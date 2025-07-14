@@ -49,15 +49,17 @@
         <br />
         <p class="text-sm text-gray-600">
           Don't have an account?
-          <router-link to="/applicant_registrationform" class="text-primary"
-            >Register here.</router-link
-          >
+          <router-link to="/a_registrationform" class="text-primary">
+               Register here.
+          </router-link>
         </p>
       </div>
     </div>
   </div>
 </template>
 
-<script setup></script>
+<script setup>
+
+</script>
 
 <style></style>
