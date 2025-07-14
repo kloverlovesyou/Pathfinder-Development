@@ -17,7 +17,7 @@
           class="input validator w-full"
           type="email"
           required
-          placeholder="mail@site.com"
+          placeholder="email@site.com"
         />
         <p class="validator-hint">Invalid Email</p>
       </div>
