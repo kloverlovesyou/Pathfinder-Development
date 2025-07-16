@@ -1,5 +1,5 @@
 import Homepage from "@/components/Home/Homepage.vue";
-import a_registrationform from "@/components/Home/A_RegistrationForm.vue";
+import ARegistrationForms from "@/components/Home/A_RegistrationForm.vue";
 import LoginForm from "@/components/Home/LoginForm.vue";
 import { createRouter, createWebHistory } from "vue-router";
 
@@ -8,7 +8,7 @@ const router = createRouter({
   routes: [
     {
       path: "/",
-      component: Homepage,
+      redirect: "/loginform",
     },
     {
       path: "/loginform",
@@ -16,7 +16,7 @@ const router = createRouter({
     },
     {
       path: "/a_registrationform",
-      component: a_registrationform,
+      component: ARegistrationForms,
     },
   ],
 });
