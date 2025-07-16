@@ -8,36 +8,28 @@
       </h2>
 
       <div class="form-control mb-4">
-        <div>
-          <label class="label">
-            <span class="label-text">Email</span>
-          </label>
-        </div>
         <input
           class="input validator w-full"
           type="email"
           required
-          placeholder="email@site.com"
+          placeholder="Email"
+          name="EmailAddress"
         />
-        <p class="validator-hint">Invalid Email</p>
+        <p class="validator-hint hidden">Invalid Email</p>
       </div>
 
-      <div>
-        <label class="label">
-          <span class="label-text">Password</span>
-        </label>
-        <div class="form-control mb-4">
-          <input
-            type="password"
-            class="input validator input-bordered w-full"
-            required
-            placeholder="Password"
-            minlength="8"
-            pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
-            title="Must be more than 8 characters, including number, lowercase letter, uppercase letter"
-          />
-          <p class="validator-hint">Invalid Password</p>
-        </div>
+      <div class="form-control mb-4">
+        <input
+          type="password"
+          class="input validator input-bordered w-full"
+          required
+          placeholder="Password"
+          minlength="8"
+          pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
+          title="Must be more than 8 characters, including number, lowercase letter, uppercase letter"
+          name="Password"
+        />
+        <p class="validator-hint hidden">Invalid Password</p>
       </div>
 
       <div class="card-actions justify-center">
@@ -50,7 +42,7 @@
         <p class="text-sm text-gray-600">
           Don't have an account?
           <router-link to="/a_registrationform" class="text-primary">
-               Register here.
+            Register here.
           </router-link>
         </p>
       </div>
@@ -58,8 +50,6 @@
   </div>
 </template>
 
-<script setup>
-
-</script>
+<script setup></script>
 
 <style></style>
