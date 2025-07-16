@@ -10,7 +10,6 @@ const route = useRoute();
 <template>
   <div class="min-h-screen flex flex-col justify-between">
     <Header v-if="route.path !== '/loginform'" />
-
     <main class="flex-grow">
       <router-view />
     </main>
