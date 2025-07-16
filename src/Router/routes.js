@@ -8,7 +8,7 @@ const router = createRouter({
   routes: [
     {
       path: "/",
-      component: Homepage,
+      redirect: "/loginform",
     },
     {
       path: "/loginform",

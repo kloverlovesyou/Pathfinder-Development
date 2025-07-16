@@ -6,5 +6,5 @@ import router from "./Router/routes.js";
 
 const app = createApp(App);
 
-app.mount("#app");
 app.use(router);
+app.mount("#app");  
