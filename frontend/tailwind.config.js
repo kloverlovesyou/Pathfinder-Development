@@ -6,6 +6,9 @@ export default {
       colors: {
         "dark-slate": "#44576D",
       },
+      fontFamily: {
+        inter: ["Inter", "sans-serif"],
+      },
     },
   },
   plugins: [require("daisyui")],
