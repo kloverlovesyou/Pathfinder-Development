@@ -9,11 +9,15 @@ const route = useRoute();
 
 <template>
   <div class="min-h-screen flex flex-col justify-between">
-    <Header v-if="route.path !== '/loginform'" />
+    <Header
+      v-if="route.path !== '/loginform' && route.path !== '/a_registrationform'"
+    />
     <main class="flex-grow">
       <router-view />
     </main>
-    <Footer v-if="route.path !== '/loginform'" />
+    <Footer
+      v-if="route.path !== '/loginform' && route.path !== '/a_registrationform'"
+    />
   </div>
 </template>
 
