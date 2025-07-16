@@ -4,14 +4,17 @@
   >
     <legend class="fieldset-legend">Page details</legend>
 
-    <label class="label">Title</label>
-    <input type="text" class="input" placeholder="My awesome page" />
+    <label class="fname">First Name</label>
+    <input type="text" class="input" placeholder="First Name" />
 
-    <label class="label">Slug</label>
-    <input type="text" class="input" placeholder="my-awesome-page" />
+    <label class="mname">Middle Name</label>
+    <input type="text" class="input" placeholder="Middle Name" />
 
-    <label class="label">Author</label>
-    <input type="text" class="input" placeholder="Name" />
+    <label class="lname">Last Name</label>
+    <input type="text" class="input" placeholder="Last Name" />
+
+    <label class="lname">Address</label>
+    <input type="text" class="input" placeholder="email@" />
   </fieldset>
 </template>
 
