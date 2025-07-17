@@ -15,10 +15,22 @@ return [
     |
     */
 
+<<<<<<< HEAD
 'paths' => ['api/*'],
 'allowed_origins' => ['http://localhost:5173'], // or '*'
 'allowed_methods' => ['*'],
 'allowed_headers' => ['*'],
+=======
+    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+
+    'allowed_methods' => ['*'],
+
+    'allowed_origins' => ['*'],
+
+    'allowed_origins_patterns' => [],
+
+    'allowed_headers' => ['*'],
+>>>>>>> Main
 
     'exposed_headers' => [],
 
