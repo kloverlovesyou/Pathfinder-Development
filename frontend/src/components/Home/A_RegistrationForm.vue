@@ -124,8 +124,10 @@
 import { ref } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
+import { useToast } from 'vue-toastification'
 
 const router = useRouter()
+const toast = useToast()
 
 const form = ref({
   firstName: '',
@@ -142,38 +144,33 @@ const termsAccepted = ref(false)
 
 const handleSubmit = async () => {
   if (form.value.password !== form.value.confirmPassword) {
-    alert('Passwords do not match.')
+    toast.error('Passwords do not match.')
     return
   }
 
   if (!termsAccepted.value) {
-    alert('You must accept the terms and conditions.')
+    toast.warning('You must accept the terms and conditions.')
     return
   }
 
-try {
-  const payload = { ...form.value }
-  delete payload.confirmPassword
+  try {
+    const payload = { ...form.value }
+    delete payload.confirmPassword
 
-await axios.post('http://127.0.0.1:8000/api/applicants', payload)
+    await axios.post('http://127.0.0.1:8000/api/applicants', payload)
 
+    toast.success('Account created successfully!')
+    router.push('/loginform')
+  } catch (error) {
+    console.error('Axios error:', error)
 
-  alert('Account created successfully!')
-  router.push('/loginform')
-}catch (error) {
-  console.error('Axios error:', error)
-
-  if (error.response) {
-    console.log('Response data:', error.response.data)
-    console.log('Status:', error.response.status)
-    alert('Backend returned status ' + error.response.status)
-  } else if (error.request) {
-    console.log('No response received:', error.request)
-    alert('No response received. Check Laravel server.')
-  } else {
-    console.log('Axios config:', error.config)
-    alert('Unexpected error: ' + error.message)
+    if (error.response) {
+      toast.error(`Backend error: ${error.response.status}`)
+    } else if (error.request) {
+      toast.error('No response from server. Is Laravel running?')
+    } else {
+      toast.error('Unexpected error: ' + error.message)
+    }
   }
-}
 }
 </script>
