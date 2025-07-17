@@ -151,15 +151,13 @@ const handleSubmit = async () => {
     toast.success('Account created successfully!')
     router.push('/loginform')
   } catch (error) {
-    console.error('Axios error:', error)
-
-    if (error.response) {
-      toast.error(`Backend error: ${error.response.status}`)
-    } else if (error.request) {
-      toast.error('No response from server. Is Laravel running?')
-    } else {
-      toast.error('Unexpected error: ' + error.message)
-    }
+  if (error.response?.status === 422) {
+    const errors = error.response.data.errors
+    const messages = Object.values(errors).flat().join('\n')
+    alert(messages)
+  } else {
+    alert('Registration failed. Please try again.')
   }
+}
 }
 </script>
