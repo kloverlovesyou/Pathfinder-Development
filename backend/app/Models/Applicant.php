@@ -1,14 +1,15 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
 class Applicant extends Model
 {
-    protected $table = 'Applicant'; // Capitalized table name
-    protected $primaryKey = 'applicantID';
-    public $timestamps = false; // Your table doesn't have created_at/updated_at
+    protected $table = 'applicant'; // ✅ Matches your custom table name
+
+    protected $primaryKey = 'applicantID'; // ✅ Matches your primary key
+
+    public $timestamps = false; // ✅ You don't have created_at / updated_at fields
 
     protected $fillable = [
         'firstName',
@@ -19,4 +20,6 @@ class Applicant extends Model
         'phoneNumber',
         'password'
     ];
+
+    protected $hidden = ['password'];
 }

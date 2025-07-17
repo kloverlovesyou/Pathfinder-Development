@@ -151,17 +151,29 @@ const handleSubmit = async () => {
     return
   }
 
-  try {
-    const payload = { ...form.value }
-    delete payload.confirmPassword
+try {
+  const payload = { ...form.value }
+  delete payload.confirmPassword
 
-    await axios.post('http://127.0.0.1:8000/api/applicants', payload)
+await axios.post('http://127.0.0.1:8000/api/applicants', payload)
 
-    alert('Account created successfully!')
-    router.push('/loginform')
-  } catch (error) {
-    console.error(error)
-    alert('Registration failed. Please check your inputs or try again.')
+
+  alert('Account created successfully!')
+  router.push('/loginform')
+}catch (error) {
+  console.error('Axios error:', error)
+
+  if (error.response) {
+    console.log('Response data:', error.response.data)
+    console.log('Status:', error.response.status)
+    alert('Backend returned status ' + error.response.status)
+  } else if (error.request) {
+    console.log('No response received:', error.request)
+    alert('No response received. Check Laravel server.')
+  } else {
+    console.log('Axios config:', error.config)
+    alert('Unexpected error: ' + error.message)
   }
+}
 }
 </script>
