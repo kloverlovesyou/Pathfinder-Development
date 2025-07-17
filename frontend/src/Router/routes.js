@@ -1,6 +1,8 @@
 import Homepage from "@/components/Home/Homepage.vue";
 import ARegistrationForms from "@/components/Home/A_RegistrationForm.vue";
+import ORegistrationForms from "@/components/Home/O_RegistrationForm.vue";
 import LoginForm from "@/components/Home/LoginForm.vue";
+import TypeOfAccount from "@/components/Home/TypeOfAccount.vue";
 import { createRouter, createWebHistory } from "vue-router";
 
 const router = createRouter({
@@ -8,7 +10,7 @@ const router = createRouter({
   routes: [
     {
       path: "/",
-      redirect: "/loginform",
+      redirect: "/homepage",
     },
     {
       path: "/loginform",
@@ -17,6 +19,14 @@ const router = createRouter({
     {
       path: "/a_registrationform",
       component: ARegistrationForms,
+    },
+    {
+      path: "/o_registrationform",
+      component: ORegistrationForms,
+    },
+    {
+      path: "/typeofaccount",
+      component: TypeOfAccount,
     },
   ],
 });

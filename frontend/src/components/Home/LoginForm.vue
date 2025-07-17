@@ -41,7 +41,7 @@
         <br />
         <p class="text-sm text-gray-600">
           Don't have an account?
-          <router-link to="/a_registrationform" class="text-primary">
+          <router-link to="/typeofaccount" class="text-primary">
             Register here.
           </router-link>
         </p>
