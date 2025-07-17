@@ -7,7 +7,6 @@
           PathFinder
         </p>
       </div>
-<<<<<<< HEAD
 
       <!-- Back Button -->
       <div class="pt-10 pb-2">
@@ -28,47 +27,18 @@
         </button>
       </div>
 
-=======
-
-      <!-- Back Button -->
-      <div class="pt-10 pb-2">
-        <router-link to="/loginform">
-          <button class="btn btn-ghost text-dark-slate">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
-        </router-link>
-      </div>
-
->>>>>>> Main
       <!-- Title -->
       <h2 class="font-inter text-3xl font-semibold text-left mb-6 text-dark-slate pl-3">
         Create Account
       </h2>
 
-<<<<<<< HEAD
       <!-- Form Inputs -->
-=======
-      <!-- Form -->
->>>>>>> Main
       <div class="form-control mb-4">
         <input v-model="form.firstName" class="input w-full" type="text" required placeholder="First Name" />
       </div>
 
       <div class="form-control mb-4">
-<<<<<<< HEAD
         <input v-model="form.middleName" class="input w-full" type="text" placeholder="Middle Name" />
-=======
-        <input v-model="form.middleName" class="input w-full" type="text" required placeholder="Middle Name" />
->>>>>>> Main
       </div>
 
       <div class="form-control mb-4">
@@ -80,17 +50,7 @@
       </div>
 
       <div class="form-control mb-4">
-<<<<<<< HEAD
         <input v-model="form.emailAddress" class="input w-full" type="email" required placeholder="Email" />
-=======
-        <input
-          v-model="form.emailAddress"
-          class="input w-full"
-          type="email"
-          required
-          placeholder="Email"
-        />
->>>>>>> Main
       </div>
 
       <div class="form-control mb-4">
@@ -114,7 +74,7 @@
           required
           placeholder="Password"
           minlength="8"
-          pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
+          pattern="(?=.*\\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
         />
       </div>
 
@@ -126,36 +86,20 @@
           required
           placeholder="Confirm Password"
           minlength="8"
-          pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
+          pattern="(?=.*\\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
         />
       </div>
 
-      <div>
-        <label class="flex items-center space-x-2 cursor-pointer mb-2">
-<<<<<<< HEAD
+      <div class="mb-4">
+        <label class="flex items-center space-x-2 cursor-pointer">
           <input type="checkbox" class="checkbox" required v-model="termsAccepted" />
-=======
-          <input
-            type="checkbox"
-            class="checkbox"
-            required
-            v-model="termsAccepted"
-          />
->>>>>>> Main
           <span>Accept all terms and conditions before creating account</span>
         </label>
       </div>
 
       <!-- Submit -->
       <div class="card-actions justify-end pt-4">
-<<<<<<< HEAD
         <button @click="handleSubmit" class="btn btn-primary w-2/4 bg-dark-slate text-white">
-=======
-        <button
-          @click="handleSubmit"
-          class="btn btn-primary w-2/4 bg-dark-slate text-white"
-        >
->>>>>>> Main
           Create
         </button>
       </div>
@@ -192,12 +136,7 @@ const handleSubmit = async () => {
   }
 
   if (!termsAccepted.value) {
-<<<<<<< HEAD
     toast.warning('You must accept the terms and conditions.', {
-=======
-    toast.warning('You must accept the terms and conditions.',
-    {
->>>>>>> Main
       toastClassName: 'rounded-md bg-emerald-600 text-white'
     })
     return
@@ -212,27 +151,13 @@ const handleSubmit = async () => {
     toast.success('Account created successfully!')
     router.push('/loginform')
   } catch (error) {
-<<<<<<< HEAD
-  if (error.response?.status === 422) {
-    const errors = error.response.data.errors
-    const messages = Object.values(errors).flat().join('\n')
-    alert(messages)
-  } else {
-    alert('Registration failed. Please try again.')
-  }
-}
-}
-=======
-    console.error('Axios error:', error)
-
-    if (error.response) {
-      toast.error(`Backend error: ${error.response.status}`)
-    } else if (error.request) {
-      toast.error('No response from server. Is Laravel running?')
+    if (error.response?.status === 422) {
+      const errors = error.response.data.errors
+      const messages = Object.values(errors).flat().join('\n')
+      alert(messages)
     } else {
-      toast.error('Unexpected error: ' + error.message)
+      alert('Registration failed. Please try again.')
     }
   }
 }
->>>>>>> Main
 </script>
