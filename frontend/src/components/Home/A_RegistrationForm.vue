@@ -149,7 +149,10 @@ const handleSubmit = async () => {
   }
 
   if (!termsAccepted.value) {
-    toast.warning('You must accept the terms and conditions.')
+    toast.warning('You must accept the terms and conditions.',
+    {
+      toastClassName: 'rounded-md bg-emerald-600 text-white'
+    })
     return
   }
 
