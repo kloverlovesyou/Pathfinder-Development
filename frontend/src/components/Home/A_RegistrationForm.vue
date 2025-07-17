@@ -155,7 +155,7 @@ const handleSubmit = async () => {
     const payload = { ...form.value }
     delete payload.confirmPassword
 
-    await axios.post('http://localhost:8000/api/applicants', payload)
+    await axios.post('http://127.0.0.1:8000/api/applicants', payload)
 
     alert('Account created successfully!')
     router.push('/loginform')
