@@ -13,6 +13,10 @@ const router = createRouter({
       redirect: "/homepage",
     },
     {
+      path: "/homepage",
+      component: Homepage,
+    },
+    {
       path: "/loginform",
       component: LoginForm,
     },
