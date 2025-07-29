@@ -1,6 +1,6 @@
 <script setup>
 import { useRoute } from "vue-router";
-import Header from "./components/Layout/Header.vue";
+import Header from "./components/Layout/Header.2.vue";
 import Homepage from "./components/Home/Homepage.vue";
 import Footer from "./components/Layout/Footer.vue";
 import TypeOfAccount from "./components/Home/TypeOfAccount.vue";
@@ -12,6 +12,13 @@ const route = useRoute();
 
 <template>
   <div class="min-h-screen flex flex-col justify-between">
+    <Header
+      v-if="
+        route.path !== '/loginform' &&
+        route.path !== '/typeofaccount' &&
+        route.path !== '/a_registrationform' &&
+        route.path !== '/o_registrationform'
+      "></Header>
     <Homepage></Homepage>
     <!--<Header
       v-if="

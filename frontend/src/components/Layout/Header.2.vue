@@ -14,7 +14,7 @@ function handleLogout() {
 
 function menuIsClicked() {
   menuClicked.value = !menuClicked.value;
-  console.log("Menu clicked:", menuClicked.value);
+  console.log("Menu clicked:", menuClicked.value,"Nays");
 }
 </script>
 
@@ -161,10 +161,11 @@ function menuIsClicked() {
               <a>Bookmark</a>
             </li>
           </ul>
+          
         </div>
 
         <!-- Logo -->
-        <a class="btn btn-ghost text-xl font-inter text-dark-slate"
+        <a class="btn btn-ghost text-xl font-inter text-dark-slate" :class="{ 'bg-dark-slate': menuClicked }"
           >Pathfinder</a
         >
 
