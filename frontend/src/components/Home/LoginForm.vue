@@ -7,38 +7,45 @@
         Login
       </h2>
 
-      <div class="form-control mb-4">
-        <input
-          class="input validator w-full"
-          type="email"
-          required
-          placeholder="Email"
-          name="EmailAddress"
-        />
-        <p class="validator-hint hidden">Invalid Email</p>
-      </div>
+      <form @submit.prevent="handleLogin">
+        <div class="form-control mb-4">
+          <input
+            v-model="email"
+            class="input validator w-full"
+            type="email"
+            required
+            placeholder="Email"
+            name="EmailAddress"
+          />
+          <p class="validator-hint" v-if="emailError">Invalid Email</p>
+        </div>
 
-      <div class="form-control mb-4">
-        <input
-          type="password"
-          class="input validator input-bordered w-full"
-          required
-          placeholder="Password"
-          minlength="8"
-          pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
-          title="Must be more than 8 characters, including number, lowercase letter, uppercase letter"
-          name="Password"
-        />
-        <p class="validator-hint hidden">Invalid Password</p>
-      </div>
+        <div class="form-control mb-4">
+          <input
+            v-model="password"
+            type="password"
+            class="input validator input-bordered w-full"
+            required
+            placeholder="Password"
+            name="Password"
+            minlength="8"
+            pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
+            title="Must be more than 8 characters, including number, lowercase letter, uppercase letter"
+          />
+          <p class="validator-hint" v-if="passwordError">Invalid Password</p>
+        </div>
 
-      <div class="card-actions justify-center">
-        <button class="btn btn-primary w-3/4 bg-dark-slate text-white">
-          Log in
-        </button>
-      </div>
+        <div class="card-actions justify-center">
+          <button
+            type="submit"
+            class="btn btn-primary w-3/4 bg-dark-slate text-white"
+          >
+            Log in
+          </button>
+        </div>
+      </form>
+
       <div class="text-center mt-4">
-        <br />
         <p class="text-sm text-gray-600">
           Don't have an account?
           <router-link to="/typeofaccount" class="text-primary">
@@ -49,7 +56,47 @@
     </div>
   </div>
 </template>
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import axios from 'axios'
 
-<script setup></script>
+const router = useRouter()
+
+const email = ref('')
+const password = ref('')
+const emailError = ref(false)
+const passwordError = ref(false)
+
+const validateEmail = (emailVal) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)
+const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw)
+
+const handleLogin = async () => {
+  emailError.value = !validateEmail(email.value)
+  passwordError.value = !validatePassword(password.value)
+
+  if (emailError.value || passwordError.value) return
+
+  try {
+    const response = await axios.post('http://127.0.0.1:8000/api/login', {
+      emailAddress: email.value,
+      password: password.value,
+    })
+
+    alert(response.data.message)
+
+    // Optional: Save user or token in storage
+    // localStorage.setItem('user', JSON.stringify(response.data.user))
+
+    router.push('/dashboard') // Change path as needed
+  } catch (error) {
+    if (error.response && error.response.data.message) {
+      alert(error.response.data.message)
+    } else {
+      alert('Login failed. Please try again.')
+    }
+  }
+}
+</script>
 
 <style></style>
