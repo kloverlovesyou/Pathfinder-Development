@@ -37,4 +37,24 @@ class ApplicantController extends Controller
 
         return response()->json(['message' => 'Registration successful'], 201);
     }
+
+public function login(Request $request)
+{
+    $request->validate([
+        'emailAddress' => 'required|email',
+        'password' => 'required|string|min:8',
+    ]);
+
+    $applicant = Applicant::where('emailAddress', $request->emailAddress)->first();
+
+    if (!$applicant || !Hash::check($request->password, $applicant->password)) {
+        return response()->json(['message' => 'Invalid credentials'], 401);
+    }
+
+    // You can also generate a token here if needed (for Sanctum)
+    return response()->json([
+        'message' => 'Login successful',
+        'user' => $applicant,
+    ]);
+}
 }
