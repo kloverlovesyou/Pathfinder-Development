@@ -1,7 +1,9 @@
 import Homepage from "@/components/Home/Homepage.vue";
+
 import ARegistrationForms from "@/components/Home/A_RegistrationForm.vue";
 import ORegistrationForms from "@/components/Home/O_RegistrationForm.vue";
 import LoginForm from "@/components/Home/LoginForm.vue";
+import ProfilePage from "@/components/Home/Profilepage.vue";
 import TypeOfAccount from "@/components/Home/TypeOfAccount.vue";
 import { createRouter, createWebHistory } from "vue-router";
 
@@ -31,6 +33,10 @@ const router = createRouter({
     {
       path: "/typeofaccount",
       component: TypeOfAccount,
+    },
+    {
+      path: "/profilepage",
+      component: ProfilePage,
     },
   ],
 });
