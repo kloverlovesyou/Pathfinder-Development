@@ -7,8 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class Organization extends Model
 {
-<<<<<<< HEAD
-=======
     protected $table = 'organization'; // Use exact table name (case-sensitive on some systems)
     protected $primaryKey = 'organizationID'; // Custom primary key
     public $timestamps = false; // Disable timestamps if your table doesn't have created_at/updated_at
@@ -21,6 +19,5 @@ class Organization extends Model
         'password',
         'adminID'
     ];
->>>>>>> 31587a87a46b0131092666d16e648b3ab552aa4b
     use HasFactory;
 }
