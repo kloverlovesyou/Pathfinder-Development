@@ -115,13 +115,23 @@
         <div class="form-control mb-4">
           <input
             type="password"
-            class="input validator input-bordered w-full"
+            class="input input-bordered w-full"
+            :class="{
+              'border-red-500': form.password !== form.confirmPassword,
+              'border-green-300': form.password === form.confirmPassword
+              
+            }"
             required
             placeholder="Confirm Password"
             minlength="8"
             v-model="form.confirmPassword"
           />
-          <p class="validator-hint hidden">Invalid Password</p>
+          <p
+            v-if="form.password !== form.confirmPassword"
+            class="text-red-500 text-sm mt-1"
+          >
+            Passwords do not match.
+          </p>
         </div>
 
         <div>
@@ -163,7 +173,8 @@ const form = ref({
   emailAddress: '',
   phoneNumber: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
+  message: 'password does not match'
 })
 
 const termsAccepted = ref(false)
@@ -175,7 +186,7 @@ const handleSubmit = async () => {
   }
 
   if (form.value.password !== form.value.confirmPassword) {
-    alert('Passwords do not match.')
+    message.value = 'Passwords do not match.'
     return
   }
 
