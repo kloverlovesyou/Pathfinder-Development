@@ -172,9 +172,7 @@ function menuIsClicked() {
         </div>
 
         <!-- Logo -->
-        <a class="btn btn-ghost text-xl font-inter text-dark-slate" :class="{ 'bg-dark-slate': menuClicked }"
-          >Pathfinder</a
-        >
+       <a class="btn btn-ghost text-xl font-inter text-dark-slate" @click="router.push('/homepage')">Pathfinder</a>
 
         <!-- Profile Button sm-->
         <div class="w-10">
@@ -211,8 +209,7 @@ function menuIsClicked() {
         <!-- Left Side: Logo + Menu -->
         <div class="flex items-center gap-6">
           <!-- Logo -->
-          <a class="btn btn-ghost text-xl font-inter text-dark-slate"
-            >Pathfinder</a
+           <a class="btn btn-ghost text-xl font-inter text-dark-slate" @click="router.push('/homepage')">Pathfinder</a>
           >
 
           <!-- Horizontal Menu -->
