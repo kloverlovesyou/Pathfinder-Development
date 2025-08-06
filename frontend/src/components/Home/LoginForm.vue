@@ -83,7 +83,7 @@ const handleLogin = async () => {
       password: password.value,
     })
 
-    alert(response.data.message)
+   
 
     // Optional: Save user or token in storage
     // localStorage.setItem('user', JSON.stringify(response.data.user))
