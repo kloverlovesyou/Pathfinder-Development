@@ -152,7 +152,9 @@
 <script setup>
 import { ref } from 'vue'
 import axios from 'axios'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const form = ref({
   firstName: '',
   middleName: '',
@@ -181,7 +183,8 @@ const handleSubmit = async () => {
     const response = await axios.post('http://127.0.0.1:8000/api/applicants', {
       ...form.value
     })
-    alert(response.data.message)
+    
+    router.push('/loginform')
   } catch (error) {
     if (error.response && error.response.data.errors) {
       const errors = error.response.data.errors
