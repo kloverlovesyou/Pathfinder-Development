@@ -44,7 +44,7 @@
           <p
             class="text-white text-xl font-semibold truncate whitespace-nowrap overflow-hidden max-w-full"
           >
-            Leonore Dove
+              {{ user.firstName }} {{ user.lastName }}
           </p>
         </div>
 
@@ -314,8 +314,10 @@
     </div>
   </div>
 </template>
-<script>
+<script setup>
 import { useBreakpoints } from "@vueuse/core";
+import useAuth from '@/composables/useAuth';
+const { authenticated, user } = useAuth()
 
 const breakpoints = useBreakpoints({
   xs: 0,

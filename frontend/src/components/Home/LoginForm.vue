@@ -88,7 +88,7 @@ const handleLogin = async () => {
     // Optional: Save user or token in storage
     // localStorage.setItem('user', JSON.stringify(response.data.user))
 
-    router.push('/dashboard') // Change path as needed
+    router.push('/homepage') // Change path as needed
   } catch (error) {
     if (error.response && error.response.data.message) {
       alert(error.response.data.message)
