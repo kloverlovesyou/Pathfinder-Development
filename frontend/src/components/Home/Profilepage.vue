@@ -44,7 +44,7 @@
           <p
             class="text-white text-xl font-semibold truncate whitespace-nowrap overflow-hidden max-w-full"
           >
-              {{ user.firstName }} {{ user.lastName }}
+            leonore dove
           </p>
         </div>
 
@@ -148,7 +148,9 @@
 
     <!--Mini navbar-->
     <div class="card bg-customblue grid place-items-center mt-3 lg:hidden">
-      <ul class="w-screen p-4 shadow text-white justify-evenly flex gap-4">
+      <ul
+        class="bg-dark-slate w-screen p-4 shadow text-white justify-evenly flex gap-4"
+      >
         <li class="flex flex-col items-center">
           <button
             class="btn btn-ghost m-1 hover:bg-customdarkblue hover:border-none hover:shadow-none"
@@ -316,8 +318,8 @@
 </template>
 <script setup>
 import { useBreakpoints } from "@vueuse/core";
-import useAuth from '@/composables/useAuth';
-const { authenticated, user } = useAuth()
+import useAuth from "@/composables/useAuth";
+const { authenticated, user } = useAuth();
 
 const breakpoints = useBreakpoints({
   xs: 0,
