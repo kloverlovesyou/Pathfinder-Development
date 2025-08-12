@@ -9,6 +9,7 @@ import Careerpage from "@/components/Home/Careerpage.vue";
 import Organizationpage from "@/components/Home/Organizationpage.vue";
 import Calendarpage from "@/components/Home/Calendarpage.vue";
 import Bookmarkpage from "@/components/Home/Bookmarkpage.vue";
+import Certificatespage from "@/components/Home/Certificatespage.vue";
 
 import { createRouter, createWebHistory } from "vue-router";
 
@@ -62,6 +63,10 @@ const router = createRouter({
     {
       path: "/bookmarkpage",
       component: Bookmarkpage,
+    },
+    {
+      path: "/certificatespage",
+      component: Certificatespage,
     },
   ],
 });

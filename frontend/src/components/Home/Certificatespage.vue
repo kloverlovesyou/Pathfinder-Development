@@ -2,120 +2,81 @@
 import { useRouter } from "vue-router";
 
 const router = useRouter();
+
+import { ref } from "vue";
+
+const isModalOpen = ref(false);
+const selectedImage = ref(null);
+const selectedTitle = ref(null);
+
+function openModal(image, title) {
+  selectedImage.value = image;
+  selectedTitle.value = title;
+  isModalOpen.value = true;
+}
+
+function closeModal() {
+  isModalOpen.value = false;
+}
 </script>
+
 <template>
   <div class="min-h-screen bg-gray-100 font-poppins">
+    <div class="absolute right-5 dropdown dropdown-end">
+      <div tabindex="0" role="button" class="group m-5">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="size-5 flex-shrink-0 group-hover:hidden"
+          viewBox="0 0 24 24"
+          fill="white"
+        >
+          <path
+            d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
+          />
+        </svg>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="size-5 flex-shrink-0 group-hover:block hidden"
+          viewBox="0 0 24 24"
+          fill="dark-slate"
+        >
+          <path
+            d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
+          />
+        </svg>
+      </div>
+      <ul
+        tabindex="0"
+        class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
+      >
+        <li>Update/Delete Account</li>
+        <li><a>Logout</a></li>
+      </ul>
+    </div>
     <div class="lg:hidden block font-poppins">
       <!-- Row 1: Profile Info -->
-      <div class="bg-dark-slate text-white p-6">
-        <div class="flex justify-end text-black">
-          <div class="absolute right-5 dropdown dropdown-end">
-            <div tabindex="0" role="button" class="group">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="size-5 flex-shrink-0 group-hover:hidden"
-                viewBox="0 0 24 24"
-                fill="white"
-              >
-                <path
-                  d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-                />
-              </svg>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="size-5 flex-shrink-0 group-hover:block hidden"
-                viewBox="0 0 24 24"
-                fill="dark-slate"
-              >
-                <path
-                  d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-                />
-              </svg>
-            </div>
-            <ul
-              tabindex="0"
-              class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-            >
-              <li><a>Update/Delete Account</a></li>
-              <li><a>Logout</a></li>
-            </ul>
-          </div>
+      <div class="bg-dark-slate text-white p-6 flex flex-col items-center">
+        <!-- Avatar -->
+        <div class="avatar w-24 h-24 rounded-full bg-white mb-4">
+          <img
+            src="https://img.daisyui.com/images/profile/demo/yellingcat@192.webp"
+            alt="User Avatar"
+            class="w-full h-full object-cover rounded-full"
+          />
         </div>
-        <!-- Back button -->
-        <div class="flex justify-start">
-          <button class="group" @click="router.push('/homepage')">
-            <svg
-              class="size-6 group-hover:hidden"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M9.57 5.93005L3.5 12.0001L9.57 18.0701"
-                stroke="white"
-                stroke-width="1.5"
-                stroke-miterlimit="10"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M20.5 12H3.66998"
-                stroke="white"
-                stroke-width="1.5"
-                stroke-miterlimit="10"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
 
-            <svg
-              class="size-6 hidden group-hover:block"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M9.57 5.93005L3.5 12.0001L9.57 18.0701"
-                stroke="#000409"
-                stroke-width="1.5"
-                stroke-miterlimit="10"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M20.5 12H3.66998"
-                stroke="#000409"
-                stroke-width="1.5"
-                stroke-miterlimit="10"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </button>
-        </div>
-        <div class="flex flex-col items-center mt-4">
-          <!-- Avatar -->
-          <div class="avatar w-24 h-24 rounded-full bg-white mb-4">
-            <img
-              src="https://img.daisyui.com/images/profile/demo/yellingcat@192.webp"
-              alt="User Avatar"
-              class="w-full h-full object-cover rounded-full"
-            />
+        <!-- Name -->
+        <h2 class="text-xl font-semibold mb-2">Keiro Musician</h2>
+
+        <!-- Stats -->
+        <div class="flex gap-8 mb-4">
+          <div class="text-center">
+            <p class="text-2xl font-bold">0</p>
+            <p class="text-sm">Upcoming</p>
           </div>
-
-          <!-- Name -->
-          <h2 class="text-xl font-semibold mb-2">Keiro Musician</h2>
-
-          <!-- Stats -->
-          <div class="flex gap-8 mb-4">
-            <div class="text-center">
-              <p class="text-2xl font-bold">0</p>
-              <p class="text-sm">Upcoming</p>
-            </div>
-            <div class="text-center">
-              <p class="text-2xl font-bold">0</p>
-              <p class="text-sm">Completed</p>
-            </div>
+          <div class="text-center">
+            <p class="text-2xl font-bold">0</p>
+            <p class="text-sm">Completed</p>
           </div>
         </div>
       </div>
@@ -287,90 +248,75 @@ const router = useRouter();
         </button>
       </div>
 
-      <!-- Row 3: Upcoming Schedules -->
+      <!-- Row 3: Certificates -->
       <div class="bg-white p-6">
-        <h3 class="text-lg font-semibold mb-4">Upcoming</h3>
-        <ul class="space-y-4">
-          <!-- Placeholder Event Items -->
-          <li class="relative p-4 bg-gray-50 rounded shadow-sm">
-            <p class="font-semibold text-lg">Title</p>
-            <div class="absolute top-2 right-2 dropdown dropdown-end">
-              <div tabindex="0" role="button" class="btn btn-ghost m-1">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path
-                    d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-                  />
-                </svg>
-              </div>
-              <ul
-                tabindex="0"
-                class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-              >
-                <li><a>Bookmark</a></li>
-                <li><a>Register</a></li>
-              </ul>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <!-- Certificate card 1 -->
+          <div
+            class="flex flex-col items-center bg-white shadow rounded-lg p-4"
+          >
+            <!-- Certificate image -->
+            <div
+              class="w-full h-48 bg-gray-200 flex items-center justify-center rounded cursor-pointer hover:opacity-90 transition"
+              @click="openModal('image1.jpg', 'Certificate Title 1')"
+            >
+              <span class="text-gray-500">Upload Image</span>
             </div>
-            <p class="text-sm">Date/Time</p>
-          </li>
-          <li class="relative p-4 bg-gray-50 rounded shadow-sm">
-            <p class="font-semibold text-lg">Title</p>
-            <div class="absolute top-2 right-2 dropdown dropdown-end">
-              <div tabindex="0" role="button" class="btn btn-ghost m-1">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path
-                    d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-                  />
-                </svg>
-              </div>
-              <ul
-                tabindex="0"
-                class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-              >
-                <li><a>Bookmark</a></li>
-                <li><a>Register</a></li>
-              </ul>
+
+            <!-- Certificate title -->
+            <p class="mt-2 text-center font-medium text-gray-800">
+              Certificate Title 1
+            </p>
+          </div>
+
+          <!-- Certificate card 2 -->
+          <div
+            class="flex flex-col items-center bg-white shadow rounded-lg p-4"
+          >
+            <!-- Certificate image -->
+            <div
+              class="w-full h-48 bg-gray-200 flex items-center justify-center rounded cursor-pointer hover:opacity-90 transition"
+              @click="openModal('image2.jpg', 'Certificate Title 2')"
+            >
+              <span class="text-gray-500">Upload Image</span>
             </div>
-            <p class="text-sm">Date/Time</p>
-          </li>
-          <li class="relative p-4 bg-gray-50 rounded shadow-sm">
-            <p class="font-semibold text-lg">Title</p>
-            <div class="absolute top-2 right-2 dropdown dropdown-end">
-              <div tabindex="0" role="button" class="btn btn-ghost m-1">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path
-                    d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-                  />
-                </svg>
-              </div>
-              <ul
-                tabindex="0"
-                class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-              >
-                <li><a>Bookmark</a></li>
-                <li><a>Register</a></li>
-              </ul>
-            </div>
-            <p class="text-sm">Date/Time</p>
-          </li>
-        </ul>
+
+            <!-- Certificate title -->
+            <p class="mt-2 text-center font-medium text-gray-800">
+              Certificate Title 2
+            </p>
+          </div>
+        </div>
+
+        <!-- Modal -->
+        <div
+          v-if="isModalOpen"
+          class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"
+        >
+          <div
+            class="bg-white rounded-lg shadow-lg max-w-3xl w-full p-4 relative"
+          >
+            <!-- Close button -->
+            <button
+              class="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
+              @click="closeModal"
+            >
+              ✕
+            </button>
+
+            <!-- Full-size image -->
+            <img
+              :src="selectedImage"
+              :alt="selectedTitle"
+              class="max-h-[80vh] w-auto mx-auto rounded"
+            />
+
+            <!-- Title -->
+            <p class="mt-4 text-center text-lg font-semibold text-gray-800">
+              {{ selectedTitle }}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -417,7 +363,6 @@ const router = useRouter();
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="router.push('/certificatespage')"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -536,106 +481,75 @@ const router = useRouter();
 
       <!-- Right Column -->
       <div class="w-full lg:w-3/4 lg:pl-6 mt-6 lg:mt-0 flex flex-col gap-6">
-        <!-- Top Row: Stats -->
-        <div class="flex gap-6 items-center">
-          <div class="flex-1 bg-white rounded-lg shadow p-6">
-            <p class="text-center text-3xl font-bold text-dark-slate">0</p>
-            <h3 class="text-center text-lg font-semibold mb-2">
-              Upcoming Events
-            </h3>
-          </div>
-          <div class="flex-1 bg-white rounded-lg shadow p-6">
-            <p class="text-center text-3xl font-bold text-dark-slate">0</p>
-            <h3 class="text-center text-lg font-semibold mb-2">
-              Completed Events
-            </h3>
-          </div>
-        </div>
-
         <!-- Bottom Row: Event List -->
         <div class="bg-white rounded-lg shadow p-6 flex-1">
-          <h3 class="text-2xl font-semibold mb-4">Upcoming</h3>
-          <ul class="space-y-4">
-            <!-- Placeholder Event Items -->
-            <li class="relative p-4 bg-gray-50 rounded shadow-sm">
-              <p class="font-semibold text-lg">Title</p>
-              <div class="absolute top-2 right-2 dropdown dropdown-end">
-                <div tabindex="0" role="button" class="btn btn-ghost m-1">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path
-                      d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-                    />
-                  </svg>
-                </div>
-                <ul
-                  tabindex="0"
-                  class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-                >
-                  <li><a>Bookmark</a></li>
-                  <li><a>Register</a></li>
-                </ul>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <!-- Certificate card 1 -->
+            <div
+              class="flex flex-col items-center bg-white shadow rounded-lg p-4"
+            >
+              <!-- Certificate image -->
+              <div
+                class="w-full h-48 bg-gray-200 flex items-center justify-center rounded cursor-pointer hover:opacity-90 transition"
+                @click="openModal('image1.jpg', 'Certificate Title 1')"
+              >
+                <span class="text-gray-500">Upload Image</span>
               </div>
-              <p class="text-sm">Date/Time</p>
-            </li>
-            <li class="relative p-4 bg-gray-50 rounded shadow-sm">
-              <p class="font-semibold text-lg">Title</p>
-              <div class="absolute top-2 right-2 dropdown dropdown-end">
-                <div tabindex="0" role="button" class="btn btn-ghost m-1">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path
-                      d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-                    />
-                  </svg>
-                </div>
-                <ul
-                  tabindex="0"
-                  class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-                >
-                  <li><a>Bookmark</a></li>
-                  <li><a>Register</a></li>
-                </ul>
+
+              <!-- Certificate title -->
+              <p class="mt-2 text-center font-medium text-gray-800">
+                Certificate Title 1
+              </p>
+            </div>
+
+            <!-- Certificate card 2 -->
+            <div
+              class="flex flex-col items-center bg-white shadow rounded-lg p-4"
+            >
+              <!-- Certificate image -->
+              <div
+                class="w-full h-48 bg-gray-200 flex items-center justify-center rounded cursor-pointer hover:opacity-90 transition"
+                @click="openModal('image2.jpg', 'Certificate Title 2')"
+              >
+                <span class="text-gray-500">Upload Image</span>
               </div>
-              <p class="text-sm">Date/Time</p>
-            </li>
-            <li class="relative p-4 bg-gray-50 rounded shadow-sm">
-              <p class="font-semibold text-lg">Title</p>
-              <div class="absolute top-2 right-2 dropdown dropdown-end">
-                <div tabindex="0" role="button" class="btn btn-ghost m-1">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path
-                      d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-                    />
-                  </svg>
-                </div>
-                <ul
-                  tabindex="0"
-                  class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-                >
-                  <li><a>Bookmark</a></li>
-                  <li><a>Register</a></li>
-                </ul>
-              </div>
-              <p class="text-sm">Date/Time</p>
-            </li>
-          </ul>
+
+              <!-- Certificate title -->
+              <p class="mt-2 text-center font-medium text-gray-800">
+                Certificate Title 2
+              </p>
+            </div>
+          </div>
+
+          <!-- Modal -->
+          <div
+            v-if="isModalOpen"
+            class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"
+          >
+            <div
+              class="bg-white rounded-lg shadow-lg max-w-3xl w-full p-4 relative"
+            >
+              <!-- Close button -->
+              <button
+                class="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
+                @click="closeModal"
+              >
+                ✕
+              </button>
+
+              <!-- Full-size image -->
+              <img
+                :src="selectedImage"
+                :alt="selectedTitle"
+                class="max-h-[80vh] w-auto mx-auto rounded"
+              />
+
+              <!-- Title -->
+              <p class="mt-4 text-center text-lg font-semibold text-gray-800">
+                {{ selectedTitle }}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
