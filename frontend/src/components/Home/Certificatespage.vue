@@ -3,9 +3,10 @@ import { useRouter } from "vue-router";
 
 const router = useRouter();
 
-import { ref } from "vue";
+import { ref, onMounted} from "vue";
 
-const isModalOpen = ref(false);
+  const userName = ref('');
+  const isModalOpen = ref(false);
 const selectedImage = ref(null);
 const selectedTitle = ref(null);
 
@@ -17,6 +18,24 @@ function openModal(image, title) {
 
 function closeModal() {
   isModalOpen.value = false;
+
+
+
+
+// Check if user is logged in and retrieve user data
+onMounted(() => {
+  const savedUser = localStorage.getItem('user')
+  if (savedUser) {
+    const user = JSON.parse(savedUser)
+    if (user.firstName && user.lastName) {
+      userName.value = `${user.firstName} ${user.lastName}`
+    } else {
+      userName.value = 'Guest'
+    }
+  } else {
+    userName.value = 'Guest'
+  }
+})
 }
 </script>
 
@@ -66,7 +85,7 @@ function closeModal() {
         </div>
 
         <!-- Name -->
-        <h2 class="text-xl font-semibold mb-2">Keiro Musician</h2>
+        <h2 class="text-xl font-semibold mb-2">{{ userName }}</h2>
 
         <!-- Stats -->
         <div class="flex gap-8 mb-4">
@@ -338,7 +357,7 @@ function closeModal() {
         </div>
 
         <!-- Name -->
-        <h2 class="text-xl font-semibold mb-6">Keiro Musician</h2>
+        <h2 class="text-xl font-semibold mb-6">{{ userName }}</h2>
 
         <!-- Buttons -->
         <div class="w-full flex flex-col gap-3">
