@@ -40,5 +40,3 @@ const route = useRoute();
     ></Footer>
   </div>
 </template>
-
-<style scoped></style>
