@@ -19,10 +19,8 @@ function openModal(image, title) {
 function closeModal() {
   isModalOpen.value = false;
 
+}
 
-
-
-// Check if user is logged in and retrieve user data
 onMounted(() => {
   const savedUser = localStorage.getItem('user')
   if (savedUser) {
@@ -36,7 +34,6 @@ onMounted(() => {
     userName.value = 'Guest'
   }
 })
-}
 </script>
 
 <template>
