@@ -7,8 +7,15 @@ import { ref, onMounted} from "vue";
 
   const userName = ref('');
   const isModalOpen = ref(false);
-const selectedImage = ref(null);
-const selectedTitle = ref(null);
+  const selectedImage = ref(null);
+  const selectedTitle = ref(null);
+
+const logout = () => {
+  // Remove user data from localStorage
+  localStorage.removeItem('user');
+  // Redirect to login page
+  router.push('/loginform');
+};
 
 function openModal(image, title) {
   selectedImage.value = image;
@@ -66,7 +73,7 @@ onMounted(() => {
         class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
       >
         <li>Update/Delete Account</li>
-        <li><a>Logout</a></li>
+        <li><a @click="logout">Logout</a></li>
       </ul>
     </div>
     <div class="lg:hidden block font-poppins">
@@ -469,6 +476,7 @@ onMounted(() => {
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
+            @click="logout "
           >
             <svg
               class="size-6 flex-shrink-0"
