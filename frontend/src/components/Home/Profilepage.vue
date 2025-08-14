@@ -4,6 +4,13 @@ import { ref, onMounted } from "vue";
 const router = useRouter();
 const userName = ref('');
 
+const logout = () => {
+  // Remove user data from localStorage
+  localStorage.removeItem('user');
+  // Redirect to login page
+  router.push('/loginform');
+};
+
 
 // Check if user is logged in and retrieve user data
 onMounted(() => {
@@ -54,7 +61,7 @@ onMounted(() => {
               class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
             >
               <li><a>Update/Delete Account</a></li>
-              <li><a>Logout</a></li>
+              <li><a @click="logout">Logout</a></li>
             </ul>
           </div>
         </div>
@@ -525,6 +532,7 @@ onMounted(() => {
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
+             @click="router.push('/loginform')"
           >
             <svg
               class="size-6 flex-shrink-0"
