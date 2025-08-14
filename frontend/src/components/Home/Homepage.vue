@@ -2,23 +2,24 @@
 import "cally";
 import organizationImage from "@/assets/images/org.jpg";
 import { useRouter } from "vue-router";
+import { ref, onMounted } from "vue";
 
-const user = ref (null)
+const router = useRouter();
+const user = ref(null);
 
 onMounted(() => {
-  const storedUser = localStorage.getItem('user')
+  const storedUser = localStorage.getItem("user");
   if (storedUser) {
-    user.value = JSON.parse(storedUser)
+    user.value = JSON.parse(storedUser);
+  } else {
+    router.push("/loginform");
   }
-})
-const router = useRouter();
+});
 </script>
 
 <template>
   <main>
-    <h2 class="text-lg font-bold">
-      Welcome, {{ user?.firstName }} {{ user?.lastName }}
-    </h2>
+
     <h2 class="text-lg font-bold -mb-1">Career & Training</h2>
     <h2 class="text-2xl font-bold mb-4">Match Recommendation</h2>
     <div class="space-y-4">
