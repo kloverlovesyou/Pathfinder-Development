@@ -83,13 +83,19 @@ const handleLogin = async () => {
       password: password.value,
     })
 
-   
+    const user = response.data.user
+    const fullName = `${user.firstName} ${user.lastName}`
 
-    // Optional: Save user or token in storage
-    // localStorage.setItem('user', JSON.stringify(response.data.user))
+    // Save with fullName
+    localStorage.setItem(
+      'user',
+      JSON.stringify({
+        ...user,
+        name: fullName
+      })
+    )
 
-    localStorage.setItem('user', JSON.stringify(response.data.user))
-    router.push('/homepage') // Change path as needed
+    router.push('/homepage')
   } catch (error) {
     if (error.response && error.response.data.message) {
       alert(error.response.data.message)
