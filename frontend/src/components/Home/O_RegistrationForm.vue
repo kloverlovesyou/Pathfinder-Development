@@ -1,6 +1,6 @@
 <template>
   <div
-    class="pb-20 min-h-screen flex items-center justify-center bg-gray-50 p-4"
+    class="font-poppins pb-20 min-h-screen flex items-center justify-center bg-gray-50 p-4"
   >
     <div>
       <div>
@@ -131,6 +131,4 @@
   </div>
 </template>
 
-<script setup>
-
-</script>
+<script setup></script>

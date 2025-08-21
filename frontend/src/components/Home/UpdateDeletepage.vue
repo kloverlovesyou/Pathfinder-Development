@@ -6,57 +6,7 @@
           class="w-full max-w-3xl flex-grow bg-white p-6 rounded-lg shadow-md py-14"
         >
           <div class="flex justify-start gap-4 mb-4 py-4">
-            <button class="group" @click="router.push('/profilepage')">
-              <svg
-                class="size-6 group-hover:hidden"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M9.57 5.93005L3.5 12.0001L9.57 18.0701"
-                  stroke="#6682A3"
-                  stroke-width="1.5"
-                  stroke-miterlimit="10"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <path
-                  d="M20.5 12H3.66998"
-                  stroke="#6682A3"
-                  stroke-width="1.5"
-                  stroke-miterlimit="10"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-
-              <svg
-                class="size-6 hidden group-hover:block"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M9.57 5.93005L3.5 12.0001L9.57 18.0701"
-                  stroke="#44576D"
-                  stroke-width="1.5"
-                  stroke-miterlimit="10"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <path
-                  d="M20.5 12H3.66998"
-                  stroke="#44576D"
-                  stroke-width="1.5"
-                  stroke-miterlimit="10"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-            </button>
-
-            <h2 class="text-2xl font-bold text-dark-slate">Update Account</h2>
+            <h2 class="text-2xl font-bold">Update Account</h2>
           </div>
 
           <!-- FORM -->
@@ -352,59 +302,7 @@
         <!-- Bottom Row: Event List -->
         <div class="bg-white rounded-lg shadow p-6 flex-1">
           <div class="flex justify-start gap-4 mb-4 py-4">
-            <button class="group" @click="router.push('/profilepage')">
-              <svg
-                class="size-6 group-hover:hidden"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M9.57 5.93005L3.5 12.0001L9.57 18.0701"
-                  stroke="#6682A3"
-                  stroke-width="1.5"
-                  stroke-miterlimit="10"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <path
-                  d="M20.5 12H3.66998"
-                  stroke="#6682A3"
-                  stroke-width="1.5"
-                  stroke-miterlimit="10"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-
-              <svg
-                class="size-6 hidden group-hover:block"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M9.57 5.93005L3.5 12.0001L9.57 18.0701"
-                  stroke="#44576D"
-                  stroke-width="1.5"
-                  stroke-miterlimit="10"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <path
-                  d="M20.5 12H3.66998"
-                  stroke="#44576D"
-                  stroke-width="1.5"
-                  stroke-miterlimit="10"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-            </button>
-
-            <h2 class="text-2xl font-bold text-dark-slate">
-              Update/Delete Account
-            </h2>
+            <h2 class="text-2xl font-bold">Update/Delete Account</h2>
           </div>
 
           <!-- FORM -->
