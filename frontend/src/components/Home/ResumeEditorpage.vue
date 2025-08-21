@@ -1,13 +1,35 @@
 <script setup>
 import { useRouter } from "vue-router";
-
-const router = useRouter();
-
+import { reactive } from "vue";
 import { ref } from "vue";
 
+const router = useRouter();
 const isModalOpen = ref(false);
 const selectedImage = ref(null);
 const selectedTitle = ref(null);
+const newSkill = ref("");
+const skills = ref([]);
+
+const experiences = reactive([{ text: "" }]);
+
+function addExperience() {
+  experiences.push({ text: "" });
+}
+
+function removeExperience(index) {
+  experiences.splice(index, 1);
+}
+
+function addSkill() {
+  if (newSkill.value.trim() !== "") {
+    skills.value.push(newSkill.value.trim());
+    newSkill.value = "";
+  }
+}
+
+function removeSkill(index) {
+  skills.value.splice(index, 1);
+}
 
 function openModal(image, title) {
   selectedImage.value = image;
@@ -17,6 +39,38 @@ function openModal(image, title) {
 
 function closeModal() {
   isModalOpen.value = false;
+}
+
+const certificates = reactive([
+  {
+    title: "",
+    image: null,
+  },
+]);
+
+function addCertificate() {
+  certificates.push({ title: "", image: null });
+}
+
+function removeCertificate(index) {
+  certificates.splice(index, 1);
+}
+
+function handleFileUpload(event, index) {
+  const file = event.target.files[0];
+  if (file) {
+    certificates[index].image = URL.createObjectURL(file);
+  }
+}
+
+const educationList = reactive([{ text: "" }]);
+
+function addEducation() {
+  educationList.push({ text: "" });
+}
+
+function removeEducation(index) {
+  educationList.splice(index, 1);
 }
 </script>
 
@@ -214,7 +268,6 @@ function closeModal() {
         </button>
         <button
           class="group flex flex-col items-center justify-center px-4 py-3 rounded text-white hover:text-dark-slate"
-          @click="router.push('/resumepage')"
         >
           <svg
             class="size-6 flex-shrink-0 group-hover:hidden"
@@ -249,74 +302,284 @@ function closeModal() {
         </button>
       </div>
 
-      <!-- Row 3: Certificates -->
+      <!-- Row 3: Editor -->
       <div class="bg-white p-6">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <!-- Certificate card 1 -->
-          <div
-            class="flex flex-col items-center bg-white shadow rounded-lg p-4"
-          >
-            <!-- Certificate image -->
-            <div
-              class="w-full h-48 bg-gray-200 flex items-center justify-center rounded cursor-pointer hover:opacity-90 transition"
-              @click="openModal('image1.jpg', 'Certificate Title 1')"
-            >
-              <span class="text-gray-500">Upload Image</span>
+        <div class="p-6 bg-white shadow-lg rounded-2xl">
+          <h1 class="text-2xl font-bold mb-6">Resume Editor</h1>
+
+          <form class="space-y-6">
+            <!-- Personal Info -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input
+                type="text"
+                placeholder="First Name"
+                class="input-field border p-2"
+              />
+              <input
+                type="text"
+                placeholder="Middle Name"
+                class="input-field border p-2"
+              />
+              <input
+                type="text"
+                placeholder="Last Name"
+                class="input-field border p-2"
+              />
+              <input
+                type="email"
+                placeholder="Email"
+                class="input-field border p-2"
+              />
+              <input
+                type="text"
+                placeholder="Mobile Number"
+                class="input-field border p-2"
+              />
+              <input
+                type="text"
+                placeholder="Address"
+                class="input-field border p-2"
+              />
             </div>
 
-            <!-- Certificate title -->
-            <p class="mt-2 text-center font-medium text-gray-800">
-              Certificate Title 1
-            </p>
-          </div>
-
-          <!-- Certificate card 2 -->
-          <div
-            class="flex flex-col items-center bg-white shadow rounded-lg p-4"
-          >
-            <!-- Certificate image -->
-            <div
-              class="w-full h-48 bg-gray-200 flex items-center justify-center rounded cursor-pointer hover:opacity-90 transition"
-              @click="openModal('image2.jpg', 'Certificate Title 2')"
-            >
-              <span class="text-gray-500">Upload Image</span>
+            <!-- Professional Summary -->
+            <div>
+              <label class="block font-medium mb-1">Professional Summary</label>
+              <textarea rows="3" class="input-field w-full"></textarea>
             </div>
 
-            <!-- Certificate title -->
-            <p class="mt-2 text-center font-medium text-gray-800">
-              Certificate Title 2
-            </p>
-          </div>
-        </div>
+            <!-- Professional Experience -->
+            <div class="border rounded-xl p-4 space-y-4 relative">
+              <!-- Header with Plus Button -->
+              <div class="flex justify-between items-center">
+                <label class="text-lg font-semibold"
+                  >Professional Experience</label
+                >
+                <button
+                  type="button"
+                  @click="addExperience"
+                  class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
+                >
+                  +
+                </button>
+              </div>
 
-        <!-- Modal -->
-        <div
-          v-if="isModalOpen"
-          class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"
-        >
-          <div
-            class="bg-white rounded-lg shadow-lg max-w-3xl w-full p-4 relative"
-          >
-            <!-- Close button -->
+              <!-- Experience Items -->
+              <div
+                v-for="(exp, index) in experiences"
+                :key="index"
+                class="relative border p-3 rounded-lg"
+              >
+                <!-- Delete Button -->
+                <button
+                  type="button"
+                  @click="removeExperience(index)"
+                  class="absolute top-2 right-2 text-gray-500 hover:text-red-500"
+                >
+                  ✕
+                </button>
+
+                <!-- Experience Field -->
+                <textarea
+                  v-model="exp.text"
+                  rows="3"
+                  placeholder="Describe your professional experience..."
+                  class="input-field w-full"
+                ></textarea>
+              </div>
+            </div>
+
+            <!-- Education -->
+            <div class="border rounded-xl p-4 space-y-4 relative">
+              <!-- Header with Plus Button -->
+              <div class="flex justify-between items-center">
+                <label class="text-lg font-semibold">Education</label>
+                <button
+                  type="button"
+                  @click="addEducation"
+                  class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
+                >
+                  +
+                </button>
+              </div>
+
+              <!-- Education Items -->
+              <div
+                v-for="(edu, index) in educationList"
+                :key="index"
+                class="relative border p-3 rounded-lg space-y-3"
+              >
+                <!-- Delete Button -->
+                <button
+                  type="button"
+                  @click="removeEducation(index)"
+                  class="absolute top-2 right-2 text-gray-500 hover:text-red-500"
+                >
+                  ✕
+                </button>
+
+                <!-- Educational Attainment -->
+                <div>
+                  <label class="block font-medium mb-1"
+                    >Educational Attainment</label
+                  >
+                  <select v-model="edu.attainment" class="input-field border">
+                    <option value="" disabled>Select level</option>
+                    <option>High School</option>
+                    <option>Bachelor's Degree</option>
+                    <option>Master's Degree</option>
+                    <option>Doctorate</option>
+                    <option>Others</option>
+                  </select>
+                </div>
+
+                <!-- University Name -->
+                <div>
+                  <label class="block font-medium mb-1">University</label>
+                  <input
+                    v-model="edu.university"
+                    type="text"
+                    placeholder="Enter university name"
+                    class="input-field"
+                  />
+                </div>
+
+                <!-- Year -->
+                <div>
+                  <label class="block font-medium mb-1">Year</label>
+                  <input
+                    v-model="edu.year"
+                    type="text"
+                    placeholder="e.g. 2020"
+                    class="input-field"
+                  />
+                </div>
+              </div>
+            </div>
+            <!-- Skills -->
+            <div class="border rounded-xl p-4 space-y-3">
+              <!-- Header -->
+              <div class="flex justify-between items-center">
+                <label class="text-lg font-semibold">Skills</label>
+              </div>
+
+              <!-- Skill Input -->
+              <div class="flex gap-2">
+                <input
+                  v-model="newSkill"
+                  @keyup.enter="addSkill"
+                  type="text"
+                  placeholder="Type a skill and press Enter"
+                  class="input-field flex-1"
+                />
+                <button
+                  type="button"
+                  @click="addSkill"
+                  class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
+                >
+                  +
+                </button>
+              </div>
+
+              <!-- Skills List -->
+              <div class="flex flex-wrap gap-2 mt-2">
+                <span
+                  v-for="(skill, index) in skills"
+                  :key="index"
+                  class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full flex items-center gap-2"
+                >
+                  {{ skill }}
+                  <button
+                    type="button"
+                    @click="removeSkill(index)"
+                    class="text-blue-500 hover:text-red-500"
+                  >
+                    ✕
+                  </button>
+                </span>
+              </div>
+            </div>
+
+            <!-- Certificates -->
+            <div class="border rounded-xl p-4 space-y-4 relative">
+              <!-- Header with Plus Button -->
+              <div class="flex justify-between items-center">
+                <h2 class="text-lg font-semibold">Certificates</h2>
+                <button
+                  type="button"
+                  @click="addCertificate"
+                  class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
+                >
+                  +
+                </button>
+              </div>
+
+              <!-- Certificate Items -->
+              <div
+                v-for="(cert, index) in certificates"
+                :key="index"
+                class="space-y-2 border p-3 rounded-lg relative"
+              >
+                <!-- Delete Button -->
+                <button
+                  type="button"
+                  @click="removeCertificate(index)"
+                  class="absolute top-2 right-2 text-gray-500 hover:text-red-500"
+                >
+                  ✕
+                </button>
+
+                <!-- Certificate Fields -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input
+                    v-model="cert.title"
+                    type="text"
+                    placeholder="Certificate Title"
+                    class="input-field"
+                  />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    class="file-input"
+                    @change="handleFileUpload($event, index)"
+                  />
+                </div>
+
+                <!-- Certificate Preview -->
+                <div>
+                  <div
+                    v-if="cert.image"
+                    class="h-32 w-full flex items-center justify-center border rounded-lg"
+                  >
+                    <img
+                      :src="cert.image"
+                      alt="Certificate Preview"
+                      class="h-32 object-cover rounded-lg"
+                    />
+                  </div>
+                  <div
+                    v-else
+                    class="h-32 w-full flex items-center justify-center border rounded-lg text-gray-400 text-sm"
+                  >
+                    Certificate Preview
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- URL -->
+            <div>
+              <input type="url" placeholder="URL" class="input-field" />
+            </div>
+
+            <!-- Save Button -->
             <button
-              class="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
-              @click="closeModal"
+              type="button"
+              class="w-full py-3 bg-customButton text-white rounded-xl hover:bg-dark-slate transition"
             >
-              ✕
+              Save Resume
             </button>
-
-            <!-- Full-size image -->
-            <img
-              :src="selectedImage"
-              :alt="selectedTitle"
-              class="max-h-[80vh] w-auto mx-auto rounded"
-            />
-
-            <!-- Title -->
-            <p class="mt-4 text-center text-lg font-semibold text-gray-800">
-              {{ selectedTitle }}
-            </p>
-          </div>
+          </form>
         </div>
       </div>
     </div>
@@ -365,6 +628,7 @@ function closeModal() {
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
+            @click="router.push('/certificatespage')"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -483,75 +747,286 @@ function closeModal() {
 
       <!-- Right Column -->
       <div class="w-full lg:w-3/4 lg:pl-6 mt-6 lg:mt-0 flex flex-col gap-6">
-        <!-- Bottom Row: Event List -->
-        <div class="bg-white rounded-lg shadow p-6 flex-1">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <!-- Certificate card 1 -->
-            <div
-              class="flex flex-col items-center bg-white shadow rounded-lg p-4"
-            >
-              <!-- Certificate image -->
-              <div
-                class="w-full h-48 bg-gray-200 flex items-center justify-center rounded cursor-pointer hover:opacity-90 transition"
-                @click="openModal('image1.jpg', 'Certificate Title 1')"
-              >
-                <span class="text-gray-500">Upload Image</span>
-              </div>
+        <div class="p-6 bg-white shadow-lg rounded-2xl">
+          <h1 class="text-2xl font-bold mb-6">Resume Editor</h1>
 
-              <!-- Certificate title -->
-              <p class="mt-2 text-center font-medium text-gray-800">
-                Certificate Title 1
-              </p>
-            </div>
-
-            <!-- Certificate card 2 -->
-            <div
-              class="flex flex-col items-center bg-white shadow rounded-lg p-4"
-            >
-              <!-- Certificate image -->
-              <div
-                class="w-full h-48 bg-gray-200 flex items-center justify-center rounded cursor-pointer hover:opacity-90 transition"
-                @click="openModal('image2.jpg', 'Certificate Title 2')"
-              >
-                <span class="text-gray-500">Upload Image</span>
-              </div>
-
-              <!-- Certificate title -->
-              <p class="mt-2 text-center font-medium text-gray-800">
-                Certificate Title 2
-              </p>
-            </div>
-          </div>
-
-          <!-- Modal -->
-          <div
-            v-if="isModalOpen"
-            class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"
-          >
-            <div
-              class="bg-white rounded-lg shadow-lg max-w-3xl w-full p-4 relative"
-            >
-              <!-- Close button -->
-              <button
-                class="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
-                @click="closeModal"
-              >
-                ✕
-              </button>
-
-              <!-- Full-size image -->
-              <img
-                :src="selectedImage"
-                :alt="selectedTitle"
-                class="max-h-[80vh] w-auto mx-auto rounded"
+          <form class="space-y-6">
+            <!-- Personal Info -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input
+                type="text"
+                placeholder="First Name"
+                class="input-field border p-2"
+              />
+              <input
+                type="email"
+                placeholder="Email"
+                class="input-field border p-2"
+              />
+              <input
+                type="text"
+                placeholder="Middle Name"
+                class="input-field border p-2"
+              />
+              <input
+                type="text"
+                placeholder="Mobile Number"
+                class="input-field border p-2"
+              />
+              <input
+                type="text"
+                placeholder="Last Name"
+                class="input-field border p-2"
               />
 
-              <!-- Title -->
-              <p class="mt-4 text-center text-lg font-semibold text-gray-800">
-                {{ selectedTitle }}
-              </p>
+              <input
+                type="text"
+                placeholder="Address"
+                class="input-field border p-2"
+              />
             </div>
-          </div>
+
+            <!-- Professional Summary -->
+            <div>
+              <label class="block font-medium mb-1">Professional Summary</label>
+              <textarea rows="3" class="input-field w-full"></textarea>
+            </div>
+
+            <!-- Professional Experience -->
+            <div class="border rounded-xl p-4 space-y-4 relative">
+              <!-- Header with Plus Button -->
+              <div class="flex justify-between items-center">
+                <label class="text-lg font-semibold"
+                  >Professional Experience</label
+                >
+                <button
+                  type="button"
+                  @click="addExperience"
+                  class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
+                >
+                  +
+                </button>
+              </div>
+
+              <!-- Experience Items -->
+              <div
+                v-for="(exp, index) in experiences"
+                :key="index"
+                class="relative border p-3 rounded-lg"
+              >
+                <!-- Delete Button -->
+                <button
+                  type="button"
+                  @click="removeExperience(index)"
+                  class="absolute top-2 right-2 text-gray-500 hover:text-red-500"
+                >
+                  ✕
+                </button>
+
+                <!-- Experience Field -->
+                <textarea
+                  v-model="exp.text"
+                  rows="3"
+                  placeholder="Describe your professional experience..."
+                  class="input-field w-full"
+                ></textarea>
+              </div>
+            </div>
+
+            <!-- Education -->
+            <div class="border rounded-xl p-4 space-y-4 relative">
+              <!-- Header with Plus Button -->
+              <div class="flex justify-between items-center">
+                <label class="text-lg font-semibold">Education</label>
+                <button
+                  type="button"
+                  @click="addEducation"
+                  class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
+                >
+                  +
+                </button>
+              </div>
+
+              <!-- Education Items -->
+              <div
+                v-for="(edu, index) in educationList"
+                :key="index"
+                class="relative border p-3 rounded-lg space-y-3"
+              >
+                <!-- Delete Button -->
+                <button
+                  type="button"
+                  @click="removeEducation(index)"
+                  class="absolute top-2 right-2 text-gray-500 hover:text-red-500"
+                >
+                  ✕
+                </button>
+
+                <!-- Educational Attainment -->
+                <div>
+                  <label class="block font-medium mb-1"
+                    >Educational Attainment</label
+                  >
+                  <select v-model="edu.attainment" class="input-field border">
+                    <option value="" disabled>Select level</option>
+                    <option>Elementary</option>
+                    <option>Highschool</option>
+                    <option>Post-Secondary Non-Tertiary</option>
+                    <option>Bachelor's Degree</option>
+                    <option>Master's Degree</option>
+                    <option>Doctoral's Degree</option>
+                    <option>Professional Degree</option>
+                  </select>
+                </div>
+
+                <!-- University Name -->
+                <div>
+                  <label class="block font-medium mb-1">University</label>
+                  <input
+                    v-model="edu.university"
+                    type="text"
+                    placeholder="Enter university name"
+                    class="input-field"
+                  />
+                </div>
+
+                <!-- Year -->
+                <div>
+                  <label class="block font-medium mb-1">Year</label>
+                  <input
+                    v-model="edu.year"
+                    type="text"
+                    placeholder="e.g. 2020-2024"
+                    class="input-field"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Skills -->
+            <div class="border rounded-xl p-4 space-y-3">
+              <!-- Header -->
+              <div class="flex justify-between items-center">
+                <label class="text-lg font-semibold">Skills</label>
+              </div>
+
+              <!-- Skill Input -->
+              <div class="flex gap-2">
+                <input
+                  v-model="newSkill"
+                  @keyup.enter="addSkill"
+                  type="text"
+                  placeholder="Type a skill and press Enter"
+                  class="input-field flex-1"
+                />
+                <button
+                  type="button"
+                  @click="addSkill"
+                  class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
+                >
+                  +
+                </button>
+              </div>
+
+              <!-- Skills List -->
+              <div class="flex flex-wrap gap-2 mt-2">
+                <span
+                  v-for="(skill, index) in skills"
+                  :key="index"
+                  class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full flex items-center gap-2"
+                >
+                  {{ skill }}
+                  <button
+                    type="button"
+                    @click="removeSkill(index)"
+                    class="text-blue-500 hover:text-red-500"
+                  >
+                    ✕
+                  </button>
+                </span>
+              </div>
+            </div>
+
+            <!-- Certificates -->
+            <div class="border rounded-xl p-4 space-y-4 relative">
+              <!-- Header with Plus Button -->
+              <div class="flex justify-between items-center">
+                <h2 class="text-lg font-semibold">Certificates</h2>
+                <button
+                  type="button"
+                  @click="addCertificate"
+                  class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
+                >
+                  +
+                </button>
+              </div>
+
+              <!-- Certificate Items -->
+              <div
+                v-for="(cert, index) in certificates"
+                :key="index"
+                class="space-y-2 border p-3 rounded-lg relative"
+              >
+                <!-- Delete Button -->
+                <button
+                  type="button"
+                  @click="removeCertificate(index)"
+                  class="absolute top-2 right-2 text-gray-500 hover:text-red-500"
+                >
+                  ✕
+                </button>
+
+                <!-- Certificate Fields -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input
+                    v-model="cert.title"
+                    type="text"
+                    placeholder="Certificate Title"
+                    class="input-field"
+                  />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    class="file-input"
+                    @change="handleFileUpload($event, index)"
+                  />
+                </div>
+
+                <!-- Certificate Preview -->
+                <div>
+                  <div
+                    v-if="cert.image"
+                    class="h-32 w-full flex items-center justify-center border rounded-lg"
+                  >
+                    <img
+                      :src="cert.image"
+                      alt="Certificate Preview"
+                      class="h-32 object-cover rounded-lg"
+                    />
+                  </div>
+                  <div
+                    v-else
+                    class="h-32 w-full flex items-center justify-center border rounded-lg text-gray-400 text-sm"
+                  >
+                    Certificate Preview
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- URL -->
+            <div>
+              <input type="url" placeholder="URL" class="input-field" />
+            </div>
+
+            <!-- Save Button -->
+            <button
+              type="button"
+              class="w-full py-3 bg-customButton text-white rounded-xl hover:bg-dark-slate transition"
+            >
+              Save Resume
+            </button>
+          </form>
         </div>
       </div>
     </div>

@@ -10,6 +10,8 @@ import Organizationpage from "@/components/Home/Organizationpage.vue";
 import Calendarpage from "@/components/Home/Calendarpage.vue";
 import Bookmarkpage from "@/components/Home/Bookmarkpage.vue";
 import Certificatespage from "@/components/Home/Certificatespage.vue";
+import UpdateDeletepage from "@/components/Home/UpdateDeletepage.vue";
+import ResumeEditorpage from "@/components/Home/ResumeEditorpage.vue";
 
 import { createRouter, createWebHistory } from "vue-router";
 
@@ -67,6 +69,14 @@ const router = createRouter({
     {
       path: "/certificatespage",
       component: Certificatespage,
+    },
+    {
+      path: "/updatedeletepage",
+      component: UpdateDeletepage,
+    },
+    {
+      path: "/resumepage",
+      component: ResumeEditorpage,
     },
   ],
 });
