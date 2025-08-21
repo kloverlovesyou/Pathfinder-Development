@@ -1,17 +1,31 @@
 <script setup>
 import { useAuthStore } from "@/stores/auth";
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useRouter } from "vue-router";
 const route = useRoute();
 const router = useRouter();
-
+const userName = ref('')
 const auth = useAuthStore();
 
 function handleLogout() {
   auth.logout();
   route.push("/loginform");
 }
+
+onMounted(() => {
+  const savedUser = localStorage.getItem('user')
+  if (savedUser) {
+    const user = JSON.parse(savedUser)
+    if (user.firstName && user.lastName) {
+      userName.value = `${user.firstName} ${user.lastName}`
+    } else {
+      userName.value = 'Guest'
+    }
+  } else {
+    userName.value = 'Guest'
+  }
+})
 </script>
 
 <template>
@@ -360,7 +374,7 @@ function handleLogout() {
                   />
                 </div>
               </div>
-              <span class="text-xl font-bold">Keiro Musician</span>
+              <span class="text-xl font-bold">{{userName}}</span>
             </div>
             <nav class="flex flex-col space-y-4">
               <button

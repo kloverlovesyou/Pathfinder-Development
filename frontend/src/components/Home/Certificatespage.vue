@@ -3,11 +3,19 @@ import { useRouter } from "vue-router";
 
 const router = useRouter();
 
-import { ref } from "vue";
+import { ref, onMounted} from "vue";
 
-const isModalOpen = ref(false);
-const selectedImage = ref(null);
-const selectedTitle = ref(null);
+  const userName = ref('');
+  const isModalOpen = ref(false);
+  const selectedImage = ref(null);
+  const selectedTitle = ref(null);
+
+const logout = () => {
+  // Remove user data from localStorage
+  localStorage.removeItem('user');
+  // Redirect to login page
+  router.push('/loginform');
+};
 
 function openModal(image, title) {
   selectedImage.value = image;
@@ -17,7 +25,22 @@ function openModal(image, title) {
 
 function closeModal() {
   isModalOpen.value = false;
+
 }
+
+onMounted(() => {
+  const savedUser = localStorage.getItem('user')
+  if (savedUser) {
+    const user = JSON.parse(savedUser)
+    if (user.firstName && user.lastName) {
+      userName.value = `${user.firstName} ${user.lastName}`
+    } else {
+      userName.value = 'Guest'
+    }
+  } else {
+    userName.value = 'Guest'
+  }
+})
 </script>
 
 <template>
@@ -50,7 +73,7 @@ function closeModal() {
         class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
       >
         <li>Update/Delete Account</li>
-        <li><a>Logout</a></li>
+        <li><a @click="logout">Logout</a></li>
       </ul>
     </div>
     <div class="lg:hidden block font-poppins">
@@ -66,7 +89,7 @@ function closeModal() {
         </div>
 
         <!-- Name -->
-        <h2 class="text-xl font-semibold mb-2">Keiro Musician</h2>
+        <h2 class="text-xl font-semibold mb-2">{{ userName }}</h2>
 
         <!-- Stats -->
         <div class="flex gap-8 mb-4">
@@ -339,7 +362,7 @@ function closeModal() {
         </div>
 
         <!-- Name -->
-        <h2 class="text-xl font-semibold mb-6">Keiro Musician</h2>
+        <h2 class="text-xl font-semibold mb-6">{{ userName }}</h2>
 
         <!-- Buttons -->
         <div class="w-full flex flex-col gap-3">
@@ -455,6 +478,7 @@ function closeModal() {
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
+            @click="logout "
           >
             <svg
               class="size-6 flex-shrink-0"
