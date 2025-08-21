@@ -3,12 +3,12 @@ import { useRoute } from "vue-router";
 import Header from "./components/Layout/Header2.vue";
 import Footer from "./components/Layout/Footer.vue";
 
-// Access the current route
 const route = useRoute();
 </script>
 
 <template>
   <div class="min-h-screen flex flex-col justify-between">
+    <!-- Header -->
     <Header
       v-if="
         route.path !== '/loginform' &&
@@ -16,20 +16,14 @@ const route = useRoute();
         route.path !== '/a_registrationform' &&
         route.path !== '/o_registrationform'
       "
-    ></Header>
-    <main
-      class="flex-grow"
-      v-if="
-        route.path !== '/homepage' &&
-        route.path !== '/trainingpage' &&
-        route.path !== '/careerpage' &&
-        route.path !== '/organizationpage' &&
-        route.path !== '/bookmarkpage' &&
-        route.path !== '/calendarpage'
-      "
-    >
-      <router-view></router-view>
+    />
+
+    <!-- Main content -->
+    <main class="flex-grow">
+      <router-view />
     </main>
+
+    <!-- Footer -->
     <Footer
       v-if="
         route.path !== '/loginform' &&
@@ -37,6 +31,6 @@ const route = useRoute();
         route.path !== '/a_registrationform' &&
         route.path !== '/o_registrationform'
       "
-    ></Footer>
+    />
   </div>
 </template>

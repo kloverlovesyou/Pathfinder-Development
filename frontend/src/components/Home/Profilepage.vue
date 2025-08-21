@@ -1,7 +1,31 @@
 <script setup>
 import { useRouter } from "vue-router";
-
+import { ref, onMounted } from "vue";
 const router = useRouter();
+const userName = ref('');
+
+const logout = () => {
+  // Remove user data from localStorage
+  localStorage.removeItem('user');
+  // Redirect to login page
+  router.push('/loginform');
+};
+
+
+// Check if user is logged in and retrieve user data
+onMounted(() => {
+  const savedUser = localStorage.getItem('user')
+  if (savedUser) {
+    const user = JSON.parse(savedUser)
+    if (user.firstName && user.lastName) {
+      userName.value = `${user.firstName} ${user.lastName}`
+    } else {
+      userName.value = 'Guest'
+    }
+  } else {
+    userName.value = 'Guest'
+  }
+})
 </script>
 <template>
   <div class="min-h-screen bg-gray-100 font-poppins">
@@ -36,12 +60,17 @@ const router = useRouter();
               tabindex="0"
               class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
             >
+<<<<<<< HEAD
               <li>
                 <button @click="router.push('/updatedeletepage')">
                   Update/Delete Account
                 </button>
               </li>
               <li><a>Logout</a></li>
+=======
+              <li><a>Update/Delete Account</a></li>
+              <li><a @click="logout">Logout</a></li>
+>>>>>>> f0dfb25419d885ff4ecdfe0fa39d88e64e1c324c
             </ul>
           </div>
         </div>
@@ -108,7 +137,7 @@ const router = useRouter();
           </div>
 
           <!-- Name -->
-          <h2 class="text-xl font-semibold mb-2">Keiro Musician</h2>
+          <h2 class="text-xl font-semibold mb-2">{{userName}}</h2>
 
           <!-- Stats -->
           <div class="flex gap-8 mb-4">
@@ -397,7 +426,7 @@ const router = useRouter();
         </div>
 
         <!-- Name -->
-        <h2 class="text-xl font-semibold mb-6">Keiro Musician</h2>
+        <h2 class="text-xl font-semibold mb-6">{{ userName }}</h2>
 
         <!-- Buttons -->
         <div class="w-full flex flex-col gap-3">
@@ -515,6 +544,7 @@ const router = useRouter();
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
+             @click="router.push('/loginform')"
           >
             <svg
               class="size-6 flex-shrink-0"
