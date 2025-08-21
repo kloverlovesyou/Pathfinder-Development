@@ -305,6 +305,36 @@ function removeEducation(index) {
       <!-- Row 3: Editor -->
       <div class="bg-white p-6">
         <div class="p-6 bg-white shadow-lg rounded-2xl">
+          <div class="absolute right-4 dropdown dropdown-end">
+            <div tabindex="0" role="button" class="group">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="size-5 flex-shrink-0 group-hover:hidden"
+                viewBox="0 0 24 24"
+                fill="dark-slate"
+              >
+                <path
+                  d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
+                />
+              </svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="size-5 flex-shrink-0 group-hover:block hidden"
+                viewBox="0 0 24 24"
+                fill="gray"
+              >
+                <path
+                  d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
+                />
+              </svg>
+            </div>
+            <ul
+              tabindex="0"
+              class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
+            >
+              <li>Download Resume</li>
+            </ul>
+          </div>
           <h1 class="text-2xl font-bold mb-6">Resume Editor</h1>
 
           <form class="space-y-6">
@@ -343,9 +373,11 @@ function removeEducation(index) {
             </div>
 
             <!-- Professional Summary -->
-            <div>
-              <label class="block font-medium mb-1">Professional Summary</label>
-              <textarea rows="3" class="input-field w-full"></textarea>
+            <div class="border rounded-xl p-4 space-y-3">
+              <label class="block text-lg font-semibold mb-1"
+                >Professional Summary</label
+              >
+              <textarea rows="3" class="border input-field w-full"></textarea>
             </div>
 
             <!-- Professional Experience -->
@@ -748,6 +780,36 @@ function removeEducation(index) {
       <!-- Right Column -->
       <div class="w-full lg:w-3/4 lg:pl-6 mt-6 lg:mt-0 flex flex-col gap-6">
         <div class="p-6 bg-white shadow-lg rounded-2xl">
+          <div class="absolute right-4 dropdown dropdown-end">
+            <div tabindex="0" role="button" class="group mr-5">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="size-5 flex-shrink-0 group-hover:hidden"
+                viewBox="0 0 24 24"
+                fill="dark-slate"
+              >
+                <path
+                  d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
+                />
+              </svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="size-5 flex-shrink-0 group-hover:block hidden"
+                viewBox="0 0 24 24"
+                fill="gray"
+              >
+                <path
+                  d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
+                />
+              </svg>
+            </div>
+            <ul
+              tabindex="0"
+              class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
+            >
+              <li>Download Resume</li>
+            </ul>
+          </div>
           <h1 class="text-2xl font-bold mb-6">Resume Editor</h1>
 
           <form class="space-y-6">
@@ -787,9 +849,11 @@ function removeEducation(index) {
             </div>
 
             <!-- Professional Summary -->
-            <div>
-              <label class="block font-medium mb-1">Professional Summary</label>
-              <textarea rows="3" class="input-field w-full"></textarea>
+            <div class="border rounded-xl p-4 space-y-3">
+              <label class="block text-lg font-semibold mb-1"
+                >Professional Summary</label
+              >
+              <textarea rows="3" class="border input-field w-full"></textarea>
             </div>
 
             <!-- Professional Experience -->
