@@ -56,8 +56,9 @@ const router = useRouter();
         </svg>
       </button>
       <svg
-        class="size-6 flex-shrink-0"
-        viewBox="0 0 32 31"
+        width="32"
+        height="32"
+        viewBox="0 0 32 32"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
@@ -71,7 +72,7 @@ const router = useRouter();
         />
       </svg>
 
-      <h2 class="text-2xl font-bold text-dark-slate -m-2">Organizations</h2>
+      <h2 class="text-2xl font-bold -m-2">Organizations</h2>
     </div>
     <div class="flex flex-col gap-8">
       <div class="flex flex-wrap -mx-2">

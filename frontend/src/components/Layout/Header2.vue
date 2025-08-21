@@ -300,7 +300,12 @@ function handleLogout() {
     <!-- Mobile/Tablet Search bar (below navbar) -->
     <div
       class="lg:hidden flex justify-center px-0 mb-2"
-      v-if="route.path !== '/profilepage' && route.path !== '/certificatespage'"
+      v-if="
+        route.path !== '/profilepage' &&
+        route.path !== '/certificatespage' &&
+        route.path !== '/updatedeletepage' &&
+        route.path !== '/resumepage'
+      "
     >
       <label
         class="bg-blue-gray input w-full max-w-md flex items-center gap-2 border-none rounded-full px-3"
@@ -331,7 +336,12 @@ function handleLogout() {
     </div>
 
     <div
-      v-if="route.path !== '/profilepage' && route.path !== '/certificatespage'"
+      v-if="
+        route.path !== '/profilepage' &&
+        route.path !== '/certificatespage' &&
+        route.path !== '/updatedeletepage' &&
+        route.path !== '/resumepage'
+      "
     >
       <div class="p-8 bg-blue-gray min-h-screen font-poppins" v-if="!isMobile">
         <div class="flex gap-8 items-start">
@@ -486,7 +496,8 @@ function handleLogout() {
             class="w-1/5 bg-white p-4 rounded-lg shadow-md hidden lg:block"
             v-if="
               route.path !== '/profilepage' &&
-              route.path !== '/certificatespage'
+              route.path !== '/certificatespage' &&
+              route.path !== '/resumepage'
             "
           >
             <h2
@@ -500,7 +511,9 @@ function handleLogout() {
               v-if="
                 route.path !== '/calendarpage' &&
                 route.path !== '/profilepage' &&
-                route.path !== '/certificatespage'
+                route.path !== '/certificatespage' &&
+                route.path !== '/updatedeletepage' &&
+                route.path !== '/resumepage'
               "
             >
               <calendar-date>
