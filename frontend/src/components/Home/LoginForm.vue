@@ -1,5 +1,7 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+  <div
+    class="font-poppins min-h-screen flex items-center justify-center bg-gray-50 p-4"
+  >
     <div
       class="card bg-base-200 border-base-300 rounded-box border p-6 max-w-xs sm:max-w-sm md:max-w-md w-full shadow-lg"
     >
@@ -57,46 +59,53 @@
   </div>
 </template>
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import axios from 'axios'
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import axios from "axios";
 
-const router = useRouter()
+const router = useRouter();
 
-const email = ref('')
-const password = ref('')
-const emailError = ref(false)
-const passwordError = ref(false)
+const email = ref("");
+const password = ref("");
+const emailError = ref(false);
+const passwordError = ref(false);
 
-const validateEmail = (emailVal) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)
-const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw)
+const validateEmail = (emailVal) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
+const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
 
 const handleLogin = async () => {
-  emailError.value = !validateEmail(email.value)
-  passwordError.value = !validatePassword(password.value)
+  emailError.value = !validateEmail(email.value);
+  passwordError.value = !validatePassword(password.value);
 
-  if (emailError.value || passwordError.value) return
+  if (emailError.value || passwordError.value) return;
 
   try {
-    const response = await axios.post('http://127.0.0.1:8000/api/login', {
+    const response = await axios.post("http://127.0.0.1:8000/api/login", {
       emailAddress: email.value,
       password: password.value,
-    })
+    });
 
-   
+    const user = response.data.user;
+    const fullName = `${user.firstName} ${user.lastName}`;
 
-    // Optional: Save user or token in storage
-    // localStorage.setItem('user', JSON.stringify(response.data.user))
+    // Save with fullName
+    localStorage.setItem(
+      "user",
+      JSON.stringify({
+        ...user,
+        name: fullName,
+      })
+    );
 
-    router.push('/homepage') // Change path as needed
+    router.push("/homepage");
   } catch (error) {
     if (error.response && error.response.data.message) {
-      alert(error.response.data.message)
+      alert(error.response.data.message);
     } else {
-      alert('Login failed. Please try again.')
+      alert("Login failed. Please try again.");
     }
   }
-}
+};
 </script>
 
 <style></style>
