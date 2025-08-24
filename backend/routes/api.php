@@ -15,9 +15,10 @@ use Illuminate\Support\Facades\Route;
 */
 use App\Http\Controllers\ApplicantController;
 use App\Http\Controllers\OrganizationController;
-Route::middleware('auth:sanctum')->get('/organizations', [OrganizationController::class, 'index']);
-Route::post('/applicants', [ApplicantController::class, 'store']);
+Route::middleware('auth:sanctum')->get('/organization', [OrganizationController::class, 'index']);
 
+Route::post('/applicants', [ApplicantController::class, 'a_register']);
+Route::post('/organization', [OrganizationController::class, 'o_register']);
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
