@@ -5,7 +5,7 @@ import organizationImage from "@/assets/images/org.jpg";
 
 <template>
   <div
-    class="min-h-screen pl-10 pr-10 pb-5 flex w-full items-center justify-center bg-gray-50"
+    class="font-poppins min-h-screen pl-10 pr-10 pb-5 flex w-full items-center justify-center bg-gray-50"
   >
     <div class="w-full max-w-6xl px-4">
       <div>

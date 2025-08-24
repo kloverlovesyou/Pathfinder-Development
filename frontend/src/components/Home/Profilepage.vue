@@ -60,8 +60,17 @@ onMounted(() => {
               tabindex="0"
               class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
             >
+<<<<<<< HEAD
+              <li>
+                <button @click="router.push('/updatedeletepage')">
+                  Update/Delete Account
+                </button>
+              </li>
+              <li><a>Logout</a></li>
+=======
               <li><a>Update/Delete Account</a></li>
               <li><a @click="logout">Logout</a></li>
+>>>>>>> f0dfb25419d885ff4ecdfe0fa39d88e64e1c324c
             </ul>
           </div>
         </div>
@@ -277,6 +286,7 @@ onMounted(() => {
         </button>
         <button
           class="group flex flex-col items-center justify-center px-4 py-3 rounded text-white hover:text-dark-slate"
+          @click="router.push('/resumepage')"
         >
           <svg
             class="size-6 flex-shrink-0 group-hover:hidden"
@@ -422,6 +432,7 @@ onMounted(() => {
         <div class="w-full flex flex-col gap-3">
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
+            @click="router.push('/resumepage')"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -515,6 +526,7 @@ onMounted(() => {
           <div class="divider"></div>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
+            @click="router.push('/updatedeletepage')"
           >
             <svg
               class="size-6 flex-shrink-0"
