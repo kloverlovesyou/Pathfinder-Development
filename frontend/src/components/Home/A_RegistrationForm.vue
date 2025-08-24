@@ -1,5 +1,7 @@
 <template>
-  <div class="pb-20 min-h-screen flex items-center justify-center bg-gray-50 p-4">
+  <div
+    class="font-poppins pb-20 min-h-screen flex items-center justify-center bg-gray-50 p-4"
+  >
     <div>
       <!-- Header -->
       <div class="flex items-center justify-center">
@@ -22,12 +24,18 @@
             stroke="currentColor"
             stroke-width="2"
           >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M15 18l-6-6 6-6"
+            />
           </svg>
         </button>
       </div>
 
-      <h2 class="font-inter text-3xl font-semibold text-left mb-6 text-dark-slate pl-3">
+      <h2
+        class="font-inter text-3xl font-semibold text-left mb-6 text-dark-slate pl-3"
+      >
         Create Account
       </h2>
 
@@ -108,7 +116,8 @@
             v-model="form.password"
           />
           <p class="validator-hint hidden">
-            Must be more than 8 characters, including number, lowercase letter, uppercase letter
+            Must be more than 8 characters, including number, lowercase letter,
+            uppercase letter
           </p>
         </div>
 
@@ -118,8 +127,7 @@
             class="input input-bordered w-full"
             :class="{
               'border-red-500': form.password !== form.confirmPassword,
-              'border-green-300': form.password === form.confirmPassword
-              
+              'border-green-300': form.password === form.confirmPassword,
             }"
             required
             placeholder="Confirm Password"
@@ -160,49 +168,49 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import axios from 'axios'
-import { useRouter } from 'vue-router'
+import { ref } from "vue";
+import axios from "axios";
+import { useRouter } from "vue-router";
 
-const router = useRouter()
+const router = useRouter();
 const form = ref({
-  firstName: '',
-  middleName: '',
-  lastName: '',
-  address: '',
-  emailAddress: '',
-  phoneNumber: '',
-  password: '',
-  confirmPassword: '',
-  message: 'password does not match'
-})
+  firstName: "",
+  middleName: "",
+  lastName: "",
+  address: "",
+  emailAddress: "",
+  phoneNumber: "",
+  password: "",
+  confirmPassword: "",
+  message: "password does not match",
+});
 
-const termsAccepted = ref(false)
+const termsAccepted = ref(false);
 
 const handleSubmit = async () => {
   if (!termsAccepted.value) {
-    alert('You must accept the terms and conditions.')
-    return
+    alert("You must accept the terms and conditions.");
+    return;
   }
 
   if (form.value.password !== form.value.confirmPassword) {
-    message.value = 'Passwords do not match.'
-    return
+    message.value = "Passwords do not match.";
+    return;
   }
 
   try {
-    const response = await axios.post('http://127.0.0.1:8000/api/applicants', {
-      ...form.value
-    })
-    
-    router.push('/loginform')
+    const response = await axios.post("http://127.0.0.1:8000/api/applicants", {
+      ...form.value,
+    });
+
+    router.push("/loginform");
   } catch (error) {
     if (error.response && error.response.data.errors) {
-      const errors = error.response.data.errors
-      alert(Object.values(errors).flat().join('\n'))
+      const errors = error.response.data.errors;
+      alert(Object.values(errors).flat().join("\n"));
     } else {
-      alert('Registration failed. Please try again.')
+      alert("Registration failed. Please try again.");
     }
   }
-}
+};
 </script>

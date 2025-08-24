@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Validator;
 
 class ApplicantController extends Controller
 {
-    public function store(Request $request)
+    public function a_register(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'firstName' => 'required|string|max:255',

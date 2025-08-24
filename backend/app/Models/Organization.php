@@ -15,7 +15,7 @@ class Organization extends Model
         'name',
         'location',
         'websiteURL',
-        'phoneNumber',
+        'emailAddress',
         'password',
         'adminID'
     ];

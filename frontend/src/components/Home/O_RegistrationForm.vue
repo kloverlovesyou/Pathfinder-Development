@@ -1,6 +1,6 @@
 <template>
   <div
-    class="pb-20 min-h-screen flex items-center justify-center bg-gray-50 p-4"
+    class="font-poppins pb-20 min-h-screen flex items-center justify-center bg-gray-50 p-4"
   >
     <div>
       <div>
@@ -37,7 +37,7 @@
           Create Account
         </h2>
       </div>
-
+      <form @submit.prevent="handleSubmit">
       <div class="form-control mb-4">
         <input
           class="input w-full"
@@ -45,6 +45,7 @@
           required
           placeholder="Organization Name"
           name="name"
+          v-model="form.name"
         />
       </div>
 
@@ -55,6 +56,7 @@
           required
           placeholder="Location"
           name="location"
+          v-model="form.location"
         />
       </div>
 
@@ -63,7 +65,8 @@
           class="input w-full"
           type="url"
           placeholder="Website URL"
-          name="websiteUrl"
+          name="websiteURL"
+          v-model="form.websiteURL"
         />
       </div>
 
@@ -74,6 +77,7 @@
           required
           placeholder="Email"
           name="emailAddress"
+          v-model="form.emailAddress"
         />
         <p class="validator-hint hidden">Invalid Email</p>
       </div>
@@ -88,6 +92,7 @@
           pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
           title="Must be more than 8 characters, including number, lowercase letter, uppercase letter"
           name="Password"
+          v-model="form.password"
         />
         <p class="validator-hint hidden">
           Must be more than 8 characters, including number, lowercase letter,
@@ -105,6 +110,7 @@
           pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
           title="Must be more than 8 characters, including number, lowercase letter, uppercase letter"
           name="confirmPassword"
+          v-model="form.confirmPassword"
         />
         <p class="validator-hint hidden">Invalid Password</p>
       </div>
@@ -127,10 +133,57 @@
           Create
         </button>
       </div>
+      </form>
     </div>
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue'
+import axios from 'axios'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
+
+const form = ref({
+  name: '',
+  location: '',
+  websiteURL: '',
+  emailAddress: '',
+  password: '',
+  confirmPassword: ''
+})
+
+const termsAccepted = ref(false)
+
+const handleSubmit = async () => {
+  if (!termsAccepted.value) {
+    alert('You must accept the terms and conditions.')
+    return
+  }
+
+  if (form.value.password !== form.value.confirmPassword) {
+    alert('Passwords do not match.')
+    return
+  }
+
+  try {
+    // ✅ Remove confirmPassword before sending
+    const { confirmPassword, ...payload } = form.value
+
+    const response = await axios.post(
+      'http://127.0.0.1:8000/api/organization',
+      payload
+    )
+
+    alert(response.data.message) // ✅ show success message
+    router.push('/loginform')
+  } catch (error) {
+    if (error.response?.data?.errors) {
+      alert(Object.values(error.response.data.errors).flat().join('\n'))
+    } else {
+      alert('Registration failed. Please try again.')
+    }
+  }
+}
 </script>
