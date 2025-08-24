@@ -196,7 +196,9 @@ const handleSubmit = async () => {
     })
     
     router.push('/loginform')
-  } catch (error) {
+  } 
+  
+  catch (error) {
     if (error.response && error.response.data.errors) {
       const errors = error.response.data.errors
       alert(Object.values(errors).flat().join('\n'))
