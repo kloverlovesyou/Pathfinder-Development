@@ -5,7 +5,7 @@ import { useRoute } from "vue-router";
 import { useRouter } from "vue-router";
 const route = useRoute();
 const router = useRouter();
-const userName = ref('')
+const userName = ref("");
 const auth = useAuthStore();
 
 function handleLogout() {
@@ -14,18 +14,18 @@ function handleLogout() {
 }
 
 onMounted(() => {
-  const savedUser = localStorage.getItem('user')
+  const savedUser = localStorage.getItem("user");
   if (savedUser) {
-    const user = JSON.parse(savedUser)
+    const user = JSON.parse(savedUser);
     if (user.firstName && user.lastName) {
-      userName.value = `${user.firstName} ${user.lastName}`
+      userName.value = `${user.firstName} ${user.lastName}`;
     } else {
-      userName.value = 'Guest'
+      userName.value = "Guest";
     }
   } else {
-    userName.value = 'Guest'
+    userName.value = "Guest";
   }
-})
+});
 </script>
 
 <template>
@@ -314,7 +314,12 @@ onMounted(() => {
     <!-- Mobile/Tablet Search bar (below navbar) -->
     <div
       class="lg:hidden flex justify-center px-0 mb-2"
-      v-if="route.path !== '/profilepage' && route.path !== '/certificatespage'"
+      v-if="
+        route.path !== '/profilepage' &&
+        route.path !== '/certificatespage' &&
+        route.path !== '/updatedeletepage' &&
+        route.path !== '/resumepage'
+      "
     >
       <label
         class="bg-blue-gray input w-full max-w-md flex items-center gap-2 border-none rounded-full px-3"
@@ -345,14 +350,21 @@ onMounted(() => {
     </div>
 
     <div
-      v-if="route.path !== '/profilepage' && route.path !== '/certificatespage'"
+      v-if="
+        route.path !== '/profilepage' &&
+        route.path !== '/certificatespage' &&
+        route.path !== '/updatedeletepage' &&
+        route.path !== '/resumepage'
+      "
     >
       <div class="p-8 bg-blue-gray min-h-screen font-poppins" v-if="!isMobile">
         <div class="flex gap-8 items-start">
           <aside
             class="w-1/5 bg-white p-4 shadow-md rounded-lg hidden lg:block"
             v-if="
-              route.path !== '/calendarpage' && route.path !== '/profilepage'
+              route.path !== '/calendarpage' &&
+              route.path !== '/profilepage' &&
+              route.path !== '/bookmarkpage'
             "
           >
             <div class="flex flex-col items-center gap-2 mb-6">
@@ -364,7 +376,7 @@ onMounted(() => {
                   />
                 </div>
               </div>
-              <span class="text-xl font-bold">{{userName}}</span>
+              <span class="text-xl font-bold">{{ userName }}</span>
             </div>
             <nav class="flex flex-col space-y-4">
               <button
@@ -500,12 +512,16 @@ onMounted(() => {
             class="w-1/5 bg-white p-4 rounded-lg shadow-md hidden lg:block"
             v-if="
               route.path !== '/profilepage' &&
-              route.path !== '/certificatespage'
+              route.path !== '/certificatespage' &&
+              route.path !== '/resumepage' &&
+              route.path !== '/bookmarkpage'
             "
           >
             <h2
               class="text-xl font-bold mb-4"
-              v-if="route.path !== '/calendarpage'"
+              v-if="
+                route.path !== '/calendarpage' && route.path !== '/bookmarkpage'
+              "
             >
               Calendar
             </h2>
@@ -514,7 +530,10 @@ onMounted(() => {
               v-if="
                 route.path !== '/calendarpage' &&
                 route.path !== '/profilepage' &&
-                route.path !== '/certificatespage'
+                route.path !== '/certificatespage' &&
+                route.path !== '/updatedeletepage' &&
+                route.path !== '/resumepage' &&
+                route.path !== '/bookmarkpage'
               "
             >
               <calendar-date>
@@ -545,7 +564,7 @@ onMounted(() => {
                 <calendar-month></calendar-month>
               </calendar-date>
             </div>
-            <div class="mt-8">
+            <div class="mt-8" v-if="route.path !== '/bookmarkpage'">
               <h2 class="text-xl font-bold mb-4">Upcoming</h2>
               <div class="space-y-4">
                 <div class="p-4 bg-gray-100 rounded-lg">

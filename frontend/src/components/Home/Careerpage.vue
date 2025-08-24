@@ -80,7 +80,7 @@ const router = useRouter();
         />
       </svg>
 
-      <h2 class="text-2xl font-bold text-dark-slate -m-2">Career</h2>
+      <h2 class="text-2xl font-bold -m-2">Career</h2>
     </div>
     <div class="space-y-4">
       <div class="p-4 bg-blue-gray rounded-lg">

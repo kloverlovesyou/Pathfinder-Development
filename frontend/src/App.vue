@@ -19,8 +19,18 @@ const route = useRoute();
     />
 
     <!-- Main content -->
-    <main class="flex-grow">
-      <router-view />
+    <main
+      class="flex-grow"
+      v-if="
+        route.path !== '/homepage' &&
+        route.path !== '/trainingpage' &&
+        route.path !== '/careerpage' &&
+        route.path !== '/organizationpage' &&
+        route.path !== '/bookmarkpage' &&
+        route.path !== '/calendarpage'
+      "
+    >
+      <router-view></router-view>
     </main>
 
     <!-- Footer -->
