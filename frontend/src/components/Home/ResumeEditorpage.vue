@@ -1,7 +1,6 @@
 <script setup>
 import { useRouter } from "vue-router";
-import { reactive } from "vue";
-import { ref } from "vue";
+import { reactive, ref, onMounted } from "vue";
 
 const router = useRouter();
 const isModalOpen = ref(false);
@@ -72,7 +71,44 @@ function addEducation() {
 function removeEducation(index) {
   educationList.splice(index, 1);
 }
+
+// 👇 NEW: Form data for autofill
+const form = reactive({
+  firstName: "",
+  middleName: "",
+  lastName: "",
+  emailAddress: "",
+  phoneNumber: "",
+  address: ""
+});
+
+const userName = ref("Guest");
+
+onMounted(() => {
+  const savedUser = localStorage.getItem("user");
+  if (savedUser) {
+    const user = JSON.parse(savedUser);
+
+    // Autofill form fields
+    form.firstName = user.firstName || "";
+    form.middleName = user.middleName || "";
+    form.lastName = user.lastName || "";
+    form.emailAddress = user.emailAddress || "";
+    form.phoneNumber = user.phoneNumber || "";
+    form.address = user.address || "";
+
+    // Display username on UI
+    if (user.firstName && user.lastName) {
+      userName.value = `${user.firstName} ${user.lastName}`;
+    } else {
+      userName.value = "Guest";
+    }
+  } else {
+    userName.value = "Guest";
+  }
+});
 </script>
+
 
 <template>
   <div class="min-h-screen bg-gray-100 font-poppins">
@@ -120,7 +156,7 @@ function removeEducation(index) {
         </div>
 
         <!-- Name -->
-        <h2 class="text-xl font-semibold mb-2">Keiro Musician</h2>
+        <h2 class="text-xl font-semibold mb-2">{{ userName }}</h2>
 
         <!-- Stats -->
         <div class="flex gap-8 mb-4">
@@ -634,7 +670,7 @@ function removeEducation(index) {
         </div>
 
         <!-- Name -->
-        <h2 class="text-xl font-semibold mb-6">Keiro Musician</h2>
+        <h2 class="text-xl font-semibold mb-6">{{ userName }}</h2>
 
         <!-- Buttons -->
         <div class="w-full flex flex-col gap-3">
@@ -816,32 +852,38 @@ function removeEducation(index) {
             <!-- Personal Info -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
+                v-model="form.firstName"
                 type="text"
                 placeholder="First Name"
                 class="input-field border p-2"
               />
               <input
+                v-model="form.emailAddress"
                 type="email"
                 placeholder="Email"
                 class="input-field border p-2"
               />
               <input
+                v-model="form.middleName"
                 type="text"
                 placeholder="Middle Name"
                 class="input-field border p-2"
               />
               <input
+                v-model="form.phoneNumber"
                 type="text"
                 placeholder="Mobile Number"
                 class="input-field border p-2"
               />
               <input
+                v-model="form.lastName"
                 type="text"
                 placeholder="Last Name"
                 class="input-field border p-2"
               />
 
               <input
+                v-model="form.address"
                 type="text"
                 placeholder="Address"
                 class="input-field border p-2"
