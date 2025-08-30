@@ -199,14 +199,12 @@ const handleSubmit = async () => {
   }
 
   try {
-    const response = await axios.post('http://127.0.0.1:8000/api/applicants', {
-      ...form.value
-    })
-    
-    router.push('/loginform')
-  } 
-  
-  catch (error) {
+    const response = await axios.post("http://127.0.0.1:8000/api/applicants", {
+      ...form.value,
+    });
+
+    router.push("/loginform");
+  } catch (error) {
     if (error.response && error.response.data.errors) {
       const errors = error.response.data.errors;
       alert(Object.values(errors).flat().join("\n"));

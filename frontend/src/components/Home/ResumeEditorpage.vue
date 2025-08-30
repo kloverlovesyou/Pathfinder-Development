@@ -1,6 +1,14 @@
 <script setup>
 import { useRouter } from "vue-router";
 import { reactive, ref, onMounted } from "vue";
+import { reactive } from "vue";
+import { ref } from "vue";
+import html2pdf from "html2pdf.js";
+import { computed } from "vue";
+
+const filteredExperiences = computed(() =>
+  resume.experiences.filter((exp) => exp.text)
+);
 
 const router = useRouter();
 const isModalOpen = ref(false);
@@ -8,15 +16,54 @@ const selectedImage = ref(null);
 const selectedTitle = ref(null);
 const newSkill = ref("");
 const skills = ref([]);
-
+const resumePreview = ref(null);
 const experiences = reactive([{ text: "" }]);
+const showModal = ref(false);
+
+// Resume data
+const resume = ref({
+  firstName: "John",
+  middleName: "M.",
+  lastName: "Doe",
+  email: "john@example.com",
+  mobile: "09123456789",
+  address: "Manila, Philippines",
+  summary: "Experienced developer with expertise in Vue.js and Tailwind.",
+  experiences: [{ text: "Software Engineer at ABC Corp (2020–2023)" }],
+  education: [
+    {
+      attainment: "Bachelor's Degree",
+      university: "XYZ University",
+      year: "2020",
+    },
+  ],
+  skills: ["Vue.js", "Tailwind", "JavaScript"],
+  certificates: [{ title: "AWS Certified Developer" }],
+  url: "https://portfolio.example.com",
+});
+
+function openPreview() {
+  showModal.value = true;
+}
+
+function downloadPDF() {
+  const element = resumePreview.value;
+  const opt = {
+    margin: 0.5,
+    filename: "resume.pdf",
+    image: { type: "jpeg", quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
+  };
+  html2pdf().set(opt).from(element).save();
+}
 
 function addExperience() {
-  experiences.push({ text: "" });
+  resume.experiences.push({ text: "" });
 }
 
 function removeExperience(index) {
-  experiences.splice(index, 1);
+  resume.experiences.splice(index, 1);
 }
 
 function addSkill() {
@@ -65,11 +112,15 @@ function handleFileUpload(event, index) {
 const educationList = reactive([{ text: "" }]);
 
 function addEducation() {
-  educationList.push({ text: "" });
+  resume.value.education.push({
+    attainment: "",
+    university: "",
+    year: "",
+  });
 }
 
 function removeEducation(index) {
-  educationList.splice(index, 1);
+  resume.value.education.splice(index, 1);
 }
 
 // 👇 NEW: Form data for autofill
@@ -112,7 +163,7 @@ onMounted(() => {
 
 <template>
   <div class="min-h-screen bg-gray-100 font-poppins">
-    <div class="absolute right-5 dropdown dropdown-end">
+    <div class="absolute right-5 dropdown dropdown-end lg:hidden">
       <div tabindex="0" role="button" class="group m-5">
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -368,7 +419,9 @@ onMounted(() => {
               tabindex="0"
               class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
             >
-              <li>Download Resume</li>
+              <li>
+                <button @click="isModalOpen = true">Download Resume</button>
+              </li>
             </ul>
           </div>
           <h1 class="text-2xl font-bold mb-6">Resume Editor</h1>
@@ -379,32 +432,38 @@ onMounted(() => {
               <input
                 type="text"
                 placeholder="First Name"
-                class="input-field border p-2"
+                class="input-field border rounded p-2"
+                v-model="resume.firstName"
               />
               <input
                 type="text"
                 placeholder="Middle Name"
-                class="input-field border p-2"
+                class="input-field border rounded p-2"
+                v-model="resume.middleName"
               />
               <input
                 type="text"
                 placeholder="Last Name"
-                class="input-field border p-2"
+                class="input-field border rounded p-2"
+                v-model="resume.lastName"
               />
               <input
                 type="email"
                 placeholder="Email"
-                class="input-field border p-2"
+                class="input-field border rounded p-2"
+                v-model="resume.email"
               />
               <input
                 type="text"
                 placeholder="Mobile Number"
-                class="input-field border p-2"
+                class="input-field border rounded p-2"
+                v-model="resume.mobile"
               />
               <input
                 type="text"
                 placeholder="Address"
-                class="input-field border p-2"
+                class="input-field border rounded p-2"
+                v-model="resume.address"
               />
             </div>
 
@@ -413,7 +472,11 @@ onMounted(() => {
               <label class="block text-lg font-semibold mb-1"
                 >Professional Summary</label
               >
-              <textarea rows="3" class="border input-field w-full"></textarea>
+              <textarea
+                rows="3"
+                class="border rounded input-field w-full"
+                v-model="resume.summary"
+              ></textarea>
             </div>
 
             <!-- Professional Experience -->
@@ -434,9 +497,9 @@ onMounted(() => {
 
               <!-- Experience Items -->
               <div
-                v-for="(exp, index) in experiences"
+                v-for="(exp, index) in resume.experiences"
                 :key="index"
-                class="relative border p-3 rounded-lg"
+                class="relative border p-3 rounded"
               >
                 <!-- Delete Button -->
                 <button
@@ -449,7 +512,7 @@ onMounted(() => {
 
                 <!-- Experience Field -->
                 <textarea
-                  v-model="exp.text"
+                  v-model="resume.experiences[index].text"
                   rows="3"
                   placeholder="Describe your professional experience..."
                   class="input-field w-full"
@@ -457,7 +520,6 @@ onMounted(() => {
               </div>
             </div>
 
-            <!-- Education -->
             <div class="border rounded-xl p-4 space-y-4 relative">
               <!-- Header with Plus Button -->
               <div class="flex justify-between items-center">
@@ -473,7 +535,7 @@ onMounted(() => {
 
               <!-- Education Items -->
               <div
-                v-for="(edu, index) in educationList"
+                v-for="(edu, index) in resume.education"
                 :key="index"
                 class="relative border p-3 rounded-lg space-y-3"
               >
@@ -491,7 +553,10 @@ onMounted(() => {
                   <label class="block font-medium mb-1"
                     >Educational Attainment</label
                   >
-                  <select v-model="edu.attainment" class="input-field border">
+                  <select
+                    v-model="edu.attainment"
+                    class="input-field border rounded w-full p-2"
+                  >
                     <option value="" disabled>Select level</option>
                     <option>High School</option>
                     <option>Bachelor's Degree</option>
@@ -508,7 +573,7 @@ onMounted(() => {
                     v-model="edu.university"
                     type="text"
                     placeholder="Enter university name"
-                    class="input-field"
+                    class="input-field border p-2 w-full rounded"
                   />
                 </div>
 
@@ -519,26 +584,22 @@ onMounted(() => {
                     v-model="edu.year"
                     type="text"
                     placeholder="e.g. 2020"
-                    class="input-field"
+                    class="input-field border p-2 w-full rounded"
                   />
                 </div>
               </div>
             </div>
+
             <!-- Skills -->
             <div class="border rounded-xl p-4 space-y-3">
-              <!-- Header -->
-              <div class="flex justify-between items-center">
-                <label class="text-lg font-semibold">Skills</label>
-              </div>
-
-              <!-- Skill Input -->
+              <label class="text-lg font-semibold">Skills</label>
               <div class="flex gap-2">
                 <input
                   v-model="newSkill"
                   @keyup.enter="addSkill"
                   type="text"
                   placeholder="Type a skill and press Enter"
-                  class="input-field flex-1"
+                  class="input-field flex-1 border rounded"
                 />
                 <button
                   type="button"
@@ -548,11 +609,9 @@ onMounted(() => {
                   +
                 </button>
               </div>
-
-              <!-- Skills List -->
               <div class="flex flex-wrap gap-2 mt-2">
                 <span
-                  v-for="(skill, index) in skills"
+                  v-for="(skill, index) in resume.skills"
                   :key="index"
                   class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full flex items-center gap-2"
                 >
@@ -586,7 +645,7 @@ onMounted(() => {
               <div
                 v-for="(cert, index) in certificates"
                 :key="index"
-                class="space-y-2 border p-3 rounded-lg relative"
+                class="space-y-2 border rounded p-3 rounded-lg relative"
               >
                 <!-- Delete Button -->
                 <button
@@ -603,7 +662,7 @@ onMounted(() => {
                     v-model="cert.title"
                     type="text"
                     placeholder="Certificate Title"
-                    class="input-field"
+                    class="input-field border rounded p-2"
                   />
                   <input
                     type="file"
@@ -617,7 +676,7 @@ onMounted(() => {
                 <div>
                   <div
                     v-if="cert.image"
-                    class="h-32 w-full flex items-center justify-center border rounded-lg"
+                    class="h-32 w-full flex items-center justify-center border rounded"
                   >
                     <img
                       :src="cert.image"
@@ -627,7 +686,7 @@ onMounted(() => {
                   </div>
                   <div
                     v-else
-                    class="h-32 w-full flex items-center justify-center border rounded-lg text-gray-400 text-sm"
+                    class="h-32 w-full flex items-center justify-center border rounded text-gray-400 text-sm"
                   >
                     Certificate Preview
                   </div>
@@ -636,8 +695,14 @@ onMounted(() => {
             </div>
 
             <!-- URL -->
-            <div>
-              <input type="url" placeholder="URL" class="input-field" />
+            <div class="border rounded p-4 space-y-4 relative">
+              <h2 class="text-lg font-semibold">URL</h2>
+              <input
+                type="url"
+                placeholder="URL"
+                class="input-field border rounded p-2 w-full"
+                v-model="resume.url"
+              />
             </div>
 
             <!-- Save Button -->
@@ -843,7 +908,9 @@ onMounted(() => {
               tabindex="0"
               class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
             >
-              <li>Download Resume</li>
+              <li>
+                <button @click="isModalOpen = true">Download Resume</button>
+              </li>
             </ul>
           </div>
           <h1 class="text-2xl font-bold mb-6">Resume Editor</h1>
@@ -855,51 +922,63 @@ onMounted(() => {
                 v-model="form.firstName"
                 type="text"
                 placeholder="First Name"
-                class="input-field border p-2"
+                class="input-field border rounded p-2"
+                v-model="resume.firstName"
               />
               <input
                 v-model="form.emailAddress"
                 type="email"
                 placeholder="Email"
-                class="input-field border p-2"
+                class="input-field border rounded p-2"
+                v-model="resume.email"
               />
               <input
                 v-model="form.middleName"
                 type="text"
                 placeholder="Middle Name"
-                class="input-field border p-2"
+                class="input-field border rounded p-2"
+                v-model="resume.middleName"
               />
               <input
                 v-model="form.phoneNumber"
                 type="text"
                 placeholder="Mobile Number"
-                class="input-field border p-2"
+                class="input-field border rounded p-2"
+                v-model="resume.mobile"
               />
               <input
                 v-model="form.lastName"
                 type="text"
                 placeholder="Last Name"
-                class="input-field border p-2"
+                class="input-field border rounded p-2"
+                v-model="resume.lastName"
               />
 
               <input
                 v-model="form.address"
                 type="text"
                 placeholder="Address"
-                class="input-field border p-2"
+                class="input-field border rounded p-2"
+                v-model="resume.address"
               />
             </div>
 
             <!-- Professional Summary -->
-            <div class="border rounded-xl p-4 space-y-3">
+            <div class="border rounded p-4 space-y-4 relative">
               <label class="block text-lg font-semibold mb-1"
                 >Professional Summary</label
               >
-              <textarea rows="3" class="border input-field w-full"></textarea>
+              <div class="relative border rounded p-3 rounded-lg">
+                <textarea
+                  rows="3"
+                  class="input-field w-full"
+                  v-model="resume.summary"
+                ></textarea>
+              </div>
             </div>
 
             <!-- Professional Experience -->
-            <div class="border rounded-xl p-4 space-y-4 relative">
+            <div class="border rounded p-4 space-y-4 relative">
               <!-- Header with Plus Button -->
               <div class="flex justify-between items-center">
                 <label class="text-lg font-semibold"
@@ -916,9 +995,9 @@ onMounted(() => {
 
               <!-- Experience Items -->
               <div
-                v-for="(exp, index) in experiences"
+                v-for="(exp, index) in resume.experiences"
                 :key="index"
-                class="relative border p-3 rounded-lg"
+                class="relative border p-3 rounded"
               >
                 <!-- Delete Button -->
                 <button
@@ -931,7 +1010,7 @@ onMounted(() => {
 
                 <!-- Experience Field -->
                 <textarea
-                  v-model="exp.text"
+                  v-model="resume.experiences[index].text"
                   rows="3"
                   placeholder="Describe your professional experience..."
                   class="input-field w-full"
@@ -939,8 +1018,7 @@ onMounted(() => {
               </div>
             </div>
 
-            <!-- Education -->
-            <div class="border rounded-xl p-4 space-y-4 relative">
+            <div class="border rounded p-4 space-y-4 relative">
               <!-- Header with Plus Button -->
               <div class="flex justify-between items-center">
                 <label class="text-lg font-semibold">Education</label>
@@ -955,9 +1033,9 @@ onMounted(() => {
 
               <!-- Education Items -->
               <div
-                v-for="(edu, index) in educationList"
+                v-for="(edu, index) in resume.education"
                 :key="index"
-                class="relative border p-3 rounded-lg space-y-3"
+                class="relative border p-3 rounded space-y-3"
               >
                 <!-- Delete Button -->
                 <button
@@ -973,15 +1051,16 @@ onMounted(() => {
                   <label class="block font-medium mb-1"
                     >Educational Attainment</label
                   >
-                  <select v-model="edu.attainment" class="input-field border">
+                  <select
+                    v-model="edu.attainment"
+                    class="input-field border rounded w-full p-2"
+                  >
                     <option value="" disabled>Select level</option>
-                    <option>Elementary</option>
-                    <option>Highschool</option>
-                    <option>Post-Secondary Non-Tertiary</option>
+                    <option>High School</option>
                     <option>Bachelor's Degree</option>
                     <option>Master's Degree</option>
-                    <option>Doctoral's Degree</option>
-                    <option>Professional Degree</option>
+                    <option>Doctorate</option>
+                    <option>Others</option>
                   </select>
                 </div>
 
@@ -992,7 +1071,7 @@ onMounted(() => {
                     v-model="edu.university"
                     type="text"
                     placeholder="Enter university name"
-                    class="input-field"
+                    class="input-field border rounded w-full p-2"
                   />
                 </div>
 
@@ -1002,28 +1081,23 @@ onMounted(() => {
                   <input
                     v-model="edu.year"
                     type="text"
-                    placeholder="e.g. 2020-2024"
-                    class="input-field"
+                    placeholder="e.g. 2020"
+                    class="input-field border rounded w-full p-2"
                   />
                 </div>
               </div>
             </div>
 
             <!-- Skills -->
-            <div class="border rounded-xl p-4 space-y-3">
-              <!-- Header -->
-              <div class="flex justify-between items-center">
-                <label class="text-lg font-semibold">Skills</label>
-              </div>
-
-              <!-- Skill Input -->
+            <div class="border rounded p-4 space-y-3">
+              <label class="text-lg font-semibold">Skills</label>
               <div class="flex gap-2">
                 <input
                   v-model="newSkill"
                   @keyup.enter="addSkill"
                   type="text"
                   placeholder="Type a skill and press Enter"
-                  class="input-field flex-1"
+                  class="input-field flex-1 border"
                 />
                 <button
                   type="button"
@@ -1033,11 +1107,9 @@ onMounted(() => {
                   +
                 </button>
               </div>
-
-              <!-- Skills List -->
               <div class="flex flex-wrap gap-2 mt-2">
                 <span
-                  v-for="(skill, index) in skills"
+                  v-for="(skill, index) in resume.skills"
                   :key="index"
                   class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full flex items-center gap-2"
                 >
@@ -1054,7 +1126,7 @@ onMounted(() => {
             </div>
 
             <!-- Certificates -->
-            <div class="border rounded-xl p-4 space-y-4 relative">
+            <div class="border rounded p-4 space-y-4 relative">
               <!-- Header with Plus Button -->
               <div class="flex justify-between items-center">
                 <h2 class="text-lg font-semibold">Certificates</h2>
@@ -1071,7 +1143,7 @@ onMounted(() => {
               <div
                 v-for="(cert, index) in certificates"
                 :key="index"
-                class="space-y-2 border p-3 rounded-lg relative"
+                class="space-y-2 border p-3 rounded relative"
               >
                 <!-- Delete Button -->
                 <button
@@ -1088,7 +1160,7 @@ onMounted(() => {
                     v-model="cert.title"
                     type="text"
                     placeholder="Certificate Title"
-                    class="input-field"
+                    class="input-field border rounded p-2"
                   />
                   <input
                     type="file"
@@ -1102,7 +1174,7 @@ onMounted(() => {
                 <div>
                   <div
                     v-if="cert.image"
-                    class="h-32 w-full flex items-center justify-center border rounded-lg"
+                    class="h-32 w-full flex items-center justify-center border rounded"
                   >
                     <img
                       :src="cert.image"
@@ -1112,7 +1184,7 @@ onMounted(() => {
                   </div>
                   <div
                     v-else
-                    class="h-32 w-full flex items-center justify-center border rounded-lg text-gray-400 text-sm"
+                    class="h-32 w-full flex items-center justify-center border rounded text-gray-400 text-sm"
                   >
                     Certificate Preview
                   </div>
@@ -1121,8 +1193,14 @@ onMounted(() => {
             </div>
 
             <!-- URL -->
-            <div>
-              <input type="url" placeholder="URL" class="input-field" />
+            <div class="border rounded p-4 space-y-4 relative">
+              <h2 class="text-lg font-semibold">URL</h2>
+              <input
+                type="url"
+                placeholder="URL"
+                class="input-field border rounded p-2 w-full"
+                v-model="resume.url"
+              />
             </div>
 
             <!-- Save Button -->
@@ -1133,8 +1211,226 @@ onMounted(() => {
               Save Resume
             </button>
           </form>
+          <!-- Modal -->
+          <div
+            v-if="isModalOpen"
+            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          >
+            <div
+              class="bg-white w-[800px] max-h-[90vh] rounded-xl shadow-lg overflow-y-auto relative"
+            >
+              <!-- Close button -->
+              <button
+                @click="isModalOpen = false"
+                class="absolute top-3 right-3 text-gray-600 hover:text-red-600 text-xl"
+              >
+                ✕
+              </button>
+
+              <!-- Resume Preview -->
+              <div
+                ref="resumePreview"
+                style="
+                  padding: 1.5rem;
+                  color: #111111;
+                  background-color: #ffffff;
+                "
+              >
+                <!-- Name -->
+                <h1
+                  style="
+                    font-size: 1.875rem;
+                    font-weight: bold;
+
+                    margin-bottom: 0.5rem;
+                  "
+                >
+                  {{ resume.firstName }} {{ resume.middleName }}
+                  {{ resume.lastName }}
+                </h1>
+
+                <!-- Contact -->
+                <p style="color: #4b5563; margin: 0">
+                  {{ resume.email }} | {{ resume.mobile }} |
+                  {{ resume.address }} <br />
+                  <span v-if="resume.url">{{ resume.url }}</span>
+                </p>
+
+                <!-- Summary -->
+                <section v-if="resume.summary" style="margin-top: 1.5rem">
+                  <h2
+                    style="
+                      font-size: 1.25rem;
+                      font-weight: 600;
+                      color: #000000;
+                      border-bottom: 1px solid #000000;
+                      padding-bottom: 0.25rem;
+                    "
+                  >
+                    Professional Summary
+                  </h2>
+                  <p
+                    style="
+                      margin-top: 0.5rem;
+                      color: #374151;
+                      white-space: pre-line;
+                    "
+                  >
+                    {{ resume.summary }}
+                  </p>
+                </section>
+
+                <!-- Experience -->
+                <section
+                  v-if="resume.experiences.length"
+                  style="margin-top: 1.5rem"
+                >
+                  <h2
+                    style="
+                      font-size: 1.25rem;
+                      font-weight: 600;
+                      color: #000000;
+                      border-bottom: 1px solid #000000;
+                      padding-bottom: 0.25rem;
+                    "
+                  >
+                    Professional Experience
+                  </h2>
+                  <ul
+                    style="
+                      list-style-type: disc;
+                      margin-left: 1.5rem;
+                      margin-top: 0.5rem;
+                    "
+                  >
+                    <li
+                      v-for="(exp, i) in resume.experiences"
+                      :key="i"
+                      style="margin-bottom: 0.25rem; color: #000000"
+                    >
+                      {{ exp.text }}
+                    </li>
+                  </ul>
+                </section>
+
+                <!-- Education -->
+                <section
+                  v-if="resume.education.length"
+                  style="margin-top: 1.5rem"
+                >
+                  <h2
+                    style="
+                      font-size: 1.25rem;
+                      font-weight: 600;
+                      color: #000000;
+                      border-bottom: 1px solid #000000;
+                      padding-bottom: 0.25rem;
+                    "
+                  >
+                    Education
+                  </h2>
+                  <div
+                    v-for="(edu, i) in resume.education"
+                    :key="i"
+                    style="margin-top: 0.5rem"
+                  >
+                    <p
+                      v-if="edu.university"
+                      style="font-weight: 600; color: #000000; margin: 0"
+                    >
+                      {{ edu.university }}
+                    </p>
+                    <p style="color: #4b5563; margin: 0">
+                      {{ edu.attainment
+                      }}<span v-if="edu.year"> ({{ edu.year }})</span>
+                    </p>
+                  </div>
+                </section>
+
+                <!-- Skills -->
+                <section v-if="resume.skills.length" style="margin-top: 1.5rem">
+                  <h2
+                    style="
+                      font-size: 1.25rem;
+                      font-weight: 600;
+                      color: #000000;
+                      border-bottom: 1px solid #000000;
+                      padding-bottom: 0.25rem;
+                    "
+                  >
+                    Skills
+                  </h2>
+                  <div style="margin-top: 0.5rem">
+                    <span
+                      v-for="(skill, i) in resume.skills"
+                      :key="i"
+                      style="
+                        display: inline-block;
+                        margin-right: 0.5rem;
+                        margin-bottom: 0.5rem;
+                        padding: 0.25rem 0.75rem;
+                        border-radius: 9999px;
+                        font-size: 0.875rem;
+                        background-color: #dbeafe;
+                        color: #1e40af;
+                      "
+                    >
+                      {{ skill }}
+                    </span>
+                  </div>
+                </section>
+              </div>
+
+              <!-- Confirm Download -->
+              <div
+                style="
+                  padding: 1rem;
+                  border-top: 1px solid #e5e7eb;
+                  margin-top: 1rem;
+                  display: flex;
+                  justify-content: flex-end;
+                "
+              >
+                <button
+                  @click="downloadPDF"
+                  style="
+                    padding: 0.5rem 1.5rem;
+                    border-radius: 0.5rem;
+                    font-weight: 600;
+                    color: #ffffff;
+                    background-color: #2563eb;
+                    border: none;
+                    cursor: pointer;
+                  "
+                >
+                  Confirm & Download PDF
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </template>
+<style>
+/* Force html2canvas-compatible colors */
+.bg-blue-600 {
+  background-color: #2563eb !important;
+}
+.bg-blue-700 {
+  background-color: #1d4ed8 !important;
+}
+.text-gray-600 {
+  color: #4b5563 !important;
+}
+.text-red-600 {
+  color: #dc2626 !important;
+}
+.text-white {
+  color: #ffffff !important;
+}
+.bg-white {
+  background-color: #ffffff !important;
+}
+</style>

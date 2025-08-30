@@ -65,6 +65,8 @@ onMounted(() => {
                   Update/Delete Account
                 </button>
               </li>
+              <li><a>Logout</a></li>
+              <li><a>Update/Delete Account</a></li>
               <li><a @click="logout">Logout</a></li>
             </ul>
           </div>
