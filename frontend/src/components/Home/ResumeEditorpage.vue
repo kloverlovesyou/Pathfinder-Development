@@ -1,14 +1,15 @@
 <script setup>
 import { useRouter } from "vue-router";
+
 import { reactive, ref, onMounted } from "vue";
-import { reactive } from "vue";
-import { ref } from "vue";
+
 import html2pdf from "html2pdf.js";
 import { computed } from "vue";
 
 const filteredExperiences = computed(() =>
   resume.experiences.filter((exp) => exp.text)
 );
+
 
 const router = useRouter();
 const isModalOpen = ref(false);
@@ -923,35 +924,35 @@ onMounted(() => {
                 type="text"
                 placeholder="First Name"
                 class="input-field border rounded p-2"
-                v-model="resume.firstName"
+                
               />
               <input
                 v-model="form.emailAddress"
                 type="email"
                 placeholder="Email"
                 class="input-field border rounded p-2"
-                v-model="resume.email"
+                
               />
               <input
                 v-model="form.middleName"
                 type="text"
                 placeholder="Middle Name"
                 class="input-field border rounded p-2"
-                v-model="resume.middleName"
+                
               />
               <input
                 v-model="form.phoneNumber"
                 type="text"
                 placeholder="Mobile Number"
                 class="input-field border rounded p-2"
-                v-model="resume.mobile"
+                
               />
               <input
                 v-model="form.lastName"
                 type="text"
                 placeholder="Last Name"
                 class="input-field border rounded p-2"
-                v-model="resume.lastName"
+                
               />
 
               <input
@@ -959,7 +960,7 @@ onMounted(() => {
                 type="text"
                 placeholder="Address"
                 class="input-field border rounded p-2"
-                v-model="resume.address"
+                
               />
             </div>
 
