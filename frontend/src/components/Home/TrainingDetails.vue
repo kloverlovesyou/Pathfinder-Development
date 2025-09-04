@@ -110,7 +110,7 @@ const registerTraining = () => {
             class="dropdown-content menu bg-base-100 rounded-box z-50 w-40 p-2 shadow-md mt-0"
           >
             <li><a>Bookmark</a></li>
-            <a>{{ post.type === "career" ? "Apply" : "Register" }}</a>
+            <a>Apply</a>
           </ul>
         </div>
       </div>
