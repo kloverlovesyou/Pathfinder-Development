@@ -12,6 +12,8 @@ import Bookmarkpage from "@/components/Home/Bookmarkpage.vue";
 import Certificatespage from "@/components/Home/Certificatespage.vue";
 import UpdateDeletepage from "@/components/Home/UpdateDeletepage.vue";
 import ResumeEditorpage from "@/components/Home/ResumeEditorpage.vue";
+import CareerDetails from "@/components/Home/CareerDetails.vue";
+import TrainingDetails from "@/components/Home/TrainingDetails.vue";
 
 import { createRouter, createWebHistory } from "vue-router";
 
@@ -77,6 +79,18 @@ const router = createRouter({
     {
       path: "/resumepage",
       component: ResumeEditorpage,
+    },
+    {
+      path: "/career/:id",
+      name: "CareerDetails",
+      component: CareerDetails,
+      props: true,
+    },
+    {
+      path: "/training/:id",
+      name: "TrainingDetails",
+      component: TrainingDetails,
+      props: true,
     },
   ],
 });
