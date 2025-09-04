@@ -60,17 +60,14 @@ onMounted(() => {
               tabindex="0"
               class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
             >
-<<<<<<< HEAD
               <li>
                 <button @click="router.push('/updatedeletepage')">
                   Update/Delete Account
                 </button>
               </li>
               <li><a>Logout</a></li>
-=======
               <li><a>Update/Delete Account</a></li>
               <li><a @click="logout">Logout</a></li>
->>>>>>> f0dfb25419d885ff4ecdfe0fa39d88e64e1c324c
             </ul>
           </div>
         </div>
