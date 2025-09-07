@@ -125,7 +125,11 @@ const registerTraining = () => {
             class="dropdown-content menu bg-base-100 rounded-box z-50 w-40 p-2 shadow-md mt-0"
           >
             <li><a>Bookmark</a></li>
+<<<<<<< HEAD
             <li><a>Register</a></li>
+=======
+            <a>Apply</a>
+>>>>>>> 963aa44b98712c6d8afb28517c93b4a6ecac003e
           </ul>
         </div>
       </div>

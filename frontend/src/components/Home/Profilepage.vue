@@ -2,29 +2,30 @@
 import { useRouter } from "vue-router";
 import { ref, onMounted } from "vue";
 const router = useRouter();
-const userName = ref("");
+const userName = ref('');
 
 const logout = () => {
   // Remove user data from localStorage
-  localStorage.removeItem("user");
+  localStorage.removeItem('user');
   // Redirect to login page
-  router.push("/loginform");
+  router.push('/loginform');
 };
+
 
 // Check if user is logged in and retrieve user data
 onMounted(() => {
-  const savedUser = localStorage.getItem("user");
+  const savedUser = localStorage.getItem('user')
   if (savedUser) {
-    const user = JSON.parse(savedUser);
+    const user = JSON.parse(savedUser)
     if (user.firstName && user.lastName) {
-      userName.value = `${user.firstName} ${user.lastName}`;
+      userName.value = `${user.firstName} ${user.lastName}`
     } else {
-      userName.value = "Guest";
+      userName.value = 'Guest'
     }
   } else {
-    userName.value = "Guest";
+    userName.value = 'Guest'
   }
-});
+})
 </script>
 <template>
   <div class="min-h-screen bg-gray-100 font-poppins">
@@ -64,9 +65,9 @@ onMounted(() => {
                   Update/Delete Account
                 </button>
               </li>
-              <li>
-                <button @click="router.push('/loginform')">Logout</button>
-              </li>
+              <li><a>Logout</a></li>
+              <li><a>Update/Delete Account</a></li>
+              <li><a @click="logout">Logout</a></li>
             </ul>
           </div>
         </div>
@@ -133,7 +134,7 @@ onMounted(() => {
           </div>
 
           <!-- Name -->
-          <h2 class="text-xl font-semibold mb-2">{{ userName }}</h2>
+          <h2 class="text-xl font-semibold mb-2">{{userName}}</h2>
 
           <!-- Stats -->
           <div class="flex gap-8 mb-4">
@@ -540,7 +541,7 @@ onMounted(() => {
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="router.push('/loginform')"
+             @click="router.push('/loginform')"
           >
             <svg
               class="size-6 flex-shrink-0"
