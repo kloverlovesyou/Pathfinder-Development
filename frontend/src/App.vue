@@ -31,7 +31,7 @@ const route = useRoute();
         route.path !== '/organizationpage' &&
         route.path !== '/bookmarkpage' &&
         route.path !== '/calendarpage'
-      "
+      " 
     >
       <router-view></router-view>
     </main>
