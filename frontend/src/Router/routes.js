@@ -14,6 +14,9 @@ import UpdateDeletepage from "@/components/Home/UpdateDeletepage.vue";
 import ResumeEditorpage from "@/components/Home/ResumeEditorpage.vue";
 import CareerDetails from "@/components/Home/CareerDetails.vue";
 import TrainingDetails from "@/components/Home/TrainingDetails.vue";
+import OrgHomePage from "@/components/Organization/OrganizationHomepage.vue";
+import OrgTraining from "@/components/Organization/OrganizationTrainings.vue";
+import OrgCareer from "@/components/Organization/OrganizationCareers.vue";
 
 import { createRouter, createWebHistory } from "vue-router";
 
@@ -91,6 +94,18 @@ const router = createRouter({
       name: "TrainingDetails",
       component: TrainingDetails,
       props: true,
+    },
+    {
+      path: "/OrganizationHomePage",
+      component: OrgHomePage,
+    },
+    {
+      path: "/OrgTrainings",
+      component: OrgTraining,
+    },
+    {
+      path: "/OrgCareers",
+      component: OrgCareer,
     },
   ],
 });
