@@ -393,7 +393,7 @@ const toggleSidebar = () => {
   flex-direction: column;
   align-items: start;
   padding: 20px 10px;
-  transition: width 0.3s ease;
+  transition: width 0.3s ease-in;
   overflow: hidden;
 }
 
