@@ -15,9 +15,10 @@ const route = useRoute();
         route.path !== '/typeofaccount' &&
         route.path !== '/a_registrationform' &&
         route.path !== '/o_registrationform' &&
-        route.path !== '/OrganizationHomePage' &&
+        route.path == '/OrganizationHomePage' &&
         route.path !== '/OrgTrainings' &&
-        route.path !== '/OrgCareers'
+        route.path !== '/OrgCareers' &&
+        route.path == '/updateprofile' 
       "
     />
 
@@ -31,7 +32,7 @@ const route = useRoute();
         route.path !== '/organizationpage' &&
         route.path !== '/bookmarkpage' &&
         route.path !== '/calendarpage'
-      "
+      " 
     >
       <router-view></router-view>
     </main>
