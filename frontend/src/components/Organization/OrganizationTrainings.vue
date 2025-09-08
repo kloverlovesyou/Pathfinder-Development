@@ -192,7 +192,7 @@
           <form @submit.prevent="saveTraining" class="training-popup-form">
             <input v-model="newTraining.title" type="text" placeholder="Title" class="training-input" />
             <textarea v-model="newTraining.description" placeholder="Description" class="training-input"></textarea>
-            <input v-model="newTraining.type" type="text" placeholder="Type" class="training-input" />
+
 
             <!-- Schedule -->
             <div class="popup-form-group schedule-group">
@@ -302,7 +302,6 @@ export default {
       newTraining: {
         title: "",
         description: "",
-        type: "",
         schedule: "",
         mode: "",
         location: "",
@@ -334,12 +333,11 @@ export default {
       this.newTraining = {
         title: "",
         description: "",
-        type: "",
         schedule: "",
         mode: "On-Site",
         location: "",
         registrationLink: ""
-      }
+      } 
     },
     saveTraining() {
       if (this.newTraining.title && this.newTraining.schedule) {
