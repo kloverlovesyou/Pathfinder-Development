@@ -11,7 +11,7 @@
         <transition name="fade">
           <div v-if="isSidebarOpen" class="profile-section">
             <div class="avatar"></div>
-            <h3 class="org-name">Organization’s Name</h3>
+            <h3 class="org-name">{{ organizationName }}</h3>
             <div class="profile-actions">
               <div class="action" @click="$router.push('/updateprofile')">
                 <svg
@@ -457,13 +457,26 @@ export default {
 </script>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 
 const isSidebarOpen = ref(true);
+const organizationName = ref("");
 
+// Toggle sidebar
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
 };
+
+// Get org name from localStorage on mount
+onMounted(() => {
+  const storedUser = localStorage.getItem("user");
+  if (storedUser) {
+    const user = JSON.parse(storedUser);
+    if (user.role === "organization") {
+      organizationName.value = user.displayName || user.name;
+    }
+  }
+});
 </script>
 
 <style scoped>
