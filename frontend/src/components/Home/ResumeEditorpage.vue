@@ -23,24 +23,18 @@ const showModal = ref(false);
 
 // Resume data
 const resume = ref({
-  firstName: "John",
-  middleName: "M.",
-  lastName: "Doe",
-  email: "john@example.com",
-  mobile: "09123456789",
-  address: "Manila, Philippines",
-  summary: "Experienced developer with expertise in Vue.js and Tailwind.",
-  experiences: [{ text: "Software Engineer at ABC Corp (2020–2023)" }],
-  education: [
-    {
-      attainment: "Bachelor's Degree",
-      university: "XYZ University",
-      year: "2020",
-    },
-  ],
-  skills: ["Vue.js", "Tailwind", "JavaScript"],
-  certificates: [{ title: "AWS Certified Developer" }],
-  url: "https://portfolio.example.com",
+  firstName: "",
+  middleName: "",
+  lastName: "",
+  email: "",
+  mobile: "",
+  address: "",
+  summary: "",
+  experiences: [],
+  education: [],
+  skills: [],        // ✅ single source of truth
+  certificates: [],
+  url: "",
 });
 
 function openPreview() {
@@ -67,17 +61,19 @@ function removeExperience(index) {
   resume.experiences.splice(index, 1);
 }
 
+
+// Add skill
 function addSkill() {
   if (newSkill.value.trim() !== "") {
-    skills.value.push(newSkill.value.trim());
-    newSkill.value = "";
+    resume.value.skills.push(newSkill.value.trim()); // ✅ push into resume.skills
+    newSkill.value = ""; // clear input after adding
   }
 }
 
+// Remove skill
 function removeSkill(index) {
-  skills.value.splice(index, 1);
+  resume.value.skills.splice(index, 1); // ✅ remove from resume.skills
 }
-
 function openModal(image, title) {
   selectedImage.value = image;
   selectedTitle.value = title;
@@ -134,14 +130,14 @@ const form = reactive({
   address: ""
 });
 
-const userName = ref("Guest");
+
 
 onMounted(() => {
   const savedUser = localStorage.getItem("user");
   if (savedUser) {
     const user = JSON.parse(savedUser);
 
-    // Autofill form fields
+    // Fill form
     form.firstName = user.firstName || "";
     form.middleName = user.middleName || "";
     form.lastName = user.lastName || "";
@@ -149,14 +145,15 @@ onMounted(() => {
     form.phoneNumber = user.phoneNumber || "";
     form.address = user.address || "";
 
-    // Display username on UI
-    if (user.firstName && user.lastName) {
-      userName.value = `${user.firstName} ${user.lastName}`;
-    } else {
-      userName.value = "Guest";
-    }
-  } else {
-    userName.value = "Guest";
+    // Fill resume
+    resume.value.firstName = user.firstName || "";
+    resume.value.middleName = user.middleName || "";
+    resume.value.lastName = user.lastName || "";
+    resume.value.email = user.emailAddress || "";
+    resume.value.mobile = user.phoneNumber || "";
+    resume.value.address = user.address || "";
+
+    
   }
 });
 </script>
@@ -592,15 +589,14 @@ onMounted(() => {
             </div>
 
             <!-- Skills -->
-            <div class="border rounded-xl p-4 space-y-3">
+            <div class="border rounded p-4 space-y-3">
               <label class="text-lg font-semibold">Skills</label>
               <div class="flex gap-2">
                 <input
                   v-model="newSkill"
-                  @keyup.enter="addSkill"
                   type="text"
-                  placeholder="Type a skill and press Enter"
-                  class="input-field flex-1 border rounded"
+                  placeholder="Type a skill"
+                  class="input-field flex-1 border"
                 />
                 <button
                   type="button"
@@ -610,6 +606,7 @@ onMounted(() => {
                   +
                 </button>
               </div>
+
               <div class="flex flex-wrap gap-2 mt-2">
                 <span
                   v-for="(skill, index) in resume.skills"
@@ -1089,25 +1086,26 @@ onMounted(() => {
               </div>
             </div>
 
-            <!-- Skills -->
-            <div class="border rounded p-4 space-y-3">
-              <label class="text-lg font-semibold">Skills</label>
-              <div class="flex gap-2">
-                <input
-                  v-model="newSkill"
-                  @keyup.enter="addSkill"
-                  type="text"
-                  placeholder="Type a skill and press Enter"
-                  class="input-field flex-1 border"
-                />
-                <button
-                  type="button"
-                  @click="addSkill"
-                  class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
-                >
-                  +
-                </button>
-              </div>
+              <!-- Skills -->
+              <div class="border rounded p-4 space-y-3">
+                <label class="text-lg font-semibold">Skills</label>
+                <div class="flex gap-2">
+                  <!-- 👇 use newSkill, not resume.skills -->
+                  <input
+                    v-model="newSkill"
+                    type="text"
+                    placeholder="Type a skill"
+                    class="input-field flex-1 border"
+                  />
+                  <button
+                    type="button"
+                    @click="addSkill"
+                    class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
+                  >
+                    +
+                  </button>
+                </div>
+
               <div class="flex flex-wrap gap-2 mt-2">
                 <span
                   v-for="(skill, index) in resume.skills"
