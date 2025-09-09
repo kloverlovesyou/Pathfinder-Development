@@ -15,7 +15,7 @@ const noHeaderRoutes = [
   "/OrgCareers",
   "/updateprofile"
 ];
-</script>x
+</script>
 
 <template>
   <div class="min-h-screen flex flex-col justify-between">
