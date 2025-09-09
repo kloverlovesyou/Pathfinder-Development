@@ -112,7 +112,7 @@ const handleLogin = async () => {
         })
       );
 
-      router.push("/organizationhomepage");
+      router.push("/OrganizationHomePage");
     } catch (err2) {
       alert("Invalid credentials. Please try again.");
     }
