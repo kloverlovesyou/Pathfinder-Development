@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Hash;
 
 class OrganizationController extends Controller
 {
+    // Register Organization
     public function o_register(Request $request)
     {
         $validator = \Validator::make($request->all(), [
@@ -23,12 +24,12 @@ class OrganizationController extends Controller
         }
 
         $organization = Organization::create([
-            'name' => $request->input('name'),
-            'location' => $request->input('location'),
-            'websiteURL' => $request->input('websiteURL'),
-            'emailAddress' => $request->input('emailAddress'),
-            'password' => Hash::make($request->input('password')),
-            'adminID' => $request->input('adminID'),
+            'name'        => $request->input('name'),
+            'location'    => $request->input('location'),
+            'websiteURL'  => $request->input('websiteURL'),
+            'emailAddress'=> $request->input('emailAddress'),
+            'password'    => Hash::make($request->input('password')),
+            'adminID'     => $request->input('adminID'),
         ]);
 
         return response()->json([
@@ -37,7 +38,7 @@ class OrganizationController extends Controller
         ], 201);
     }
 
-    // 👇 Add this login method
+    // Login Organization
     public function login(Request $request)
     {
         $request->validate([
@@ -55,5 +56,11 @@ class OrganizationController extends Controller
             'message' => 'Login successful',
             'organization' => $organization,
         ]);
+    }
+
+    // List All Organizations
+    public function index()
+    {
+        return response()->json(Organization::all());
     }
 }
