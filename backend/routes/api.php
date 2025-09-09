@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Route;
 */
 use App\Http\Controllers\ApplicantController;
 use App\Http\Controllers\OrganizationController;
-Route::middleware('auth:sanctum')->get('/organization', [OrganizationController::class, 'index']);
+Route::get('/organization', [OrganizationController::class, 'index']);
 
 Route::post('/applicants', [ApplicantController::class, 'a_register']);
 Route::post('applicants/login', [ApplicantController::class, 'login']);
