@@ -28,31 +28,6 @@ onMounted(async () => {
   <main>
     <!-- Header -->
     <div class="flex items-center gap-4 mb-4">
-      <button class="group" @click="router.push('/homepage')">
-        <!-- Back Arrow -->
-        <svg
-          class="size-6"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M9.57 5.93005L3.5 12.0001L9.57 18.0701"
-            stroke="#6682A3"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <path
-            d="M20.5 12H3.66998"
-            stroke="#6682A3"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-      </button>
-
       <!-- Title -->
       <h2 class="text-2xl font-bold -m-2">Career</h2>
     </div>
