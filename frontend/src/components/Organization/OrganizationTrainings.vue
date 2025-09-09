@@ -8,7 +8,7 @@
         <transition name="fade">
           <div v-if="isSidebarOpen" class="profile-section">
             <div class="avatar"></div>
-            <h3 class="org-name">Organization’s Name</h3>
+            <h3 class="org-name">{{ organizationName }}</h3>
             <div class="profile-actions">
               <div class="action" @click="$router.push('/updateprofile')">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -192,7 +192,7 @@
           <form @submit.prevent="saveTraining" class="training-popup-form">
             <input v-model="newTraining.title" type="text" placeholder="Title" class="training-input" />
             <textarea v-model="newTraining.description" placeholder="Description" class="training-input"></textarea>
-            <input v-model="newTraining.type" type="text" placeholder="Type" class="training-input" />
+
 
             <!-- Schedule -->
             <div class="popup-form-group schedule-group">
@@ -302,7 +302,6 @@ export default {
       newTraining: {
         title: "",
         description: "",
-        type: "",
         schedule: "",
         mode: "",
         location: "",
@@ -334,12 +333,11 @@ export default {
       this.newTraining = {
         title: "",
         description: "",
-        type: "",
         schedule: "",
         mode: "On-Site",
         location: "",
         registrationLink: ""
-      }
+      } 
     },
     saveTraining() {
       if (this.newTraining.title && this.newTraining.schedule) {
@@ -356,13 +354,26 @@ export default {
 
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from "vue";
 
-const isSidebarOpen = ref(true)
+const isSidebarOpen = ref(true);
+const organizationName = ref("");
 
+// Toggle sidebar
 const toggleSidebar = () => {
-  isSidebarOpen.value = !isSidebarOpen.value
-}
+  isSidebarOpen.value = !isSidebarOpen.value;
+};
+
+// Get org name from localStorage on mount
+onMounted(() => {
+  const storedUser = localStorage.getItem("user");
+  if (storedUser) {
+    const user = JSON.parse(storedUser);
+    if (user.role === "organization") {
+      organizationName.value = user.displayName || user.name;
+    }
+  }
+});
 </script>
 
 <style scoped>
@@ -395,7 +406,7 @@ const toggleSidebar = () => {
   flex-direction: column;
   align-items: start;
   padding: 20px 10px;
-  transition: width 0.3s ease;
+  transition: width 0.3s ease-in;
   overflow: hidden;
 }
 
