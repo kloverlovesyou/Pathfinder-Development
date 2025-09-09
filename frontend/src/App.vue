@@ -15,7 +15,6 @@ const route = useRoute();
         route.path !== '/typeofaccount' &&
         route.path !== '/a_registrationform' &&
         route.path !== '/o_registrationform' &&
-        route.path !== '/OrganizationHomePage' &&
         route.path !== '/OrgTrainings' &&
         route.path !== '/OrgCareers'
       "
