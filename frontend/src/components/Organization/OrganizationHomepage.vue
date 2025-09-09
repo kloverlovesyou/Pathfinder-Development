@@ -8,7 +8,7 @@
         <transition name="fade">
           <div v-if="isSidebarOpen" class="profile-section">
             <div class="avatar"></div>
-            <h3 class="org-name">Organization’s Name</h3>
+            <h3 class="org-name">{{ organizationName }}</h3>
             <div class="profile-actions">
               <div class="action" @click="$router.push('/updateprofile')">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -269,47 +269,58 @@ export default {
 </script>
 
 <script setup>
-import { ref } from 'vue'
-import { onMounted } from 'vue'
-import Chart from 'chart.js/auto'
+import { ref, onMounted } from "vue";
+import Chart from "chart.js/auto";
 
-const isSidebarOpen = ref(true)
+const isSidebarOpen = ref(true);
+const organizationName = ref("");
 
+// Toggle sidebar
 const toggleSidebar = () => {
-  isSidebarOpen.value = !isSidebarOpen.value
-}
+  isSidebarOpen.value = !isSidebarOpen.value;
+};
 
 onMounted(() => {
-  const ctx = document.getElementById('applicantChart')
+  // 🔹 Get org data from localStorage
+  const storedUser = localStorage.getItem("user");
+  if (storedUser) {
+    const user = JSON.parse(storedUser);
+    if (user.role === "organization") {
+      organizationName.value = user.displayName || user.name;
+    }
+  }
+
+  // 🔹 Initialize Chart.js
+  const ctx = document.getElementById("applicantChart");
   new Chart(ctx, {
-    type: 'line',
+    type: "line",
     data: {
-      labels: ['January', 'February', 'March', 'April', 'May', 'June'],
+      labels: ["January", "February", "March", "April", "May", "June"],
       datasets: [
         {
-          label: 'Training Applicants',
+          label: "Training Applicants",
           data: [10, 20, 15, 25, 40, 30],
-          borderColor: '#3182ce',
+          borderColor: "#3182ce",
           fill: false,
-          tension: 0.4
+          tension: 0.4,
         },
         {
-          label: 'Job Applicants',
+          label: "Job Applicants",
           data: [5, 15, 20, 22, 50, 35],
-          borderColor: '#9f7aea',
+          borderColor: "#9f7aea",
           fill: false,
-          tension: 0.4
-        }
-      ]
+          tension: 0.4,
+        },
+      ],
     },
     options: {
       responsive: true,
       plugins: {
-        legend: { display: false }
-      }
-    }
-  })
-})
+        legend: { display: false },
+      },
+    },
+  });
+});
 </script>
 
 <style scoped>
@@ -342,7 +353,7 @@ onMounted(() => {
   flex-direction: column;
   align-items: start;
   padding: 20px 10px;
-  transition: width 0.3s ease;
+  transition: width 0.3s ease-in;
   overflow: hidden;
 }
 
