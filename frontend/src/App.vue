@@ -13,14 +13,24 @@ const noHeaderRoutes = [
   "/OrganizationHomePage",
   "/OrgTrainings",
   "/OrgCareers",
-  "/updateprofile"
+  "/updateprofile",
 ];
 </script>
 
 <template>
   <div class="min-h-screen flex flex-col justify-between">
     <Header v-if="!noHeaderRoutes.includes(route.path)" />
-    <main class="flex-grow">
+    <main
+      class="flex-grow"
+      v-if="
+        route.path !== '/homepage' &&
+        route.path !== '/careerpage' &&
+        route.path !== '/trainingpage' &&
+        route.path !== '/organizationpage' &&
+        route.path !== '/calendarpage' &&
+        route.path !== '/bookmarkpage'
+      "
+    >
       <router-view></router-view>
     </main>
     <Footer />
