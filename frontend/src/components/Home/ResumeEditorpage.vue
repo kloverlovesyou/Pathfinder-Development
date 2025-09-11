@@ -734,6 +734,39 @@ onMounted(() => {
 
         <!-- Name -->
         <h2 class="text-xl font-semibold mb-6">{{ userName }}</h2>
+        <div
+          class="w-full flex items-center justify-center gap-6 mb-6 relative"
+        >
+          <!-- Upcoming -->
+          <div class="relative">
+            <div
+              class="flex items-center justify-center bg-gray-100 rounded-full px-6 py-2"
+            >
+              <span class="font-semibold text-gray-700">Upcoming</span>
+            </div>
+            <!-- Floating Bubble -->
+            <span
+              class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
+            >
+              0
+            </span>
+          </div>
+
+          <!-- Completed -->
+          <div class="relative">
+            <div
+              class="flex items-center justify-center bg-gray-100 rounded-full px-6 py-2"
+            >
+              <span class="font-semibold text-gray-700">Completed</span>
+            </div>
+            <!-- Floating Bubble -->
+            <span
+              class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
+            >
+              0
+            </span>
+          </div>
+        </div>
 
         <!-- Buttons -->
         <div class="w-full flex flex-col gap-3">
