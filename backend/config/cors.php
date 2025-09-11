@@ -7,7 +7,7 @@ return [
     'allowed_methods' => ['*'],
 
     'allowed_origins' => [
-        'http://localhost:5173',   // Vue dev server
+        '*',   // Vue dev server
     ],
 
     'allowed_origins_patterns' => [],
