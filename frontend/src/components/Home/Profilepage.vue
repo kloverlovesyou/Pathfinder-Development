@@ -2,36 +2,35 @@
 import { useRouter } from "vue-router";
 import { ref, onMounted } from "vue";
 const router = useRouter();
-const userName = ref('');
+const userName = ref("");
 
 const logout = () => {
   // Remove user data from localStorage
-  localStorage.removeItem('user');
+  localStorage.removeItem("user");
   // Redirect to login page
-  router.push('/loginform');
+  router.push("/loginform");
 };
-
 
 // Check if user is logged in and retrieve user data
 onMounted(() => {
-  const savedUser = localStorage.getItem('user')
+  const savedUser = localStorage.getItem("user");
   if (savedUser) {
-    const user = JSON.parse(savedUser)
+    const user = JSON.parse(savedUser);
     if (user.firstName && user.lastName) {
-      userName.value = `${user.firstName} ${user.lastName}`
+      userName.value = `${user.firstName} ${user.lastName}`;
     } else {
-      userName.value = 'Guest'
+      userName.value = "Guest";
     }
   } else {
-    userName.value = 'Guest'
+    userName.value = "Guest";
   }
-})
+});
 </script>
 <template>
   <div class="min-h-screen bg-gray-100 font-poppins">
     <div class="lg:hidden block font-poppins">
       <!-- Row 1: Profile Info -->
-      <div class="bg-dark-slate text-white p-6">
+      <div class="bg-customButton text-white p-6">
         <div class="flex justify-end text-black">
           <div class="absolute right-5 dropdown dropdown-end">
             <div tabindex="0" role="button" class="group">
@@ -65,64 +64,12 @@ onMounted(() => {
                   Update/Delete Account
                 </button>
               </li>
-              <li><a>Logout</a></li>
-              <li><a>Update/Delete Account</a></li>
+
               <li><a @click="logout">Logout</a></li>
             </ul>
           </div>
         </div>
-        <!-- Back button -->
-        <div class="flex justify-start">
-          <button class="group" @click="router.push('/homepage')">
-            <svg
-              class="size-6 group-hover:hidden"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M9.57 5.93005L3.5 12.0001L9.57 18.0701"
-                stroke="white"
-                stroke-width="1.5"
-                stroke-miterlimit="10"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M20.5 12H3.66998"
-                stroke="white"
-                stroke-width="1.5"
-                stroke-miterlimit="10"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
 
-            <svg
-              class="size-6 hidden group-hover:block"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M9.57 5.93005L3.5 12.0001L9.57 18.0701"
-                stroke="#000409"
-                stroke-width="1.5"
-                stroke-miterlimit="10"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M20.5 12H3.66998"
-                stroke="#000409"
-                stroke-width="1.5"
-                stroke-miterlimit="10"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </button>
-        </div>
         <div class="flex flex-col items-center mt-4">
           <!-- Avatar -->
           <div class="avatar w-24 h-24 rounded-full bg-white mb-4">
@@ -134,24 +81,45 @@ onMounted(() => {
           </div>
 
           <!-- Name -->
-          <h2 class="text-xl font-semibold mb-2">{{userName}}</h2>
+          <h2 class="text-xl font-semibold mb-2">{{ userName }}</h2>
 
           <!-- Stats -->
-          <div class="flex gap-8 mb-4">
-            <div class="text-center">
-              <p class="text-2xl font-bold">0</p>
-              <p class="text-sm">Upcoming</p>
+          <div class="w-full flex items-center justify-center gap-6 relative">
+            <!-- Upcoming -->
+            <div class="relative">
+              <div
+                class="flex items-center justify-center bg-gray-100 rounded-full px-6 py-2"
+              >
+                <span class="font-semibold text-gray-700">Upcoming</span>
+              </div>
+              <!-- Floating Bubble -->
+              <span
+                class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-dark-slate rounded-full"
+              >
+                0
+              </span>
             </div>
-            <div class="text-center">
-              <p class="text-2xl font-bold">0</p>
-              <p class="text-sm">Completed</p>
+
+            <!-- Completed -->
+            <div class="relative">
+              <div
+                class="flex items-center justify-center bg-gray-100 rounded-full px-6 py-2"
+              >
+                <span class="font-semibold text-gray-700">Completed</span>
+              </div>
+              <!-- Floating Bubble -->
+              <span
+                class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-dark-slate rounded-full"
+              >
+                0
+              </span>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Row 2: Buttons -->
-      <div class="bg-customButton text-white p-4 flex justify-center gap-4">
+      <div class="bg-customButton text-white p-2 flex justify-center gap-4">
         <button
           class="group flex flex-col items-center justify-center px-4 py-3 rounded text-white hover:text-dark-slate"
           @click="router.push('/calendarpage')"
@@ -320,7 +288,7 @@ onMounted(() => {
 
       <!-- Row 3: Upcoming Schedules -->
       <div class="bg-white p-6">
-        <h3 class="text-lg font-semibold mb-4">Upcoming</h3>
+        <h3 class="text-lg font-semibold mb-4">My Activity</h3>
         <ul class="space-y-4">
           <!-- Placeholder Event Items -->
           <li class="relative p-4 bg-gray-50 rounded shadow-sm">
@@ -424,6 +392,39 @@ onMounted(() => {
 
         <!-- Name -->
         <h2 class="text-xl font-semibold mb-6">{{ userName }}</h2>
+        <div
+          class="w-full flex items-center justify-center gap-6 mb-6 relative"
+        >
+          <!-- Upcoming -->
+          <div class="relative">
+            <div
+              class="flex items-center justify-center bg-gray-100 rounded-full px-6 py-2"
+            >
+              <span class="font-semibold text-gray-700">Upcoming</span>
+            </div>
+            <!-- Floating Bubble -->
+            <span
+              class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
+            >
+              0
+            </span>
+          </div>
+
+          <!-- Completed -->
+          <div class="relative">
+            <div
+              class="flex items-center justify-center bg-gray-100 rounded-full px-6 py-2"
+            >
+              <span class="font-semibold text-gray-700">Completed</span>
+            </div>
+            <!-- Floating Bubble -->
+            <span
+              class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
+            >
+              0
+            </span>
+          </div>
+        </div>
 
         <!-- Buttons -->
         <div class="w-full flex flex-col gap-3">
@@ -541,7 +542,7 @@ onMounted(() => {
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-             @click="router.push('/loginform')"
+            @click="router.push('/loginform')"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -570,106 +571,154 @@ onMounted(() => {
 
       <!-- Right Column -->
       <div class="w-full lg:w-3/4 lg:pl-6 mt-6 lg:mt-0 flex flex-col gap-6">
-        <!-- Top Row: Stats -->
-        <div class="flex gap-6 items-center">
-          <div class="flex-1 bg-white rounded-lg shadow p-6">
-            <p class="text-center text-3xl font-bold text-dark-slate">0</p>
-            <h3 class="text-center text-lg font-semibold mb-2">
-              Upcoming Events
-            </h3>
-          </div>
-          <div class="flex-1 bg-white rounded-lg shadow p-6">
-            <p class="text-center text-3xl font-bold text-dark-slate">0</p>
-            <h3 class="text-center text-lg font-semibold mb-2">
-              Completed Events
-            </h3>
-          </div>
-        </div>
-
-        <!-- Bottom Row: Event List -->
+        <!-- Bottom Row: Event Table -->
         <div class="bg-white rounded-lg shadow p-6 flex-1">
-          <h3 class="text-2xl font-semibold mb-4">Upcoming</h3>
-          <ul class="space-y-4">
-            <!-- Placeholder Event Items -->
-            <li class="relative p-4 bg-gray-50 rounded shadow-sm">
-              <p class="font-semibold text-lg">Title</p>
-              <div class="absolute top-2 right-2 dropdown dropdown-end">
-                <div tabindex="0" role="button" class="btn btn-ghost m-1">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
+          <h3 class="text-2xl font-semibold mb-4">My Activity</h3>
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider"
                   >
-                    <path
-                      d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-                    />
-                  </svg>
-                </div>
-                <ul
-                  tabindex="0"
-                  class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-                >
-                  <li><a>Bookmark</a></li>
-                  <li><a>Register</a></li>
-                </ul>
-              </div>
-              <p class="text-sm">Date/Time</p>
-            </li>
-            <li class="relative p-4 bg-gray-50 rounded shadow-sm">
-              <p class="font-semibold text-lg">Title</p>
-              <div class="absolute top-2 right-2 dropdown dropdown-end">
-                <div tabindex="0" role="button" class="btn btn-ghost m-1">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
+                    Title
+                  </th>
+                  <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider"
                   >
-                    <path
-                      d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-                    />
-                  </svg>
-                </div>
-                <ul
-                  tabindex="0"
-                  class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-                >
-                  <li><a>Bookmark</a></li>
-                  <li><a>Register</a></li>
-                </ul>
-              </div>
-              <p class="text-sm">Date/Time</p>
-            </li>
-            <li class="relative p-4 bg-gray-50 rounded shadow-sm">
-              <p class="font-semibold text-lg">Title</p>
-              <div class="absolute top-2 right-2 dropdown dropdown-end">
-                <div tabindex="0" role="button" class="btn btn-ghost m-1">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
+                    Date/Time
+                  </th>
+                  <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider"
                   >
-                    <path
-                      d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-                    />
-                  </svg>
-                </div>
-                <ul
-                  tabindex="0"
-                  class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-                >
-                  <li><a>Bookmark</a></li>
-                  <li><a>Register</a></li>
-                </ul>
-              </div>
-              <p class="text-sm">Date/Time</p>
-            </li>
-          </ul>
+                    Status
+                  </th>
+                  <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider"
+                  >
+                    Requirement/Certificate
+                  </th>
+                  <th scope="col" class="relative px-6 py-3">
+                    <span class="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <!-- Example Event Row -->
+                <tr class="bg-gray-50 hover:bg-gray-100">
+                  <td
+                    class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900"
+                  >
+                    Career Post Title
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                    -------
+                  </td>
+                  <td
+                    class="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium"
+                  >
+                    Applied
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    <!-- Certificate button, disabled for now -->
+                    <button
+                      class="px-3 py-1 rounded bg-gray-300 text-white cursor-not-allowed"
+                      disabled
+                    >
+                      View Requirement
+                    </button>
+                  </td>
+                  <td
+                    class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
+                  >
+                    <div class="dropdown dropdown-end">
+                      <div
+                        tabindex="0"
+                        role="button"
+                        class="btn btn-ghost m-1 p-1"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="15"
+                          height="15"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path
+                            d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
+                          />
+                        </svg>
+                      </div>
+                      <ul
+                        tabindex="0"
+                        class="dropdown-content menu bg-base-100 rounded-box z-10 w-52 p-2 shadow-sm"
+                      >
+                        <li><a>Cancel</a></li>
+                      </ul>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Repeat rows as needed -->
+                <tr class="hover:bg-gray-100">
+                  <td
+                    class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900"
+                  >
+                    Training Post Title
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                    2025-09-10 2:00 PM
+                  </td>
+                  <td
+                    class="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium"
+                  >
+                    Upcoming
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    <button
+                      class="px-3 py-1 rounded bg-gray-300 text-white cursor-not-allowed"
+                      disabled
+                    >
+                      Certificate Issued
+                    </button>
+                  </td>
+                  <td
+                    class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
+                  >
+                    <div class="dropdown dropdown-end">
+                      <div
+                        tabindex="0"
+                        role="button"
+                        class="btn btn-ghost m-1 p-1"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="15"
+                          height="15"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path
+                            d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
+                          />
+                        </svg>
+                      </div>
+                      <ul
+                        tabindex="0"
+                        class="dropdown-content menu bg-base-100 rounded-box z-10 w-52 p-2 shadow-sm"
+                      >
+                        <li><a>Cancel</a></li>
+                      </ul>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

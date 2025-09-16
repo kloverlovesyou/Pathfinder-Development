@@ -30,6 +30,7 @@ const router = createRouter({
     {
       path: "/homepage",
       component: Homepage,
+      meta: { requiresAuth: true, role: "applicant" },
     },
     {
       path: "/loginform",
@@ -50,34 +51,42 @@ const router = createRouter({
     {
       path: "/profilepage",
       component: ProfilePage,
+      meta: { requiresAuth: true, role: "applicant" },
     },
     {
       path: "/trainingpage",
       component: Trainingpage,
+      meta: { requiresAuth: true, role: "applicant" },
     },
     {
       path: "/careerpage",
       component: Careerpage,
+      meta: { requiresAuth: true, role: "applicant" },
     },
     {
       path: "/organizationpage",
       component: Organizationpage,
+      meta: { requiresAuth: true, role: "applicant" },
     },
     {
       path: "/calendarpage",
       component: Calendarpage,
+      meta: { requiresAuth: true, role: "applicant" },
     },
     {
       path: "/bookmarkpage",
       component: Bookmarkpage,
+      meta: { requiresAuth: true, role: "applicant" },
     },
     {
       path: "/certificatespage",
       component: Certificatespage,
+      meta: { requiresAuth: true, role: "applicant" },
     },
     {
       path: "/updatedeletepage",
       component: UpdateDeletepage,
+      meta: { requiresAuth: true, role: "applicant" },
     },
     {
       path: "/resumepage",
@@ -88,26 +97,54 @@ const router = createRouter({
       name: "CareerDetails",
       component: CareerDetails,
       props: true,
+      meta: { requiresAuth: true, role: "applicant" },
     },
     {
       path: "/training/:id",
       name: "TrainingDetails",
       component: TrainingDetails,
       props: true,
+      meta: { requiresAuth: true, role: "applicant" },
     },
     {
       path: "/OrganizationHomePage",
       component: OrgHomePage,
+      meta: { requiresAuth: true, role: "organization" },
     },
     {
       path: "/OrgTrainings",
       component: OrgTraining,
+      meta: { requiresAuth: true, role: "organization" },
     },
     {
       path: "/OrgCareers",
       component: OrgCareer,
+      meta: { requiresAuth: true, role: "organization" },
+    },
+
+    // 🚨 Catch-all must always be last
+    {
+      path: "/:pathMatch(.*)*",
+      redirect: "/loginform", 
+      // OR use a component like NotFound.vue instead:
+      // component: () => import("@/components/NotFound.vue"),
     },
   ],
+});
+
+// ✅ Global navigation guard (MUST be after router is created)
+router.beforeEach((to, from, next) => {
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  if (to.meta.requiresAuth && !user) {
+    return next("/loginform");
+  }
+
+  if (to.meta.role && user?.role !== to.meta.role) {
+    return next("/loginform"); // or redirect to a "403" page if you like
+  }
+
+  next();
 });
 
 export default router;
