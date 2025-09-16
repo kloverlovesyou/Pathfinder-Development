@@ -1,5 +1,7 @@
 <template>
-  <div class="font-poppins min-h-screen flex items-center justify-center bg-gray-50 p-4">
+  <div
+    class="font-poppins min-h-screen flex items-center justify-center bg-gray-50 p-4"
+  >
     <div
       class="card bg-base-200 border-base-300 rounded-box border p-6 max-w-xs sm:max-w-sm md:max-w-md w-full shadow-lg"
     >
@@ -35,7 +37,10 @@
         </div>
 
         <div class="card-actions justify-center">
-          <button type="submit" class="btn btn-primary w-3/4 bg-dark-slate text-white">
+          <button
+            type="submit"
+            class="btn btn-primary w-3/4 bg-dark-slate text-white"
+          >
             Log in
           </button>
         </div>
@@ -44,7 +49,9 @@
       <div class="text-center mt-4">
         <p class="text-sm text-gray-600">
           Don't have an account?
-          <router-link to="/typeofaccount" class="text-primary"> Register here. </router-link>
+          <router-link to="/typeofaccount" class="text-primary">
+            Register here.
+          </router-link>
         </p>
       </div>
     </div>
@@ -74,10 +81,13 @@ const handleLogin = async () => {
 
   try {
     // 1️⃣ Try applicant login first
-    let response = await axios.post("http://127.0.0.1:8000/api/applicants/login", {
-      emailAddress: email.value,
-      password: password.value,
-    });
+    let response = await axios.post(
+      "http://127.0.0.1:8000/api/applicants/login",
+      {
+        emailAddress: email.value,
+        password: password.value,
+      }
+    );
 
     let userData = response.data.user;
     let displayName = `${userData.firstName} ${userData.lastName}`;
@@ -95,10 +105,13 @@ const handleLogin = async () => {
   } catch (err1) {
     try {
       // 2️⃣ If applicant login fails, try organization
-      let response = await axios.post("http://127.0.0.1:8000/api/organizations/login", {
-        emailAddress: email.value,
-        password: password.value,
-      });
+      let response = await axios.post(
+        "http://127.0.0.1:8000/api/organizations/login",
+        {
+          emailAddress: email.value,
+          password: password.value,
+        }
+      );
 
       let orgData = response.data.organization;
       let displayName = orgData.name;

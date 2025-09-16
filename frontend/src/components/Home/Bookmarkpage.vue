@@ -6,68 +6,6 @@ const router = useRouter();
 <template>
   <main>
     <div class="flex items-center gap-4 mb-4">
-      <button class="group" @click="router.push('/homepage')">
-        <svg
-          class="size-6 group-hover:hidden"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M9.57 5.93005L3.5 12.0001L9.57 18.0701"
-            stroke="#6682A3"
-            stroke-width="1.5"
-            stroke-miterlimit="10"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <path
-            d="M20.5 12H3.66998"
-            stroke="#6682A3"
-            stroke-width="1.5"
-            stroke-miterlimit="10"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-
-        <svg
-          class="size-6 hidden group-hover:block"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M9.57 5.93005L3.5 12.0001L9.57 18.0701"
-            stroke="#44576D"
-            stroke-width="1.5"
-            stroke-miterlimit="10"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <path
-            d="M20.5 12H3.66998"
-            stroke="#44576D"
-            stroke-width="1.5"
-            stroke-miterlimit="10"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-      </button>
-      <svg
-        width="32"
-        height="32"
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M6 3V24L13.5 16.5L21 24V3H6ZM18 0H3V21L4.5 19.5V1.5H18V0Z"
-          fill="#44576D"
-        />
-      </svg>
-
       <h2 class="text-2xl font-bold -m-2">Bookmark</h2>
     </div>
     <div class="space-y-4">
