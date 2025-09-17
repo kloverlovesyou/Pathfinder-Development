@@ -3,18 +3,48 @@ import { useRouter } from "vue-router";
 
 const router = useRouter();
 
-import { ref, onMounted} from "vue";
+import { ref, onMounted } from "vue";
 
-  const userName = ref('');
-  const isModalOpen = ref(false);
-  const selectedImage = ref(null);
-  const selectedTitle = ref(null);
+// Certificates state
+const certificates = ref([]);
+
+// Add a new empty certificate entry
+function addCertificate() {
+  certificates.value.push({
+    title: "",
+    image: null, // base64 or URL after upload
+    file: null, // actual file (optional if you want to send to backend)
+  });
+}
+
+// Remove a certificate by index
+function removeCertificate(index) {
+  certificates.value.splice(index, 1);
+}
+
+// Handle file upload
+function handleFileUpload(event, index) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    certificates.value[index].image = e.target.result; // base64 preview
+    certificates.value[index].file = file; // keep original file for backend
+  };
+  reader.readAsDataURL(file);
+}
+
+const userName = ref("");
+const isModalOpen = ref(false);
+const selectedImage = ref(null);
+const selectedTitle = ref(null);
 
 const logout = () => {
   // Remove user data from localStorage
-  localStorage.removeItem('user');
+  localStorage.removeItem("user");
   // Redirect to login page
-  router.push('/loginform');
+  router.push("/loginform");
 };
 
 function openModal(image, title) {
@@ -25,22 +55,21 @@ function openModal(image, title) {
 
 function closeModal() {
   isModalOpen.value = false;
-
 }
 
 onMounted(() => {
-  const savedUser = localStorage.getItem('user')
+  const savedUser = localStorage.getItem("user");
   if (savedUser) {
-    const user = JSON.parse(savedUser)
+    const user = JSON.parse(savedUser);
     if (user.firstName && user.lastName) {
-      userName.value = `${user.firstName} ${user.lastName}`
+      userName.value = `${user.firstName} ${user.lastName}`;
     } else {
-      userName.value = 'Guest'
+      userName.value = "Guest";
     }
   } else {
-    userName.value = 'Guest'
+    userName.value = "Guest";
   }
-})
+});
 </script>
 
 <template>
@@ -478,7 +507,7 @@ onMounted(() => {
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="logout "
+            @click="logout"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -507,6 +536,82 @@ onMounted(() => {
 
       <!-- Right Column -->
       <div class="w-full lg:w-3/4 lg:pl-6 mt-6 lg:mt-0 flex flex-col gap-6">
+        <!-- Certificates Upload -->
+        <div class="border bg-white rounded-lg p-4 space-y-4 relative">
+          <!-- Header with Plus Button -->
+          <div class="flex justify-between items-center">
+            <h2 class="text-lg font-semibold">Upload Certificates</h2>
+            <button
+              type="button"
+              @click="addCertificate"
+              class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
+            >
+              +
+            </button>
+          </div>
+
+          <!-- Certificate Items -->
+          <div
+            v-for="(cert, index) in certificates"
+            :key="index"
+            class="space-y-2 border p-3 rounded relative"
+          >
+            <!-- Delete Button -->
+            <button
+              type="button"
+              @click="removeCertificate(index)"
+              class="absolute top-2 right-2 text-gray-500 hover:text-red-500"
+            >
+              ✕
+            </button>
+
+            <!-- Certificate Fields -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input
+                v-model="cert.title"
+                type="text"
+                placeholder="Certificate Title"
+                class="input-field border rounded p-2"
+              />
+              <input
+                type="file"
+                accept="image/*"
+                class="file-input"
+                @change="handleFileUpload($event, index)"
+              />
+            </div>
+
+            <!-- Certificate Preview -->
+            <div>
+              <div
+                v-if="cert.image"
+                class="h-32 w-full flex items-center justify-center border rounded"
+              >
+                <img
+                  :src="cert.image"
+                  alt="Certificate Preview"
+                  class="h-32 object-cover rounded-lg"
+                />
+              </div>
+              <div
+                v-else
+                class="h-32 w-full flex items-center justify-center border rounded text-gray-400 text-sm"
+              >
+                Certificate Preview
+              </div>
+            </div>
+            <!-- Upload Button -->
+            <div class="flex justify-end mt-2">
+              <button
+                type="button"
+                @click="uploadCertificate(index)"
+                class="px-4 py-2 bg-customButton text-white rounded hover:bg-dark-slate"
+              >
+                Upload
+              </button>
+            </div>
+          </div>
+        </div>
         <!-- Bottom Row: Event List -->
         <div class="bg-white rounded-lg shadow p-6 flex-1">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">

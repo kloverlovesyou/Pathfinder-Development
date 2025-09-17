@@ -6,7 +6,7 @@
           class="w-full max-w-3xl flex-grow bg-white p-6 rounded-lg shadow-md py-14"
         >
           <div class="flex justify-start gap-4 mb-4 py-4">
-            <h2 class="text-2xl font-bold">Update Account</h2>
+            <h2 class="text-2xl font-bold">Account Setting</h2>
           </div>
 
           <!-- FORM -->
@@ -156,6 +156,39 @@
 
         <!-- Name -->
         <h2 class="text-xl font-semibold mb-6">Keiro Musician</h2>
+        <div
+          class="w-full flex items-center justify-center gap-6 mb-6 relative"
+        >
+          <!-- Upcoming -->
+          <div class="relative">
+            <div
+              class="flex items-center justify-center bg-gray-100 rounded-full px-6 py-2"
+            >
+              <span class="font-semibold text-gray-700">Upcoming</span>
+            </div>
+            <!-- Floating Bubble -->
+            <span
+              class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
+            >
+              0
+            </span>
+          </div>
+
+          <!-- Completed -->
+          <div class="relative">
+            <div
+              class="flex items-center justify-center bg-gray-100 rounded-full px-6 py-2"
+            >
+              <span class="font-semibold text-gray-700">Completed</span>
+            </div>
+            <!-- Floating Bubble -->
+            <span
+              class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
+            >
+              0
+            </span>
+          </div>
+        </div>
 
         <!-- Buttons -->
         <div class="w-full flex flex-col gap-3">
@@ -267,7 +300,7 @@
               />
             </svg>
 
-            <span>Update/Delete Account</span>
+            <span>Account Setting</span>
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
@@ -302,7 +335,7 @@
         <!-- Bottom Row: Event List -->
         <div class="bg-white rounded-lg shadow p-6 flex-1">
           <div class="flex justify-start gap-4 mb-4 py-4">
-            <h2 class="text-2xl font-bold">Update/Delete Account</h2>
+            <h2 class="text-2xl font-bold">Account Setting</h2>
           </div>
 
           <!-- FORM -->
