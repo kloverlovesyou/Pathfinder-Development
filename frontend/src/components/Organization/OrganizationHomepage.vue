@@ -3,14 +3,16 @@
     <!-- Sidebar -->
     <transition name="slide">
       <aside class="sidebar" :class="{ collapsed: !isSidebarOpen }" @click.self="toggleSidebar">
+        <!-- Avatar always visible -->
+        <div class="avatar"></div>
 
-        <!-- Profile Section (only when sidebar is hovered/open) -->
+        <!-- Profile Section (only when sidebar is open) -->
         <transition name="fade">
           <div v-if="isSidebarOpen" class="profile-section">
-            <div class="avatar"></div>
             <h3 class="org-name">{{ organizationName }}</h3>
             <div class="profile-actions">
               <div class="action" @click="$router.push('/updateprofile')">
+                <!-- Update Profile Icon -->
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M11.7278 8.27191C12.7534 9.87525 14.1247 11.2375 15.7464 12.2534L8.85673 19.144C8.43166 19.569 8.21841 19.7816 7.95731 19.9213C7.69637 20.0609 7.40171 20.1199 6.81278 20.2377L3.73563 20.853C3.40302 20.9195 3.23649 20.9525 3.14188 20.8578C3.04759 20.7632 3.08035 20.5971 3.14677 20.2651L3.76298 17.1879C3.88087 16.5985 3.93965 16.3035 4.07938 16.0424C4.21912 15.7814 4.43173 15.569 4.85673 15.144L11.7278 8.27191ZM16.1116 4.03656C16.6711 3.75929 17.3284 3.75931 17.888 4.03656C18.1821 4.18229 18.455 4.45518 19.0003 5.00043C19.5453 5.54545 19.8184 5.81774 19.9641 6.11175C20.2414 6.67123 20.2413 7.32861 19.9641 7.88812C19.8184 8.18221 19.5455 8.45517 19.0003 9.00043L17.2034 10.7963C15.5308 9.84498 14.1456 8.46859 13.1819 6.81781L15.0003 5.00043C15.5453 4.45539 15.8176 4.18234 16.1116 4.03656Z"
@@ -56,7 +58,7 @@
           </svg>
           <span>Career</span>
         </div>
-        <div class="icon" @click="$router.push('/Calendar')">
+        <div class="icon" @click="$router.push('/OrgCalendar')">
           <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M2.16675 9.4165C2.16675 7.53089 2.16675 6.58808 2.75253 6.00229C3.33832 5.4165 4.28113 5.4165 6.16675 5.4165H19.8334C21.719 5.4165 22.6618 5.4165 23.2476 6.00229C23.8334 6.58808 23.8334 7.53089 23.8334 9.4165V9.83317C23.8334 10.3046 23.8334 10.5403 23.687 10.6867C23.5405 10.8332 23.3048 10.8332 22.8334 10.8332H3.16675C2.69534 10.8332 2.45964 10.8332 2.31319 10.6867C2.16675 10.5403 2.16675 10.3046 2.16675 9.83317V9.4165Z"
@@ -397,6 +399,12 @@ onMounted(() => {
   pointer-events: none;
 }
 
+.sidebar.collapsed .avatar {
+  margin: 10px auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
 
 /* Main Content */
 .content {
@@ -513,9 +521,18 @@ onMounted(() => {
 }
 
 .profile-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;    /* centers everything under avatar */
   text-align: center;
-  padding: 20px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  gap: 0.3rem;           /* spacing between avatar, name, and actions */
+}
+
+.profile-section .avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: #ccc; /* placeholder for logo/avatar */
 }
 
 .avatar {
@@ -528,30 +545,31 @@ onMounted(() => {
 }
 
 .org-name {
-  font-size: 16px;
   font-weight: 600;
-  margin: 10px 0;
-  color: white;
+  font-size: 14px;
+  text-align: center;
 }
 
 .profile-actions {
   display: flex;
-  justify-content: space-around;
-  margin-top: 15px;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .profile-actions .action {
   display: flex;
-  flex-direction: row;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 0.35rem;           /* smaller space between icon + text */
+  font-size: 13px;        /* smaller text */
+  color: #fff;            /* keep text color consistent */
   cursor: pointer;
-  font-size: 14px;
-  color: white;
 }
 
 .profile-actions .action svg {
-  margin-bottom: 0;
+  width: 14px;            /* shrink the icon */
+  height: 14px;
 }
 
 .profile-actions .action:hover {

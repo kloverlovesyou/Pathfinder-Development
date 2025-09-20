@@ -14,6 +14,7 @@ const noHeaderRoutes = [
   "/OrgTrainings",
   "/OrgCareers",
   "/updateprofile",
+  "/OrgCalendar",
 ];
 </script>
 
