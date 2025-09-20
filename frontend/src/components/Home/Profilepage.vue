@@ -30,7 +30,7 @@ onMounted(() => {
   <div class="min-h-screen bg-gray-100 font-poppins">
     <div class="lg:hidden block font-poppins">
       <!-- Row 1: Profile Info -->
-      <div class="bg-customButton text-white p-6">
+      <div class="bg-dark-slate text-white p-6">
         <div class="flex justify-end text-black">
           <div class="absolute right-5 dropdown dropdown-end">
             <div tabindex="0" role="button" class="group">
@@ -61,7 +61,7 @@ onMounted(() => {
             >
               <li>
                 <button @click="router.push('/updatedeletepage')">
-                  Update/Delete Account
+                  Account Setting
                 </button>
               </li>
 
@@ -94,7 +94,7 @@ onMounted(() => {
               </div>
               <!-- Floating Bubble -->
               <span
-                class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-dark-slate rounded-full"
+                class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
               >
                 0
               </span>
@@ -109,7 +109,7 @@ onMounted(() => {
               </div>
               <!-- Floating Bubble -->
               <span
-                class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-dark-slate rounded-full"
+                class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
               >
                 0
               </span>

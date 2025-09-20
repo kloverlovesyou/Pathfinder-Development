@@ -10,14 +10,6 @@ const filteredExperiences = computed(() =>
   resume.experiences.filter((exp) => exp.text)
 );
 
-const logout = () => {
-  // Remove user data from localStorage
-  localStorage.removeItem("user");
-  // Redirect to login page
-  router.push("/loginform");
-};
-
-
 const router = useRouter();
 const isModalOpen = ref(false);
 const selectedImage = ref(null);
@@ -134,7 +126,7 @@ const form = reactive({
   lastName: "",
   emailAddress: "",
   phoneNumber: "",
-  address: ""
+  address: "",
 });
 
 
@@ -164,7 +156,6 @@ onMounted(() => {
   }
 });
 </script>
-
 
 <template>
   <div class="min-h-screen bg-gray-100 font-poppins">
@@ -632,73 +623,6 @@ onMounted(() => {
               </div>
             </div>
 
-            <!-- Certificates -->
-            <div class="border rounded-xl p-4 space-y-4 relative">
-              <!-- Header with Plus Button -->
-              <div class="flex justify-between items-center">
-                <h2 class="text-lg font-semibold">Certificates</h2>
-                <button
-                  type="button"
-                  @click="addCertificate"
-                  class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
-                >
-                  +
-                </button>
-              </div>
-
-              <!-- Certificate Items -->
-              <div
-                v-for="(cert, index) in certificates"
-                :key="index"
-                class="space-y-2 border rounded p-3 rounded-lg relative"
-              >
-                <!-- Delete Button -->
-                <button
-                  type="button"
-                  @click="removeCertificate(index)"
-                  class="absolute top-2 right-2 text-gray-500 hover:text-red-500"
-                >
-                  ✕
-                </button>
-
-                <!-- Certificate Fields -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input
-                    v-model="cert.title"
-                    type="text"
-                    placeholder="Certificate Title"
-                    class="input-field border rounded p-2"
-                  />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    class="file-input"
-                    @change="handleFileUpload($event, index)"
-                  />
-                </div>
-
-                <!-- Certificate Preview -->
-                <div>
-                  <div
-                    v-if="cert.image"
-                    class="h-32 w-full flex items-center justify-center border rounded"
-                  >
-                    <img
-                      :src="cert.image"
-                      alt="Certificate Preview"
-                      class="h-32 object-cover rounded-lg"
-                    />
-                  </div>
-                  <div
-                    v-else
-                    class="h-32 w-full flex items-center justify-center border rounded text-gray-400 text-sm"
-                  >
-                    Certificate Preview
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <!-- URL -->
             <div class="border rounded p-4 space-y-4 relative">
               <h2 class="text-lg font-semibold">URL</h2>
@@ -961,35 +885,30 @@ onMounted(() => {
                 type="text"
                 placeholder="First Name"
                 class="input-field border rounded p-2"
-                
               />
               <input
                 v-model="form.emailAddress"
                 type="email"
                 placeholder="Email"
                 class="input-field border rounded p-2"
-                
               />
               <input
                 v-model="form.middleName"
                 type="text"
                 placeholder="Middle Name"
                 class="input-field border rounded p-2"
-                
               />
               <input
                 v-model="form.phoneNumber"
                 type="text"
                 placeholder="Mobile Number"
                 class="input-field border rounded p-2"
-                
               />
               <input
                 v-model="form.lastName"
                 type="text"
                 placeholder="Last Name"
                 class="input-field border rounded p-2"
-                
               />
 
               <input
@@ -997,7 +916,6 @@ onMounted(() => {
                 type="text"
                 placeholder="Address"
                 class="input-field border rounded p-2"
-                
               />
             </div>
 
@@ -1161,73 +1079,6 @@ onMounted(() => {
                     ✕
                   </button>
                 </span>
-              </div>
-            </div>
-
-            <!-- Certificates -->
-            <div class="border rounded p-4 space-y-4 relative">
-              <!-- Header with Plus Button -->
-              <div class="flex justify-between items-center">
-                <h2 class="text-lg font-semibold">Certificates</h2>
-                <button
-                  type="button"
-                  @click="addCertificate"
-                  class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
-                >
-                  +
-                </button>
-              </div>
-
-              <!-- Certificate Items -->
-              <div
-                v-for="(cert, index) in certificates"
-                :key="index"
-                class="space-y-2 border p-3 rounded relative"
-              >
-                <!-- Delete Button -->
-                <button
-                  type="button"
-                  @click="removeCertificate(index)"
-                  class="absolute top-2 right-2 text-gray-500 hover:text-red-500"
-                >
-                  ✕
-                </button>
-
-                <!-- Certificate Fields -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input
-                    v-model="cert.title"
-                    type="text"
-                    placeholder="Certificate Title"
-                    class="input-field border rounded p-2"
-                  />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    class="file-input"
-                    @change="handleFileUpload($event, index)"
-                  />
-                </div>
-
-                <!-- Certificate Preview -->
-                <div>
-                  <div
-                    v-if="cert.image"
-                    class="h-32 w-full flex items-center justify-center border rounded"
-                  >
-                    <img
-                      :src="cert.image"
-                      alt="Certificate Preview"
-                      class="h-32 object-cover rounded-lg"
-                    />
-                  </div>
-                  <div
-                    v-else
-                    class="h-32 w-full flex items-center justify-center border rounded text-gray-400 text-sm"
-                  >
-                    Certificate Preview
-                  </div>
-                </div>
               </div>
             </div>
 
