@@ -10,6 +10,13 @@ const filteredExperiences = computed(() =>
   resume.experiences.filter((exp) => exp.text)
 );
 
+const logout = () => {
+  // Remove user data from localStorage
+  localStorage.removeItem("user");
+  // Redirect to login page
+  router.push("/loginform");
+};
+
 
 const router = useRouter();
 const isModalOpen = ref(false);
