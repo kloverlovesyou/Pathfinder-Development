@@ -57,4 +57,21 @@ public function login(Request $request)
         'user' => $applicant,
     ]);
 }
+
+public function destroy(Request $request)
+{
+    $user = $request->user(); // get authenticated user
+
+    if ($user) {
+        // delete the account
+        $user->delete();
+
+        // revoke all tokens (logout everywhere)
+        $user->tokens()->delete();
+
+        return response()->json(['message' => 'Account deleted successfully']);
+    }
+
+    return response()->json(['message' => 'User not found'], 404);
+}
 }
