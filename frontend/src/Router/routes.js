@@ -17,6 +17,7 @@ import TrainingDetails from "@/components/Home/TrainingDetails.vue";
 import OrgHomePage from "@/components/Organization/OrganizationHomepage.vue";
 import OrgTraining from "@/components/Organization/OrganizationTrainings.vue";
 import OrgCareer from "@/components/Organization/OrganizationCareers.vue";
+import OrgCalendar from "@/components/Organization/OrganizationCalendar.vue";
 
 import { createRouter, createWebHistory } from "vue-router";
 
@@ -121,11 +122,16 @@ const router = createRouter({
       component: OrgCareer,
       meta: { requiresAuth: true, role: "organization" },
     },
+    {
+      path: "/OrgCalendar",
+      component: OrgCalendar,
+      meta: { requiresAuth: true, role: "organization" },
+    },
 
     // 🚨 Catch-all must always be last
     {
       path: "/:pathMatch(.*)*",
-      redirect: "/loginform", 
+      redirect: "/loginform",
       // OR use a component like NotFound.vue instead:
       // component: () => import("@/components/NotFound.vue"),
     },

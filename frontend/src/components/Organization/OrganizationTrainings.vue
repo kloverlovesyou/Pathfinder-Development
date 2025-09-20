@@ -3,14 +3,16 @@
     <!-- Sidebar -->
     <transition name="slide">
       <aside class="sidebar" :class="{ collapsed: !isSidebarOpen }" @click.self="toggleSidebar">
+        <!-- Avatar always visible -->
+        <div class="avatar"></div>
 
-        <!-- Profile Section (only when sidebar is hovered/open) -->
+        <!-- Profile Section (only when sidebar is open) -->
         <transition name="fade">
           <div v-if="isSidebarOpen" class="profile-section">
-            <div class="avatar"></div>
             <h3 class="org-name">{{ organizationName }}</h3>
             <div class="profile-actions">
               <div class="action" @click="$router.push('/updateprofile')">
+                <!-- Update Profile Icon -->
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M11.7278 8.27191C12.7534 9.87525 14.1247 11.2375 15.7464 12.2534L8.85673 19.144C8.43166 19.569 8.21841 19.7816 7.95731 19.9213C7.69637 20.0609 7.40171 20.1199 6.81278 20.2377L3.73563 20.853C3.40302 20.9195 3.23649 20.9525 3.14188 20.8578C3.04759 20.7632 3.08035 20.5971 3.14677 20.2651L3.76298 17.1879C3.88087 16.5985 3.93965 16.3035 4.07938 16.0424C4.21912 15.7814 4.43173 15.569 4.85673 15.144L11.7278 8.27191ZM16.1116 4.03656C16.6711 3.75929 17.3284 3.75931 17.888 4.03656C18.1821 4.18229 18.455 4.45518 19.0003 5.00043C19.5453 5.54545 19.8184 5.81774 19.9641 6.11175C20.2414 6.67123 20.2413 7.32861 19.9641 7.88812C19.8184 8.18221 19.5455 8.45517 19.0003 9.00043L17.2034 10.7963C15.5308 9.84498 14.1456 8.46859 13.1819 6.81781L15.0003 5.00043C15.5453 4.45539 15.8176 4.18234 16.1116 4.03656Z"
@@ -56,7 +58,7 @@
           </svg>
           <span>Career</span>
         </div>
-        <div class="icon" @click="$router.push('/Calendar')">
+        <div class="icon" @click="$router.push('/OrgCalendar')">
           <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M2.16675 9.4165C2.16675 7.53089 2.16675 6.58808 2.75253 6.00229C3.33832 5.4165 4.28113 5.4165 6.16675 5.4165H19.8334C21.719 5.4165 22.6618 5.4165 23.2476 6.00229C23.8334 6.58808 23.8334 7.53089 23.8334 9.4165V9.83317C23.8334 10.3046 23.8334 10.5403 23.687 10.6867C23.5405 10.8332 23.3048 10.8332 22.8334 10.8332H3.16675C2.69534 10.8332 2.45964 10.8332 2.31319 10.6867C2.16675 10.5403 2.16675 10.3046 2.16675 9.83317V9.4165Z"
@@ -198,21 +200,31 @@
             <div class="popup-form-group schedule-group">
               <label for="schedule">Schedule</label>
               <div class="schedule-input-wrapper">
-                <input type="date" id="schedule" v-model="newTraining.schedule" placeholder="Schedule" />
-                <span class="calendar-icon">
-                  <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path
-                      d="M2.16669 9.41675C2.16669 7.53113 2.16669 6.58832 2.75247 6.00253C3.33826 5.41675 4.28107 5.41675 6.16669 5.41675H19.8334C21.719 5.41675 22.6618 5.41675 23.2476 6.00253C23.8334 6.58832 23.8334 7.53113 23.8334 9.41675V9.83342C23.8334 10.3048 23.8334 10.5405 23.6869 10.687C23.5405 10.8334 23.3048 10.8334 22.8334 10.8334H3.16669C2.69528 10.8334 2.45958 10.8334 2.31313 10.687C2.16669 10.5405 2.16669 10.3048 2.16669 9.83341V9.41675Z"
-                      fill="black" />
-                    <path
-                      d="M22.833 13C23.3042 13 23.5401 13.0002 23.6865 13.1465C23.833 13.2929 23.833 13.5286 23.833 14V19.833C23.833 21.7186 23.8329 22.6613 23.2471 23.2471C22.6613 23.8329 21.7186 23.833 19.833 23.833H6.16699C4.28137 23.833 3.33872 23.8329 2.75293 23.2471C2.16714 22.6613 2.16699 21.7186 2.16699 19.833V14C2.16699 13.5286 2.16703 13.2929 2.31348 13.1465C2.45994 13.0002 2.69576 13 3.16699 13H22.833ZM8.58301 19.5C8.11182 19.5 7.87591 19.5001 7.72949 19.6465C7.58321 19.7929 7.58301 20.0288 7.58301 20.5V20.667C7.58301 21.1382 7.58308 21.3741 7.72949 21.5205C7.87591 21.6669 8.11182 21.667 8.58301 21.667H10.917C11.3882 21.667 11.6241 21.6669 11.7705 21.5205C11.9169 21.3741 11.917 21.1382 11.917 20.667V20.5C11.917 20.0288 11.9168 19.7929 11.7705 19.6465C11.6241 19.5001 11.3882 19.5 10.917 19.5H8.58301ZM15.083 19.5C14.6118 19.5 14.3759 19.5001 14.2295 19.6465C14.0832 19.7929 14.083 20.0288 14.083 20.5V20.667C14.083 21.1382 14.0831 21.3741 14.2295 21.5205C14.3759 21.6669 14.6118 21.667 15.083 21.667H17.417C17.8882 21.667 18.1241 21.6669 18.2705 21.5205C18.4169 21.3741 18.417 21.1382 18.417 20.667V20.5C18.417 20.0288 18.4168 19.7929 18.2705 19.6465C18.1241 19.5001 17.8882 19.5 17.417 19.5H15.083ZM8.58301 15.167C8.11182 15.167 7.87591 15.1671 7.72949 15.3135C7.58337 15.4599 7.58301 15.6959 7.58301 16.167V16.333C7.58301 16.8041 7.58337 17.0401 7.72949 17.1865C7.87591 17.3329 8.11182 17.333 8.58301 17.333H10.917C11.3882 17.333 11.6241 17.3329 11.7705 17.1865C11.9166 17.0401 11.917 16.8041 11.917 16.333V16.167C11.917 15.6959 11.9166 15.4599 11.7705 15.3135C11.6241 15.1671 11.3882 15.167 10.917 15.167H8.58301ZM15.083 15.167C14.6118 15.167 14.3759 15.1671 14.2295 15.3135C14.0834 15.4599 14.083 15.6959 14.083 16.167V16.333C14.083 16.8041 14.0834 17.0401 14.2295 17.1865C14.3759 17.3329 14.6118 17.333 15.083 17.333H17.417C17.8882 17.333 18.1241 17.3329 18.2705 17.1865C18.4166 17.0401 18.417 16.8041 18.417 16.333V16.167C18.417 15.6959 18.4166 15.4599 18.2705 15.3135C18.1241 15.1671 17.8882 15.167 17.417 15.167H15.083Z"
-                      fill="black" />
-                    <path d="M7.58331 3.25L7.58331 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
-                    <path d="M18.4167 3.25L18.4167 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
-                  </svg>
-                </span>
+                <!-- Date input with calendar icon -->
+                <div class="date-input-wrapper">
+                  <input type="date" id="schedule" v-model="newTraining.date" placeholder="Schedule" />
+                  <span class="calendar-icon">
+                    <!-- your SVG calendar icon -->
+                    <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M2.16669 9.41675C2.16669 7.53113 2.16669 6.58832 2.75247 6.00253C3.33826 5.41675 4.28107 5.41675 6.16669 5.41675H19.8334C21.719 5.41675 22.6618 5.41675 23.2476 6.00253C23.8334 6.58832 23.8334 7.53113 23.8334 9.41675V9.83342C23.8334 10.3048 23.8334 10.5405 23.6869 10.687C23.5405 10.8334 23.3048 10.8334 22.8334 10.8334H3.16669C2.69528 10.8334 2.45958 10.8334 2.31313 10.687C2.16669 10.5405 2.16669 10.3048 2.16669 9.83341V9.41675Z"
+                        fill="black" />
+                      <path
+                        d="M22.833 13C23.3042 13 23.5401 13.0002 23.6865 13.1465C23.833 13.2929 23.833 13.5286 23.833 14V19.833C23.833 21.7186 23.8329 22.6613 23.2471 23.2471C22.6613 23.8329 21.7186 23.833 19.833 23.833H6.16699C4.28137 23.833 3.33872 23.8329 2.75293 23.2471C2.16714 22.6613 2.16699 21.7186 2.16699 19.833V14C2.16699 13.5286 2.16703 13.2929 2.31348 13.1465C2.45994 13.0002 2.69576 13 3.16699 13H22.833Z"
+                        fill="black" />
+                      <path d="M7.58331 3.25L7.58331 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
+                      <path d="M18.4167 3.25L18.4167 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                  </span>
+                </div>
+
+                <!-- Time input -->
+                <div class="time-input-wrapper">
+                  <input type="time" id="time" v-model="newTraining.time" />
+                </div>
               </div>
             </div>
+
 
 
             <!-- On-Site / Online -->
@@ -274,9 +286,7 @@ export default {
       showRegistrantsModal: false,
 
       upcomingtrainings: [
-        { id: 1, title: "Mind Over Machine: Navigating AI in Everyday Life", date: "September 20, 2025", time: "7:30 PM to 12:00 PM" },
-        { id: 2, title: "Building Scalable Web Apps", date: "September 22, 2025", time: "9:00 AM to 11:00 AM" },
-        { id: 3, title: "Cybersecurity Fundamentals", date: "September 25, 2025", time: "1:00 PM to 4:00 PM" },
+        
       ],
 
       completedtrainings: [
@@ -302,12 +312,14 @@ export default {
       newTraining: {
         title: "",
         description: "",
-        schedule: "",
+        date: "",
+        time: "",
         mode: "",
         location: "",
         trainingLink: "",
         registrationLink: ""
       },
+      upcomingtrainings: []
     }
   },
   methods: {
@@ -337,16 +349,25 @@ export default {
         mode: "On-Site",
         location: "",
         registrationLink: ""
-      } 
+      }
     },
     saveTraining() {
-      if (this.newTraining.title && this.newTraining.schedule) {
-        this.upcomingtrainings.push({
-          id: Date.now(),
-          ...this.newTraining
-        })
-        this.closeTrainingPopup()
-      }
+      this.upcomingtrainings.push({
+        id: Date.now(),
+        title: this.newTraining.title,
+        description: this.newTraining.description,
+        date: this.newTraining.date,
+        time: this.newTraining.time
+      });
+
+      // clear form
+      this.newTraining = {
+        title: "",
+        description: "",
+        date: "",
+        time: ""
+      };
+      this.closeTrainingPopup()
     }
   }
 }
@@ -450,6 +471,12 @@ onMounted(() => {
   pointer-events: none;
 }
 
+.sidebar.collapsed .avatar {
+  margin: 10px auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
 
 /* Main Content */
 .content {
@@ -529,9 +556,21 @@ onMounted(() => {
 }
 
 .profile-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* centers everything under avatar */
   text-align: center;
-  padding: 20px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  gap: 0.3rem;
+  /* spacing between avatar, name, and actions */
+}
+
+.profile-section .avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: #ccc;
+  /* placeholder for logo/avatar */
 }
 
 .avatar {
@@ -544,30 +583,35 @@ onMounted(() => {
 }
 
 .org-name {
-  font-size: 16px;
   font-weight: 600;
-  margin: 10px 0;
-  color: white;
+  font-size: 14px;
+  text-align: center;
 }
 
 .profile-actions {
   display: flex;
-  justify-content: space-around;
-  margin-top: 15px;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .profile-actions .action {
   display: flex;
-  flex-direction: row;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 0.35rem;
+  /* smaller space between icon + text */
+  font-size: 13px;
+  /* smaller text */
+  color: #fff;
+  /* keep text color consistent */
   cursor: pointer;
-  font-size: 14px;
-  color: white;
 }
 
 .profile-actions .action svg {
-  margin-bottom: 0;
+  width: 14px;
+  /* shrink the icon */
+  height: 14px;
 }
 
 .profile-actions .action:hover {
