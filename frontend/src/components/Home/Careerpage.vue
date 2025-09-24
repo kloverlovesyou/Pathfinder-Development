@@ -99,68 +99,58 @@ function toggleCareerBookmark(careerId) {
 </script>
 
 <template>
-  <main class="">
+  <main class="font-poppins">
     <!-- Header -->
-    <div class="flex items-center gap-4 mb-4">
-      <h2 class="text-2xl font-bold -m-2">Career</h2>
-    </div>
 
-    <!-- Career Cards -->
-    <div class="space-y-4">
-      <div
-        v-for="career in careersWithOrg"
-        :key="career.id"
-        class="p-4 bg-blue-gray rounded-lg relative hover:bg-gray-300 transition cursor-pointer"
-        @click="openModal(career)"
-      >
-        <h3 class="font-semibold text-lg">{{ career.position }}</h3>
+    <div class="bg-white m-3 p-4 rounded-lg">
+      <h2 class="text-2xl font-bold mb-3 sticky top-0 bg-white z-10">Career</h2>
+      <!-- Career Cards -->
+      <div class="space-y-4">
+        <div
+          v-for="career in careersWithOrg"
+          :key="career.id"
+          class="p-4 bg-blue-gray rounded-lg relative hover:bg-gray-300 transition cursor-pointer"
+          @click="openModal(career)"
+        >
+          <h3 class="font-semibold text-lg">{{ career.position }}</h3>
 
-        <p class="text-gray-700 font-medium">
-          {{ career.organizationName }}
-        </p>
+          <p class="text-gray-700 font-medium">
+            {{ career.organizationName }}
+          </p>
+        </div>
       </div>
     </div>
 
     <!-- Career Details Modal -->
-    <dialog v-if="showModal" open class="modal modal-bottom sm:modal-middle">
-      <div class="modal-box max-w-7xl relative">
+    <dialog v-if="showModal" open class="modal">
+      <div class="modal-box rounded-none relative w-full h-full sm:w-auto">
+        <!-- Close (X) Button -->
         <button
-          class="btn btn-sm btn-circle absolute right-2 top-2"
+          class="btn btn-sm btn-circle absolute right-2 top-2 z-10 bg-transparent border-0"
           @click="closeModal"
         >
           ✕
         </button>
 
-        <div v-if="selectedCareer" class="p-6 font-poppins">
+        <div
+          v-if="selectedCareer"
+          class="p-6 font-poppins overflow-y-auto h-full sm:h-auto"
+        >
           <h1 class="text-2xl font-bold mb-2">{{ selectedCareer.position }}</h1>
-          <p class="text-gray-600 mb-2"></p>
-          <p class="mb-2">
-            {{ selectedCareer.organizationName }}
-          </p>
+          <p class="mb-2">{{ selectedCareer.organizationName }}</p>
 
-          <div class="flex gap-2 justify-end">
+          <!-- Action buttons -->
+          <div class="flex gap-2 justify-end mb-4">
             <button
               class="rounded-lg flex items-center gap-2 px-3 py-2 border border-gray-300 hover:bg-gray-100 transition"
               @click.stop="toggleCareerBookmark(selectedCareer.id)"
             >
-              <!-- Unbookmarked (outline) -->
+              <!-- Bookmark toggle -->
               <span v-if="!isCareerBookmarked(selectedCareer.id)">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+                <!-- Outline bookmark -->
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                   <path
                     d="M12.89 5.87988H5.10999C3.39999 5.87988 2 7.27987 2 8.98987V20.3499C2 21.7999 3.04 22.4199 4.31 21.7099L8.23999 19.5199C8.65999 19.2899 9.34 19.2899 9.75 19.5199L13.68 21.7099C14.95 22.4199 15.99 21.7999 15.99 20.3499V8.98987C16 7.27987 14.6 5.87988 12.89 5.87988Z"
-                    stroke="#6682A3"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                  <path
-                    d="M16 8.98987V20.3499C16 21.7999 14.96 22.4099 13.69 21.7099L9.76001 19.5199C9.34001 19.2899 8.65999 19.2899 8.23999 19.5199L4.31 21.7099C3.04 22.4099 2 21.7999 2 20.3499V8.98987C2 7.27987 3.39999 5.87988 5.10999 5.87988H12.89C14.6 5.87988 16 7.27987 16 8.98987Z"
                     stroke="#6682A3"
                     stroke-width="1.5"
                     stroke-linecap="round"
@@ -175,16 +165,9 @@ function toggleCareerBookmark(careerId) {
                   />
                 </svg>
               </span>
-
-              <!-- Bookmarked (filled) -->
               <span v-else>
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+                <!-- Filled bookmark -->
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                   <path
                     d="M12.89 5.87988H5.11C3.4 5.87988 2 7.27988 2 8.98988V20.3499C2 21.7999 3.04 22.4199 4.31 21.7099L8.24 19.5199C8.66 19.2899 9.34 19.2899 9.75 19.5199L13.68 21.7099C14.96 22.4099 16 21.7999 16 20.3499V8.98988C16 7.27988 14.6 5.87988 12.89 5.87988Z"
                     fill="#44576D"
@@ -206,6 +189,7 @@ function toggleCareerBookmark(careerId) {
 
           <div class="divider"></div>
 
+          <!-- Details -->
           <p v-if="selectedCareer.detailsAndInstructions">
             <span class="font-semibold">Details:</span>
             {{ selectedCareer.detailsAndInstructions }}
@@ -224,6 +208,8 @@ function toggleCareerBookmark(careerId) {
           </p>
         </div>
       </div>
+
+      <!-- Backdrop -->
       <form method="dialog" class="modal-backdrop" @click="closeModal">
         <button>close</button>
       </form>
