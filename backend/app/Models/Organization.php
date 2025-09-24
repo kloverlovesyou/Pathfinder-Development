@@ -2,22 +2,20 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Organization extends Model
+class Organization extends Model   // ✅ Correct class name
 {
-    protected $table = 'organization'; // Use exact table name (case-sensitive on some systems)
-    protected $primaryKey = 'organizationID'; // Custom primary key
-    public $timestamps = false; // Disable timestamps if your table doesn't have created_at/updated_at
+    protected $table = 'organization'; // ✅ Use the actual table name
+    protected $primaryKey = 'organizationID'; // ✅ Adjust to your PK column
+    public $timestamps = false;
 
-    protected $fillable = [
-        'name',
-        'location',
-        'websiteURL',
-        'emailAddress',
-        'password',
-        'adminID'
-    ];
-    use HasFactory;
+protected $fillable = [
+    'name',
+    'location',
+    'websiteURL',
+    'emailAddress',
+    'password',
+    'adminID',
+];
 }
