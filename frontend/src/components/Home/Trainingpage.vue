@@ -90,50 +90,53 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main>
+  <main class="font-poppins">
     <!-- Header -->
-    <div class="flex items-center gap-4 mb-4">
-      <h2 class="text-2xl font-bold">Training</h2>
-    </div>
 
-    <!-- Training Cards -->
-    <div class="space-y-4">
-      <div
-        v-for="training in trainingsWithOrg"
-        :key="training.id"
-        class="p-4 bg-blue-gray rounded-lg relative hover:bg-gray-300 transition cursor-pointer"
-        @click="openTrainingModal(training)"
-      >
-        <!-- Card content -->
-        <h3 class="font-semibold text-lg">{{ training.title }}</h3>
-        <p class="text-gray-700 font-medium">
-          {{ training.organizationName }}
-        </p>
+    <div class="bg-white m-3 p-4 rounded-lg">
+      <h2 class="text-2xl font-bold mb-3 sticky top-0 bg-white z-10">
+        Training
+      </h2>
+      <!-- Training Cards -->
+      <div class="space-y-4">
+        <div
+          v-for="training in trainingsWithOrg"
+          :key="training.id"
+          class="p-4 bg-blue-gray rounded-lg relative hover:bg-gray-300 transition cursor-pointer"
+          @click="openTrainingModal(training)"
+        >
+          <!-- Card content -->
+          <h3 class="font-semibold text-lg">{{ training.title }}</h3>
+          <p class="text-gray-700 font-medium">
+            {{ training.organizationName }}
+          </p>
+        </div>
       </div>
     </div>
     <!-- Training Details Modal -->
-    <dialog v-if="isModalOpen" open class="modal modal-bottom sm:modal-middle">
-      <div class="modal-box max-w-7xl relative">
+    <dialog v-if="isModalOpen" open class="modal">
+      <div class="modal-box rounded-none relative w-full h-full sm:w-auto">
         <!-- Close (X) Button -->
         <button
-          class="btn btn-sm btn-circle absolute right-2 top-2"
+          class="btn btn-sm btn-circle absolute right-2 top-2 z-10 bg-transparent border-0"
           @click="closeModal"
         >
           ✕
         </button>
 
-        <div v-if="selectedTraining" class="p-6 font-poppins">
+        <div
+          v-if="selectedTraining"
+          class="p-6 font-poppins overflow-y-auto h-full sm:h-auto"
+        >
           <h1 class="text-2xl font-bold mb-2">{{ selectedTraining.title }}</h1>
-          <p class="mb-2">
-            {{ selectedTraining.organizationName }}
-          </p>
-          <!-- Action buttons at the bottom -->
-          <div class="flex gap-2 justify-end">
+          <p class="mb-2">{{ selectedTraining.organizationName }}</p>
+
+          <!-- Action buttons -->
+          <div class="flex gap-2 justify-end mb-4">
             <button
               class="rounded-lg flex items-center gap-2 px-3 py-2 border border-gray-300 hover:bg-gray-100 transition"
               @click.stop="toggleBookmark(selectedTraining.id)"
             >
-              <!-- Unbookmarked (outline) -->
               <span v-if="!isTrainingBookmarked(selectedTraining.id)">
                 <svg
                   width="24"
@@ -193,7 +196,9 @@ onMounted(async () => {
               Register
             </button>
           </div>
+
           <div class="divider"></div>
+
           <p class="text-gray-600 mb-2">
             <strong>Type:</strong> {{ selectedTraining.type }}
           </p>
@@ -203,7 +208,6 @@ onMounted(async () => {
           <p class="mb-2">
             <strong>Location:</strong> {{ selectedTraining.location }}
           </p>
-
           <p class="mb-4">
             <strong>Description:</strong> {{ selectedTraining.description }}
           </p>
