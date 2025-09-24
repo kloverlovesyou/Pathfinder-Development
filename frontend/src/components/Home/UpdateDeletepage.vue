@@ -194,7 +194,7 @@
         <div class="w-full flex flex-col gap-3">
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="router.push('/resumepage')"
+            @click="$router.push({ name: 'ResumeEditorpage' })"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -214,6 +214,7 @@
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
+            @click="$router.push({ name: 'Certificatespage' })"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -231,44 +232,10 @@
             </svg>
             <span>Certificates</span>
           </button>
+
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="router.push('/calendarpage')"
-          >
-            <svg
-              class="size-6 flex-shrink-0"
-              viewBox="0 0 33 34"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M2.75 11.0697C2.75 9.18408 2.75 8.24128 3.33579 7.65549C3.92157 7.0697 4.86438 7.0697 6.75 7.0697H26.25C28.1356 7.0697 29.0784 7.0697 29.6642 7.65549C30.25 8.24128 30.25 9.18408 30.25 11.0697V13.1394C30.25 13.6108 30.25 13.8465 30.1036 13.9929C29.9571 14.1394 29.7214 14.1394 29.25 14.1394H3.75C3.2786 14.1394 3.04289 14.1394 2.89645 13.9929C2.75 13.8465 2.75 13.6108 2.75 13.1394V11.0697Z"
-                fill="white"
-              />
-              <path
-                fill-rule="evenodd"
-                clip-rule="evenodd"
-                d="M2.75 27.1065C2.75 28.9921 2.75 29.9349 3.33579 30.5207C3.92157 31.1065 4.86438 31.1065 6.75 31.1065H26.25C28.1356 31.1065 29.0784 31.1065 29.6642 30.5207C30.25 29.9349 30.25 28.9921 30.25 27.1065V17.9672C30.25 17.4958 30.25 17.2601 30.1036 17.1136C29.9571 16.9672 29.7214 16.9672 29.25 16.9672H3.75C3.2786 16.9672 3.04289 16.9672 2.89645 17.1136C2.75 17.2601 2.75 17.4958 2.75 17.9672V27.1065ZM9.625 20.795C9.625 20.3236 9.625 20.0879 9.77145 19.9415C9.91789 19.795 10.1536 19.795 10.625 19.795H14.125C14.5964 19.795 14.8321 19.795 14.9786 19.9415C15.125 20.0879 15.125 20.3236 15.125 20.795V21.6229C15.125 22.0943 15.125 22.33 14.9786 22.4765C14.8321 22.6229 14.5964 22.6229 14.125 22.6229H10.625C10.1536 22.6229 9.91789 22.6229 9.77145 22.4765C9.625 22.33 9.625 22.0943 9.625 21.6229V20.795ZM9.77145 25.5972C9.625 25.7437 9.625 25.9794 9.625 26.4508V27.2786C9.625 27.75 9.625 27.9857 9.77145 28.1322C9.91789 28.2786 10.1536 28.2786 10.625 28.2786H14.125C14.5964 28.2786 14.8321 28.2786 14.9786 28.1322C15.125 27.9857 15.125 27.75 15.125 27.2786V26.4508C15.125 25.9794 15.125 25.7437 14.9786 25.5972C14.8321 25.4508 14.5964 25.4508 14.125 25.4508H10.625C10.1536 25.4508 9.91789 25.4508 9.77145 25.5972ZM17.875 20.795C17.875 20.3236 17.875 20.0879 18.0214 19.9415C18.1679 19.795 18.4036 19.795 18.875 19.795H22.375C22.8464 19.795 23.0821 19.795 23.2286 19.9415C23.375 20.0879 23.375 20.3236 23.375 20.795V21.6229C23.375 22.0943 23.375 22.33 23.2286 22.4765C23.0821 22.6229 22.8464 22.6229 22.375 22.6229H18.875C18.4036 22.6229 18.1679 22.6229 18.0214 22.4765C17.875 22.33 17.875 22.0943 17.875 21.6229V20.795ZM18.0214 25.5972C17.875 25.7437 17.875 25.9794 17.875 26.4508V27.2786C17.875 27.75 17.875 27.9857 18.0214 28.1322C18.1679 28.2786 18.4036 28.2786 18.875 28.2786H22.375C22.8464 28.2786 23.0821 28.2786 23.2286 28.1322C23.375 27.9857 23.375 27.75 23.375 27.2786V26.4508C23.375 25.9794 23.375 25.7437 23.2286 25.5972C23.0821 25.4508 22.8464 25.4508 22.375 25.4508H18.875C18.4036 25.4508 18.1679 25.4508 18.0214 25.5972Z"
-                fill="white"
-              />
-              <path
-                d="M9.625 4.24182L9.625 8.48362"
-                stroke="white"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-              <path
-                d="M23.375 4.24182L23.375 8.48362"
-                stroke="white"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-            </svg>
-            <span>Calendar</span>
-          </button>
-          <button
-            class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="router.push('/bookmarkpage')"
+            @click="$router.push({ name: 'Bookmarkpage' })"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -287,6 +254,7 @@
           <div class="divider"></div>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
+            @click="$router.push({ name: 'UpdateDeletepage' })"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -304,6 +272,7 @@
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
+            @click="$router.push({ name: 'Login' })"
           >
             <svg
               class="size-6 flex-shrink-0"
