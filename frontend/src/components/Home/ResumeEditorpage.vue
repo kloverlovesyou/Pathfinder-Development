@@ -159,499 +159,12 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-100 font-poppins">
-    <div class="absolute right-5 dropdown dropdown-end lg:hidden">
-      <div tabindex="0" role="button" class="group m-5">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="size-5 flex-shrink-0 group-hover:hidden"
-          viewBox="0 0 24 24"
-          fill="white"
-        >
-          <path
-            d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-          />
-        </svg>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="size-5 flex-shrink-0 group-hover:block hidden"
-          viewBox="0 0 24 24"
-          fill="dark-slate"
-        >
-          <path
-            d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-          />
-        </svg>
-      </div>
-      <ul
-        tabindex="0"
-        class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-      >
-        <li>Update/Delete Account</li>
-        <li><a>Logout</a></li>
-      </ul>
-    </div>
-    <div class="lg:hidden block font-poppins">
-      <!-- Row 1: Profile Info -->
-      <div class="bg-dark-slate text-white p-6 flex flex-col items-center">
-        <!-- Avatar -->
-        <div class="avatar w-24 h-24 rounded-full bg-white mb-4">
-          <img
-            src="https://img.daisyui.com/images/profile/demo/yellingcat@192.webp"
-            alt="User Avatar"
-            class="w-full h-full object-cover rounded-full"
-          />
-        </div>
-
-        <!-- Name -->
-        <h2 class="text-xl font-semibold mb-2">{{ userName }}</h2>
-
-        <!-- Stats -->
-        <div class="flex gap-8 mb-4">
-          <div class="text-center">
-            <p class="text-2xl font-bold">0</p>
-            <p class="text-sm">Upcoming</p>
-          </div>
-          <div class="text-center">
-            <p class="text-2xl font-bold">0</p>
-            <p class="text-sm">Completed</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Row 2: Buttons -->
-      <div class="bg-customButton text-white p-4 flex justify-center gap-4">
-        <button
-          class="group flex flex-col items-center justify-center px-4 py-3 rounded text-white hover:text-dark-slate"
-          @click="router.push('/calendarpage')"
-        >
-          <svg
-            class="size-6 flex-shrink-0 group-hover:hidden"
-            viewBox="0 0 33 34"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M2.75 11.0697C2.75 9.18408 2.75 8.24128 3.33579 7.65549C3.92157 7.0697 4.86438 7.0697 6.75 7.0697H26.25C28.1356 7.0697 29.0784 7.0697 29.6642 7.65549C30.25 8.24128 30.25 9.18408 30.25 11.0697V13.1394C30.25 13.6108 30.25 13.8465 30.1036 13.9929C29.9571 14.1394 29.7214 14.1394 29.25 14.1394H3.75C3.2786 14.1394 3.04289 14.1394 2.89645 13.9929C2.75 13.8465 2.75 13.6108 2.75 13.1394V11.0697Z"
-              fill="white"
-            />
-            <path
-              fill-rule="evenodd"
-              clip-rule="evenodd"
-              d="M2.75 27.1065C2.75 28.9921 2.75 29.9349 3.33579 30.5207C3.92157 31.1065 4.86438 31.1065 6.75 31.1065H26.25C28.1356 31.1065 29.0784 31.1065 29.6642 30.5207C30.25 29.9349 30.25 28.9921 30.25 27.1065V17.9672C30.25 17.4958 30.25 17.2601 30.1036 17.1136C29.9571 16.9672 29.7214 16.9672 29.25 16.9672H3.75C3.2786 16.9672 3.04289 16.9672 2.89645 17.1136C2.75 17.2601 2.75 17.4958 2.75 17.9672V27.1065ZM9.625 20.795C9.625 20.3236 9.625 20.0879 9.77145 19.9415C9.91789 19.795 10.1536 19.795 10.625 19.795H14.125C14.5964 19.795 14.8321 19.795 14.9786 19.9415C15.125 20.0879 15.125 20.3236 15.125 20.795V21.6229C15.125 22.0943 15.125 22.33 14.9786 22.4765C14.8321 22.6229 14.5964 22.6229 14.125 22.6229H10.625C10.1536 22.6229 9.91789 22.6229 9.77145 22.4765C9.625 22.33 9.625 22.0943 9.625 21.6229V20.795ZM9.77145 25.5972C9.625 25.7437 9.625 25.9794 9.625 26.4508V27.2786C9.625 27.75 9.625 27.9857 9.77145 28.1322C9.91789 28.2786 10.1536 28.2786 10.625 28.2786H14.125C14.5964 28.2786 14.8321 28.2786 14.9786 28.1322C15.125 27.9857 15.125 27.75 15.125 27.2786V26.4508C15.125 25.9794 15.125 25.7437 14.9786 25.5972C14.8321 25.4508 14.5964 25.4508 14.125 25.4508H10.625C10.1536 25.4508 9.91789 25.4508 9.77145 25.5972ZM17.875 20.795C17.875 20.3236 17.875 20.0879 18.0214 19.9415C18.1679 19.795 18.4036 19.795 18.875 19.795H22.375C22.8464 19.795 23.0821 19.795 23.2286 19.9415C23.375 20.0879 23.375 20.3236 23.375 20.795V21.6229C23.375 22.0943 23.375 22.33 23.2286 22.4765C23.0821 22.6229 22.8464 22.6229 22.375 22.6229H18.875C18.4036 22.6229 18.1679 22.6229 18.0214 22.4765C17.875 22.33 17.875 22.0943 17.875 21.6229V20.795ZM18.0214 25.5972C17.875 25.7437 17.875 25.9794 17.875 26.4508V27.2786C17.875 27.75 17.875 27.9857 18.0214 28.1322C18.1679 28.2786 18.4036 28.2786 18.875 28.2786H22.375C22.8464 28.2786 23.0821 28.2786 23.2286 28.1322C23.375 27.9857 23.375 27.75 23.375 27.2786V26.4508C23.375 25.9794 23.375 25.7437 23.2286 25.5972C23.0821 25.4508 22.8464 25.4508 22.375 25.4508H18.875C18.4036 25.4508 18.1679 25.4508 18.0214 25.5972Z"
-              fill="white"
-            />
-            <path
-              d="M9.625 4.24182L9.625 8.48362"
-              stroke="white"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-            <path
-              d="M23.375 4.24182L23.375 8.48362"
-              stroke="white"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-          </svg>
-          <svg
-            class="size-6 flex-shrink-0 hidden group-hover:block"
-            viewBox="0 0 33 34"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M2.75 11.0697C2.75 9.18408 2.75 8.24128 3.33579 7.65549C3.92157 7.0697 4.86438 7.0697 6.75 7.0697H26.25C28.1356 7.0697 29.0784 7.0697 29.6642 7.65549C30.25 8.24128 30.25 9.18408 30.25 11.0697V13.1394C30.25 13.6108 30.25 13.8465 30.1036 13.9929C29.9571 14.1394 29.7214 14.1394 29.25 14.1394H3.75C3.2786 14.1394 3.04289 14.1394 2.89645 13.9929C2.75 13.8465 2.75 13.6108 2.75 13.1394V11.0697Z"
-              fill="#44576D"
-            />
-            <path
-              fill-rule="evenodd"
-              clip-rule="evenodd"
-              d="M2.75 27.1065C2.75 28.9921 2.75 29.9349 3.33579 30.5207C3.92157 31.1065 4.86438 31.1065 6.75 31.1065H26.25C28.1356 31.1065 29.0784 31.1065 29.6642 30.5207C30.25 29.9349 30.25 28.9921 30.25 27.1065V17.9672C30.25 17.4958 30.25 17.2601 30.1036 17.1136C29.9571 16.9672 29.7214 16.9672 29.25 16.9672H3.75C3.2786 16.9672 3.04289 16.9672 2.89645 17.1136C2.75 17.2601 2.75 17.4958 2.75 17.9672V27.1065ZM9.625 20.795C9.625 20.3236 9.625 20.0879 9.77145 19.9415C9.91789 19.795 10.1536 19.795 10.625 19.795H14.125C14.5964 19.795 14.8321 19.795 14.9786 19.9415C15.125 20.0879 15.125 20.3236 15.125 20.795V21.6229C15.125 22.0943 15.125 22.33 14.9786 22.4765C14.8321 22.6229 14.5964 22.6229 14.125 22.6229H10.625C10.1536 22.6229 9.91789 22.6229 9.77145 22.4765C9.625 22.33 9.625 22.0943 9.625 21.6229V20.795ZM9.77145 25.5972C9.625 25.7437 9.625 25.9794 9.625 26.4508V27.2786C9.625 27.75 9.625 27.9857 9.77145 28.1322C9.91789 28.2786 10.1536 28.2786 10.625 28.2786H14.125C14.5964 28.2786 14.8321 28.2786 14.9786 28.1322C15.125 27.9857 15.125 27.75 15.125 27.2786V26.4508C15.125 25.9794 15.125 25.7437 14.9786 25.5972C14.8321 25.4508 14.5964 25.4508 14.125 25.4508H10.625C10.1536 25.4508 9.91789 25.4508 9.77145 25.5972ZM17.875 20.795C17.875 20.3236 17.875 20.0879 18.0214 19.9415C18.1679 19.795 18.4036 19.795 18.875 19.795H22.375C22.8464 19.795 23.0821 19.795 23.2286 19.9415C23.375 20.0879 23.375 20.3236 23.375 20.795V21.6229C23.375 22.0943 23.375 22.33 23.2286 22.4765C23.0821 22.6229 22.8464 22.6229 22.375 22.6229H18.875C18.4036 22.6229 18.1679 22.6229 18.0214 22.4765C17.875 22.33 17.875 22.0943 17.875 21.6229V20.795ZM18.0214 25.5972C17.875 25.7437 17.875 25.9794 17.875 26.4508V27.2786C17.875 27.75 17.875 27.9857 18.0214 28.1322C18.1679 28.2786 18.4036 28.2786 18.875 28.2786H22.375C22.8464 28.2786 23.0821 28.2786 23.2286 28.1322C23.375 27.9857 23.375 27.75 23.375 27.2786V26.4508C23.375 25.9794 23.375 25.7437 23.2286 25.5972C23.0821 25.4508 22.8464 25.4508 22.375 25.4508H18.875C18.4036 25.4508 18.1679 25.4508 18.0214 25.5972Z"
-              fill="#44576D"
-            />
-            <path
-              d="M9.625 4.24182L9.625 8.48362"
-              stroke="#44576D"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-            <path
-              d="M23.375 4.24182L23.375 8.48362"
-              stroke="#44576D"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-          </svg>
-
-          <span>Calendar</span>
-        </button>
-        <button
-          class="group flex flex-col items-center justify-center px-4 py-3 rounded text-white hover:text-dark-slate"
-          @click="router.push('/bookmarkpage')"
-        >
-          <svg
-            class="size-6 flex-shrink-0 group-hover:hidden"
-            viewBox="0 0 18 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M3 3V24L10.5 16.5L18 24V3H3ZM15 0H0V21L1.5 19.5V1.5H15V0Z"
-              fill="white"
-            />
-          </svg>
-          <svg
-            class="size-6 flex-shrink-0 group-hover:block hidden"
-            viewBox="0 0 31 30"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M7.75 3.75V30L17.4375 20.625L27.125 30V3.75H7.75ZM23.25 0H3.875V26.25L5.8125 24.375V1.875H23.25V0Z"
-              fill="#44576D"
-            />
-          </svg>
-
-          <span>Bookmark</span>
-        </button>
-        <button
-          class="group flex flex-col items-center justify-center px-4 py-3 rounded text-white hover:text-dark-slate"
-          @click="router.push('/certificatespage')"
-        >
-          <svg
-            class="size-6 flex-shrink-0 group-hover:hidden"
-            viewBox="0 0 35 35"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M9.47917 29.1666H7.29167C5.68084 29.1666 4.375 27.8608 4.375 26.25V5.83329C4.375 4.22246 5.68084 2.91663 7.29167 2.91663H27.7083C29.3192 2.91663 30.625 4.22246 30.625 5.83329V26.25C30.625 27.8608 29.3192 29.1666 27.7083 29.1666H25.5208M17.5 27.7083C19.9162 27.7083 21.875 25.7495 21.875 23.3333C21.875 20.917 19.9162 18.9583 17.5 18.9583C15.0838 18.9583 13.125 20.917 13.125 23.3333C13.125 25.7495 15.0838 27.7083 17.5 27.7083ZM17.5 27.7083L17.5313 27.708L12.8751 32.3641L8.75036 28.2393L13.1537 23.836M17.5 27.7083L22.1562 32.3641L26.281 28.2393L21.8777 23.836M13.125 8.74996H21.875M10.2083 13.8541H24.7917"
-              stroke="white"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-          <svg
-            class="size-6 flex-shrink-0 hidden group-hover:block"
-            viewBox="0 0 35 35"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M9.47917 29.1666H7.29167C5.68084 29.1666 4.375 27.8608 4.375 26.25V5.83329C4.375 4.22246 5.68084 2.91663 7.29167 2.91663H27.7083C29.3192 2.91663 30.625 4.22246 30.625 5.83329V26.25C30.625 27.8608 29.3192 29.1666 27.7083 29.1666H25.5208M17.5 27.7083C19.9162 27.7083 21.875 25.7495 21.875 23.3333C21.875 20.917 19.9162 18.9583 17.5 18.9583C15.0838 18.9583 13.125 20.917 13.125 23.3333C13.125 25.7495 15.0838 27.7083 17.5 27.7083ZM17.5 27.7083L17.5313 27.708L12.8751 32.3641L8.75036 28.2393L13.1537 23.836M17.5 27.7083L22.1562 32.3641L26.281 28.2393L21.8777 23.836M13.125 8.74996H21.875M10.2083 13.8541H24.7917"
-              stroke="#44576D"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-
-          <span>Certificates</span>
-        </button>
-        <button
-          class="group flex flex-col items-center justify-center px-4 py-3 rounded text-white hover:text-dark-slate"
-        >
-          <svg
-            class="size-6 flex-shrink-0 group-hover:hidden"
-            viewBox="0 0 34 34"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M19.8333 3.21521V9.06681C19.8333 9.86022 19.8333 10.2569 19.9877 10.56C20.1235 10.8265 20.3402 11.0432 20.6068 11.1791C20.9098 11.3335 21.3066 11.3335 22.1 11.3335H27.9516M22.6666 18.4167H11.3333M22.6666 24.0834H11.3333M14.1666 12.75H11.3333M19.8333 2.83337H12.4666C10.0864 2.83337 8.89629 2.83337 7.98717 3.2966C7.18748 3.70406 6.53731 4.35423 6.12985 5.15391C5.66663 6.06304 5.66663 7.25315 5.66663 9.63337V24.3667C5.66663 26.7469 5.66663 27.937 6.12985 28.8462C6.53731 29.6459 7.18748 30.296 7.98717 30.7035C8.89629 31.1667 10.0864 31.1667 12.4666 31.1667H21.5333C23.9135 31.1667 25.1036 31.1667 26.0128 30.7035C26.8124 30.296 27.4626 29.6459 27.8701 28.8462C28.3333 27.937 28.3333 26.7469 28.3333 24.3667V11.3334L19.8333 2.83337Z"
-              stroke="white"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-          <svg
-            class="size-6 flex-shrink-0 hidden group-hover:block"
-            viewBox="0 0 34 34"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M19.8333 3.21521V9.06681C19.8333 9.86022 19.8333 10.2569 19.9877 10.56C20.1235 10.8265 20.3402 11.0432 20.6068 11.1791C20.9098 11.3335 21.3066 11.3335 22.1 11.3335H27.9516M22.6666 18.4167H11.3333M22.6666 24.0834H11.3333M14.1666 12.75H11.3333M19.8333 2.83337H12.4666C10.0864 2.83337 8.89629 2.83337 7.98717 3.2966C7.18748 3.70406 6.53731 4.35423 6.12985 5.15391C5.66663 6.06304 5.66663 7.25315 5.66663 9.63337V24.3667C5.66663 26.7469 5.66663 27.937 6.12985 28.8462C6.53731 29.6459 7.18748 30.296 7.98717 30.7035C8.89629 31.1667 10.0864 31.1667 12.4666 31.1667H21.5333C23.9135 31.1667 25.1036 31.1667 26.0128 30.7035C26.8124 30.296 27.4626 29.6459 27.8701 28.8462C28.3333 27.937 28.3333 26.7469 28.3333 24.3667V11.3334L19.8333 2.83337Z"
-              stroke="#44576D"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-
-          <span>Resume</span>
-        </button>
-      </div>
-
-      <!-- Row 3: Editor -->
-      <div class="bg-white p-6">
-        <div class="p-6 bg-white shadow-lg rounded-2xl">
-          <div class="absolute right-4 dropdown dropdown-end">
-            <div tabindex="0" role="button" class="group">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="size-5 flex-shrink-0 group-hover:hidden"
-                viewBox="0 0 24 24"
-                fill="dark-slate"
-              >
-                <path
-                  d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-                />
-              </svg>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="size-5 flex-shrink-0 group-hover:block hidden"
-                viewBox="0 0 24 24"
-                fill="gray"
-              >
-                <path
-                  d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-                />
-              </svg>
-            </div>
-            <ul
-              tabindex="0"
-              class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-            >
-              <li>
-                <button @click="isModalOpen = true">Download Resume</button>
-              </li>
-            </ul>
-          </div>
-          <h1 class="text-2xl font-bold mb-6">Resume Editor</h1>
-
-          <form class="space-y-6">
-            <!-- Personal Info -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input
-                type="text"
-                placeholder="First Name"
-                class="input-field border rounded p-2"
-                v-model="resume.firstName"
-              />
-              <input
-                type="text"
-                placeholder="Middle Name"
-                class="input-field border rounded p-2"
-                v-model="resume.middleName"
-              />
-              <input
-                type="text"
-                placeholder="Last Name"
-                class="input-field border rounded p-2"
-                v-model="resume.lastName"
-              />
-              <input
-                type="email"
-                placeholder="Email"
-                class="input-field border rounded p-2"
-                v-model="resume.email"
-              />
-              <input
-                type="text"
-                placeholder="Mobile Number"
-                class="input-field border rounded p-2"
-                v-model="resume.mobile"
-              />
-              <input
-                type="text"
-                placeholder="Address"
-                class="input-field border rounded p-2"
-                v-model="resume.address"
-              />
-            </div>
-
-            <!-- Professional Summary -->
-            <div class="border rounded-xl p-4 space-y-3">
-              <label class="block text-lg font-semibold mb-1"
-                >Professional Summary</label
-              >
-              <textarea
-                rows="3"
-                class="border rounded input-field w-full"
-                v-model="resume.summary"
-              ></textarea>
-            </div>
-
-            <!-- Professional Experience -->
-            <div class="border rounded-xl p-4 space-y-4 relative">
-              <!-- Header with Plus Button -->
-              <div class="flex justify-between items-center">
-                <label class="text-lg font-semibold"
-                  >Professional Experience</label
-                >
-                <button
-                  type="button"
-                  @click="addExperience"
-                  class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
-                >
-                  +
-                </button>
-              </div>
-
-              <!-- Experience Items -->
-              <div
-                v-for="(exp, index) in resume.experiences"
-                :key="index"
-                class="relative border p-3 rounded"
-              >
-                <!-- Delete Button -->
-                <button
-                  type="button"
-                  @click="removeExperience(index)"
-                  class="absolute top-2 right-2 text-gray-500 hover:text-red-500"
-                >
-                  ✕
-                </button>
-
-                <!-- Experience Field -->
-                <textarea
-                  v-model="resume.experiences[index].text"
-                  rows="3"
-                  placeholder="Describe your professional experience..."
-                  class="input-field w-full"
-                ></textarea>
-              </div>
-            </div>
-
-            <div class="border rounded-xl p-4 space-y-4 relative">
-              <!-- Header with Plus Button -->
-              <div class="flex justify-between items-center">
-                <label class="text-lg font-semibold">Education</label>
-                <button
-                  type="button"
-                  @click="addEducation"
-                  class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
-                >
-                  +
-                </button>
-              </div>
-
-              <!-- Education Items -->
-              <div
-                v-for="(edu, index) in resume.education"
-                :key="index"
-                class="relative border p-3 rounded-lg space-y-3"
-              >
-                <!-- Delete Button -->
-                <button
-                  type="button"
-                  @click="removeEducation(index)"
-                  class="absolute top-2 right-2 text-gray-500 hover:text-red-500"
-                >
-                  ✕
-                </button>
-
-                <!-- Educational Attainment -->
-                <div>
-                  <label class="block font-medium mb-1"
-                    >Educational Attainment</label
-                  >
-                  <select
-                    v-model="edu.attainment"
-                    class="input-field border rounded w-full p-2"
-                  >
-                    <option value="" disabled>Select level</option>
-                    <option>High School</option>
-                    <option>Bachelor's Degree</option>
-                    <option>Master's Degree</option>
-                    <option>Doctorate</option>
-                    <option>Others</option>
-                  </select>
-                </div>
-
-                <!-- University Name -->
-                <div>
-                  <label class="block font-medium mb-1">University</label>
-                  <input
-                    v-model="edu.university"
-                    type="text"
-                    placeholder="Enter university name"
-                    class="input-field border p-2 w-full rounded"
-                  />
-                </div>
-
-                <!-- Year -->
-                <div>
-                  <label class="block font-medium mb-1">Year</label>
-                  <input
-                    v-model="edu.year"
-                    type="text"
-                    placeholder="e.g. 2020"
-                    class="input-field border p-2 w-full rounded"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- Skills -->
-            <div class="border rounded p-4 space-y-3">
-              <label class="text-lg font-semibold">Skills</label>
-              <div class="flex gap-2">
-                <input
-                  v-model="newSkill"
-                  type="text"
-                  placeholder="Type a skill"
-                  class="input-field flex-1 border"
-                />
-                <button
-                  type="button"
-                  @click="addSkill"
-                  class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
-                >
-                  +
-                </button>
-              </div>
-
-              <div class="flex flex-wrap gap-2 mt-2">
-                <span
-                  v-for="(skill, index) in resume.skills"
-                  :key="index"
-                  class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full flex items-center gap-2"
-                >
-                  {{ skill }}
-                  <button
-                    type="button"
-                    @click="removeSkill(index)"
-                    class="text-blue-500 hover:text-red-500"
-                  >
-                    ✕
-                  </button>
-                </span>
-              </div>
-            </div>
-
-            <!-- URL -->
-            <div class="border rounded p-4 space-y-4 relative">
-              <h2 class="text-lg font-semibold">URL</h2>
-              <input
-                type="url"
-                placeholder="URL"
-                class="input-field border rounded p-2 w-full"
-                v-model="resume.url"
-              />
-            </div>
-
-            <!-- Save Button -->
-            <button
-              type="button"
-              class="w-full py-3 bg-customButton text-white rounded-xl hover:bg-dark-slate transition"
-            >
-              Save Resume
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-
+  <div class="min-h-screen m-3 p-4 rounded-lg font-poppins">
     <!--Large screen-->
-    <div class="min-h-screen p-6 font-poppins hidden lg:flex">
+    <div class="min-h-screen font-poppins lg:flex">
       <!-- Left Column -->
       <div
-        class="w-full lg:w-1/4 bg-white rounded-lg shadow p-6 flex flex-col items-center"
+        class="w-full lg:w-1/4 bg-white rounded-lg shadow p-4 pt-8 flex flex-col items-center hidden lg:flex"
       >
         <!-- Avatar -->
         <div class="w-24 h-24 rounded-full bg-white mb-4">
@@ -704,7 +217,7 @@ onMounted(() => {
         <div class="w-full flex flex-col gap-3">
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="router.push('/resumepage')"
+            @click="$router.push({ name: 'ResumeEditorpage' })"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -724,7 +237,7 @@ onMounted(() => {
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="router.push('/certificatespage')"
+            @click="$router.push({ name: 'Certificatespage' })"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -742,44 +255,10 @@ onMounted(() => {
             </svg>
             <span>Certificates</span>
           </button>
+
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="router.push('/calendarpage')"
-          >
-            <svg
-              class="size-6 flex-shrink-0"
-              viewBox="0 0 33 34"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M2.75 11.0697C2.75 9.18408 2.75 8.24128 3.33579 7.65549C3.92157 7.0697 4.86438 7.0697 6.75 7.0697H26.25C28.1356 7.0697 29.0784 7.0697 29.6642 7.65549C30.25 8.24128 30.25 9.18408 30.25 11.0697V13.1394C30.25 13.6108 30.25 13.8465 30.1036 13.9929C29.9571 14.1394 29.7214 14.1394 29.25 14.1394H3.75C3.2786 14.1394 3.04289 14.1394 2.89645 13.9929C2.75 13.8465 2.75 13.6108 2.75 13.1394V11.0697Z"
-                fill="white"
-              />
-              <path
-                fill-rule="evenodd"
-                clip-rule="evenodd"
-                d="M2.75 27.1065C2.75 28.9921 2.75 29.9349 3.33579 30.5207C3.92157 31.1065 4.86438 31.1065 6.75 31.1065H26.25C28.1356 31.1065 29.0784 31.1065 29.6642 30.5207C30.25 29.9349 30.25 28.9921 30.25 27.1065V17.9672C30.25 17.4958 30.25 17.2601 30.1036 17.1136C29.9571 16.9672 29.7214 16.9672 29.25 16.9672H3.75C3.2786 16.9672 3.04289 16.9672 2.89645 17.1136C2.75 17.2601 2.75 17.4958 2.75 17.9672V27.1065ZM9.625 20.795C9.625 20.3236 9.625 20.0879 9.77145 19.9415C9.91789 19.795 10.1536 19.795 10.625 19.795H14.125C14.5964 19.795 14.8321 19.795 14.9786 19.9415C15.125 20.0879 15.125 20.3236 15.125 20.795V21.6229C15.125 22.0943 15.125 22.33 14.9786 22.4765C14.8321 22.6229 14.5964 22.6229 14.125 22.6229H10.625C10.1536 22.6229 9.91789 22.6229 9.77145 22.4765C9.625 22.33 9.625 22.0943 9.625 21.6229V20.795ZM9.77145 25.5972C9.625 25.7437 9.625 25.9794 9.625 26.4508V27.2786C9.625 27.75 9.625 27.9857 9.77145 28.1322C9.91789 28.2786 10.1536 28.2786 10.625 28.2786H14.125C14.5964 28.2786 14.8321 28.2786 14.9786 28.1322C15.125 27.9857 15.125 27.75 15.125 27.2786V26.4508C15.125 25.9794 15.125 25.7437 14.9786 25.5972C14.8321 25.4508 14.5964 25.4508 14.125 25.4508H10.625C10.1536 25.4508 9.91789 25.4508 9.77145 25.5972ZM17.875 20.795C17.875 20.3236 17.875 20.0879 18.0214 19.9415C18.1679 19.795 18.4036 19.795 18.875 19.795H22.375C22.8464 19.795 23.0821 19.795 23.2286 19.9415C23.375 20.0879 23.375 20.3236 23.375 20.795V21.6229C23.375 22.0943 23.375 22.33 23.2286 22.4765C23.0821 22.6229 22.8464 22.6229 22.375 22.6229H18.875C18.4036 22.6229 18.1679 22.6229 18.0214 22.4765C17.875 22.33 17.875 22.0943 17.875 21.6229V20.795ZM18.0214 25.5972C17.875 25.7437 17.875 25.9794 17.875 26.4508V27.2786C17.875 27.75 17.875 27.9857 18.0214 28.1322C18.1679 28.2786 18.4036 28.2786 18.875 28.2786H22.375C22.8464 28.2786 23.0821 28.2786 23.2286 28.1322C23.375 27.9857 23.375 27.75 23.375 27.2786V26.4508C23.375 25.9794 23.375 25.7437 23.2286 25.5972C23.0821 25.4508 22.8464 25.4508 22.375 25.4508H18.875C18.4036 25.4508 18.1679 25.4508 18.0214 25.5972Z"
-                fill="white"
-              />
-              <path
-                d="M9.625 4.24182L9.625 8.48362"
-                stroke="white"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-              <path
-                d="M23.375 4.24182L23.375 8.48362"
-                stroke="white"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-            </svg>
-            <span>Calendar</span>
-          </button>
-          <button
-            class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="router.push('/bookmarkpage')"
+            @click="$router.push({ name: 'Bookmarkpage' })"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -798,6 +277,7 @@ onMounted(() => {
           <div class="divider"></div>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
+            @click="$router.push({ name: 'UpdateDeletepage' })"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -815,6 +295,7 @@ onMounted(() => {
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
+            @click="$router.push({ name: 'Login' })"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -843,40 +324,46 @@ onMounted(() => {
 
       <!-- Right Column -->
       <div class="w-full lg:w-3/4 lg:pl-6 mt-6 lg:mt-0 flex flex-col gap-6">
-        <div class="p-6 bg-white shadow-lg rounded-2xl">
-          <div class="absolute right-4 dropdown dropdown-end">
-            <div tabindex="0" role="button" class="group mr-5">
+        <div class="p-6 bg-white shadow rounded-lg">
+          <div class="flex items-center justify-between mb-6">
+            <h1 class="text-2xl font-bold">Resume Editor</h1>
+            <button @click="isModalOpen = true" class="group px-2 py-2">
               <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="size-5 flex-shrink-0 group-hover:hidden"
+                class="block group-hover:hidden"
+                width="34"
+                height="34"
                 viewBox="0 0 24 24"
-                fill="dark-slate"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
               >
                 <path
-                  d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
+                  d="M20.5 10.19H17.61C15.24 10.19 13.31 8.26 13.31 5.89V3C13.31 2.45 12.86 2 12.31 2H8.07C4.99 2 2.5 4 2.5 7.57V16.43C2.5 20 4.99 22 8.07 22H15.93C19.01 22 21.5 20 21.5 16.43V11.19C21.5 10.64 21.05 10.19 20.5 10.19ZM12.28 15.78L10.28 17.78C10.21 17.85 10.12 17.91 10.03 17.94C9.94 17.98 9.85 18 9.75 18C9.65 18 9.56 17.98 9.47 17.94C9.39 17.91 9.31 17.85 9.25 17.79C9.24 17.78 9.23 17.78 9.23 17.77L7.23 15.77C6.94 15.48 6.94 15 7.23 14.71C7.52 14.42 8 14.42 8.29 14.71L9 15.44V11.25C9 10.84 9.34 10.5 9.75 10.5C10.16 10.5 10.5 10.84 10.5 11.25V15.44L11.22 14.72C11.51 14.43 11.99 14.43 12.28 14.72C12.57 15.01 12.57 15.49 12.28 15.78Z"
+                  fill="#6682A3"
+                />
+                <path
+                  d="M17.4299 8.80999C18.3799 8.81999 19.6999 8.81999 20.8299 8.81999C21.3999 8.81999 21.6999 8.14999 21.2999 7.74999C19.8599 6.29999 17.2799 3.68999 15.7999 2.20999C15.3899 1.79999 14.6799 2.07999 14.6799 2.64999V6.13999C14.6799 7.59999 15.9199 8.80999 17.4299 8.80999Z"
+                  fill="#6682A3"
                 />
               </svg>
               <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="size-5 flex-shrink-0 group-hover:block hidden"
+                class="hidden group-hover:block"
+                width="34"
+                height="34"
                 viewBox="0 0 24 24"
-                fill="gray"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
               >
                 <path
-                  d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
+                  d="M20.5 10.19H17.61C15.24 10.19 13.31 8.26 13.31 5.89V3C13.31 2.45 12.86 2 12.31 2H8.07C4.99 2 2.5 4 2.5 7.57V16.43C2.5 20 4.99 22 8.07 22H15.93C19.01 22 21.5 20 21.5 16.43V11.19C21.5 10.64 21.05 10.19 20.5 10.19ZM12.28 15.78L10.28 17.78C10.21 17.85 10.12 17.91 10.03 17.94C9.94 17.98 9.85 18 9.75 18C9.65 18 9.56 17.98 9.47 17.94C9.39 17.91 9.31 17.85 9.25 17.79C9.24 17.78 9.23 17.78 9.23 17.77L7.23 15.77C6.94 15.48 6.94 15 7.23 14.71C7.52 14.42 8 14.42 8.29 14.71L9 15.44V11.25C9 10.84 9.34 10.5 9.75 10.5C10.16 10.5 10.5 10.84 10.5 11.25V15.44L11.22 14.72C11.51 14.43 11.99 14.43 12.28 14.72C12.57 15.01 12.57 15.49 12.28 15.78Z"
+                  fill="#44576D"
+                />
+                <path
+                  d="M17.4299 8.80999C18.3799 8.81999 19.6999 8.81999 20.8299 8.81999C21.3999 8.81999 21.6999 8.14999 21.2999 7.74999C19.8599 6.29999 17.2799 3.68999 15.7999 2.20999C15.3899 1.79999 14.6799 2.07999 14.6799 2.64999V6.13999C14.6799 7.59999 15.9199 8.80999 17.4299 8.80999Z"
+                  fill="#44576D"
                 />
               </svg>
-            </div>
-            <ul
-              tabindex="0"
-              class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-            >
-              <li>
-                <button @click="isModalOpen = true">Download Resume</button>
-              </li>
-            </ul>
+            </button>
           </div>
-          <h1 class="text-2xl font-bold mb-6">Resume Editor</h1>
 
           <form class="space-y-6">
             <!-- Personal Info -->
