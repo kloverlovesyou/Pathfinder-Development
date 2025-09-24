@@ -80,8 +80,8 @@ class AuthController extends Controller
             return response()->json([
                 'status'  => 'success',
                 'message' => 'Login successful',
-                'user'    => $applicant,
-                'role'    => 'applicant',
+                'user'    => array_merge($applicant->toArray(),
+                ['role' => 'applicant']),
             ]);
         }
 
@@ -91,8 +91,8 @@ class AuthController extends Controller
             return response()->json([
                 'status'  => 'success',
                 'message' => 'Login successful',
-                'user'    => $organization,
-                'role'    => 'organization',
+                'user'    => array_merge($organization->toArray(), 
+                ['role' => 'organization']),
             ]);
         }
 

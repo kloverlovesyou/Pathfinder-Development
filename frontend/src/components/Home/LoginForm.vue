@@ -72,31 +72,24 @@ const passwordError = ref(false);
 
 const validateEmail = (emailVal) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
 const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
-
 const handleLogin = async () => {
-  // Validate inputs
   emailError.value = !validateEmail(email.value);
   passwordError.value = !validatePassword(password.value);
-
   if (emailError.value || passwordError.value) return;
 
   try {
-    // Call API (applicants login)
     const response = await axios.post(
-      "http://127.0.0.1:8000/api/applicants/login",
+      "http://127.0.0.1:8000/api/login",
       {
         emailAddress: email.value,
         password: password.value,
       }
     );
 
-    // Extract user data
-    const userData = response.data.user; // applicants login returns user object
-    const role = "applicant"; // we know this is always applicant
-
+    const userData = response.data.user;
+    const role = userData.role; // 'applicant' or 'organization'
     const displayName = `${userData.firstName} ${userData.lastName}`;
 
-    // Save user to localStorage
     localStorage.setItem(
       "user",
       JSON.stringify({
@@ -106,8 +99,12 @@ const handleLogin = async () => {
       })
     );
 
-    // Redirect applicant to Homepage
-    router.push({ name: "Homepage" }); // /app
+    // Redirect based on role
+    if (role === "organization") {
+      router.push("/organization"); // organization home
+    } else {
+      router.push("/app"); // applicant home
+    }
   } catch (err) {
     console.error(err.response?.data || err.message);
     alert("Invalid credentials. Please try again.");
