@@ -74,14 +74,15 @@ const validateEmail = (emailVal) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
 const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
 
 const handleLogin = async () => {
+  // Validate inputs
   emailError.value = !validateEmail(email.value);
   passwordError.value = !validatePassword(password.value);
 
   if (emailError.value || passwordError.value) return;
 
   try {
-    // 1️⃣ Try applicant login first
-    let response = await axios.post(
+    // Call API (applicants login)
+    const response = await axios.post(
       "http://127.0.0.1:8000/api/applicants/login",
       {
         emailAddress: email.value,
@@ -89,46 +90,27 @@ const handleLogin = async () => {
       }
     );
 
-    let userData = response.data.user;
-    let displayName = `${userData.firstName} ${userData.lastName}`;
+    // Extract user data
+    const userData = response.data.user; // applicants login returns user object
+    const role = "applicant"; // we know this is always applicant
 
+    const displayName = `${userData.firstName} ${userData.lastName}`;
+
+    // Save user to localStorage
     localStorage.setItem(
       "user",
       JSON.stringify({
         ...userData,
-        role: "applicant",
+        role,
         displayName,
       })
     );
 
-    router.push("/homepage");
-  } catch (err1) {
-    try {
-      // 2️⃣ If applicant login fails, try organization
-      let response = await axios.post(
-        "http://127.0.0.1:8000/api/organizations/login",
-        {
-          emailAddress: email.value,
-          password: password.value,
-        }
-      );
-
-      let orgData = response.data.organization;
-      let displayName = orgData.name;
-
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          ...orgData,
-          role: "organization",
-          displayName,
-        })
-      );
-
-      router.push("/OrganizationHomePage");
-    } catch (err2) {
-      alert("Invalid credentials. Please try again.");
-    }
+    // Redirect applicant to Homepage
+    router.push({ name: "Homepage" }); // /app
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    alert("Invalid credentials. Please try again.");
   }
 };
 </script>

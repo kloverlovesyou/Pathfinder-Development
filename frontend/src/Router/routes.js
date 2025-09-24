@@ -28,13 +28,18 @@ const router = createRouter({
       redirect: "/auth/login",
     },
 
-    // Auth pages
+// Auth pages
     {
       path: "/auth",
       component: AuthLayout,
       children: [
         { path: "login", name: "Login", component: LoginForm },
-        { path: "register", name: "Register", component: TypeOfAccount },
+        { 
+          path: "register", 
+          alias: "/typeofaccount",   // 👈 Now /typeofaccount works too
+          name: "Register", 
+          component: TypeOfAccount 
+        },
         {
           path: "aregistration",
           name: "ARegistrationForms",

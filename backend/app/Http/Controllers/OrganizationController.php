@@ -12,12 +12,12 @@ class OrganizationController extends Controller
     public function o_register(Request $request)
     {
         $validator = \Validator::make($request->all(), [
-            'name'        => 'required|string|max:255',
-            'location'    => 'nullable|string|max:255',
-            'websiteURL'  => 'nullable|string|max:255',
-            'emailAddress'=> 'required|email|unique:organization,emailAddress',
-            'password'    => 'required|string|min:8',
-        ]);
+        'name'        => 'required|string|max:255',
+        'location'    => 'nullable|string|max:255',
+        'websiteURL'  => 'nullable|string|max:255',
+        'emailAddress'=> 'required|email|unique:organization,emailAddress',
+        'password'    => 'required|string|min:8',
+    ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
