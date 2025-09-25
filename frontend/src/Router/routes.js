@@ -108,23 +108,20 @@ const router = createRouter({
     // 🚨 Catch-all must always be last
     {
       path: "/:pathMatch(.*)*",
-      redirect: "/loginform", 
-      // OR use a component like NotFound.vue instead:
-      // component: () => import("@/components/NotFound.vue"),
+      redirect: "/auth/login", // or use a NotFound component
     },
   ],
 });
 
-// ✅ Global navigation guard (MUST be after router is created)
 router.beforeEach((to, from, next) => {
   const user = JSON.parse(localStorage.getItem("user"));
 
   if (to.meta.requiresAuth && !user) {
-    return next("/loginform");
+    return next({ name: "Login" });
   }
 
   if (to.meta.role && user?.role !== to.meta.role) {
-    return next("/loginform"); // or redirect to a "403" page if you like
+    return next({ name: "Login" }); // optional: redirect to 403 page
   }
 
   next();
