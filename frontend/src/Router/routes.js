@@ -18,6 +18,7 @@ import OrgCareer from "@/components/Organization/OrganizationCareers.vue";
 import MainLayout from "@/components/Layout/MainLayout.vue";
 import AuthLayout from "@/components/Layout/AuthLayout.vue";
 import { createRouter, createWebHistory } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
