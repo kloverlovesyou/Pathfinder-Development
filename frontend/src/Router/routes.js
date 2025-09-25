@@ -57,6 +57,7 @@ const router = createRouter({
     {
       path: "/app",
       component: MainLayout,
+      meta: { requiresAuth: true },
       children: [
         { path: "", name: "Homepage", component: Homepage },
         { path: "profile", name: "Profile", component: ProfilePage },
