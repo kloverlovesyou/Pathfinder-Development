@@ -1,106 +1,257 @@
 <script setup>
-import { useRouter } from "vue-router";
-import { ref, onMounted } from "vue";
-import axios from "axios";
+import { ref, computed } from "vue";
 
-const router = useRouter();
+const organizations = ref([
+  { id: 1, name: "Tech Corp" },
+  { id: 2, name: "Analytics Inc" },
+]);
+
 const careers = ref([
   {
-    id: 3,
-    type: "career",
+    id: 1,
     position: "Software Engineer",
-    deadlineOfSubmission: "July 24, 2025",
-    organizationImage: "https://via.placeholder.com/150",
+    deadlineOfSubmission: "2025-07-24",
+    detailsAndInstructions: "Build and maintain software applications.",
+    qualifications: "Bachelor’s in Computer Science or related field.",
+    requirements: "Resume, Transcript, Certificate of Employment",
+    applicationLetterAddress: "HR Dept, Tech Corp, Manila",
+    organizationID: 1,
+  },
+  {
+    id: 2,
+    position: "Data Analyst",
+    deadlineOfSubmission: "2025-08-15",
+    detailsAndInstructions: "Analyze data to support business decisions.",
+    qualifications: "Background in Statistics or Data Science.",
+    requirements: "Resume, TOR, Sample Reports",
+    applicationLetterAddress: "Data Team, Analytics Inc, Cebu",
+    organizationID: 2,
   },
 ]);
 
-onMounted(async () => {
-  try {
-    const response = await axios.get("http://127.0.0.1:8000/api/careers");
-    careers.value = response.data;
-  } catch (error) {
-    console.error("Error fetching careers:", error);
+// Merge careers with organization name
+const careersWithOrg = computed(() =>
+  careers.value.map((career) => {
+    const org = organizations.value.find((o) => o.id === career.organizationID);
+    return {
+      ...career,
+      organizationName: org ? org.name : "Unknown",
+    };
+  })
+);
+
+const showModal = ref(false);
+const showUploadModal = ref(false);
+const selectedCareer = ref(null);
+const isClicked = ref(false);
+const uploadedFile = ref(null);
+
+function openModal(career) {
+  selectedCareer.value = career;
+  showModal.value = true;
+}
+
+function closeModal() {
+  showModal.value = false;
+  selectedCareer.value = null;
+}
+
+function openUploadModal() {
+  showUploadModal.value = true;
+}
+
+function closeUploadModal() {
+  showUploadModal.value = false;
+  uploadedFile.value = null;
+}
+
+function handleFileUpload(event) {
+  uploadedFile.value = event.target.files[0];
+}
+
+function submitApplication() {
+  if (uploadedFile.value) {
+    alert(
+      `Applied for ${selectedCareer.value.position} with file: ${uploadedFile.value.name}`
+    );
+    closeUploadModal();
+    closeModal();
+  } else {
+    alert("Please upload a PDF file before submitting.");
   }
-});
+}
+// Track bookmarked careers (store IDs)
+const bookmarkedCareers = ref(new Set());
+
+// Check if a career is bookmarked
+function isCareerBookmarked(careerId) {
+  return bookmarkedCareers.value.has(careerId);
+}
+
+// Toggle bookmark
+function toggleCareerBookmark(careerId) {
+  if (bookmarkedCareers.value.has(careerId)) {
+    bookmarkedCareers.value.delete(careerId);
+  } else {
+    bookmarkedCareers.value.add(careerId);
+  }
+}
 </script>
 
 <template>
-  <main>
+  <main class="font-poppins">
     <!-- Header -->
-    <div class="flex items-center gap-4 mb-4">
-      <button class="group" @click="router.push('/homepage')">
-        <!-- Back Arrow -->
-        <svg
-          class="size-6"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M9.57 5.93005L3.5 12.0001L9.57 18.0701"
-            stroke="#6682A3"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <path
-            d="M20.5 12H3.66998"
-            stroke="#6682A3"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-      </button>
 
-      <!-- Title -->
-      <h2 class="text-2xl font-bold -m-2">Career</h2>
-    </div>
-
-    <!-- Career Cards -->
-    <div class="space-y-4">
-      <div
-        v-for="career in careers"
-        :key="career.id"
-        class="p-4 bg-blue-gray rounded-lg relative hover:bg-gray-300 transition"
-      >
-        <!-- Dropdown (top-right inside card) -->
-        <div class="absolute top-2 right-2 z-50">
-          <div class="dropdown dropdown-end">
-            <div tabindex="0" role="button" class="btn btn-ghost btn-sm">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path
-                  d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-                />
-              </svg>
-            </div>
-            <ul
-              tabindex="0"
-              class="dropdown-content menu bg-base-100 rounded-box w-40 p-2 shadow-md mt-0"
-            >
-              <li><a>Bookmark</a></li>
-              <li><a>Apply</a></li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- Router-link wraps only the card content -->
-        <router-link
-          :to="{ name: 'CareerDetails', params: { id: career.id } }"
-          class="block"
+    <div class="bg-white m-3 p-4 rounded-lg">
+      <h2 class="text-2xl font-bold mb-3 sticky top-0 bg-white z-10">Career</h2>
+      <!-- Career Cards -->
+      <div class="space-y-4">
+        <div
+          v-for="career in careersWithOrg"
+          :key="career.id"
+          class="p-4 bg-blue-gray rounded-lg relative hover:bg-gray-300 transition cursor-pointer"
+          @click="openModal(career)"
         >
           <h3 class="font-semibold text-lg">{{ career.position }}</h3>
-          <p class="text-gray-600 text-sm">
-            Deadline: {{ career.deadlineOfSubmission }}
+
+          <p class="text-gray-700 font-medium">
+            {{ career.organizationName }}
           </p>
-        </router-link>
+        </div>
       </div>
     </div>
+
+    <!-- Career Details Modal -->
+    <dialog v-if="showModal" open class="modal">
+      <div class="modal-box rounded-none relative w-full h-full sm:w-auto">
+        <!-- Close (X) Button -->
+        <button
+          class="btn btn-sm btn-circle absolute right-2 top-2 z-10 bg-transparent border-0"
+          @click="closeModal"
+        >
+          ✕
+        </button>
+
+        <div
+          v-if="selectedCareer"
+          class="p-6 font-poppins overflow-y-auto h-full sm:h-auto"
+        >
+          <h1 class="text-2xl font-bold mb-2">{{ selectedCareer.position }}</h1>
+          <p class="mb-2">{{ selectedCareer.organizationName }}</p>
+
+          <!-- Action buttons -->
+          <div class="flex gap-2 justify-end mb-4">
+            <button
+              class="rounded-lg flex items-center gap-2 px-3 py-2 border border-gray-300 hover:bg-gray-100 transition"
+              @click.stop="toggleCareerBookmark(selectedCareer.id)"
+            >
+              <!-- Bookmark toggle -->
+              <span v-if="!isCareerBookmarked(selectedCareer.id)">
+                <!-- Outline bookmark -->
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M12.89 5.87988H5.10999C3.39999 5.87988 2 7.27987 2 8.98987V20.3499C2 21.7999 3.04 22.4199 4.31 21.7099L8.23999 19.5199C8.65999 19.2899 9.34 19.2899 9.75 19.5199L13.68 21.7099C14.95 22.4199 15.99 21.7999 15.99 20.3499V8.98987C16 7.27987 14.6 5.87988 12.89 5.87988Z"
+                    stroke="#6682A3"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M22 5.10999V16.47C22 17.92 20.96 18.53 19.69 17.83L16 15.77V8.98999C16 7.27999 14.6 5.88 12.89 5.88H8V5.10999C8 3.39999 9.39999 2 11.11 2H18.89C20.6 2 22 3.39999 22 5.10999Z"
+                    stroke="#6682A3"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </span>
+              <span v-else>
+                <!-- Filled bookmark -->
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M12.89 5.87988H5.11C3.4 5.87988 2 7.27988 2 8.98988V20.3499C2 21.7999 3.04 22.4199 4.31 21.7099L8.24 19.5199C8.66 19.2899 9.34 19.2899 9.75 19.5199L13.68 21.7099C14.96 22.4099 16 21.7999 16 20.3499V8.98988C16 7.27988 14.6 5.87988 12.89 5.87988Z"
+                    fill="#44576D"
+                  />
+                  <path
+                    d="M22 5.11V16.47C22 17.92 20.96 18.53 19.69 17.83L17.76 16.75C17.6 16.66 17.5 16.49 17.5 16.31V8.99C17.5 6.45 15.43 4.38 12.89 4.38H8.82C8.45 4.38 8.19 3.99 8.36 3.67C8.88 2.68 9.92 2 11.11 2H18.89C20.6 2 22 3.4 22 5.11Z"
+                    fill="#44576D"
+                  />
+                </svg>
+              </span>
+            </button>
+            <button
+              @click.stop="openUploadModal"
+              class="btn btn-primary bg-customButton hover:bg-dark-slate text-white"
+            >
+              Apply
+            </button>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Details -->
+          <p v-if="selectedCareer.detailsAndInstructions">
+            <span class="font-semibold">Details:</span>
+            {{ selectedCareer.detailsAndInstructions }}
+          </p>
+          <p v-if="selectedCareer.qualifications">
+            <span class="font-semibold">Qualifications:</span>
+            {{ selectedCareer.qualifications }}
+          </p>
+          <p v-if="selectedCareer.requirements">
+            <span class="font-semibold">Requirements:</span>
+            {{ selectedCareer.requirements }}
+          </p>
+          <p v-if="selectedCareer.applicationLetterAddress">
+            <span class="font-semibold">Application Letter Address:</span>
+            {{ selectedCareer.applicationLetterAddress }}
+          </p>
+        </div>
+      </div>
+
+      <!-- Backdrop -->
+      <form method="dialog" class="modal-backdrop" @click="closeModal">
+        <button>close</button>
+      </form>
+    </dialog>
+
+    <!-- Upload PDF Modal -->
+    <dialog
+      v-if="showUploadModal"
+      open
+      class="modal modal-bottom sm:modal-middle"
+    >
+      <div class="modal-box max-w-lg relative">
+        <button
+          class="btn btn-sm btn-circle absolute right-2 top-2"
+          @click="closeUploadModal"
+        >
+          ✕
+        </button>
+
+        <h2 class="text-xl font-bold mb-4">Application Requirements</h2>
+        <p class="mb-4">Compile and consolidate requirements to a PDF file:</p>
+
+        <input
+          type="file"
+          accept="application/pdf"
+          class="file-input file-input-bordered w-full"
+          @change="handleFileUpload"
+        />
+
+        <div class="flex justify-end gap-2 mt-6">
+          <button
+            class="btn btn-primary bg-customButton hover:bg-dark-slate text-white"
+            @click="submitApplication"
+          >
+            Submit
+          </button>
+          <button class="btn" @click="closeUploadModal">Cancel</button>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop" @click="closeUploadModal">
+        <button>close</button>
+      </form>
+    </dialog>
   </main>
 </template>
