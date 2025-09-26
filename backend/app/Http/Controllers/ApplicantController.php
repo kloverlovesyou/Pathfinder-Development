@@ -63,20 +63,52 @@ public function login(Request $request)
     ]);
 }
 
-public function destroy(Request $request)
-{
-    $user = $request->user(); // get authenticated user
+ // Update applicant profile
+    public function update(Request $request)
+    {
+        $token = $request->bearerToken();
+        $applicant = Applicant::where('api_token', $token)->first();
 
-    if ($user) {
-        // delete the account
+        if (!$applicant) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        // Optional: Verify current password before allowing update
+        if (!Hash::check($request->currentPassword, $applicant->password)) {
+            return response()->json(['message' => 'Incorrect current password'], 403);
+        }
+
+        // Update fields
+        $applicant->update([
+            'firstName' => $request->firstName,
+            'middleName' => $request->middleName,
+            'lastName' => $request->lastName,
+            'address' => $request->address,
+            'emailAddress' => $request->emailAddress,
+            'phoneNumber' => $request->phoneNumber,
+            'password' => $request->newPassword ? Hash::make($request->newPassword) : $applicant->password,
+        ]);
+
+        return response()->json(['message' => 'Profile updated successfully']);
+    }
+
+
+// Delete applicant account
+    public function destroy(Request $request)
+    {
+        $user = $request->user(); // This gets the authenticated applicant via Sanctum
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        // Verify current password
+        if (!Hash::check($request->currentPassword, $user->password)) {
+            return response()->json(['message' => 'Incorrect password'], 403);
+        }
+
         $user->delete();
-
-        // revoke all tokens (logout everywhere)
-        $user->tokens()->delete();
 
         return response()->json(['message' => 'Account deleted successfully']);
     }
-
-    return response()->json(['message' => 'User not found'], 404);
-}
 }
