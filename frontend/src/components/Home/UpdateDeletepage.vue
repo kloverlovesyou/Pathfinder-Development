@@ -272,7 +272,7 @@
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="$router.push({ name: 'Login' })"
+            @click="logout"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -577,5 +577,12 @@ const handleDelete = async () => {
     isDeleting.value = false;
     showDeleteModal.value = false;
   }
+};
+
+const logout = () => {
+  // Remove user data from localStorage
+  localStorage.removeItem("user");
+  // Redirect to login page
+  router.push({ name: "Login" });
 };
 </script>
