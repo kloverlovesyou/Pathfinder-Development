@@ -37,7 +37,7 @@
           </svg>
           <span>Home</span>
         </div>
-        <div class="icon" @click="$router.push('/org-trainings')">
+        <div class="icon" @click="$router.push({ name: 'OrgTrainings' })">
           <svg width="29" height="29" viewBox="0 0 29 29" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M20.5837 3.625C23.4119 3.625 24.8261 3.62526 25.7048 4.50391C26.5833 5.3826 26.5837 6.79675 26.5837 9.625V19.375C26.5837 22.2033 26.5833 23.6174 25.7048 24.4961C24.8261 25.3747 23.4119 25.375 20.5837 25.375H8.41666C5.58824 25.375 4.17425 25.3748 3.29557 24.4961C2.41689 23.6174 2.41666 22.2034 2.41666 19.375V9.625C2.41666 6.79657 2.41689 5.38259 3.29557 4.50391C4.17425 3.62523 5.58824 3.625 8.41666 3.625H20.5837ZM9.66666 12.292C9.11438 12.292 8.66666 12.7397 8.66666 13.292V20.542L8.67155 20.6445C8.72303 21.1485 9.1491 21.542 9.66666 21.542C10.1842 21.542 10.6103 21.1485 10.6618 20.6445L10.6667 20.542V13.292C10.6667 12.7397 10.2189 12.292 9.66666 12.292ZM19.3337 9.875C18.7814 9.875 18.3337 10.3227 18.3337 10.875V20.542L18.3385 20.6436C18.3896 21.148 18.8158 21.542 19.3337 21.542C19.8514 21.5418 20.2778 21.1479 20.3288 20.6436L20.3337 20.542V10.875C20.3337 10.3228 19.8858 9.87518 19.3337 9.875ZM14.4997 14.708C13.9476 14.7082 13.4998 15.156 13.4997 15.708V20.541L13.5046 20.6436C13.5557 21.1477 13.982 21.5408 14.4997 21.541C15.0175 21.541 15.4436 21.1478 15.4948 20.6436L15.4997 20.541V15.708C15.4995 15.1559 15.0518 14.708 14.4997 14.708Z"
@@ -45,7 +45,7 @@
           </svg>
           <span>Trainings</span>
         </div>
-        <div class="icon" @click="$router.push('/org-careers')">
+        <div class="icon" @click="$router.push({ name: 'OrgCareers' })">
           <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M22.8798 11.0484C23.4046 10.8642 23.9845 11.1431 24.1081 11.6855C24.4792 13.3134 24.4217 15.0018 23.9268 16.6191C23.4739 18.0989 22.6698 19.4685 21.5787 20.6449C21.2148 21.0372 20.6017 21.0197 20.2239 20.6408L14.9487 15.3495C14.4292 14.8284 14.6314 13.9436 15.3257 13.6999L22.8798 11.0484ZM13 4.0826C13 3.50231 13.4932 3.04057 14.0672 3.12592C15.8633 3.39302 17.5788 4.00579 19.085 4.93161C20.3794 5.72731 21.4793 6.72976 22.3343 7.87824C22.709 8.38157 22.4513 9.07932 21.8592 9.28718L14.3313 11.9301C13.6809 12.1584 13 11.6758 13 10.9865V4.0826Z"
@@ -71,7 +71,7 @@
         </div>
 
         <div class="spacer"></div> <!-- pushes signout down -->
-        <div class="icon signout" @click="$router.push('/auth/login')">
+        <div class="icon signout" @click="logout">
           <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -261,72 +261,67 @@ export default {
 
 
 <script setup>
-import { ref, onMounted } from "vue";
-import Chart from "chart.js/auto";
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import Chart from 'chart.js/auto';
 
+const router = useRouter();
 const isSidebarOpen = ref(true);
-const organizationName = ref("");
+const organizationName = ref('');
+const showCareerPopup = ref(false);
+const showTrainingPopup = ref(false);
 
-// Toggle sidebar
-const toggleSidebar = () => {
-  isSidebarOpen.value = !isSidebarOpen.value;
-};
+const newCareer = ref({
+  position: '',
+  details: '',
+  qualifications: '',
+  requirements: '',
+  address: '',
+  deadline: ''
+});
+
+const newTraining = ref({
+  title: '',
+  description: '',
+  type: '',
+  schedule: '',
+  mode: '',
+  location: '',
+  trainingLink: '',
+  registrationLink: ''
+});
 
 onMounted(() => {
-  // 🔹 Get org data from localStorage
   const storedUser = localStorage.getItem("user");
   if (storedUser) {
     const user = JSON.parse(storedUser);
     if (user.role === "organization") {
-      organizationName.value = user.displayName || user.name;
+      organizationName.value = user.organizationName || user.displayName || user.name || "Unknown Org";
     }
   }
 
-  // 🔹 Initialize Chart.js
   const ctx = document.getElementById("applicantChart");
-  new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: ["January", "February", "March", "April", "May", "June"],
-      datasets: [
-        {
-          label: "Training Applicants",
-          data: [10, 20, 15, 25, 40, 30],
-          borderColor: "#3182ce",
-          fill: false,
-          tension: 0.4,
-        },
-        {
-          label: "Job Applicants",
-          data: [5, 15, 20, 22, 50, 35],
-          borderColor: "#9f7aea",
-          fill: false,
-          tension: 0.4,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: false },
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ["Jan","Feb","Mar","Apr","May","Jun"],
+        datasets: [
+          { label:"Training Applicants", data:[10,20,15,25,40,30], borderColor:"#3182ce", fill:false, tension:0.4 },
+          { label:"Job Applicants", data:[5,15,20,22,50,35], borderColor:"#9f7aea", fill:false, tension:0.4 }
+        ]
       },
-    },
-  });
-});
-
-onMounted(() => {
-  const storedUser = localStorage.getItem("user");
-  if (storedUser) {
-    const user = JSON.parse(storedUser);
-    console.log("🔎 Loaded user:", user); // check what keys exist
-
-    if (user.role === "organization") {
-      // ✅ Try all possible keys to avoid undefined
-      organizationName.value =
-        user.organizationName || user.displayName || user.name || "Unknown Org";
-    }
+      options: { responsive:true, plugins:{legend:{display:false}} }
+    });
   }
 });
+
+const toggleSidebar = () => isSidebarOpen.value = !isSidebarOpen.value;
+const logout = () => { localStorage.removeItem('user'); localStorage.removeItem('token'); router.push({ name: 'Login' }); }
+const closeCareerPopup = () => showCareerPopup.value = false;
+const closeTrainingPopup = () => showTrainingPopup.value = false;
+const saveCareer = () => { console.log('Career saved'); closeCareerPopup(); }
+const saveTraining = () => { console.log('Training saved'); closeTrainingPopup(); }
 </script>
 
 <style scoped>

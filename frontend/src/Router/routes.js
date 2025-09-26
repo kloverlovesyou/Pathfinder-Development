@@ -136,6 +136,7 @@ router.beforeEach((to, from, next) => {
     return next({ name: "Login" });
   }
 
+
   // 4. Otherwise, continue
   next();
 });
