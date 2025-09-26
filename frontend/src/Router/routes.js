@@ -15,7 +15,6 @@ import TypeOfAccount from "@/components/Home/TypeOfAccount.vue";
 import OrgHomePage from "@/components/Organization/OrganizationHomepage.vue";
 import OrgTraining from "@/components/Organization/OrganizationTrainings.vue";
 import OrgCareer from "@/components/Organization/OrganizationCareers.vue";
-import OrgProfile from "@/components/Organization/Profile.vue";
 import MainLayout from "@/components/Layout/MainLayout.vue";
 import AuthLayout from "@/components/Layout/AuthLayout.vue";
 import { createRouter, createWebHistory } from "vue-router";
@@ -111,13 +110,10 @@ const router = createRouter({
       name: "OrgCareers",
       component: OrgCareer,
     },
-    {
-      path: "org-profile",
-      name: "OrgProfile",
-      component: OrgProfile,
-    },
   ],
 },
+
+
     
     // 🚨 Catch-all must always be last
     {
@@ -138,11 +134,6 @@ router.beforeEach((to, from, next) => {
   // 2. Block access if role does not match
   if (to.meta.role && (!user || user.role !== to.meta.role)) {
     return next({ name: "Login" });
-  }
-
-  // 3. Prevent logged-in users from going back to login
-  if (to.name === "Login" && user) {
-    return next(user.role === "organization" ? "/organization" : "/app");
   }
 
   // 4. Otherwise, continue
