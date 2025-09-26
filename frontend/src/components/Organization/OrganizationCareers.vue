@@ -32,7 +32,7 @@
           </div>
         </transition>
 
-        <div class="icon" @click="$router.push('/OrganizationHomePage')">
+        <div class="icon" @click="$router.push('/organization')">
           <svg
             width="30"
             height="30"
@@ -63,7 +63,7 @@
           </svg>
           <span>Home</span>
         </div>
-        <div class="icon" @click="$router.push('/OrgTrainings')">
+        <div class="icon" @click="$router.push('/org-trainings')">
           <svg
             width="29"
             height="29"
@@ -78,7 +78,7 @@
           </svg>
           <span>Trainings</span>
         </div>
-        <div class="icon" @click="$router.push('/OrgCareers')">
+        <div class="icon" @click="$router.push('/org-careers')">
           <svg
             width="25"
             height="25"
