@@ -565,7 +565,7 @@ const handleDelete = async () => {
     isDeleting.value = true;
     const res = await axios.delete("http://127.0.0.1:8000/api/user", {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      data: { currentPassword: form.value.currentPassword } // pass password for verification
+      data: { currentPassword: form.value.currentPassword } // send password for verification
     });
     alert(res.data.message);
     localStorage.removeItem("token");
