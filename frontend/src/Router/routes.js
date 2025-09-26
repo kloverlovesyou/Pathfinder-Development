@@ -15,7 +15,7 @@ import TypeOfAccount from "@/components/Home/TypeOfAccount.vue";
 import OrgHomePage from "@/components/Organization/OrganizationHomepage.vue";
 import OrgTraining from "@/components/Organization/OrganizationTrainings.vue";
 import OrgCareer from "@/components/Organization/OrganizationCareers.vue";
-import OrgProfile from "@/components/Organization/OrganizationProfile.vue";
+import OrgProfile from "@/components/Organization/Profile.vue";
 import MainLayout from "@/components/Layout/MainLayout.vue";
 import AuthLayout from "@/components/Layout/AuthLayout.vue";
 import { createRouter, createWebHistory } from "vue-router";
@@ -102,17 +102,17 @@ const router = createRouter({
       component: OrgHomePage,
     },
     {
-      path: "trainings",
+      path: "org-trainings",
       name: "OrgTrainings",
       component: OrgTraining,
     },
     {
-      path: "careers",
+      path: "org-careers",
       name: "OrgCareers",
       component: OrgCareer,
     },
     {
-      path: "profile",
+      path: "org-profile",
       name: "OrgProfile",
       component: OrgProfile,
     },
@@ -130,18 +130,22 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const user = JSON.parse(localStorage.getItem("user"));
 
+  // 1. Block access if route requires auth and no user
   if (to.meta.requiresAuth && !user) {
     return next({ name: "Login" });
   }
 
-  if (to.meta.role && user?.role !== to.meta.role) {
-    return next(user?.role === "organization" ? "/organization" : "/app");
+  // 2. Block access if role does not match
+  if (to.meta.role && (!user || user.role !== to.meta.role)) {
+    return next({ name: "Login" });
   }
 
+  // 3. Prevent logged-in users from going back to login
   if (to.name === "Login" && user) {
     return next(user.role === "organization" ? "/organization" : "/app");
   }
 
+  // 4. Otherwise, continue
   next();
 });
 
