@@ -76,59 +76,45 @@ const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
 const handleLogin = async () => {
   emailError.value = !validateEmail(email.value);
   passwordError.value = !validatePassword(password.value);
-
   if (emailError.value || passwordError.value) return;
 
   try {
-    // 1️⃣ Try applicant login first
-    let response = await axios.post(
-      "http://127.0.0.1:8000/api/applicants/login",
-      {
-        emailAddress: email.value,
-        password: password.value,
-      }
-    );
+    const response = await axios.post("http://127.0.0.1:8000/api/login", {
+      emailAddress: email.value,
+      password: password.value,
+    });
 
-    let userData = response.data.user;
-    let displayName = `${userData.firstName} ${userData.lastName}`;
+    const userData = response.data.user;
+    const role = userData.role; // 'applicant' or 'organization'
 
+    // ✅ Handle displayName differently for applicant vs organization
+    let displayName = "";
+    if (role === "organization") {
+      displayName = userData.organizationName || userData.name || "Organization";
+    } else {
+      displayName = `${userData.firstName} ${userData.lastName}`;
+    }
+
+    // Save in localStorage
     localStorage.setItem(
       "user",
       JSON.stringify({
         ...userData,
-        role: "applicant",
+        role,
         displayName,
       })
     );
 
-    router.push("/homepage");
-  } catch (err1) {
-    try {
-      // 2️⃣ If applicant login fails, try organization
-      let response = await axios.post(
-        "http://127.0.0.1:8000/api/organizations/login",
-        {
-          emailAddress: email.value,
-          password: password.value,
-        }
-      );
-
-      let orgData = response.data.organization;
-      let displayName = orgData.name;
-
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          ...orgData,
-          role: "organization",
-          displayName,
-        })
-      );
-
-      router.push("/OrganizationHomePage");
-    } catch (err2) {
-      alert("Invalid credentials. Please try again.");
+    // Redirect based on role
+    if (role === "organization") {
+      router.push("/organization"); // organization home
+    } else {
+      router.push("/app"); // applicant home
     }
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    alert("Invalid credentials. Please try again.");
   }
 };
 </script>
+

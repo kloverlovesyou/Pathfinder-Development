@@ -155,7 +155,7 @@
         </div>
 
         <!-- Name -->
-        <h2 class="text-xl font-semibold mb-6">Keiro Musician</h2>
+        <h2 class="text-xl font-semibold mb-6">{{ userName }}</h2>
         <div
           class="w-full flex items-center justify-center gap-6 mb-6 relative"
         >
@@ -272,7 +272,7 @@
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="$router.push({ name: 'Login' })"
+            @click="logout"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -422,32 +422,30 @@
             </div>
           </form>
 
-          <!-- Delete Confirmation Modal -->
-          <div
-            v-if="showDeleteModal"
-            class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
-          >
-            <div class="bg-white p-6 rounded-lg max-w-sm w-full">
-              <h2 class="text-lg font-semibold mb-4">
-                Confirm Account Deletion
-              </h2>
-              <p class="mb-4 text-sm">
-                This action is irreversible. Are you sure you want to delete
-                your account?
-              </p>
-              <div class="flex justify-end gap-2">
-                <button class="btn btn-sm" @click="showDeleteModal = false">
-                  Cancel
-                </button>
-                <button
-                  class="btn btn-error btn-sm text-white"
-                  @click="handleDelete"
-                >
-                  Delete
-                </button>
-              </div>
+        <!-- Delete Confirmation Modal -->
+        <div
+          v-if="showDeleteModal"
+          class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
+        >
+          <div class="bg-white p-6 rounded-lg max-w-sm w-full">
+            <h2 class="text-lg font-semibold mb-4">Confirm Account Deletion</h2>
+            <p class="mb-4 text-sm">
+              This action is irreversible. Are you sure you want to delete your account?
+            </p>
+            <div class="flex justify-end gap-2">
+              <button class="btn btn-sm" @click="showDeleteModal = false" :disabled="isDeleting">
+                Cancel
+              </button>
+              <button
+                class="btn btn-error btn-sm text-white"
+                @click="handleDelete"
+                :disabled="isDeleting"
+              >
+                {{ isDeleting ? "Deleting..." : "Delete" }}
+              </button>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>
@@ -461,6 +459,8 @@ import { useRouter } from "vue-router";
 
 const router = useRouter();
 const showDeleteModal = ref(false);
+const isDeleting = ref(false);
+
 
 const form = ref({
   firstName: "",
@@ -473,17 +473,75 @@ const form = ref({
   currentPassword: "",
 });
 
-// Load current user info
+const userName = ref("");
+
 onMounted(async () => {
   try {
+    // --- Fetch user from API ---
     const res = await axios.get("http://127.0.0.1:8000/api/user", {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
-    form.value = { ...form.value, ...res.data };
+
+    const user = res.data;
+
+    // Update form (including middle name)
+    form.value = {
+      ...form.value,
+      firstName: user.firstName || user.first_name || "",
+      middleName: user.middleName || user.middle_name || "",
+      lastName: user.lastName || user.last_name || "",
+      emailAddress: user.emailAddress || user.email || "",
+      phoneNumber: user.phoneNumber || user.phone || "",
+      address: user.address || "",
+    };
+
+    // Set userName (display only first + last)
+    userName.value = `${form.value.firstName} ${form.value.lastName}`.trim();
+
+    // Save backup
+    localStorage.setItem("user", JSON.stringify(user));
+
   } catch (err) {
-    console.error(err);
+    console.error("API failed, fallback to localStorage:", err);
+
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+
+      form.value = {
+        ...form.value,
+        firstName: user.firstName || user.first_name || "",
+        middleName: user.middleName || user.middle_name || "",
+        lastName: user.lastName || user.last_name || "",
+        emailAddress: user.emailAddress || user.email || "",
+        phoneNumber: user.phoneNumber || user.phone || "",
+        address: user.address || "",
+      };
+
+      userName.value = `${form.value.firstName} ${form.value.lastName}`.trim();
+    }
   }
 });
+
+function deleteAccount() {
+  axios.delete("http://127.0.0.1:8000/api/user", {
+    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+  })
+  .then(res => {
+    alert(res.data.message);
+
+    // clear saved data
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    // redirect to login
+    router.push("/loginform");
+  })
+  .catch(err => {
+    console.error(err);
+    alert("Failed to delete account.");
+  });
+}
 
 const handleUpdate = async () => {
   if (!form.value.currentPassword) {
@@ -504,14 +562,27 @@ const handleUpdate = async () => {
 
 const handleDelete = async () => {
   try {
-    await axios.delete("http://127.0.0.1:8000/api/user", {
+    isDeleting.value = true;
+    const res = await axios.delete("http://127.0.0.1:8000/api/user", {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
-    alert("Account deleted.");
+    alert(res.data.message || "Account deleted.");
     localStorage.removeItem("token");
-    router.push("/register");
+    localStorage.removeItem("user");
+    router.push("/loginform");
   } catch (error) {
+    console.error(error.response);
     alert(error.response?.data?.message || "Deletion failed.");
+  } finally {
+    isDeleting.value = false;
+    showDeleteModal.value = false;
   }
+};
+
+const logout = () => {
+  // Remove user data from localStorage
+  localStorage.removeItem("user");
+  // Redirect to login page
+  router.push({ name: "Login" });
 };
 </script>

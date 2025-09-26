@@ -44,26 +44,22 @@ import organizationImage from "@/assets/images/org.jpg";
 
       <!-- cards -->
       <div class="flex w-full flex-col lg:flex-row gap-6">
-        <div
-          class="card bg-base-300 rounded-box flex-1 min-h-[200px] p-6"
-          @click="$router.push('/a_registrationform')"
-        >
-          <figure><img :src="applicantImage" alt="Applicant" /></figure>
-          <p
-            class="sm:text-base md:text-md lg:text-lg xl:text-xl text-center font-inter pt-4"
-          >
-            Applicant
-          </p>
-        </div>
+      <div
+        class="card bg-base-300 rounded-box flex-1 min-h-[200px] p-6"
+        @click="$router.push('/auth/aregistration')"
+      >
+        <figure><img :src="applicantImage" alt="Applicant" /></figure>
+        <p class="sm:text-base md:text-md lg:text-lg xl:text-xl text-center font-inter pt-4">
+          Applicant
+        </p>
+      </div>
         <div class="divider lg:divider-horizontal font-inter">OR</div>
         <div
-          class="card bg-base-300 rounded-box flex-1 min-h-[200px] p-6"
-          @click="$router.push('/o_registrationform')"
-        >
+        class="card bg-base-300 rounded-box flex-1 min-h-[200px] p-6"
+        @click="$router.push('/auth/oregistration')"
+>
           <figure><img :src="organizationImage" alt="Organization" /></figure>
-          <p
-            class="sm:text-base md:text-md lg:text-lg xl:text-xl text-center font-inter pt-4"
-          >
+          <p class="sm:text-base md:text-md lg:text-lg xl:text-xl text-center font-inter pt-4">
             Organization
           </p>
         </div>

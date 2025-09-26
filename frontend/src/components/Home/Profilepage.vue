@@ -5,10 +5,11 @@ const router = useRouter();
 const userName = ref("");
 
 const logout = () => {
-  // Remove user data from localStorage
-  localStorage.removeItem("user");
+  // Remove user data
+  localStorage.removeItem('user');
+  localStorage.removeItem('token'); // if you store an auth token
   // Redirect to login page
-  router.push("/loginform");
+  router.push({ name: 'Login' });
 };
 
 // Check if user is logged in and retrieve user data
@@ -25,6 +26,7 @@ onMounted(() => {
     userName.value = "Guest";
   }
 });
+
 </script>
 <template>
   <div class="min-h-screen bg-gray-100 font-poppins">
@@ -270,7 +272,7 @@ onMounted(() => {
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="$router.push({ name: 'Login' })"
+            @click="logout"
           >
             <svg
               class="size-6 flex-shrink-0"
