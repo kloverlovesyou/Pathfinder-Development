@@ -90,17 +90,23 @@ const router = createRouter({
     },
 
     {
-      path: "/organization",
-      component: OrgHomePage,
-      meta: { requiresAuth: true, role: "organization" },
-      children: [
-        { path: "", name: "OrgHome", component: OrgHomePage },
-        { path: "org-trainings", name: "OrgTrainings", component: OrgTraining },
-        { path: "org-careers", name: "OrgCareers", component: OrgCareer },
-      ],
-    },
-
-
+    path: '/organization',
+    name: 'OrgHome',
+    component: OrgHomePage,
+    meta: { requiresAuth: true, role: 'organization' },
+  },
+  {
+    path: '/organization/org-trainings',
+    name: 'OrgTrainings',
+    component: OrgTraining,
+    meta: { requiresAuth: true, role: 'organization' },
+  },
+  {
+    path: '/organization/org-careers',
+    name: 'OrgCareers',
+    component: OrgCareer,
+    meta: { requiresAuth: true, role: 'organization' },
+  },
     
     // 🚨 Catch-all must always be last
     {
