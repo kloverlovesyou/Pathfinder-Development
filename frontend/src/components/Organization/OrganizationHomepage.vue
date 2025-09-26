@@ -197,76 +197,68 @@
 </template>
 
 <script>
+import { ref, onMounted } from "vue";
+
 export default {
-  data() {
+  name: "OrganizationHomePage",
+  setup() {
+    const isSidebarOpen = ref(true);
+    const showCareerPopup = ref(false);
+    const showTrainingPopup = ref(false);
+
+    // Initialize organizationName
+    const organizationName = ref("Loading...");
+
+    // Simulate fetching organization data (replace with real API/localStorage)
+    onMounted(() => {
+      // Example: get from localStorage
+      const storedName = localStorage.getItem("organizationName");
+
+      if (storedName) {
+        organizationName.value = storedName;
+      } else {
+        organizationName.value = "My Organization"; // fallback default
+      }
+    });
+
+    // Functions
+    const toggleSidebar = () => {
+      isSidebarOpen.value = !isSidebarOpen.value;
+    };
+
+    const closeCareerPopup = () => {
+      showCareerPopup.value = false;
+    };
+
+    const closeTrainingPopup = () => {
+      showTrainingPopup.value = false;
+    };
+
+    const saveCareer = () => {
+      console.log("Career saved");
+      showCareerPopup.value = false;
+    };
+
+    const saveTraining = () => {
+      console.log("Training saved");
+      showTrainingPopup.value = false;
+    };
+
     return {
-      showTrainingPopup: false,
-      showCareerPopup: false,
-      newTraining: {
-        title: "",
-        description: "",
-        type: "",
-        schedule: "",
-        mode: "",
-        location: "",        
-        trainingLink: "",    
-        registrationLink: "" 
-      },
-      upcomingtrainings: [],
-      newCareer: {
-        position: "",
-        details: "",
-        qualifications: "",
-        requirements: "",
-        letterAddress: "",
-        deadline: ""
-      }
-    }
+      isSidebarOpen,
+      organizationName,
+      showCareerPopup,
+      showTrainingPopup,
+      toggleSidebar,
+      closeCareerPopup,
+      closeTrainingPopup,
+      saveCareer,
+      saveTraining,
+    };
   },
-
-  methods: {
-    openCareerPopup() {
-      this.showCareerPopup = true
-    },
-    closeCareerPopup() {
-      this.showCareerPopup = false
-      this.newCareer = {
-        position: "",
-        details: "",
-        qualifications: "",
-        requirements: "",
-        letterAddress: "",
-        deadline: ""
-      }
-    },
-
-    openTrainingPopup() {
-      this.showTrainingPopup = true
-    },
-    closeTrainingPopup() {
-      this.showTrainingPopup = false
-      this.newTraining = {
-        title: "",
-        description: "",
-        type: "",
-        schedule: "",
-        mode: "On-Site",
-        location: "",
-        registrationLink: ""
-      }
-    },
-    saveTraining() {
-      if (this.newTraining.title && this.newTraining.schedule) {
-        this.upcomingtrainings.push({
-          id: Date.now(),
-          ...this.newTraining
-        })
-        this.closeTrainingPopup()
-      }
-    }
-  }
-}
+};
 </script>
+
 
 <script setup>
 import { ref, onMounted } from "vue";
@@ -320,6 +312,20 @@ onMounted(() => {
       },
     },
   });
+});
+
+onMounted(() => {
+  const storedUser = localStorage.getItem("user");
+  if (storedUser) {
+    const user = JSON.parse(storedUser);
+    console.log("🔎 Loaded user:", user); // check what keys exist
+
+    if (user.role === "organization") {
+      // ✅ Try all possible keys to avoid undefined
+      organizationName.value =
+        user.organizationName || user.displayName || user.name || "Unknown Org";
+    }
+  }
 });
 </script>
 
