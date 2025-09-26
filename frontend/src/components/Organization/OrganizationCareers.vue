@@ -13,7 +13,7 @@
             <div class="avatar"></div>
             <h3 class="org-name">{{ organizationName }}</h3>
             <div class="profile-actions">
-              <div class="action" @click="$router.push('/updateprofile')">
+              <div class="action" @click="navigateTo('/profile')">
                 <svg
                   width="24"
                   height="24"
@@ -32,7 +32,7 @@
           </div>
         </transition>
 
-        <div class="icon" @click="$router.push('/organization')">
+        <div class="icon" @click="navigateTo('/organization')">
           <svg
             width="30"
             height="30"
@@ -63,7 +63,7 @@
           </svg>
           <span>Home</span>
         </div>
-        <div class="icon" @click="$router.push('/org-trainings')">
+        <div class="icon" @click="navigateTo({ name: 'OrgTrainings' })">
           <svg
             width="29"
             height="29"
@@ -78,7 +78,7 @@
           </svg>
           <span>Trainings</span>
         </div>
-        <div class="icon" @click="$router.push('/org-careers')">
+        <div class="icon"  @click="navigateTo({ name: 'OrgCareers' })">
           <svg
             width="25"
             height="25"
@@ -97,7 +97,7 @@
           </svg>
           <span>Career</span>
         </div>
-        <div class="icon" @click="$router.push('/Calendar')">
+        <div class="icon" @click="navigateTo('/app/calendar')">
           <svg
             width="26"
             height="26"
@@ -131,7 +131,7 @@
 
         <div class="spacer"></div>
         <!-- pushes signout down -->
-        <div class="icon signout" @click="signOut">
+        <div class="icon signout" @click="logout">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="28"
@@ -458,7 +458,9 @@ export default {
 
 <script setup>
 import { ref, onMounted } from "vue";
+import { useRouter } from 'vue-router';
 
+const router = useRouter();
 const isSidebarOpen = ref(true);
 const organizationName = ref("");
 
@@ -477,6 +479,19 @@ onMounted(() => {
     }
   }
 });
+
+// Sidebar navigation functions
+const goToProfile = () => router.push('/profile');
+const goToHome = () => router.push('/organization');
+const goToTrainings = () => router.push({ name: 'OrgTrainings' });
+const goToCareers = () => router.push({ name: 'OrgCareers' });
+const goToCalendar = () => router.push('/app/calendar');
+
+const logout = () => { 
+  localStorage.removeItem('user'); 
+  localStorage.removeItem('token'); 
+  router.push({ name: 'Login' }); 
+};
 </script>
 
 <style scoped>
