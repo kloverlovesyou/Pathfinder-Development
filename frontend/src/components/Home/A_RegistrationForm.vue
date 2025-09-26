@@ -14,7 +14,7 @@
       <div class="pt-10 pb-2">
         <button
           class="btn btn-ghost btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl text-dark-slate"
-          @click="$router.push('/loginform')"
+          @click="$router.push('Login')"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -429,7 +429,7 @@ const handleSubmit = async () => {
       ...form.value,
     });
 
-    router.push("/loginform");
+    router.push("Login");
   } catch (error) {
     if (error.response && error.response.data.errors) {
       const errors = error.response.data.errors;

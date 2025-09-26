@@ -10,34 +10,39 @@ use Illuminate\Support\Facades\Validator;
 class ApplicantController extends Controller
 {
     public function a_register(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'firstName' => 'required|string|max:255',
-            'middleName' => 'nullable|string|max:255',
-            'lastName' => 'required|string|max:255',
-            'address' => 'required|string|max:255',
-            'emailAddress' => 'required|email|unique:Applicant,emailAddress',
-            'phoneNumber' => 'required|digits:11',
-            'password' => 'required|string|min:8',
-        ]);
+{
+    $validator = \Validator::make($request->all(), [
+        'firstName'    => 'required|string|max:255',
+        'lastName'     => 'required|string|max:255',
+        'address'      => 'required|string|max:255',
+        'emailAddress' => 'required|email|unique:applicant,emailAddress',
+        'phoneNumber'  => 'required|string|max:11',
+        'password'     => 'required|string|min:8',
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $applicant = Applicant::create([
-            'firstName' => $request->firstName,
-            'middleName' => $request->middleName,
-            'lastName' => $request->lastName,
-            'address' => $request->address,
-            'emailAddress' => $request->emailAddress,
-            'phoneNumber' => $request->phoneNumber,
-            'password' => Hash::make($request->password),
-        ]);
-
-        return response()->json(['message' => 'Registration successful'], 201);
+    if ($validator->fails()) {
+        return response()->json([
+            'status' => 'error',
+            'errors' => $validator->errors(),
+        ], 422);
     }
 
+    $applicant = Applicant::create([
+        'firstName'    => $request->firstName,
+        'middleName'   => $request->middleName,
+        'lastName'     => $request->lastName,
+        'address'      => $request->address,
+        'emailAddress' => $request->emailAddress,
+        'phoneNumber'  => $request->phoneNumber,
+        'password'     => bcrypt($request->password),
+    ]);
+
+    return response()->json([
+        'status'  => 'success',
+        'message' => 'Registration successful',
+        'user'    => $applicant,
+    ], 201);
+}
 public function login(Request $request)
 {
     $request->validate([
@@ -56,5 +61,22 @@ public function login(Request $request)
         'message' => 'Login successful',
         'user' => $applicant,
     ]);
+}
+
+public function destroy(Request $request)
+{
+    $user = $request->user(); // get authenticated user
+
+    if ($user) {
+        // delete the account
+        $user->delete();
+
+        // revoke all tokens (logout everywhere)
+        $user->tokens()->delete();
+
+        return response()->json(['message' => 'Account deleted successfully']);
+    }
+
+    return response()->json(['message' => 'User not found'], 404);
 }
 }

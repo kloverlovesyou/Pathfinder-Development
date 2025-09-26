@@ -15,9 +15,11 @@ import TypeOfAccount from "@/components/Home/TypeOfAccount.vue";
 import OrgHomePage from "@/components/Organization/OrganizationHomepage.vue";
 import OrgTraining from "@/components/Organization/OrganizationTrainings.vue";
 import OrgCareer from "@/components/Organization/OrganizationCareers.vue";
+import OrgProfile from "@/components/Organization/OrganizationProfile.vue";
 import MainLayout from "@/components/Layout/MainLayout.vue";
 import AuthLayout from "@/components/Layout/AuthLayout.vue";
 import { createRouter, createWebHistory } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -28,13 +30,18 @@ const router = createRouter({
       redirect: "/auth/login",
     },
 
-    // Auth pages
+      // Auth pages
     {
       path: "/auth",
       component: AuthLayout,
       children: [
         { path: "login", name: "Login", component: LoginForm },
-        { path: "register", name: "Register", component: TypeOfAccount },
+        { 
+          path: "register", 
+          alias: "/typeofaccount",   // 👈 Now /typeofaccount works too
+          name: "Register", 
+          component: TypeOfAccount 
+        },
         {
           path: "aregistration",
           name: "ARegistrationForms",
@@ -52,6 +59,7 @@ const router = createRouter({
     {
       path: "/app",
       component: MainLayout,
+      meta: { requiresAuth: true },
       children: [
         { path: "", name: "Homepage", component: Homepage },
         { path: "profile", name: "Profile", component: ProfilePage },
@@ -83,19 +91,58 @@ const router = createRouter({
     },
 
     // Organization-specific pages
+{
+  path: "/organization",
+  component: OrgHomePage,
+  meta: { requiresAuth: true, role: "organization" },
+  children: [
     {
-      path: "/organization",
+      path: "",
+      name: "OrgHome",
       component: OrgHomePage,
     },
     {
-      path: "/org-trainings",
+      path: "trainings",
+      name: "OrgTrainings",
       component: OrgTraining,
     },
     {
-      path: "/org-careers",
+      path: "careers",
+      name: "OrgCareers",
       component: OrgCareer,
     },
+    {
+      path: "profile",
+      name: "OrgProfile",
+      component: OrgProfile,
+    },
   ],
+},
+    
+    // 🚨 Catch-all must always be last
+    {
+      path: "/:pathMatch(.*)*",
+      redirect: "/auth/login", // or use a NotFound component
+    },
+  ],
+});
+
+router.beforeEach((to, from, next) => {
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  if (to.meta.requiresAuth && !user) {
+    return next({ name: "Login" });
+  }
+
+  if (to.meta.role && user?.role !== to.meta.role) {
+    return next(user?.role === "organization" ? "/organization" : "/app");
+  }
+
+  if (to.name === "Login" && user) {
+    return next(user.role === "organization" ? "/organization" : "/app");
+  }
+
+  next();
 });
 
 export default router;

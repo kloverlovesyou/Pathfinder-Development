@@ -128,6 +128,8 @@ const form = reactive({
   address: "",
 });
 
+const userName = ref(""); // <-- define it
+
 onMounted(() => {
   const savedUser = localStorage.getItem("user");
   if (savedUser) {
@@ -148,6 +150,9 @@ onMounted(() => {
     resume.value.email = user.emailAddress || "";
     resume.value.mobile = user.phoneNumber || "";
     resume.value.address = user.address || "";
+
+    // set userName (e.g., "First Last")
+    userName.value = `${user.firstName || ""} ${user.lastName || ""}`.trim();
   }
 });
 </script>
