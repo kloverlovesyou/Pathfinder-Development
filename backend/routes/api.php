@@ -20,12 +20,7 @@ Route::post('/organizations/login', [OrganizationController::class, 'login']);
 
 // Protected routes (require Sanctum auth)
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
-
-    // delete account
+    Route::get('/user', function (Request $request) { return $request->user(); });
     Route::delete('/user', [ApplicantController::class, 'destroy']);
 });
-
 
