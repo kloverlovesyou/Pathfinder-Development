@@ -15,6 +15,7 @@ import TypeOfAccount from "@/components/Home/TypeOfAccount.vue";
 import OrgHomePage from "@/components/Organization/OrganizationHomepage.vue";
 import OrgTraining from "@/components/Organization/OrganizationTrainings.vue";
 import OrgCareer from "@/components/Organization/OrganizationCareers.vue";
+import OrgProfile from "@/components/Organization/OrganizationProfile.vue";
 import MainLayout from "@/components/Layout/MainLayout.vue";
 import AuthLayout from "@/components/Layout/AuthLayout.vue";
 import { createRouter, createWebHistory } from "vue-router";
@@ -29,7 +30,7 @@ const router = createRouter({
       redirect: "/auth/login",
     },
 
-// Auth pages
+      // Auth pages
     {
       path: "/auth",
       component: AuthLayout,
@@ -90,22 +91,34 @@ const router = createRouter({
     },
 
     // Organization-specific pages
+{
+  path: "/organization",
+  component: OrgHomePage,
+  meta: { requiresAuth: true, role: "organization" },
+  children: [
     {
-      path: "/organization",
+      path: "",
+      name: "OrgHome",
       component: OrgHomePage,
-      meta: { requiresAuth: true, role: "organization" },
     },
     {
-      path: "/org-trainings",
+      path: "trainings",
+      name: "OrgTrainings",
       component: OrgTraining,
-      meta: { requiresAuth: true, role: "organization" },
     },
     {
-      path: "/org-careers",
+      path: "careers",
+      name: "OrgCareers",
       component: OrgCareer,
-      meta: { requiresAuth: true, role: "organization" },
     },
-
+    {
+      path: "profile",
+      name: "OrgProfile",
+      component: OrgProfile,
+    },
+  ],
+},
+    
     // 🚨 Catch-all must always be last
     {
       path: "/:pathMatch(.*)*",
@@ -122,7 +135,11 @@ router.beforeEach((to, from, next) => {
   }
 
   if (to.meta.role && user?.role !== to.meta.role) {
-    return next({ name: "Login" }); // optional: redirect to 403 page
+    return next(user?.role === "organization" ? "/organization" : "/app");
+  }
+
+  if (to.name === "Login" && user) {
+    return next(user.role === "organization" ? "/organization" : "/app");
   }
 
   next();
