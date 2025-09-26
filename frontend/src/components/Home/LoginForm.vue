@@ -72,24 +72,30 @@ const passwordError = ref(false);
 
 const validateEmail = (emailVal) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
 const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
+
 const handleLogin = async () => {
   emailError.value = !validateEmail(email.value);
   passwordError.value = !validatePassword(password.value);
   if (emailError.value || passwordError.value) return;
 
   try {
-    const response = await axios.post(
-      "http://127.0.0.1:8000/api/login",
-      {
-        emailAddress: email.value,
-        password: password.value,
-      }
-    );
+    const response = await axios.post("http://127.0.0.1:8000/api/login", {
+      emailAddress: email.value,
+      password: password.value,
+    });
 
     const userData = response.data.user;
     const role = userData.role; // 'applicant' or 'organization'
-    const displayName = `${userData.firstName} ${userData.lastName}`;
 
+    // ✅ Handle displayName differently for applicant vs organization
+    let displayName = "";
+    if (role === "organization") {
+      displayName = userData.organizationName || userData.name || "Organization";
+    } else {
+      displayName = `${userData.firstName} ${userData.lastName}`;
+    }
+
+    // Save in localStorage
     localStorage.setItem(
       "user",
       JSON.stringify({
@@ -111,3 +117,4 @@ const handleLogin = async () => {
   }
 };
 </script>
+
