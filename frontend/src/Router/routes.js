@@ -89,29 +89,16 @@ const router = createRouter({
       ],
     },
 
-    // Organization-specific pages
-{
-  path: "/organization",
-  component: OrgHomePage,
-  meta: { requiresAuth: true, role: "organization" },
-  children: [
     {
-      path: "",
-      name: "OrgHome",
+      path: "/organization",
       component: OrgHomePage,
+      meta: { requiresAuth: true, role: "organization" },
+      children: [
+        { path: "", name: "OrgHome", component: OrgHomePage },
+        { path: "org-trainings", name: "OrgTrainings", component: OrgTraining },
+        { path: "org-careers", name: "OrgCareers", component: OrgCareer },
+      ],
     },
-    {
-      path: "org-trainings",
-      name: "OrgTrainings",
-      component: OrgTraining,
-    },
-    {
-      path: "org-careers",
-      name: "OrgCareers",
-      component: OrgCareer,
-    },
-  ],
-},
 
 
     
