@@ -17,6 +17,7 @@ class Applicant extends Model
         'address',
         'emailAddress',
         'phoneNumber',
-        'password'
+        'password',
+        'api_token',
     ];
 }

@@ -94,21 +94,23 @@ public function login(Request $request)
 
 
 // Delete applicant account
-    public function destroy(Request $request)
-    {
-        $user = $request->user(); // This gets the authenticated applicant via Sanctum
+   public function destroy(Request $request)
+{
+    $token = $request->bearerToken();
+    $user = Applicant::where('api_token', $token)->first();
 
-        if (!$user) {
-            return response()->json(['message' => 'Unauthorized'], 401);
-        }
-
-        // Verify current password
-        if (!Hash::check($request->currentPassword, $user->password)) {
-            return response()->json(['message' => 'Incorrect password'], 403);
-        }
-
-        $user->delete();
-
-        return response()->json(['message' => 'Account deleted successfully']);
+    if (!$user) {
+        return response()->json(['message' => 'Unauthorized'], 401);
     }
+
+    // Verify password
+    if (!Hash::check($request->currentPassword, $user->password)) {
+        return response()->json(['message' => 'Incorrect password'], 403);
+    }
+
+    $user->delete();
+
+    return response()->json(['message' => 'Account deleted successfully']);
+}
+
 }

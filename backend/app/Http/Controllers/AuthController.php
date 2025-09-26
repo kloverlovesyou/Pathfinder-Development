@@ -68,37 +68,42 @@ class AuthController extends Controller
         ]);
     }
 
-        // ✅ Login for both Applicants & Organizations
         public function login(Request $request)
-        {
-            $request->validate([
-                'emailAddress' => 'required|email',
-                'password'     => 'required|string|min:8',
-            ]);
+{
+    $request->validate([
+        'emailAddress' => 'required|email',
+        'password'     => 'required|string|min:8',
+    ]);
 
-            // 1. Check in applicants
-            $applicant = Applicant::where('emailAddress', $request->emailAddress)->first();
-            if ($applicant && Hash::check($request->password, $applicant->password)) {
-                return response()->json([
-                    'status'  => 'success',
-                    'message' => 'Login successful',
-                    'user'    => array_merge($applicant->toArray(),
-                    ['role' => 'applicant']),
-                ]);
-            }
+    // Check applicant
+    $applicant = Applicant::where('emailAddress', $request->emailAddress)->first();
+    if ($applicant && Hash::check($request->password, $applicant->password)) {
+        // Generate token
+        $applicant->api_token = Str::random(60);
+        $applicant->save();
 
-            // 2. If not found, check in organizations
-            $organization = Organization::where('emailAddress', $request->emailAddress)->first();
-            if ($organization && Hash::check($request->password, $organization->password)) {
-                return response()->json([
-                    'status'  => 'success',
-                    'message' => 'Login successful',
-                    'user'    => array_merge($organization->toArray(), 
-                    ['role' => 'organization']),
-                ]);
-            }
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Login successful',
+            'token'   => $applicant->api_token,
+            'user'    => array_merge($applicant->toArray(), ['role' => 'applicant']),
+        ]);
+    }
 
-            // 3. If neither matches
-            return response()->json(['status' => 'error', 'message' => 'Invalid credentials'], 401);
-        }
+    // Check organization
+    $organization = Organization::where('emailAddress', $request->emailAddress)->first();
+    if ($organization && Hash::check($request->password, $organization->password)) {
+        $organization->api_token = Str::random(60);
+        $organization->save();
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Login successful',
+            'token'   => $organization->api_token,
+            'user'    => array_merge($organization->toArray(), ['role' => 'organization']),
+        ]);
+    }
+
+    return response()->json(['status' => 'error', 'message' => 'Invalid credentials'], 401);
+}
 }
