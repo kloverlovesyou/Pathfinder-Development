@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Applicant;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-
+use Illuminate\Support\Str;
 class ApplicantController extends Controller
 {
     public function a_register(Request $request)
@@ -35,6 +35,7 @@ class ApplicantController extends Controller
         'emailAddress' => $request->emailAddress,
         'phoneNumber'  => $request->phoneNumber,
         'password'     => bcrypt($request->password),
+        'api_token'    => Str::random(60),
     ]);
 
     return response()->json([
@@ -60,6 +61,7 @@ public function login(Request $request)
     return response()->json([
         'message' => 'Login successful',
         'user' => $applicant,
+        'token' => $applicant->api_token, // send token to frontend
     ]);
 }
 

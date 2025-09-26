@@ -19,8 +19,12 @@ Route::post('/organization', [OrganizationController::class, 'o_register']);
 Route::post('/organizations/login', [OrganizationController::class, 'login']);
 
 // Protected routes (require Sanctum auth)
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/user', function (Request $request) { return $request->user(); });
-    Route::delete('/user', [ApplicantController::class, 'destroy']);
+Route::get('/user', function (Request $request) {
+    $token = $request->bearerToken();
+    $user = \App\Models\Applicant::where('api_token', $token)->first();
+    if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
+    return $user;
 });
+
+Route::delete('/user', [ApplicantController::class, 'destroy']);
 
