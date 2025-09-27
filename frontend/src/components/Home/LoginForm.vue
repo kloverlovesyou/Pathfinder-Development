@@ -71,7 +71,7 @@
           <h2 class="text-lg font-semibold mb-4 text-red-600">Error</h2>
           <p class="mb-4">{{ loginError }}</p>
           <button
-            @click="showPopup = false"
+            @click="closePopup"
             class="btn btn-primary w-3/4 bg-dark-slate text-white"
           >
             OK
@@ -143,5 +143,11 @@ const handleLogin = async () => {
     loginError.value = "Invalid credentials. Please try again.";
     showPopup.value = true; // ✅ show modal
   }
+};
+
+// ✅ Close popup and clear password
+const closePopup = () => {
+  showPopup.value = false;
+  password.value = ""; // clear password input
 };
 </script>
