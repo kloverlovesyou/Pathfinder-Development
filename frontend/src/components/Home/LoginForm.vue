@@ -5,9 +5,14 @@
     <div
       class="card bg-base-200 border-base-300 rounded-box border p-6 max-w-xs sm:max-w-sm md:max-w-md w-full shadow-lg"
     >
-      <h2 class="text-2xl font-semibold text-center mb-6 text-dark-slate">
+      <h2 class="text-2xl font-semibold text-center mb-4 text-dark-slate">
         Login
       </h2>
+
+      <!-- 🔴 Error Message -->
+      <p v-if="loginError" class="text-red-500 text-sm text-center mb-4">
+        {{ loginError }}
+      </p>
 
       <form @submit.prevent="handleLogin">
         <!-- Email -->
@@ -69,6 +74,7 @@ const email = ref("");
 const password = ref("");
 const emailError = ref(false);
 const passwordError = ref(false);
+const loginError = ref(""); // ✅ add error state
 
 const validateEmail = (emailVal) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
 const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
@@ -76,6 +82,7 @@ const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
 const handleLogin = async () => {
   emailError.value = !validateEmail(email.value);
   passwordError.value = !validatePassword(password.value);
+  loginError.value = ""; // clear old errors
   if (emailError.value || passwordError.value) return;
 
   try {
@@ -85,9 +92,8 @@ const handleLogin = async () => {
     });
 
     const userData = response.data.user;
-    const role = userData.role; // 'applicant' or 'organization'
+    const role = userData.role;
 
-    // ✅ Handle displayName differently for applicant vs organization
     let displayName = "";
     if (role === "organization") {
       displayName = userData.organizationName || userData.name || "Organization";
@@ -95,7 +101,6 @@ const handleLogin = async () => {
       displayName = `${userData.firstName} ${userData.lastName}`;
     }
 
-    // Save in localStorage
     localStorage.setItem(
       "user",
       JSON.stringify({
@@ -105,15 +110,14 @@ const handleLogin = async () => {
       })
     );
 
-    // Redirect based on role
     if (role === "organization") {
-      router.push("/organization"); // organization home
+      router.push("/organization");
     } else {
-      router.push("/app"); // applicant home
+      router.push("/app");
     }
   } catch (err) {
     console.error(err.response?.data || err.message);
-    alert("Invalid credentials. Please try again.");
+    loginError.value = "Invalid credentials. Please try again."; // ✅ show inline message
   }
 };
 </script>
