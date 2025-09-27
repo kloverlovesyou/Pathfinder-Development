@@ -372,6 +372,10 @@ const goToTrainings = () => router.push({ name: 'OrgTrainings' });
 const goToCareers = () => router.push({ name: 'OrgCareers' });
 const goToCalendar = () => router.push('/app/calendar');
 
+// Generic navigation function
+const navigateTo = (route) => {
+  router.push(route);
+}
 
 // Get org name from localStorage on mount
 onMounted(() => {
