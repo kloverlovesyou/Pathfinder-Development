@@ -1,147 +1,10 @@
 <template>
-  <div class="min-h-screen bg-gray-100 font-poppins">
-    <div class="lg:hidden block font-poppins">
-      <div class="pb-20 font-poppins flex justify-center bg-blue-gray p-4">
-        <div
-          class="w-full max-w-3xl flex-grow bg-white p-6 rounded-lg shadow-md py-14"
-        >
-          <div class="flex justify-start gap-4 mb-4 py-4">
-            <h2 class="text-2xl font-bold">Account Setting</h2>
-          </div>
-
-          <!-- FORM -->
-          <form @submit.prevent="handleUpdate" class="space-y-4">
-            <!-- First, Middle, Last Name -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <input
-                class="input w-full"
-                type="text"
-                placeholder="First Name"
-                v-model="form.firstName"
-              />
-              <input
-                class="input w-full"
-                type="text"
-                placeholder="Middle Name"
-                v-model="form.middleName"
-              />
-              <input
-                class="input w-full"
-                type="text"
-                placeholder="Last Name"
-                v-model="form.lastName"
-              />
-            </div>
-
-            <!-- Address -->
-            <div>
-              <input
-                class="input w-full"
-                type="text"
-                placeholder="Address"
-                v-model="form.address"
-              />
-            </div>
-
-            <!-- Email & Phone -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <input
-                class="input w-full"
-                type="email"
-                placeholder="Email"
-                v-model="form.emailAddress"
-              />
-              <input
-                type="tel"
-                class="input w-full"
-                placeholder="Phone Number"
-                minlength="11"
-                maxlength="11"
-                pattern="[0-9]*"
-                v-model="form.phoneNumber"
-              />
-            </div>
-
-            <!-- New & Confirm Password -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <input
-                type="password"
-                class="input w-full"
-                placeholder="New Password (optional)"
-                v-model="form.newPassword"
-              />
-              <input
-                type="password"
-                class="input w-full"
-                placeholder="Confirm New Password"
-                v-model="form.confirmPassword"
-              />
-            </div>
-
-            <!-- Current Password -->
-            <div>
-              <input
-                type="password"
-                class="input w-full"
-                required
-                placeholder="Confirm Password"
-                v-model="form.currentPassword"
-              />
-            </div>
-
-            <!-- Buttons -->
-            <div class="grid grid-cols-2 gap-4 flex-col sm:flex-row pt-6">
-              <button
-                type="button"
-                class="btn bg-customButton hover:bg-dark-slate text-white w-full sm:w-auto"
-                @click="showDeleteModal = true"
-              >
-                Delete Account
-              </button>
-              <button
-                type="submit"
-                class="btn bg-customButton hover:bg-dark-slate text-white w-full sm:w-auto"
-              >
-                Save Changes
-              </button>
-            </div>
-          </form>
-
-          <!-- Delete Confirmation Modal -->
-          <div
-            v-if="showDeleteModal"
-            class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
-          >
-            <div class="bg-white p-6 rounded-lg max-w-sm w-full">
-              <h2 class="text-lg font-semibold mb-4">
-                Confirm Account Deletion
-              </h2>
-              <p class="mb-4 text-sm">
-                This action is irreversible. Are you sure you want to delete
-                your account?
-              </p>
-              <div class="flex justify-end gap-2">
-                <button class="btn btn-sm" @click="showDeleteModal = false">
-                  Cancel
-                </button>
-                <button
-                  class="btn btn-error btn-sm text-white"
-                  @click="handleDelete"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
+  <div class="min-h-screen p-3 rounded-lg font-poppins">
     <!--Large screen-->
-    <div class="min-h-screen p-6 font-poppins hidden lg:flex">
+    <div class="min-h-screen font-poppins lg:flex">
       <!-- Left Column -->
       <div
-        class="w-full lg:w-1/4 bg-white rounded-lg shadow p-6 flex flex-col items-center"
+        class="w-full lg:w-1/4 lg:mr-3 bg-white rounded-lg shadow p-6 flex flex-col items-center hidden lg:flex"
       >
         <!-- Avatar -->
         <div class="w-24 h-24 rounded-full bg-white mb-4">
@@ -298,9 +161,8 @@
           </button>
         </div>
       </div>
-
       <!-- Right Column -->
-      <div class="w-full lg:w-3/4 lg:pl-6 mt-6 lg:mt-0 flex flex-col gap-6">
+      <div class="w-full lg:mt-0 lg:ml-3 flex flex-col gap-6">
         <!-- Bottom Row: Event List -->
         <div class="bg-white rounded-lg shadow p-6 flex-1">
           <div class="flex justify-start gap-4 mb-4 py-4">
@@ -314,19 +176,19 @@
             <!-- First, Middle, Last Name -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <input
-                class="input w-full"
+                class="border border-gray-300 input w-full"
                 type="text"
                 placeholder="First Name"
                 v-model="form.firstName"
               />
               <input
-                class="input w-full"
+                class="border border-gray-300 input w-full"
                 type="text"
                 placeholder="Middle Name"
                 v-model="form.middleName"
               />
               <input
-                class="input w-full"
+                class="border border-gray-300 input w-full"
                 type="text"
                 placeholder="Last Name"
                 v-model="form.lastName"
@@ -339,7 +201,7 @@
             <!-- Address -->
             <div>
               <input
-                class="input w-full"
+                class="border border-gray-300 input w-full"
                 type="text"
                 placeholder="Address"
                 v-model="form.address"
@@ -352,14 +214,14 @@
             <!-- Email & Phone -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <input
-                class="input w-full"
+                class="border border-gray-300 input w-full"
                 type="email"
                 placeholder="Email"
                 v-model="form.emailAddress"
               />
               <input
                 type="tel"
-                class="input w-full"
+                class="border border-gray-300 input w-full"
                 placeholder="Phone Number"
                 minlength="11"
                 maxlength="11"
@@ -375,13 +237,13 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <input
                 type="password"
-                class="input w-full"
+                class="border border-gray-300 input w-full"
                 placeholder="New Password (optional)"
                 v-model="form.newPassword"
               />
               <input
                 type="password"
-                class="input w-full"
+                class="border border-gray-300 input w-full"
                 placeholder="Confirm New Password"
                 v-model="form.confirmPassword"
               />
@@ -394,7 +256,7 @@
             <div>
               <input
                 type="password"
-                class="input w-full"
+                class="border border-gray-300 input w-full"
                 required
                 placeholder="Confirm Password"
                 v-model="form.currentPassword"
@@ -405,14 +267,7 @@
             <div class="hidden lg:block h-px bg-gray-300"></div>
 
             <!-- Buttons -->
-            <div class="grid grid-cols-2 gap-4 flex-col sm:flex-row pt-6">
-              <button
-                type="button"
-                class="btn bg-customButton hover:bg-dark-slate text-white w-full sm:w-auto"
-                @click="showDeleteModal = true"
-              >
-                Delete Account
-              </button>
+            <div class="flex justify-end pt-6">
               <button
                 type="submit"
                 class="btn bg-customButton hover:bg-dark-slate text-white w-full sm:w-auto"
@@ -422,30 +277,37 @@
             </div>
           </form>
 
-        <!-- Delete Confirmation Modal -->
-        <div
-          v-if="showDeleteModal"
-          class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
-        >
-          <div class="bg-white p-6 rounded-lg max-w-sm w-full">
-            <h2 class="text-lg font-semibold mb-4">Confirm Account Deletion</h2>
-            <p class="mb-4 text-sm">
-              This action is irreversible. Are you sure you want to delete your account?
-            </p>
-            <div class="flex justify-end gap-2">
-              <button class="btn btn-sm" @click="showDeleteModal = false" :disabled="isDeleting">
-                Cancel
-              </button>
-              <button
-                class="btn btn-error btn-sm text-white"
-                @click="handleDelete"
-                :disabled="isDeleting"
-              >
-                {{ isDeleting ? "Deleting..." : "Delete" }}
-              </button>
+          <!-- Delete Confirmation Modal -->
+          <div
+            v-if="showDeleteModal"
+            class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
+          >
+            <div class="bg-white p-6 rounded-lg max-w-sm w-full">
+              <h2 class="text-lg font-semibold mb-4">
+                Confirm Account Deletion
+              </h2>
+              <p class="mb-4 text-sm">
+                This action is irreversible. Are you sure you want to delete
+                your account?
+              </p>
+              <div class="flex justify-end gap-2">
+                <button
+                  class="btn btn-sm"
+                  @click="showDeleteModal = false"
+                  :disabled="isDeleting"
+                >
+                  Cancel
+                </button>
+                <button
+                  class="btn btn-error btn-sm text-white"
+                  @click="handleDelete"
+                  :disabled="isDeleting"
+                >
+                  {{ isDeleting ? "Deleting..." : "Delete" }}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
         </div>
       </div>
     </div>
@@ -460,7 +322,6 @@ import { useRouter } from "vue-router";
 const router = useRouter();
 const showDeleteModal = ref(false);
 const isDeleting = ref(false);
-
 
 const form = ref({
   firstName: "",
@@ -500,7 +361,6 @@ onMounted(async () => {
 
     // Save backup
     localStorage.setItem("user", JSON.stringify(user));
-
   } catch (err) {
     console.error("API failed, fallback to localStorage:", err);
 
@@ -524,23 +384,24 @@ onMounted(async () => {
 });
 
 function deleteAccount() {
-  axios.delete("http://127.0.0.1:8000/api/user", {
-    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-  })
-  .then(res => {
-    alert(res.data.message);
+  axios
+    .delete("http://127.0.0.1:8000/api/user", {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    })
+    .then((res) => {
+      alert(res.data.message);
 
-    // clear saved data
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+      // clear saved data
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
 
-    // redirect to login
-    router.push("/loginform");
-  })
-  .catch(err => {
-    console.error(err);
-    alert("Failed to delete account.");
-  });
+      // redirect to login
+      router.push("/loginform");
+    })
+    .catch((err) => {
+      console.error(err);
+      alert("Failed to delete account.");
+    });
 }
 
 const handleUpdate = async () => {
