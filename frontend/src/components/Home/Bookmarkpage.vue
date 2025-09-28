@@ -6,41 +6,16 @@ const userName = ref("");
 
 
 const router = useRouter();
-
-
-
-const logout = () => {
-  // Remove user data
-  localStorage.removeItem('user');
-  localStorage.removeItem('token'); // if you store an auth token
-  // Redirect to login page
-  router.push({ name: 'Login' });
-};
-
-// Check if user is logged in and retrieve user data
-onMounted(() => {
-  const savedUser = localStorage.getItem("user");
-  if (savedUser) {
-    const user = JSON.parse(savedUser);
-    if (user.firstName && user.lastName) {
-      userName.value = `${user.firstName} ${user.lastName}`;
-    } else {
-      userName.value = "Guest";
-    }
-  } else {
-    userName.value = "Guest";
-  }
-});
 </script>
 <template>
   <main class="font-poppins">
     <!-- Header -->
-    <div class="min-h-screen m-3 p-4 rounded-lg font-poppins">
+    <div class="min-h-screen p-3 rounded-lg font-poppins">
       <!--Large screen-->
       <div class="min-h-screen font-poppins lg:flex">
         <!-- Left Column -->
         <div
-          class="w-full lg:w-1/4 bg-white rounded-lg shadow p-4 pt-8 flex flex-col items-center hidden lg:flex"
+          class="w-full lg:w-1/4 bg-white rounded-lg shadow p-6 flex flex-col items-center hidden lg:flex"
         >
           <!-- Avatar -->
           <div class="w-24 h-24 rounded-full bg-white mb-4">
@@ -199,8 +174,8 @@ onMounted(() => {
         </div>
 
         <!-- Right Column -->
-        <div class="w-full lg:w-3/4 lg:pl-6 lg:mt-0 flex flex-col gap-6">
-          <div class="bg-white m-3 p-4 rounded-lg">
+        <div class="w-full lg:w-3/4 lg:pl-6 flex flex-col gap-6">
+          <div class="bg-white p-4 rounded-lg">
             <h2 class="text-2xl font-bold mb-3">Bookmark</h2>
 
             <div class="space-y-4">

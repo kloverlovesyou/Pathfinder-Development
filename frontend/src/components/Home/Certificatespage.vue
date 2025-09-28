@@ -73,12 +73,12 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen m-3 p-4 rounded-lg font-poppins">
+  <div class="min-h-screen p-3 rounded-lg font-poppins">
     <!--Large screen-->
     <div class="min-h-screen font-poppins lg:flex">
       <!-- Left Column -->
       <div
-        class="w-full lg:w-1/4 bg-white rounded-lg shadow p-4 pt-8 flex flex-col items-center hidden lg:flex"
+        class="w-full lg:w-1/4 bg-white rounded-lg shadow p-6 flex flex-col items-center hidden lg:flex"
       >
         <!-- Avatar -->
         <div class="w-24 h-24 rounded-full bg-white mb-4">
@@ -357,7 +357,7 @@ onMounted(() => {
           <!-- Modal -->
           <div
             v-if="isModalOpen"
-            class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"
+            class="fixed inset-0 flex items-center justify-center z-50"
           >
             <div
               class="bg-white rounded-lg shadow-lg max-w-3xl w-full p-4 relative"
