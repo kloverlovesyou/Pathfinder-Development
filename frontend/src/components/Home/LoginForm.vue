@@ -115,6 +115,7 @@ const handleLogin = async () => {
 
     const userData = response.data.user;
     const role = userData.role;
+    const token = response.data.token; // ✅ get token
 
     let displayName = "";
     if (role === "organization") {
@@ -124,6 +125,8 @@ const handleLogin = async () => {
       displayName = `${userData.firstName} ${userData.lastName}`;
     }
 
+    // ✅ save both user + token
+    localStorage.setItem("token", token);
     localStorage.setItem(
       "user",
       JSON.stringify({
@@ -141,13 +144,7 @@ const handleLogin = async () => {
   } catch (err) {
     console.error(err.response?.data || err.message);
     loginError.value = "Invalid credentials. Please try again.";
-    showPopup.value = true; // ✅ show modal
+    showPopup.value = true;
   }
-};
-
-// ✅ Close popup and clear password
-const closePopup = () => {
-  showPopup.value = false;
-  password.value = ""; // clear password input
 };
 </script>
