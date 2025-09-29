@@ -6,7 +6,7 @@ use App\Http\Controllers\ApplicantController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ResumeController;
-
+use App\Http\Controllers\ProfessionalExperienceController;
 
 Route::get('/organization', [OrganizationController::class, 'index']);
 
@@ -20,12 +20,19 @@ Route::post('applicants/login', [ApplicantController::class, 'login']);
 Route::post('/organization', [OrganizationController::class, 'o_register']);
 Route::post('/organizations/login', [OrganizationController::class, 'login']);
 
-// Resume routes
+// ✅ Resume routes
 Route::post('/resume', [ResumeController::class, 'store']);
 Route::get('/resume', [ResumeController::class, 'show']);
 Route::delete('/resume', [ResumeController::class, 'destroy']);
 
-// Protected routes (require Sanctum auth)
+// ✅ Professional Experience routes
+Route::middleware('auth.custom')->group(function () {
+    Route::get('/experiences', [ProfessionalExperienceController::class, 'show']);
+    Route::post('/experiences', [ProfessionalExperienceController::class, 'store']);
+    Route::put('/experiences/{id}', [ProfessionalExperienceController::class, 'update']);
+    Route::delete('/experiences/{id}', [ProfessionalExperienceController::class, 'destroy']);
+});
+// ✅ Protected routes (require Sanctum auth)
 Route::get('/user', function (Request $request) {
     $token = $request->bearerToken();
     $user = \App\Models\Applicant::where('api_token', $token)->first();
@@ -34,4 +41,3 @@ Route::get('/user', function (Request $request) {
 });
 
 Route::delete('/user', [ApplicantController::class, 'destroy']);
-

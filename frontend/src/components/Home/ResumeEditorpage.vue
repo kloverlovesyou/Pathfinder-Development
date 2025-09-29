@@ -10,6 +10,16 @@ const newSkill = ref("");
 const router = useRouter();
 const userName = ref("");
 
+const showNewExperienceForm = ref(false);
+
+const newExperience = reactive({
+  jobTitle: "",
+  companyName: "",
+  companyAddress: "",
+  startYear: new Date().getFullYear(),
+  endYear: new Date().getFullYear(),
+});
+
 // ✅ Resume Data
 const resume = reactive({
   summary: "",
@@ -44,8 +54,9 @@ async function saveResume() {
       }
     );
 
+    // Store resumeID
+    resume.resumeID = response.data.resumeID; // <-- add this
     alert("Resume saved successfully!");
-    console.log(response.data);
   } catch (error) {
     console.error("Error saving resume:", error.response?.data || error);
     alert("Failed to save resume.");
@@ -64,11 +75,17 @@ async function loadResume() {
       resume.summary = data.summary || "";
       resume.url = data.professionalLink || "";
     }
+
+    // ✅ Also load experiences
+    const { data: expData } = await axios.get("http://127.0.0.1:8000/api/experiences", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    resume.experience = expData || [];
+
   } catch (error) {
     console.error("Error loading resume:", error.response?.data || error);
   }
 }
-
 // --- Delete Resume ---
 async function deleteResume() {
   try {
@@ -94,13 +111,83 @@ function removeEducation(index) {
   resume.education.splice(index, 1);
 }
 
+
 // --- Experience ---
-function addExperience() {
-  resume.experience.push({ company: "", role: "", duration: "" });
-}
-function removeExperience(index) {
-  resume.experience.splice(index, 1);
-}
+
+      async function addExperience() {
+        // ✅ Basic validation
+        if (
+          !newExperience.jobTitle.trim() ||
+          !newExperience.companyName.trim() ||
+          !newExperience.companyAddress.trim() ||
+          !newExperience.startYear ||
+          !newExperience.endYear
+        ) {
+          alert("Please fill out all fields before adding experience.");
+          return;
+        }
+
+        try {
+          const token = localStorage.getItem("token");
+
+          // Ensure resumeID exists
+          if (!resume.resumeID) {
+            alert("Please save your resume first before adding experience.");
+            return;
+          }
+
+          const { data } = await axios.post(
+            "http://127.0.0.1:8000/api/experiences",
+            {
+              jobTitle: newExperience.jobTitle.trim(),
+              companyName: newExperience.companyName.trim(),
+              companyAddress: newExperience.companyAddress.trim(),
+              startYear: `${newExperience.startYear}-01-01`,
+              endYear: `${newExperience.endYear}-01-01`,
+              resumeID: resume.resumeID,
+            },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+
+          // Add the returned experience to frontend
+          resume.experience.push(data);
+
+          // Reset form fields and hide form
+          newExperience.jobTitle = "";
+          newExperience.companyName = "";
+          newExperience.companyAddress = "";
+          newExperience.startYear = new Date().getFullYear();
+          newExperience.endYear = new Date().getFullYear();
+          showNewExperienceForm.value = false;
+
+          alert("Experience added successfully!");
+        } catch (error) {
+          console.error("Error adding experience:", error.response?.data || error);
+          alert(
+            error.response?.data?.error ||
+            "Failed to add experience. Make sure you have a resume first."
+          );
+        }
+      }
+
+    async function removeExperience(index) {
+      try {
+        const token = localStorage.getItem("token");
+        const exp = resume.experience[index];
+
+        if (exp.experienceID) {
+          await axios.delete(`http://127.0.0.1:8000/api/experiences/${exp.experienceID}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        }
+
+        // Remove from frontend
+        resume.experience.splice(index, 1);
+      } catch (error) {
+        console.error("Error deleting experience:", error.response?.data || error);
+        alert("Failed to delete experience.");
+      }
+    }
 
 // --- Skills ---
 function addSkill() {
@@ -479,87 +566,59 @@ const logout = () => {
                 ></textarea>
               </div>
             </div>
+            
             <!-- Professional Experience -->
             <div class="border rounded p-4 space-y-4 relative">
               <!-- Header with Plus Button -->
               <div class="flex justify-between items-center">
-                <label class="text-lg font-semibold"
-                  >Professional Experience</label
-                >
+                <label class="text-lg font-semibold">Professional Experience</label>
                 <button
                   type="button"
-                  @click="addExperience"
+                  @click="showNewExperienceForm = true"
                   class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
                 >
                   +
                 </button>
               </div>
-              <!-- Experience Items -->
-              <div
-                v-for="(exp, index) in resume.experience"
-                :key="index"
-                class="relative border p-3 rounded space-y-3"
-              >
-                <!-- Delete Button -->
-                <button
-                  type="button"
-                  @click="removeExperience(index)"
-                  class="absolute top-2 right-2 text-gray-500 hover:text-red-500"
-                >
-                  ✕
-                </button>
-                <!-- Job Title -->
+
+              <!-- New Experience Form -->
+              <div v-if="showNewExperienceForm" class="border p-3 rounded space-y-3 mt-3">
                 <div>
                   <label class="block font-medium mb-1">Job Title</label>
-                  <input
-                    v-model="exp.jobTitle"
-                    type="text"
-                    placeholder="Enter job title"
-                    class="input-field border rounded w-full p-2"
-                  />
+                  <input v-model="newExperience.jobTitle" type="text" placeholder="Enter job title" class="input-field border rounded w-full p-2" />
                 </div>
-                <!-- Company Name -->
                 <div>
                   <label class="block font-medium mb-1">Company Name</label>
-                  <input
-                    v-model="exp.companyName"
-                    type="text"
-                    placeholder="Enter company name"
-                    class="input-field border rounded w-full p-2"
-                  />
+                  <input v-model="newExperience.companyName" type="text" placeholder="Enter company name" class="input-field border rounded w-full p-2" />
                 </div>
-                <!-- Company Address -->
                 <div>
                   <label class="block font-medium mb-1">Company Address</label>
-                  <input
-                    v-model="exp.companyAddress"
-                    type="text"
-                    placeholder="Enter company address"
-                    class="input-field border rounded w-full p-2"
-                  />
+                  <input v-model="newExperience.companyAddress" type="text" placeholder="Enter company address" class="input-field border rounded w-full p-2" />
                 </div>
-                <!-- Start Date -->
                 <div>
-                  <label class="block font-medium mb-1">Start Date</label>
-                  <input
-                    v-model="exp.startDate"
-                    type="number"
-                    placeholder="e.g. 2020"
-                    class="input-field border rounded w-full p-2"
-                  />
+                  <label class="block font-medium mb-1">Start Year</label>
+                  <input v-model="newExperience.startYear" type="number" placeholder="e.g. 2020" class="input-field border rounded w-full p-2" />
                 </div>
-                <!-- End Date -->
                 <div>
-                  <label class="block font-medium mb-1">End Date</label>
-                  <input
-                    v-model="exp.endDate"
-                    type="number"
-                    placeholder="e.g. 2022"
-                    class="input-field border rounded w-full p-2"
-                  />
+                  <label class="block font-medium mb-1">End Year</label>
+                  <input v-model="newExperience.endYear" type="number" placeholder="e.g. 2022" class="input-field border rounded w-full p-2" />
                 </div>
+                <button
+                  type="button"
+                  @click="addExperience"
+                  class="w-20 h-10 flex items-center justify-center rounded bg-customButton text-white hover:bg-dark-slate"
+                >
+                  Add +
+                </button>
+              </div>
+
+              <!-- Existing Experiences -->
+              <div v-for="(exp, index) in resume.experience" :key="index" class="relative border p-3 rounded space-y-3">
+                <button type="button" @click="removeExperience(index)" class="absolute top-2 right-2 text-gray-500 hover:text-red-500">✕</button>
+                <p><strong>{{ exp.jobTitle }}</strong> at {{ exp.companyName }}</p>
               </div>
             </div>
+
             <div class="border rounded p-4 space-y-4 relative">
               <!-- Header with Plus Button -->
               <div class="flex justify-between items-center">
