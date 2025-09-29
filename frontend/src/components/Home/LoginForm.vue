@@ -2,12 +2,11 @@
   <div
     class="font-poppins min-h-screen flex items-center justify-center bg-gray-50 p-4"
   >
-    <!-- Wrapper for blur effect -->
+    <!-- Wrapper -->
     <div class="relative w-full max-w-md">
       <!-- Login Card -->
       <div
         class="card bg-base-200 border-base-300 rounded-box border p-6 shadow-lg transition duration-300"
-        :class="{ 'blur-sm pointer-events-none': showPopup }"
       >
         <h2 class="text-2xl font-semibold text-center mb-4 text-dark-slate">
           Login
@@ -50,6 +49,11 @@
           </div>
         </form>
 
+        <!-- 🔴 Error message below Login -->
+        <p v-if="loginError" class="text-center mt-4 text-red-600 font-medium">
+          {{ loginError }}
+        </p>
+
         <div class="text-center mt-4">
           <p class="text-sm text-gray-600">
             Don't have an account?
@@ -57,25 +61,6 @@
               Register here.
             </router-link>
           </p>
-        </div>
-      </div>
-
-      <!-- 🔴 Popup Modal -->
-      <div
-        v-if="showPopup"
-        class="absolute inset-0 flex items-center justify-center"
-      >
-        <div
-          class="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full text-center z-10"
-        >
-          <h2 class="text-lg font-semibold mb-4 text-red-600">Error</h2>
-          <p class="mb-4">{{ loginError }}</p>
-          <button
-            @click="closePopup"
-            class="btn btn-primary w-3/4 bg-dark-slate text-white"
-          >
-            OK
-          </button>
         </div>
       </div>
     </div>
@@ -94,8 +79,7 @@ const password = ref("");
 const emailError = ref(false);
 const passwordError = ref(false);
 
-const loginError = ref(""); // store error message
-const showPopup = ref(false); // controls modal visibility
+const loginError = ref(""); // just show as text now
 
 const validateEmail = (emailVal) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
 const validatePassword = (pw) =>
@@ -115,7 +99,7 @@ const handleLogin = async () => {
 
     const userData = response.data.user;
     const role = userData.role;
-    const token = response.data.token; // ✅ get token
+    const token = response.data.token;
 
     let displayName = "";
     if (role === "organization") {
@@ -125,7 +109,6 @@ const handleLogin = async () => {
       displayName = `${userData.firstName} ${userData.lastName}`;
     }
 
-    // ✅ save both user + token
     localStorage.setItem("token", token);
     localStorage.setItem(
       "user",
@@ -144,7 +127,6 @@ const handleLogin = async () => {
   } catch (err) {
     console.error(err.response?.data || err.message);
     loginError.value = "Invalid credentials. Please try again.";
-    showPopup.value = true;
   }
 };
 </script>

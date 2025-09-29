@@ -1,7 +1,7 @@
 <script setup>
 import { reactive, ref, onMounted } from "vue";
 import jsPDF from "jspdf";
-import axios from "axios";   // ✅ add axios for API calls
+import axios from "axios";   // ✅ API calls
 import { useRouter } from "vue-router";
 
 const isModalOpen = ref(false);
@@ -87,22 +87,105 @@ async function deleteResume() {
 }
 
 // --- Education ---
-function addEducation() { /* unchanged */ }
-function removeEducation(index) { resume.education.splice(index, 1); }
+function addEducation() {
+  resume.education.push({ school: "", degree: "", year: "" });
+}
+function removeEducation(index) {
+  resume.education.splice(index, 1);
+}
 
 // --- Experience ---
-function addExperience() { /* unchanged */ }
-function removeExperience(index) { resume.experience.splice(index, 1); }
+function addExperience() {
+  resume.experience.push({ company: "", role: "", duration: "" });
+}
+function removeExperience(index) {
+  resume.experience.splice(index, 1);
+}
 
 // --- Skills ---
-function addSkill() { /* unchanged */ }
-function removeSkill(index) { resume.skills.splice(index, 1); }
+function addSkill() {
+  if (newSkill.value.trim() !== "") {
+    resume.skills.push(newSkill.value.trim());
+    newSkill.value = "";
+  }
+}
+function removeSkill(index) {
+  resume.skills.splice(index, 1);
+}
 
 // --- Section Header Helper ---
-function sectionHeader(doc, title, x, y, pageWidth, margin) { /* unchanged */ }
+function sectionHeader(doc, title, x, y, pageWidth, margin) {
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text(title, margin, y);
+  doc.setLineWidth(0.5);
+  doc.line(margin, y + 2, pageWidth - margin, y + 2);
+}
 
 // --- Generate PDF ---
-function generatePdf() { /* unchanged */ }
+function generatePdf() {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 20;
+  let y = 20;
+
+  // Helper: safely add text with wrapping + auto page break
+  function addWrappedText(text, x, y, maxWidth, lineHeight = 6) {
+    const lines = doc.splitTextToSize(text, maxWidth);
+    for (let i = 0; i < lines.length; i++) {
+      if (y > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+      }
+      doc.text(lines[i], x, y);
+      y += lineHeight; // ✅ single spacing
+    }
+    return y;
+  }
+
+  // Header
+  doc.setFontSize(18);
+  y = addWrappedText(`${form.firstName} ${form.lastName}`, margin, y, pageWidth - 2 * margin, 8);
+  doc.setFontSize(11);
+  y = addWrappedText(`${form.emailAddress} | ${form.phoneNumber}`, margin, y, pageWidth - 2 * margin, 6);
+  y += 8;
+
+  // Summary
+  sectionHeader(doc, "Summary", margin, y, pageWidth, margin);
+  y += 6;
+  doc.setFontSize(11);
+  y = addWrappedText(resume.summary || "", margin, y, pageWidth - 2 * margin, 6);
+
+  // Education
+  if (resume.education.length) {
+    sectionHeader(doc, "Education", margin, y, pageWidth, margin);
+    y += 6;
+    resume.education.forEach((edu) => {
+      y = addWrappedText(`${edu.degree} - ${edu.school} (${edu.year})`, margin, y, pageWidth - 2 * margin, 6);
+    });
+  }
+
+  // Experience
+  if (resume.experience.length) {
+    sectionHeader(doc, "Experience", margin, y, pageWidth, margin);
+    y += 6;
+    resume.experience.forEach((exp) => {
+      y = addWrappedText(`${exp.role} at ${exp.company} (${exp.duration})`, margin, y, pageWidth - 2 * margin, 6);
+    });
+  }
+
+  // Skills
+  if (resume.skills.length) {
+    sectionHeader(doc, "Skills", margin, y, pageWidth, margin);
+    y += 6;
+    y = addWrappedText(resume.skills.join(", "), margin, y, pageWidth - 2 * margin, 6);
+  }
+
+  // ✅ create blob for modal preview
+  const pdfBlob = doc.output("blob");
+  pdfUrl.value = URL.createObjectURL(pdfBlob);
+}
 
 function generateAndOpenPdf() {
   generatePdf();
