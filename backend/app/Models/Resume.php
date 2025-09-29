@@ -16,6 +16,11 @@ class Resume extends Model
         'applicantID',
     ];
 
+    public function experiences()
+    {
+        return $this->hasMany(ProfessionalExperience::class, 'resumeID', 'resumeID');
+    }
+
     // 👇 Fix relationship (tell Laravel to use applicantID, not applicant_id)
     public function applicant()
     {
