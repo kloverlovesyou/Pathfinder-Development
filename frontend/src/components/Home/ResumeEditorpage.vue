@@ -144,19 +144,45 @@ function generatePdf() {
     return y;
   }
 
-  // Header
-  doc.setFontSize(18);
-  y = addWrappedText(`${form.firstName} ${form.lastName}`, margin, y, pageWidth - 2 * margin, 8);
-  doc.setFontSize(11);
-  y = addWrappedText(`${form.emailAddress} | ${form.phoneNumber}`, margin, y, pageWidth - 2 * margin, 6);
-  y = addWrappedText(`${resume.url}`, margin, y, pageWidth - 2 * margin, 6);
+  
+  // Header (Name)
+  doc.setFont("times", "bold");
+  doc.setFontSize(20);
+  doc.text(
+    `${form.firstName} ${form.middleName} ${form.lastName}`,
+    pageWidth / 2,
+    y,
+    { align: "center" }
+  );
+  y += 4.5;
 
+  doc.setFont("times", "regular");
+  doc.setFontSize(10);
+  doc.text(
+    `${form.emailAddress} | ${form.phoneNumber}`,
+    pageWidth / 2,
+    y,
+    { align: "center" }
+  );
+  y += 4.5;
+
+    doc.setFont("times", "regular");
+  doc.setFontSize(10);
+  doc.text(
+    `${resume.url}`,
+    pageWidth / 2,
+    y,
+    { align: "center" }
+  );
+  y += 4.5;
 
   // Summary
-  sectionHeader(doc, "Summary", margin, y, pageWidth, margin);
-  y += 6;
-  doc.setFontSize(11);
-  y = addWrappedText(resume.summary || "", margin, y, pageWidth - 2 * margin, 6);
+doc.setFont("times", "bold");  // ✅ Bold font for "Summary"
+sectionHeader(doc, "Summary", margin, y, pageWidth, margin);
+y += 6;
+doc.setFont("times", "regular");  // ✅ Switch back to regular for body text
+doc.setFontSize(11);
+y = addWrappedText(resume.summary || "", margin, y, pageWidth - 2 * margin, 6);
 
   // Education
   if (resume.education.length) {
