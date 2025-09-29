@@ -149,7 +149,8 @@ function generatePdf() {
   y = addWrappedText(`${form.firstName} ${form.lastName}`, margin, y, pageWidth - 2 * margin, 8);
   doc.setFontSize(11);
   y = addWrappedText(`${form.emailAddress} | ${form.phoneNumber}`, margin, y, pageWidth - 2 * margin, 6);
-  y += 8;
+  y = addWrappedText(`${resume.url}`, margin, y, pageWidth - 2 * margin, 6);
+
 
   // Summary
   sectionHeader(doc, "Summary", margin, y, pageWidth, margin);
