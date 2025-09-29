@@ -1,6 +1,6 @@
 <template>
   <div
-    class="font-poppins pb-20 min-h-screen flex items-center justify-center bg-gray-50 p-4"
+    class="font-poppins pb-20 min-h-screen flex items-center justify-centerp-4"
   >
     <div>
       <!-- Header -->
