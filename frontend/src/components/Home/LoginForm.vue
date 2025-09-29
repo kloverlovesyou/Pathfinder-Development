@@ -1,7 +1,5 @@
 <template>
-  <div
-    class="font-poppins min-h-screen flex items-center justify-center bg-gray-50 p-4"
-  >
+  <div class="font-poppins min-h-screen flex items-center justify-center p-4">
     <div
       class="card bg-base-200 border-base-300 rounded-box border p-6 max-w-xs sm:max-w-sm md:max-w-md w-full shadow-lg"
     >
@@ -78,13 +76,10 @@ const handleLogin = async () => {
   if (emailError.value || passwordError.value) return;
 
   try {
-    const response = await axios.post(
-      "http://127.0.0.1:8000/api/login",
-      {
-        emailAddress: email.value,
-        password: password.value,
-      }
-    );
+    const response = await axios.post("http://127.0.0.1:8000/api/login", {
+      emailAddress: email.value,
+      password: password.value,
+    });
 
     const userData = response.data.user;
     const role = userData.role; // 'applicant' or 'organization'
