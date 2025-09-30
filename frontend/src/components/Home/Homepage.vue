@@ -25,7 +25,47 @@ const posts = ref([
     description: "Explore how AI affects daily life.",
   },
   {
+    trainingID: 6,
+    title: "Mind Over Machine: Navigating AI in Everyday Life",
+    schedule: "2025-09-20T19:30:00",
+    organizationID: 2,
+    location: "Auditorium",
+    trainingLink: "#",
+    registrationLink: "#",
+    description: "Explore how AI affects daily life.",
+  },
+  {
+    trainingID: 7,
+    title: "Mind Over Machine: Navigating AI in Everyday Life",
+    schedule: "2025-09-20T19:30:00",
+    organizationID: 2,
+    location: "Auditorium",
+    trainingLink: "#",
+    registrationLink: "#",
+    description: "Explore how AI affects daily life.",
+  },
+  {
     careerID: 3,
+    position: "Software Engineer",
+    deadlineOfSubmission: "2025-07-24",
+    organizationID: 1,
+    detailsAndInstructions: "Submit resume and portfolio.",
+    qualifications: "BS in Computer Science",
+    requirements: "Proficiency in Vue.js",
+    applicationLetterAddress: "hr@techcorp.com",
+  },
+  {
+    careerID: 4,
+    position: "Software Engineer",
+    deadlineOfSubmission: "2025-07-24",
+    organizationID: 1,
+    detailsAndInstructions: "Submit resume and portfolio.",
+    qualifications: "BS in Computer Science",
+    requirements: "Proficiency in Vue.js",
+    applicationLetterAddress: "hr@techcorp.com",
+  },
+  {
+    careerID: 5,
     position: "Software Engineer",
     deadlineOfSubmission: "2025-07-24",
     organizationID: 1,
@@ -91,7 +131,6 @@ function showEvents(dateStr) {
   dayEvents.value = events.value[dateStr] || [];
 }
 
-// Setup calendar
 onMounted(async () => {
   await nextTick();
   buildEvents();
@@ -120,6 +159,14 @@ onMounted(async () => {
     const selectedEl = calendar.querySelector(`[data-date="${pickedDate}"]`);
     if (selectedEl) selectedEl.classList.add("selected-day");
   });
+
+  // ✅ Auto-select today's date to show events
+  calendar.value = today; // Set the <calendar-date> selected value
+  showEvents(today); // Load today's events into the panel
+
+  // Manually trigger "change" event to simulate user selecting today
+  const event = new Event("change", { bubbles: true });
+  calendar.dispatchEvent(event);
 });
 
 function formatDateTime(dt) {
@@ -179,10 +226,16 @@ function submitApplication() {
     <!-- Layout wrapper -->
     <div class="grid grid-cols-1 lg:grid-cols-[1fr_auto] min-h-screen gap-3">
       <!-- Career & Training Cards -->
-      <main class="bg-white m-3 p-4 rounded-lg h-full">
-        <h2 class="text-lg font-bold -mb-1">Career & Training</h2>
-        <h2 class="text-2xl font-bold mb-4">Match Recommendation</h2>
-        <div class="space-y-4">
+      <main
+        class="bg-white m-3 px-4 rounded-lg flex flex-col max-h-[60vh] overflow-y-auto lg:max-h-none lg:overflow-visible"
+      >
+        <div class="sticky top-0 bg-white z-10 pt-4 px-4">
+          <h2 class="text-lg font-bold -mb-1">Career</h2>
+          <h2 class="text-2xl font-bold mb-4">Match Recommendation</h2>
+        </div>
+
+        <!-- Scrollable Posts Container -->
+        <div class="space-y-4 flex-1 pb-2">
           <div
             v-for="post in posts"
             :key="post.trainingID || post.careerID"
@@ -340,8 +393,6 @@ function submitApplication() {
             <strong>Deadline:</strong>
             {{ formatDate(selectedPost.deadlineOfSubmission) }}
           </p>
-
-          <!-- Buttons -->
         </div>
       </div>
     </dialog>
@@ -382,7 +433,10 @@ function submitApplication() {
             >
               Cancel
             </button>
-            <button type="submit" class="btn btn-primary btn-sm">
+            <button
+              type="submit"
+              class="btn bg-customButton hover:bg-dark-slate text-white btn-sm"
+            >
               Submit Application
             </button>
           </div>

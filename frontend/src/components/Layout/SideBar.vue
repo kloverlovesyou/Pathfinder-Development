@@ -5,7 +5,7 @@
       ref="sidebar"
       :class="[
         'h-screen bg-dark-slate text-white transition-all duration-300 flex flex-col',
-        isExpanded ? 'w-80 px-4' : 'w-16 items-center',
+        isExpanded ? 'w-75 px-4' : 'w-16 items-center',
       ]"
     >
       <!-- Menu Button -->
@@ -272,10 +272,10 @@ const auth = useAuthStore();
 
 const logout = () => {
   // Remove user data
-  localStorage.removeItem('user');
-  localStorage.removeItem('token'); // if you store an auth token
+  localStorage.removeItem("user");
+  localStorage.removeItem("token"); // if you store an auth token
   // Redirect to login page
-  router.push({ name: 'Login' });
+  router.push({ name: "Login" });
 };
 
 const isExpanded = ref(false);
@@ -296,7 +296,6 @@ const handleClickOutside = (event) => {
 };
 
 onMounted(() => {
-
   document.addEventListener("click", handleClickOutside);
   const savedUser = localStorage.getItem("user");
   if (savedUser) {
@@ -310,7 +309,6 @@ onMounted(() => {
     userName.value = "Guest";
   }
 });
-
 
 onMounted(() => {
   document.addEventListener("click", handleClickOutside);
