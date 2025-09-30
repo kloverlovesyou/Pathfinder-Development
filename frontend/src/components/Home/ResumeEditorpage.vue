@@ -114,61 +114,66 @@ function removeEducation(index) {
 
 // --- Experience ---
 
-      async function addExperience() {
-        // ✅ Basic validation
-        if (
-          !newExperience.jobTitle.trim() ||
-          !newExperience.companyName.trim() ||
-          !newExperience.companyAddress.trim() ||
-          !newExperience.startYear ||
-          !newExperience.endYear
-        ) {
-          alert("Please fill out all fields before adding experience.");
-          return;
-        }
+async function addExperience() {
+  // ✅ Basic validation
+  if (
+    !newExperience.jobTitle.trim() ||
+    !newExperience.companyName.trim() ||
+    !newExperience.companyAddress.trim() ||
+    !newExperience.startYear ||
+    !newExperience.endYear
+  ) {
+    alert("Please fill out all fields before adding experience.");
+    return;
+  }
 
-        try {
-          const token = localStorage.getItem("token");
+  try {
+    const token = localStorage.getItem("token");
 
-          // Ensure resumeID exists
-          if (!resume.resumeID) {
-            alert("Please save your resume first before adding experience.");
-            return;
-          }
+    // ✅ If resumeID is missing, create one automatically
+    if (!resume.resumeID) {
+      const resumeRes = await axios.post(
+        "http://127.0.0.1:8000/api/resume",
+        {
+          summary: resume.summary || "",
+          professionalLink: resume.url || "",
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      resume.resumeID = resumeRes.data.resumeID;
+    }
 
-          const { data } = await axios.post(
-            "http://127.0.0.1:8000/api/experiences",
-            {
-              jobTitle: newExperience.jobTitle.trim(),
-              companyName: newExperience.companyName.trim(),
-              companyAddress: newExperience.companyAddress.trim(),
-              startYear: `${newExperience.startYear}-01-01`,
-              endYear: `${newExperience.endYear}-01-01`,
-              resumeID: resume.resumeID,
-            },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
+    // ✅ Now add the experience
+    const { data } = await axios.post(
+      "http://127.0.0.1:8000/api/experiences",
+      {
+        jobTitle: newExperience.jobTitle.trim(),
+        companyName: newExperience.companyName.trim(),
+        companyAddress: newExperience.companyAddress.trim(),
+        startYear: `${newExperience.startYear}-01-01`,
+        endYear: `${newExperience.endYear}-01-01`,
+        resumeID: resume.resumeID,
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-          // Add the returned experience to frontend
-          resume.experience.push(data);
+    // Push to frontend
+    resume.experience.push(data);
 
-          // Reset form fields and hide form
-          newExperience.jobTitle = "";
-          newExperience.companyName = "";
-          newExperience.companyAddress = "";
-          newExperience.startYear = new Date().getFullYear();
-          newExperience.endYear = new Date().getFullYear();
-          showNewExperienceForm.value = false;
+    // Reset form
+    newExperience.jobTitle = "";
+    newExperience.companyName = "";
+    newExperience.companyAddress = "";
+    newExperience.startYear = new Date().getFullYear();
+    newExperience.endYear = new Date().getFullYear();
+    showNewExperienceForm.value = false;
 
-          alert("Experience added successfully!");
-        } catch (error) {
-          console.error("Error adding experience:", error.response?.data || error);
-          alert(
-            error.response?.data?.error ||
-            "Failed to add experience. Make sure you have a resume first."
-          );
-        }
-      }
+    alert("Experience added successfully!");
+  } catch (error) {
+    console.error("Error adding experience:", error.response?.data || error);
+    alert("Failed to add experience.");
+  }
+}
 
     async function removeExperience(index) {
       try {
@@ -264,12 +269,12 @@ function generatePdf() {
   y += 4.5;
 
   // Summary
-doc.setFont("times", "bold");  // ✅ Bold font for "Summary"
-sectionHeader(doc, "Summary", margin, y, pageWidth, margin);
-y += 6;
-doc.setFont("times", "regular");  // ✅ Switch back to regular for body text
-doc.setFontSize(11);
-y = addWrappedText(resume.summary || "", margin, y, pageWidth - 2 * margin, 6);
+    doc.setFont("times", "bold");  // ✅ Bold font for "Summary"
+    sectionHeader(doc, "Summary", margin, y, pageWidth, margin);
+    y += 6;
+    doc.setFont("times", "regular");  // ✅ Switch back to regular for body text
+    doc.setFontSize(11);
+    y = addWrappedText(resume.summary || "", margin, y, pageWidth - 2 * margin, 6);
 
   // Education
   if (resume.education.length) {
@@ -281,13 +286,32 @@ y = addWrappedText(resume.summary || "", margin, y, pageWidth - 2 * margin, 6);
   }
 
   // Experience
-  if (resume.experience.length) {
-    sectionHeader(doc, "Experience", margin, y, pageWidth, margin);
-    y += 6;
-    resume.experience.forEach((exp) => {
-      y = addWrappedText(`${exp.role} at ${exp.company} (${exp.duration})`, margin, y, pageWidth - 2 * margin, 6);
-    });
-  }
+    if (resume.experience.length) {
+      sectionHeader(doc, "Experience", margin, y, pageWidth, margin);
+      y += 6;
+
+      // ✅ Reset font to normal for content
+      doc.setFont("times", "normal");
+      doc.setFontSize(11);
+
+      resume.experience.forEach((exp) => {
+        const startYear = exp.startYear ? new Date(exp.startYear).getFullYear() : "";
+        const endYear = exp.endYear ? new Date(exp.endYear).getFullYear() : "Present";
+
+        // Job title + company
+        y = addWrappedText(`${exp.jobTitle} at ${exp.companyName}`, margin, y, pageWidth - 2 * margin, 5);
+
+        // Company address
+        if (exp.companyAddress) {
+          y = addWrappedText(exp.companyAddress, margin, y, pageWidth - 2 * margin, 6);
+        }
+
+        // Duration (just years)
+        y = addWrappedText(`${startYear} - ${endYear}`, margin, y, pageWidth - 2 * margin, 6);
+
+        y += 4; // space between experiences
+      });
+    }
 
   // Skills
   if (resume.skills.length) {
@@ -613,9 +637,26 @@ const logout = () => {
               </div>
 
               <!-- Existing Experiences -->
-              <div v-for="(exp, index) in resume.experience" :key="index" class="relative border p-3 rounded space-y-3">
-                <button type="button" @click="removeExperience(index)" class="absolute top-2 right-2 text-gray-500 hover:text-red-500">✕</button>
-                <p><strong>{{ exp.jobTitle }}</strong> at {{ exp.companyName }}</p>
+              <div
+                v-for="(exp, index) in resume.experience"
+                :key="index"
+                class="relative border p-3 rounded space-y-3"
+              >
+                <button
+                  type="button"
+                  @click="removeExperience(index)"
+                  class="absolute top-2 right-2 text-gray-500 hover:text-red-500"
+                >
+                  ✕
+                </button>
+
+                <p><strong>{{ exp.jobTitle }}</strong></p>
+                <p>{{ exp.companyName }}</p>
+                <p>{{ exp.companyAddress }}</p>
+                <p>
+                  {{ new Date(exp.startYear).getFullYear() }} -
+                  {{ new Date(exp.endYear).getFullYear() }}
+                </p>
               </div>
             </div>
 
