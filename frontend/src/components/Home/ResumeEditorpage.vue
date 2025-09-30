@@ -12,168 +12,172 @@ const userName = ref("");
 
 const showNewExperienceForm = ref(false);
 
-const newExperience = reactive({
-  jobTitle: "",
-  companyName: "",
-  companyAddress: "",
-  startYear: new Date().getFullYear(),
-  endYear: new Date().getFullYear(),
-});
+  const newExperience = reactive({
+    jobTitle: "",
+    companyName: "",
+    companyAddress: "",
+    startYear: new Date().getFullYear(),
+    endYear: new Date().getFullYear(),
+  });
 
 // ✅ Resume Data
-const resume = reactive({
-  summary: "",
-  experience: [],
-  education: [],
-  skills: [],
-  url: "", // professionalLink stored here
-});
+  const resume = reactive
+  ({
+    summary: "",
+    experience: [],
+    education: [],
+    skills: [],
+    url: "", // professionalLink stored here
+  });
 
 // ✅ User Form Data
-const form = reactive({
-  firstName: "",
-  middleName: "",
-  lastName: "",
-  emailAddress: "",
-  phoneNumber: "",
-  address: "",
-});
+  const form = reactive
+  ({
+    firstName: "",
+    middleName: "",
+    lastName: "",
+    emailAddress: "",
+    phoneNumber: "",
+    address: "",
+  });
 
 // --- Save Resume (summary + professionalLink) ---
-async function saveResume() {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await axios.post(
-      "http://127.0.0.1:8000/api/resume",
-      {
-        summary: resume.summary,
-        professionalLink: resume.url,
-      },
-      {
-        headers: { Authorization: `Bearer ${token}` },
+    async function saveResume() 
+    {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.post(
+          "http://127.0.0.1:8000/api/resume",
+          {
+            summary: resume.summary,
+            professionalLink: resume.url,
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        // Store resumeID
+        resume.resumeID = response.data.resumeID; // <-- add this
+        alert("Resume saved successfully!");
+      } catch (error) {
+        console.error("Error saving resume:", error.response?.data || error);
+        alert("Failed to save resume.");
       }
-    );
-
-    // Store resumeID
-    resume.resumeID = response.data.resumeID; // <-- add this
-    alert("Resume saved successfully!");
-  } catch (error) {
-    console.error("Error saving resume:", error.response?.data || error);
-    alert("Failed to save resume.");
-  }
-}
-
-// --- Load Resume on Mount ---
-async function loadResume() {
-  try {
-    const token = localStorage.getItem("token");
-    const { data } = await axios.get("http://127.0.0.1:8000/api/resume", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (data) {
-      resume.summary = data.summary || "";
-      resume.url = data.professionalLink || "";
     }
 
-    // ✅ Also load experiences
-    const { data: expData } = await axios.get("http://127.0.0.1:8000/api/experiences", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    resume.experience = expData || [];
+// --- Load Resume on Mount ---
+    async function loadResume() 
+    {
+      try {
+        const token = localStorage.getItem("token");
+        const { data } = await axios.get("http://127.0.0.1:8000/api/resume", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-  } catch (error) {
-    console.error("Error loading resume:", error.response?.data || error);
-  }
-}
-// --- Delete Resume ---
-async function deleteResume() {
-  try {
-    const token = localStorage.getItem("token");
-    await axios.delete("http://127.0.0.1:8000/api/resume", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+        if (data) {
+          resume.summary = data.summary || "";
+          resume.url = data.professionalLink || "";
+        }
 
-    resume.summary = "";
-    resume.url = "";
-    alert("Resume deleted successfully!");
-  } catch (error) {
-    console.error("Error deleting resume:", error.response?.data || error);
-    alert("Failed to delete resume.");
-  }
-}
+        // ✅ Also load experiences
+        const { data: expData } = await axios.get("http://127.0.0.1:8000/api/experiences", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        resume.experience = expData || [];
 
-// --- Education ---
-function addEducation() {
-  resume.education.push({ school: "", degree: "", year: "" });
-}
-function removeEducation(index) {
-  resume.education.splice(index, 1);
-}
+      } catch (error) {
+        console.error("Error loading resume:", error.response?.data || error);
+      }
+    }
+    // --- Delete Resume ---
+    async function deleteResume() {
+      try {
+        const token = localStorage.getItem("token");
+        await axios.delete("http://127.0.0.1:8000/api/resume", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        resume.summary = "";
+        resume.url = "";
+        alert("Resume deleted successfully!");
+      } catch (error) {
+        console.error("Error deleting resume:", error.response?.data || error);
+        alert("Failed to delete resume.");
+      }
+    }
+
+    // --- Education ---
+    function addEducation() {
+      resume.education.push({ school: "", degree: "", year: "" });
+    }
+    function removeEducation(index) {
+      resume.education.splice(index, 1);
+    }
 
 
 // --- Experience ---
 
-async function addExperience() {
-  // ✅ Basic validation
-  if (
-    !newExperience.jobTitle.trim() ||
-    !newExperience.companyName.trim() ||
-    !newExperience.companyAddress.trim() ||
-    !newExperience.startYear ||
-    !newExperience.endYear
-  ) {
-    alert("Please fill out all fields before adding experience.");
-    return;
-  }
+    async function addExperience() {
+      // ✅ Basic validation
+      if (
+        !newExperience.jobTitle.trim() ||
+        !newExperience.companyName.trim() ||
+        !newExperience.companyAddress.trim() ||
+        !newExperience.startYear ||
+        !newExperience.endYear
+      ) {
+        alert("Please fill out all fields before adding experience.");
+        return;
+      }
 
-  try {
-    const token = localStorage.getItem("token");
+      try {
+        const token = localStorage.getItem("token");
 
-    // ✅ If resumeID is missing, create one automatically
-    if (!resume.resumeID) {
-      const resumeRes = await axios.post(
-        "http://127.0.0.1:8000/api/resume",
-        {
-          summary: resume.summary || "",
-          professionalLink: resume.url || "",
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      resume.resumeID = resumeRes.data.resumeID;
+        // ✅ If resumeID is missing, create one automatically
+        if (!resume.resumeID) {
+          const resumeRes = await axios.post(
+            "http://127.0.0.1:8000/api/resume",
+            {
+              summary: resume.summary || "",
+              professionalLink: resume.url || "",
+            },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          resume.resumeID = resumeRes.data.resumeID;
+        }
+
+        // ✅ Now add the experience
+        const { data } = await axios.post(
+          "http://127.0.0.1:8000/api/experiences",
+          {
+            jobTitle: newExperience.jobTitle.trim(),
+            companyName: newExperience.companyName.trim(),
+            companyAddress: newExperience.companyAddress.trim(),
+            startYear: `${newExperience.startYear}-01-01`,
+            endYear: `${newExperience.endYear}-01-01`,
+            resumeID: resume.resumeID,
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        // Push to frontend
+        resume.experience.push(data);
+        
+        // Reset form
+        newExperience.jobTitle = "";
+        newExperience.companyName = "";
+        newExperience.companyAddress = "";
+        newExperience.startYear = new Date().getFullYear();
+        newExperience.endYear = new Date().getFullYear();
+        showNewExperienceForm.value = false;
+
+        alert("Experience added successfully!");
+      } catch (error) {
+        console.error("Error adding experience:", error.response?.data || error);
+        alert("Failed to add experience.");
+      }
     }
-
-    // ✅ Now add the experience
-    const { data } = await axios.post(
-      "http://127.0.0.1:8000/api/experiences",
-      {
-        jobTitle: newExperience.jobTitle.trim(),
-        companyName: newExperience.companyName.trim(),
-        companyAddress: newExperience.companyAddress.trim(),
-        startYear: `${newExperience.startYear}-01-01`,
-        endYear: `${newExperience.endYear}-01-01`,
-        resumeID: resume.resumeID,
-      },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    // Push to frontend
-    resume.experience.push(data);
-
-    // Reset form
-    newExperience.jobTitle = "";
-    newExperience.companyName = "";
-    newExperience.companyAddress = "";
-    newExperience.startYear = new Date().getFullYear();
-    newExperience.endYear = new Date().getFullYear();
-    showNewExperienceForm.value = false;
-
-    alert("Experience added successfully!");
-  } catch (error) {
-    console.error("Error adding experience:", error.response?.data || error);
-    alert("Failed to add experience.");
-  }
-}
 
     async function removeExperience(index) {
       try {
@@ -286,32 +290,41 @@ function generatePdf() {
   }
 
   // Experience
-    if (resume.experience.length) {
-      sectionHeader(doc, "Experience", margin, y, pageWidth, margin);
-      y += 6;
+  if (resume.experience.length) {
+    sectionHeader(doc, "Experience", margin, y, pageWidth, margin);
+    y += 6;
 
-      // ✅ Reset font to normal for content
-      doc.setFont("times", "normal");
-      doc.setFontSize(11);
+    // ✅ Reset font for content
+    doc.setFont("times", "normal");
+    doc.setFontSize(11);
 
-      resume.experience.forEach((exp) => {
-        const startYear = exp.startYear ? new Date(exp.startYear).getFullYear() : "";
-        const endYear = exp.endYear ? new Date(exp.endYear).getFullYear() : "Present";
+    // ✅ Sort experiences by endYear (newest first), then startYear
+    const sortedExperiences = [...resume.experience].sort((a, b) => {
+      const aEnd = a.endYear ? new Date(a.endYear).getFullYear() : new Date().getFullYear();
+      const bEnd = b.endYear ? new Date(b.endYear).getFullYear() : new Date().getFullYear();
 
-        // Job title + company
-        y = addWrappedText(`${exp.jobTitle} at ${exp.companyName}`, margin, y, pageWidth - 2 * margin, 5);
+      if (bEnd !== aEnd) return bEnd - aEnd; // newer endYear first
+      return new Date(b.startYear).getFullYear() - new Date(a.startYear).getFullYear();
+    });
 
-        // Company address
-        if (exp.companyAddress) {
-          y = addWrappedText(exp.companyAddress, margin, y, pageWidth - 2 * margin, 6);
-        }
+    sortedExperiences.forEach((exp) => {
+      const startYear = exp.startYear ? new Date(exp.startYear).getFullYear() : "";
+      const endYear = exp.endYear ? new Date(exp.endYear).getFullYear() : "Present";
 
-        // Duration (just years)
-        y = addWrappedText(`${startYear} - ${endYear}`, margin, y, pageWidth - 2 * margin, 6);
+      // Job title + company
+      y = addWrappedText(`${exp.jobTitle} at ${exp.companyName}`, margin, y, pageWidth - 2 * margin, 6);
 
-        y += 4; // space between experiences
-      });
-    }
+      // Company address
+      if (exp.companyAddress) {
+        y = addWrappedText(exp.companyAddress, margin, y, pageWidth - 2 * margin, 6);
+      }
+
+      // Duration (just years)
+      y = addWrappedText(`${startYear} - ${endYear}`, margin, y, pageWidth - 2 * margin, 6);
+
+      y += 4; // space between experiences
+    });
+  }
 
   // Skills
   if (resume.skills.length) {
