@@ -20,6 +20,16 @@ const showNewExperienceForm = ref(false);
     endYear: new Date().getFullYear(),
   });
 
+const showNewEducationForm = ref(false);
+
+const newEducation = reactive({
+  educationLevel: "",
+  major: "",
+  institutionName: "",
+  institutionAddress: "",
+  graduationYear: ""
+});
+
 // ✅ Resume Data
   const resume = reactive
   ({
@@ -66,9 +76,9 @@ const showNewExperienceForm = ref(false);
       }
     }
 
-// --- Load Resume on Mount ---
-    async function loadResume() 
-    {
+
+    // --- Load Resume on Mount ---
+    async function loadResume() {
       try {
         const token = localStorage.getItem("token");
         const { data } = await axios.get("http://127.0.0.1:8000/api/resume", {
@@ -78,13 +88,17 @@ const showNewExperienceForm = ref(false);
         if (data) {
           resume.summary = data.summary || "";
           resume.url = data.professionalLink || "";
+          resume.resumeID = data.resumeID; // ✅ make sure resumeID is stored
         }
 
-        // ✅ Also load experiences
+        // ✅ Load experiences
         const { data: expData } = await axios.get("http://127.0.0.1:8000/api/experiences", {
           headers: { Authorization: `Bearer ${token}` },
         });
         resume.experience = expData || [];
+
+        // ✅ Load education
+        await loadEducation();
 
       } catch (error) {
         console.error("Error loading resume:", error.response?.data || error);
@@ -108,12 +122,74 @@ const showNewExperienceForm = ref(false);
     }
 
     // --- Education ---
-    function addEducation() {
-      resume.education.push({ school: "", degree: "", year: "" });
+    async function addEducation() {
+    try {
+      const token = localStorage.getItem("token");
+
+      if (!resume.resumeID) {
+        const resumeRes = await axios.post(
+          "http://127.0.0.1:8000/api/resume",
+          {
+            summary: resume.summary || "",
+            professionalLink: resume.url || "",
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        resume.resumeID = resumeRes.data.resumeID;
+      }
+
+      const { data } = await axios.post(
+        "http://127.0.0.1:8000/api/education",
+        {
+          ...newEducation,
+          resumeID: resume.resumeID,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      resume.education.push(data);
+
+      // reset form
+      Object.keys(newEducation).forEach((key) => (newEducation[key] = ""));
+      showNewEducationForm.value = false;
+      alert("Education added successfully!");
+    } catch (error) {
+      console.error("Error adding education:", error.response?.data || error);
+      alert("Failed to add education.");
     }
-    function removeEducation(index) {
+  }
+
+  async function loadEducation() {
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.get("http://127.0.0.1:8000/api/educations", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      resume.education = data || []; // 🔥 dito dapat siya ma-assign
+      console.log("Education Data:", resume.education);
+    } catch (error) {
+      console.error("Error loading education:", error.response?.data || error);
+    }
+  }
+
+  async function removeEducation(index) {
+    try {
+      const token = localStorage.getItem("token");
+      const edu = resume.education[index];
+
+      if (edu.educationID) {
+        await axios.delete(`http://127.0.0.1:8000/api/education/${edu.educationID}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+
       resume.education.splice(index, 1);
+    } catch (error) {
+      console.error("Error deleting education:", error.response?.data || error);
+      alert("Failed to delete education.");
     }
+  }
 
 
 // --- Experience ---
@@ -218,134 +294,169 @@ function sectionHeader(doc, title, x, y, pageWidth, margin) {
   doc.line(margin, y + 2, pageWidth - margin, y + 2);
 }
 
-// --- Generate PDF ---
-function generatePdf() {
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 20;
-  let y = 20;
+  // --- Generate PDF ---
+  // Generate PDF
+    function generatePdf() {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      let y = 20;
 
-  // Helper: safely add text with wrapping + auto page break
-  function addWrappedText(text, x, y, maxWidth, lineHeight = 6) {
-    const lines = doc.splitTextToSize(text, maxWidth);
-    for (let i = 0; i < lines.length; i++) {
-      if (y > pageHeight - margin) {
-        doc.addPage();
-        y = margin;
+      // ✅ Helper: extract year only
+      function getYearOnly(dateStr) {
+        if (!dateStr) return "";
+        const year = new Date(dateStr).getFullYear();
+        return isNaN(year) ? "" : year.toString();
       }
-      doc.text(lines[i], x, y);
-      y += lineHeight; // ✅ single spacing
+
+      // Helper: wrapped text with auto page break
+      function addWrappedText(text, x, y, maxWidth, lineHeight = 6) {
+        const lines = doc.splitTextToSize(text, maxWidth);
+        for (let i = 0; i < lines.length; i++) {
+          if (y > pageHeight - margin) {
+            doc.addPage();
+            y = margin;
+          }
+          doc.text(lines[i], x, y);
+          y += lineHeight;
+        }
+        return y;
+      }
+
+      // Helper: section headers with underline
+      function sectionHeader(title, x, y, pageWidth, margin) {
+        doc.setFont("times", "bold");
+        doc.setFontSize(12);
+        doc.text(title, x, y);
+        y += 2;
+        doc.setLineWidth(0.5);
+        doc.line(margin, y, pageWidth - margin, y);
+        return y + 6;
+      }
+
+      // Header (Name)
+      doc.setFont("times", "bold");
+      doc.setFontSize(20);
+      doc.text(`${form.firstName} ${form.middleName} ${form.lastName}`, pageWidth / 2, y, { align: "center" });
+      y += 8;
+
+      // Contact Info
+      doc.setFont("times", "regular");
+      doc.setFontSize(10);
+      const contactLine = `${form.phoneNumber} • ${form.emailAddress} • ${resume.url} • ${form.city}, ${form.state}`;
+      doc.text(contactLine, pageWidth / 2, y, { align: "center" });
+      y += 12;
+
+      // Summary
+      y = sectionHeader("Summary", margin, y, pageWidth, margin);
+      doc.setFont("times", "regular");
+      doc.setFontSize(11);
+      y = addWrappedText(resume.summary || "", margin, y, pageWidth - 2 * margin, 6);
+
+      // Experience
+      if (resume.experience.length) {
+        y = sectionHeader("Professional Experience", margin, y, pageWidth, margin);
+
+        const sortedExperiences = [...resume.experience].sort((a, b) => {
+          const aEnd = a.endYear ? new Date(a.endYear).getFullYear() : new Date().getFullYear();
+          const bEnd = b.endYear ? new Date(b.endYear).getFullYear() : new Date().getFullYear();
+          return bEnd - aEnd;
+        });
+
+        sortedExperiences.forEach((exp) => {
+          // ✅ Show only years
+          const start = getYearOnly(exp.startYear);
+          const end = exp.endYear ? getYearOnly(exp.endYear) : "Present";
+
+          // Job title (left) + Date (right)
+          doc.setFont("times", "bold");
+          doc.setFontSize(11);
+          doc.text(exp.jobTitle || "", margin, y);
+          doc.setFont("times", "regular");
+          doc.text(`${start} – ${end}`, pageWidth - margin, y, { align: "right" });
+          y += 6;
+
+          // Company name + location
+          doc.setFont("times", "italic");
+          doc.text(`${exp.companyName || ""}`, margin, y);
+          if (exp.companyAddress) {
+            doc.text(exp.companyAddress, pageWidth - margin, y, { align: "right" });
+          }
+          y += 6;
+
+          // Responsibilities (bulleted)
+          doc.setFont("times", "regular");
+          exp.responsibilities?.forEach((task) => {
+            y = addWrappedText(`• ${task}`, margin + 4, y, pageWidth - 2 * margin, 6);
+          });
+          y += 4;
+        });
+      }
+
+      // Education
+      if (resume.education.length) {
+        y = sectionHeader("Education", margin, y, pageWidth, margin);
+        resume.education.forEach((edu) => {
+          doc.setFont("times", "bold");
+          doc.text(`${edu.institutionName || ""}`, margin, y);
+
+          // ✅ Show only graduation year
+          const gradYear = getYearOnly(edu.graduationYear);
+          doc.setFont("times", "regular");
+          doc.text(`${gradYear}`, pageWidth - margin, y, { align: "right" });
+          y += 6;
+
+          doc.text(`${edu.educationLevel || ""} in ${edu.major || ""}`, margin, y);
+          y += 6;
+
+          if (edu.extraInfo) {
+            y = addWrappedText(edu.extraInfo, margin, y, pageWidth - 2 * margin, 6);
+          }
+          y += 4;
+        });
+      }
+
+      // Skills
+      if (resume.skills.length) {
+        y = sectionHeader("Skills", margin, y, pageWidth, margin);
+        y = addWrappedText(resume.skills.join(" • "), margin, y, pageWidth - 2 * margin, 6);
+      }
+
+      // Projects
+      if (resume.projects?.length) {
+        y = sectionHeader("Projects", margin, y, pageWidth, margin);
+        resume.projects.forEach((proj) => {
+          doc.setFont("times", "bold");
+          doc.text(proj.name || "", margin, y);
+          if (proj.date) {
+            // ✅ Show only year
+            const projYear = getYearOnly(proj.date);
+            doc.setFont("times", "regular");
+            doc.text(projYear, pageWidth - margin, y, { align: "right" });
+          }
+          y += 6;
+
+          doc.setFont("times", "regular");
+          y = addWrappedText(proj.description || "", margin, y, pageWidth - 2 * margin, 6);
+          y += 4;
+        });
+      }
+
+      // ✅ create blob for modal preview
+      const pdfBlob = doc.output("blob");
+      pdfUrl.value = URL.createObjectURL(pdfBlob);
     }
-    return y;
-  }
 
-  
-  // Header (Name)
-  doc.setFont("times", "bold");
-  doc.setFontSize(20);
-  doc.text(
-    `${form.firstName} ${form.middleName} ${form.lastName}`,
-    pageWidth / 2,
-    y,
-    { align: "center" }
-  );
-  y += 4.5;
+    function generateAndOpenPdf() {
+      generatePdf();
+      isModalOpen.value = true;
+    }
 
-  doc.setFont("times", "regular");
-  doc.setFontSize(10);
-  doc.text(
-    `${form.emailAddress} | ${form.phoneNumber}`,
-    pageWidth / 2,
-    y,
-    { align: "center" }
-  );
-  y += 4.5;
+    function closeModal() {
+      isModalOpen.value = false;
+    }
 
-    doc.setFont("times", "regular");
-  doc.setFontSize(10);
-  doc.text(
-    `${resume.url}`,
-    pageWidth / 2,
-    y,
-    { align: "center" }
-  );
-  y += 4.5;
-
-  // Summary
-    doc.setFont("times", "bold");  // ✅ Bold font for "Summary"
-    sectionHeader(doc, "Summary", margin, y, pageWidth, margin);
-    y += 6;
-    doc.setFont("times", "regular");  // ✅ Switch back to regular for body text
-    doc.setFontSize(11);
-    y = addWrappedText(resume.summary || "", margin, y, pageWidth - 2 * margin, 6);
-
-  // Education
-  if (resume.education.length) {
-    sectionHeader(doc, "Education", margin, y, pageWidth, margin);
-    y += 6;
-    resume.education.forEach((edu) => {
-      y = addWrappedText(`${edu.degree} - ${edu.school} (${edu.year})`, margin, y, pageWidth - 2 * margin, 6);
-    });
-  }
-
-  // Experience
-  if (resume.experience.length) {
-    sectionHeader(doc, "Experience", margin, y, pageWidth, margin);
-    y += 6;
-
-    // ✅ Reset font for content
-    doc.setFont("times", "normal");
-    doc.setFontSize(11);
-
-    // ✅ Sort experiences by endYear (newest first), then startYear
-    const sortedExperiences = [...resume.experience].sort((a, b) => {
-      const aEnd = a.endYear ? new Date(a.endYear).getFullYear() : new Date().getFullYear();
-      const bEnd = b.endYear ? new Date(b.endYear).getFullYear() : new Date().getFullYear();
-
-      if (bEnd !== aEnd) return bEnd - aEnd; // newer endYear first
-      return new Date(b.startYear).getFullYear() - new Date(a.startYear).getFullYear();
-    });
-
-    sortedExperiences.forEach((exp) => {
-      const startYear = exp.startYear ? new Date(exp.startYear).getFullYear() : "";
-      const endYear = exp.endYear ? new Date(exp.endYear).getFullYear() : "Present";
-
-      // Job title + company
-      y = addWrappedText(`${exp.jobTitle} at ${exp.companyName}`, margin, y, pageWidth - 2 * margin, 6);
-
-      // Company address
-      if (exp.companyAddress) {
-        y = addWrappedText(exp.companyAddress, margin, y, pageWidth - 2 * margin, 6);
-      }
-
-      // Duration (just years)
-      y = addWrappedText(`${startYear} - ${endYear}`, margin, y, pageWidth - 2 * margin, 6);
-
-      y += 4; // space between experiences
-    });
-  }
-
-  // Skills
-  if (resume.skills.length) {
-    sectionHeader(doc, "Skills", margin, y, pageWidth, margin);
-    y += 6;
-    y = addWrappedText(resume.skills.join(", "), margin, y, pageWidth - 2 * margin, 6);
-  }
-
-  // ✅ create blob for modal preview
-  const pdfBlob = doc.output("blob");
-  pdfUrl.value = URL.createObjectURL(pdfBlob);
-}
-
-function generateAndOpenPdf() {
-  generatePdf();
-  isModalOpen.value = true;
-}
-
-function closeModal() {
-  isModalOpen.value = false;
-}
 
 // --- Autofill user + resume data on mount ---
 onMounted(() => {
@@ -679,13 +790,93 @@ const logout = () => {
                 <label class="text-lg font-semibold">Education</label>
                 <button
                   type="button"
-                  @click="addEducation"
+                  @click="showNewEducationForm = !showNewEducationForm"
                   class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
                 >
                   +
                 </button>
               </div>
-              <!-- Education Items -->
+
+              <!-- New Education Form -->
+              <div v-if="showNewEducationForm" class="border p-3 rounded space-y-3 mt-3">
+                <!-- Education Level -->
+                <div>
+                  <label class="block font-medium mb-1">Education Level</label>
+                  <select
+                    v-model="newEducation.educationLevel"
+                    class="input-field border rounded w-full p-2"
+                  >
+                    <option value="" disabled>Select level</option>
+                    <option>Elementary</option>
+                    <option>High School</option>
+                    <option>Senior High School</option>
+                    <option>Bachelor's Degree</option>
+                    <option>Master's Degree</option>
+                    <option>Doctorate</option>
+                    <option>Others</option>
+                  </select>
+                </div>
+
+                <!-- Major -->
+                <div>
+                  <label class="block font-medium mb-1">Major</label>
+                  <input
+                    v-model="newEducation.major"
+                    type="text"
+                    placeholder="Enter major"
+                    class="input-field border rounded w-full p-2 disabled:bg-gray-200"
+                    :disabled="
+                      newEducation.educationLevel === 'Elementary' ||
+                      newEducation.educationLevel === 'High School' ||
+                      newEducation.educationLevel === 'Senior High School'
+                    "
+                  />
+                </div>
+
+                <!-- Institution Name -->
+                <div>
+                  <label class="block font-medium mb-1">Institution Name</label>
+                  <input
+                    v-model="newEducation.institutionName"
+                    type="text"
+                    placeholder="Enter school/university name"
+                    class="input-field border rounded w-full p-2"
+                  />
+                </div>
+
+                <!-- Institution Address -->
+                <div>
+                  <label class="block font-medium mb-1">Institution Address</label>
+                  <input
+                    v-model="newEducation.institutionAddress"
+                    type="text"
+                    placeholder="Enter address"
+                    class="input-field border rounded w-full p-2"
+                  />
+                </div>
+
+                <!-- Graduation Year -->
+                <div>
+                  <label class="block font-medium mb-1">Graduation Year</label>
+                  <input
+                    v-model="newEducation.graduationYear"
+                    type="number"
+                    placeholder="e.g. 2025"
+                    class="input-field border rounded w-full p-2"
+                  />
+                </div>
+
+                <!-- Add Button -->
+                <button
+                  type="button"
+                  @click="addEducation"
+                  class="w-20 h-10 flex items-center justify-center rounded bg-customButton text-white hover:bg-dark-slate"
+                >
+                  Add +
+                </button>
+              </div>
+
+              <!-- Existing Education Items -->
               <div
                 v-for="(edu, index) in resume.education"
                 :key="index"
@@ -699,70 +890,12 @@ const logout = () => {
                 >
                   ✕
                 </button>
-                <!-- Education Level -->
-                <div>
-                  <label class="block font-medium mb-1">Education Level</label>
-                  <select
-                    v-model="edu.educationLevel"
-                    class="input-field border rounded w-full p-2"
-                  >
-                    <option value="" disabled>Select level</option>
-                    <option>Elementary</option>
-                    <option>High School</option>
-                    <option>Senior High School</option>
-                    <option>Bachelor's Degree</option>
-                    <option>Master's Degree</option>
-                    <option>Doctorate</option>
-                    <option>Others</option>
-                  </select>
-                </div>
-                <!-- Major -->
-                <div>
-                  <label class="block font-medium mb-1">Major</label>
-                  <input
-                    v-model="edu.major"
-                    type="text"
-                    placeholder="Enter major"
-                    class="input-field border rounded w-full p-2 disabled:bg-gray-200"
-                    :disabled="
-                      edu.educationLevel === 'Elementary' ||
-                      edu.educationLevel === 'High School' ||
-                      edu.educationLevel === 'Senior High School'
-                    "
-                  />
-                </div>
-                <!-- Institution Name -->
-                <div>
-                  <label class="block font-medium mb-1">Institution Name</label>
-                  <input
-                    v-model="edu.institutionName"
-                    type="text"
-                    placeholder="Enter school/university name"
-                    class="input-field border rounded w-full p-2"
-                  />
-                </div>
-                <!-- Institution Address -->
-                <div>
-                  <label class="block font-medium mb-1"
-                    >Institution Address</label
-                  >
-                  <input
-                    v-model="edu.institutionAddress"
-                    type="text"
-                    placeholder="Enter address"
-                    class="input-field border rounded w-full p-2"
-                  />
-                </div>
-                <!-- Graduation Date -->
-                <div>
-                  <label class="block font-medium mb-1">Graduation Year</label>
-                  <input
-                    v-model="edu.graduationDate"
-                    type="number"
-                    placeholder="e.g. 2025"
-                    class="input-field border rounded w-full p-2"
-                  />
-                </div>
+
+                <p><strong>{{ edu.educationLevel }}</strong></p>
+                <p v-if="edu.major">{{ edu.major }}</p>
+                <p>{{ edu.institutionName }}</p>
+                <p>{{ edu.institutionAddress }}</p>
+                <p>{{ edu.graduationYear }}</p>
               </div>
             </div>
             <!-- Skills -->

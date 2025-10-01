@@ -7,6 +7,7 @@ use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ResumeController;
 use App\Http\Controllers\ProfessionalExperienceController;
+use App\Http\Controllers\EducationController;
 
 Route::get('/organization', [OrganizationController::class, 'index']);
 
@@ -38,6 +39,14 @@ Route::get('/user', function (Request $request) {
     $user = \App\Models\Applicant::where('api_token', $token)->first();
     if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
     return $user;
+});
+
+// ✅ Education routes
+Route::middleware('auth.custom')->group(function () {
+    Route::get('/education', [EducationController::class, 'show']);
+    Route::post('/education', [EducationController::class, 'store']);
+    Route::put('/education/{id}', [EducationController::class, 'update']);
+    Route::delete('/education/{id}', [EducationController::class, 'destroy']);
 });
 
 Route::delete('/user', [ApplicantController::class, 'destroy']);
