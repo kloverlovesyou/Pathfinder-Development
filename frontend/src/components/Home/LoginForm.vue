@@ -1,6 +1,6 @@
 <template>
   <div
-    class="font-poppins min-h-screen flex items-center justify-center bg-gray-50 p-4"
+    class="font-poppins min-h-screen flex items-center justify-center  p-4"
   >
     <!-- Wrapper -->
     <div class="relative w-full max-w-md">
