@@ -206,24 +206,44 @@ import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
 
 export default {
   name: "OrganizationHomePage",
+
+  data() {
+    return {
+      dictLogo,
+      showTrainingPopup: false,
+      showCareerPopup: false,
+      newTraining: {
+        title: "",
+        description: "",
+        type: "",
+        schedule: "",
+        mode: "",
+        location: "",
+        trainingLink: "",
+        registrationLink: "",
+      },
+      upcomingtrainings: [],
+      newCareer: {
+        position: "",
+        details: "",
+        qualifications: "",
+        requirements: "",
+        letterAddress: "",
+        deadline: "",
+      },
+    };
+  },
+
   setup() {
     const isSidebarOpen = ref(true);
     const showCareerPopup = ref(false);
     const showTrainingPopup = ref(false);
 
-    // Initialize organizationName
     const organizationName = ref("Loading...");
 
-    // Simulate fetching organization data (replace with real API/localStorage)
     onMounted(() => {
-      // Example: get from localStorage
       const storedName = localStorage.getItem("organizationName");
-
-      if (storedName) {
-        organizationName.value = storedName;
-      } else {
-        organizationName.value = "My Organization"; // fallback default
-      }
+      organizationName.value = storedName || "My Organization";
     });
 
     // Functions
@@ -260,34 +280,6 @@ export default {
       saveCareer,
       saveTraining,
     };
-
-
-export default {
-  data() {
-    dictLogo
-    return {
-      showTrainingPopup: false,
-      showCareerPopup: false,
-      newTraining: {
-        title: "",
-        description: "",
-        type: "",
-        schedule: "",
-        mode: "",
-        location: "",
-        trainingLink: "",
-        registrationLink: ""
-      },
-      upcomingtrainings: [],
-      newCareer: {
-        position: "",
-        details: "",
-        qualifications: "",
-        requirements: "",
-        letterAddress: "",
-        deadline: ""
-      }
-    }
   },
 };
 </script>
