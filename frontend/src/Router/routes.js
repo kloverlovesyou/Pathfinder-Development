@@ -17,6 +17,8 @@ import OrgTraining from "@/components/Organization/OrganizationTrainings.vue";
 import OrgCareer from "@/components/Organization/OrganizationCareers.vue";
 import MainLayout from "@/components/Layout/MainLayout.vue";
 import AuthLayout from "@/components/Layout/AuthLayout.vue";
+import OrgCalendar from "@/components/Organization/OrganizationCalendar.vue";
+
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 
@@ -27,6 +29,11 @@ const router = createRouter({
     {
       path: "/",
       redirect: "/auth/login",
+    },
+    {
+      path: "/OrgCalendar",
+      component: OrgCalendar,
+      meta: { requiresAuth: true, role: "organization" },
     },
 
       // Auth pages

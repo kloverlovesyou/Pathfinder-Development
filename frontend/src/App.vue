@@ -2,8 +2,6 @@
 import { useRoute } from "vue-router";
 
 const route = useRoute();
-<<<<<<< HEAD
-=======
 
 const noHeaderRoutes = [
   "/loginform",
@@ -16,7 +14,6 @@ const noHeaderRoutes = [
   "/updateprofile",
   "/OrgCalendar",
 ];
->>>>>>> 573a31f62b4b0becc75169ba6437df4ee895621e
 </script>
 
 <template>

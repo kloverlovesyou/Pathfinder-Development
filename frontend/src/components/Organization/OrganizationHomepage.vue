@@ -3,11 +3,14 @@
     <!-- Sidebar -->
     <transition name="slide">
       <aside class="sidebar" :class="{ collapsed: !isSidebarOpen }" @click.self="toggleSidebar">
+        <!-- Avatar always visible -->
+        <div class="avatar">
+          <img :src="dictLogo" alt="DICT Logo" class="avatar-img" />
+        </div>
 
-        <!-- Profile Section (only when sidebar is hovered/open) -->
+        <!-- Profile Section (only when sidebar is open) -->
         <transition name="fade">
           <div v-if="isSidebarOpen" class="profile-section">
-            <div class="avatar"></div>
             <h3 class="org-name">{{ organizationName }}</h3>
             <div class="profile-actions">
               <div class="action" @click="navigateTo('/profile')">
@@ -37,7 +40,11 @@
           </svg>
           <span>Home</span>
         </div>
+<<<<<<< HEAD
         <div class="icon" @click="navigateTo({ name: 'OrgTrainings' })">
+=======
+        <div class="icon" :class="{ active: $route.path === '/OrgTrainings' }" @click="$router.push('/OrgTrainings')">
+>>>>>>> 573a31f62b4b0becc75169ba6437df4ee895621e
           <svg width="29" height="29" viewBox="0 0 29 29" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M20.5837 3.625C23.4119 3.625 24.8261 3.62526 25.7048 4.50391C26.5833 5.3826 26.5837 6.79675 26.5837 9.625V19.375C26.5837 22.2033 26.5833 23.6174 25.7048 24.4961C24.8261 25.3747 23.4119 25.375 20.5837 25.375H8.41666C5.58824 25.375 4.17425 25.3748 3.29557 24.4961C2.41689 23.6174 2.41666 22.2034 2.41666 19.375V9.625C2.41666 6.79657 2.41689 5.38259 3.29557 4.50391C4.17425 3.62523 5.58824 3.625 8.41666 3.625H20.5837ZM9.66666 12.292C9.11438 12.292 8.66666 12.7397 8.66666 13.292V20.542L8.67155 20.6445C8.72303 21.1485 9.1491 21.542 9.66666 21.542C10.1842 21.542 10.6103 21.1485 10.6618 20.6445L10.6667 20.542V13.292C10.6667 12.7397 10.2189 12.292 9.66666 12.292ZM19.3337 9.875C18.7814 9.875 18.3337 10.3227 18.3337 10.875V20.542L18.3385 20.6436C18.3896 21.148 18.8158 21.542 19.3337 21.542C19.8514 21.5418 20.2778 21.1479 20.3288 20.6436L20.3337 20.542V10.875C20.3337 10.3228 19.8858 9.87518 19.3337 9.875ZM14.4997 14.708C13.9476 14.7082 13.4998 15.156 13.4997 15.708V20.541L13.5046 20.6436C13.5557 21.1477 13.982 21.5408 14.4997 21.541C15.0175 21.541 15.4436 21.1478 15.4948 20.6436L15.4997 20.541V15.708C15.4995 15.1559 15.0518 14.708 14.4997 14.708Z"
@@ -45,7 +52,11 @@
           </svg>
           <span>Trainings</span>
         </div>
+<<<<<<< HEAD
         <div class="icon" @click="navigateTo({ name: 'OrgCareers' })">
+=======
+        <div class="icon" :class="{ active: $route.path === '/OrgCareers' }" @click="$router.push('/OrgCareers')">
+>>>>>>> 573a31f62b4b0becc75169ba6437df4ee895621e
           <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M22.8798 11.0484C23.4046 10.8642 23.9845 11.1431 24.1081 11.6855C24.4792 13.3134 24.4217 15.0018 23.9268 16.6191C23.4739 18.0989 22.6698 19.4685 21.5787 20.6449C21.2148 21.0372 20.6017 21.0197 20.2239 20.6408L14.9487 15.3495C14.4292 14.8284 14.6314 13.9436 15.3257 13.6999L22.8798 11.0484ZM13 4.0826C13 3.50231 13.4932 3.04057 14.0672 3.12592C15.8633 3.39302 17.5788 4.00579 19.085 4.93161C20.3794 5.72731 21.4793 6.72976 22.3343 7.87824C22.709 8.38157 22.4513 9.07932 21.8592 9.28718L14.3313 11.9301C13.6809 12.1584 13 11.6758 13 10.9865V4.0826Z"
@@ -56,7 +67,11 @@
           </svg>
           <span>Career</span>
         </div>
+<<<<<<< HEAD
         <div class="icon"  @click="navigateTo('/app/calendar')">
+=======
+        <div class="icon" :class="{ active: $route.path === '/OrgCalendar' }" @click="$router.push('/OrgCalendar')">
+>>>>>>> 573a31f62b4b0becc75169ba6437df4ee895621e
           <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M2.16675 9.4165C2.16675 7.53089 2.16675 6.58808 2.75253 6.00229C3.33832 5.4165 4.28113 5.4165 6.16675 5.4165H19.8334C21.719 5.4165 22.6618 5.4165 23.2476 6.00229C23.8334 6.58808 23.8334 7.53089 23.8334 9.4165V9.83317C23.8334 10.3046 23.8334 10.5403 23.687 10.6867C23.5405 10.8332 23.3048 10.8332 22.8334 10.8332H3.16675C2.69534 10.8332 2.45964 10.8332 2.31319 10.6867C2.16675 10.5403 2.16675 10.3046 2.16675 9.83317V9.4165Z"
@@ -118,7 +133,8 @@
             <input v-model="newCareer.details" type="text" placeholder="Details and Instruction" class="career-input" />
             <textarea v-model="newCareer.qualifications" placeholder="Qualifications" class="career-input"></textarea>
             <textarea v-model="newCareer.requirements" placeholder="Requirements" class="career-input"></textarea>
-            <input v-model="newCareer.address" type="text" placeholder="Application Letter Address" class="career-input" />
+            <input v-model="newCareer.address" type="text" placeholder="Application Letter Address"
+              class="career-input" />
             <input v-model="newCareer.deadline" type="text" placeholder="Deadline of Submission" class="career-input" />
 
             <!-- Save -->
@@ -197,6 +213,7 @@
 </template>
 
 <script>
+<<<<<<< HEAD
 import { ref, onMounted } from "vue";
 
 export default {
@@ -255,6 +272,36 @@ export default {
       saveCareer,
       saveTraining,
     };
+=======
+import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
+
+export default {
+  data() {
+    dictLogo
+    return {
+      showTrainingPopup: false,
+      showCareerPopup: false,
+      newTraining: {
+        title: "",
+        description: "",
+        type: "",
+        schedule: "",
+        mode: "",
+        location: "",
+        trainingLink: "",
+        registrationLink: ""
+      },
+      upcomingtrainings: [],
+      newCareer: {
+        position: "",
+        details: "",
+        qualifications: "",
+        requirements: "",
+        letterAddress: "",
+        deadline: ""
+      }
+    }
+>>>>>>> 573a31f62b4b0becc75169ba6437df4ee895621e
   },
 };
 </script>
@@ -415,6 +462,23 @@ const saveTraining = () => { console.log('Training saved'); closeTrainingPopup()
   pointer-events: none;
 }
 
+.sidebar.collapsed .avatar {
+  margin: 10px auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.icon.active {
+  background-color: #ffffff33;
+  /* faint highlight */
+  color: #000000;
+}
+
+.icon.active svg path {
+  fill: #000000;
+  /* change icon color when active */
+}
 
 /* Main Content */
 .content {
@@ -531,9 +595,21 @@ const saveTraining = () => { console.log('Training saved'); closeTrainingPopup()
 }
 
 .profile-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* centers everything under avatar */
   text-align: center;
-  padding: 20px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  gap: 0.3rem;
+  /* spacing between avatar, name, and actions */
+}
+
+.profile-section .avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: #ccc;
+  /* placeholder for logo/avatar */
 }
 
 .avatar {
@@ -546,30 +622,35 @@ const saveTraining = () => { console.log('Training saved'); closeTrainingPopup()
 }
 
 .org-name {
-  font-size: 16px;
   font-weight: 600;
-  margin: 10px 0;
-  color: white;
+  font-size: 14px;
+  text-align: center;
 }
 
 .profile-actions {
   display: flex;
-  justify-content: space-around;
-  margin-top: 15px;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .profile-actions .action {
   display: flex;
-  flex-direction: row;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 0.35rem;
+  /* smaller space between icon + text */
+  font-size: 13px;
+  /* smaller text */
+  color: #fff;
+  /* keep text color consistent */
   cursor: pointer;
-  font-size: 14px;
-  color: white;
 }
 
 .profile-actions .action svg {
-  margin-bottom: 0;
+  width: 14px;
+  /* shrink the icon */
+  height: 14px;
 }
 
 .profile-actions .action:hover {
@@ -625,7 +706,7 @@ const saveTraining = () => { console.log('Training saved'); closeTrainingPopup()
   padding: 8px 10px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
-  margin-bottom: 15px; 
+  margin-bottom: 15px;
   font-size: 14px;
   background: #ffffff;
   color: #111827;
@@ -638,7 +719,7 @@ const saveTraining = () => { console.log('Training saved'); closeTrainingPopup()
   font-weight: 500;
   padding: 10px;
   border-radius: 6px;
-  width: 100%; 
+  width: 100%;
   border: none;
   cursor: pointer;
 }
