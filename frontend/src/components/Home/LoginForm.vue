@@ -1,58 +1,67 @@
 <template>
   <div
-    class="font-poppins min-h-screen flex items-center justify-center bg-gray-50 p-4"
+    class="font-poppins min-h-screen flex items-center justify-center  p-4"
   >
-    <div
-      class="card bg-base-200 border-base-300 rounded-box border p-6 max-w-xs sm:max-w-sm md:max-w-md w-full shadow-lg"
-    >
-      <h2 class="text-2xl font-semibold text-center mb-6 text-dark-slate">
-        Login
-      </h2>
+    <!-- Wrapper -->
+    <div class="relative w-full max-w-md">
+      <!-- Login Card -->
+      <div
+        class="card bg-base-200 border-base-300 rounded-box border p-6 shadow-lg transition duration-300"
+      >
+        <h2 class="text-2xl font-semibold text-center mb-4 text-dark-slate">
+          Login
+        </h2>
 
-      <form @submit.prevent="handleLogin">
-        <!-- Email -->
-        <div class="form-control mb-4">
-          <input
-            v-model="email"
-            class="input validator w-full"
-            type="email"
-            required
-            placeholder="Email"
-          />
-          <p class="validator-hint" v-if="emailError">Invalid Email</p>
-        </div>
+        <form @submit.prevent="handleLogin">
+          <!-- Email -->
+          <div class="form-control mb-4">
+            <input
+              v-model="email"
+              class="input validator w-full"
+              type="email"
+              required
+              placeholder="Email"
+            />
+            <p class="validator-hint" v-if="emailError">Invalid Email</p>
+          </div>
 
-        <!-- Password -->
-        <div class="form-control mb-4">
-          <input
-            v-model="password"
-            type="password"
-            class="input validator input-bordered w-full"
-            required
-            placeholder="Password"
-            minlength="8"
-            pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
-          />
-          <p class="validator-hint" v-if="passwordError">Invalid Password</p>
-        </div>
+          <!-- Password -->
+          <div class="form-control mb-4">
+            <input
+              v-model="password"
+              type="password"
+              class="input validator input-bordered w-full"
+              required
+              placeholder="Password"
+              minlength="8"
+              pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
+            />
+            <p class="validator-hint" v-if="passwordError">Invalid Password</p>
+          </div>
 
-        <div class="card-actions justify-center">
-          <button
-            type="submit"
-            class="btn btn-primary w-3/4 bg-dark-slate text-white"
-          >
-            Log in
-          </button>
-        </div>
-      </form>
+          <div class="card-actions justify-center">
+            <button
+              type="submit"
+              class="btn btn-primary w-3/4 bg-dark-slate text-white"
+            >
+              Log in
+            </button>
+          </div>
+        </form>
 
-      <div class="text-center mt-4">
-        <p class="text-sm text-gray-600">
-          Don't have an account?
-          <router-link to="/typeofaccount" class="text-primary">
-            Register here.
-          </router-link>
+        <!-- 🔴 Error message below Login -->
+        <p v-if="loginError" class="text-center mt-4 text-red-600 font-medium">
+          {{ loginError }}
         </p>
+
+        <div class="text-center mt-4">
+          <p class="text-sm text-gray-600">
+            Don't have an account?
+            <router-link to="/typeofaccount" class="text-primary">
+              Register here.
+            </router-link>
+          </p>
+        </div>
       </div>
     </div>
   </div>
@@ -70,12 +79,16 @@ const password = ref("");
 const emailError = ref(false);
 const passwordError = ref(false);
 
+const loginError = ref(""); // just show as text now
+
 const validateEmail = (emailVal) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
-const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
+const validatePassword = (pw) =>
+  /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
 
 const handleLogin = async () => {
   emailError.value = !validateEmail(email.value);
   passwordError.value = !validatePassword(password.value);
+  loginError.value = "";
   if (emailError.value || passwordError.value) return;
 
   try {
@@ -85,17 +98,18 @@ const handleLogin = async () => {
     });
 
     const userData = response.data.user;
-    const role = userData.role; // 'applicant' or 'organization'
+    const role = userData.role;
+    const token = response.data.token;
 
-    // ✅ Handle displayName differently for applicant vs organization
     let displayName = "";
     if (role === "organization") {
-      displayName = userData.organizationName || userData.name || "Organization";
+      displayName =
+        userData.organizationName || userData.name || "Organization";
     } else {
       displayName = `${userData.firstName} ${userData.lastName}`;
     }
 
-    // Save in localStorage
+    localStorage.setItem("token", token);
     localStorage.setItem(
       "user",
       JSON.stringify({
@@ -105,16 +119,14 @@ const handleLogin = async () => {
       })
     );
 
-    // Redirect based on role
     if (role === "organization") {
-      router.push("/organization"); // organization home
+      router.push("/organization");
     } else {
-      router.push("/app"); // applicant home
+      router.push("/app");
     }
   } catch (err) {
     console.error(err.response?.data || err.message);
-    alert("Invalid credentials. Please try again.");
+    loginError.value = "Invalid credentials. Please try again.";
   }
 };
 </script>
-

@@ -1,6 +1,6 @@
 <template>
   <div
-    class="font-poppins pb-20 min-h-screen flex items-center justify-center bg-gray-50 p-4"
+    class="font-poppins pb-20 min-h-screen flex items-center justify-centerp-4"
   >
     <div>
       <!-- Header -->
@@ -389,6 +389,28 @@
         </div>
       </form>
     </div>
+     <!-- 🔵 Success Modal -->
+    <div
+      v-if="showSuccessModal"
+      class="fixed inset-0 flex items-center justify-center z-50"
+      style="background-color: rgba(0, 0, 0, 0.3)"
+    >
+      <div class="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full text-center relative">
+        <h2 class="text-lg font-bold text-green-600 mb-4">
+          Registration Successful 🎉
+        </h2>
+        <p class="text-sm mb-6">
+          Your account has been created successfully.  
+          Click OK to go to the login page.
+        </p>
+        <button
+          class="btn btn-primary w-3/4 bg-dark-slate text-white"
+          @click="goToLogin"
+        >
+          OK
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -411,7 +433,8 @@ const form = ref({
 });
 
 const termsAccepted = ref(false);
-const showModal = ref(false);
+const showModal = ref(false); // terms modal
+const showSuccessModal = ref(false); // ✅ success modal
 
 const handleSubmit = async () => {
   if (!termsAccepted.value) {
@@ -420,16 +443,17 @@ const handleSubmit = async () => {
   }
 
   if (form.value.password !== form.value.confirmPassword) {
-    message.value = "Passwords do not match.";
+    alert("Passwords do not match.");
     return;
   }
 
   try {
-    const response = await axios.post("http://127.0.0.1:8000/api/applicants", {
+    await axios.post("http://127.0.0.1:8000/api/applicants", {
       ...form.value,
     });
 
-    router.push("Login");
+    // ✅ Show success modal instead of redirecting immediately
+    showSuccessModal.value = true;
   } catch (error) {
     if (error.response && error.response.data.errors) {
       const errors = error.response.data.errors;
@@ -440,10 +464,16 @@ const handleSubmit = async () => {
   }
 };
 
-// Two separate toggles (keeps behaviour clear and independent)
+const goToLogin = () => {
+  showSuccessModal.value = false;
+  router.push("Login");
+};
+
+// Two separate toggles
 const showPassword = ref(false);
 const showConfirm = ref(false);
 </script>
+
 <style scoped>
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear,

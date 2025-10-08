@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class Applicant extends Model
 {
-    protected $table = 'applicant'; // Use exact table name (case-sensitive on some systems)
-    protected $primaryKey = 'applicantID'; // Custom primary key
-    public $timestamps = false; // Disable timestamps if your table doesn't have created_at/updated_at
+    protected $table = 'applicant';
+    protected $primaryKey = 'applicantID';
+    public $timestamps = false;
 
     protected $fillable = [
         'firstName',
@@ -17,6 +17,13 @@ class Applicant extends Model
         'address',
         'emailAddress',
         'phoneNumber',
-        'password'
+        'password',
+        'api_token',
     ];
+
+    // One applicant has one resume
+    public function resume()
+    {
+        return $this->hasOne(Resume::class, 'applicantID', 'applicantID');
+    }
 }

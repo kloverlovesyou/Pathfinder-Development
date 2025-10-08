@@ -6,10 +6,10 @@ const userName = ref("");
 
 const logout = () => {
   // Remove user data
-  localStorage.removeItem('user');
-  localStorage.removeItem('token'); // if you store an auth token
+  localStorage.removeItem("user");
+  localStorage.removeItem("token"); // if you store an auth token
   // Redirect to login page
-  router.push({ name: 'Login' });
+  router.push({ name: "Login" });
 };
 
 // Check if user is logged in and retrieve user data
@@ -138,7 +138,7 @@ onMounted(() => {
     </dialog>
 
     <!--Large screen-->
-    <div class="min-h-screen p-6 font-poppins hidden lg:flex">
+    <div class="min-h-screen p-3 font-poppins hidden lg:flex">
       <!-- Left Column -->
       <div
         class="w-full lg:w-1/4 bg-white rounded-lg shadow p-6 flex flex-col items-center"
@@ -268,7 +268,7 @@ onMounted(() => {
               />
             </svg>
 
-            <span>Update/Delete Account</span>
+            <span>Account Setting</span>
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
