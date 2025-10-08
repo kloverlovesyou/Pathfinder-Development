@@ -27,7 +27,7 @@ const resume = ref({
 });
 
 // ✅ Resume Data
-  const resume = reactive
+  const resumeData = reactive
   ({
     summary: "",
     experience: [],
