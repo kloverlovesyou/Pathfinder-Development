@@ -15,9 +15,10 @@ import TypeOfAccount from "@/components/Home/TypeOfAccount.vue";
 import OrgHomePage from "@/components/Organization/OrganizationHomepage.vue";
 import OrgTraining from "@/components/Organization/OrganizationTrainings.vue";
 import OrgCareer from "@/components/Organization/OrganizationCareers.vue";
-import OrgProfile from "@/components/Organization/OrganizationProfile.vue";
 import MainLayout from "@/components/Layout/MainLayout.vue";
 import AuthLayout from "@/components/Layout/AuthLayout.vue";
+import OrgCalendar from "@/components/Organization/OrganizationCalendar.vue";
+
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 
@@ -28,6 +29,11 @@ const router = createRouter({
     {
       path: "/",
       redirect: "/auth/login",
+    },
+    {
+      path: "/OrgCalendar",
+      component: OrgCalendar,
+      meta: { requiresAuth: true, role: "organization" },
     },
 
       // Auth pages
@@ -90,34 +96,24 @@ const router = createRouter({
       ],
     },
 
-    // Organization-specific pages
-{
-  path: "/organization",
-  component: OrgHomePage,
-  meta: { requiresAuth: true, role: "organization" },
-  children: [
     {
-      path: "",
-      name: "OrgHome",
-      component: OrgHomePage,
-    },
-    {
-      path: "trainings",
-      name: "OrgTrainings",
-      component: OrgTraining,
-    },
-    {
-      path: "careers",
-      name: "OrgCareers",
-      component: OrgCareer,
-    },
-    {
-      path: "profile",
-      name: "OrgProfile",
-      component: OrgProfile,
-    },
-  ],
-},
+    path: '/organization',
+    name: 'OrgHome',
+    component: OrgHomePage,
+    meta: { requiresAuth: true, role: 'organization' },
+  },
+  {
+    path: '/organization/org-trainings',
+    name: 'OrgTrainings',
+    component: OrgTraining,
+    meta: { requiresAuth: true, role: 'organization' },
+  },
+  {
+    path: '/organization/org-careers',
+    name: 'OrgCareers',
+    component: OrgCareer,
+    meta: { requiresAuth: true, role: 'organization' },
+  },
     
     // 🚨 Catch-all must always be last
     {
@@ -130,18 +126,18 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const user = JSON.parse(localStorage.getItem("user"));
 
+  // 1. Block access if route requires auth and no user
   if (to.meta.requiresAuth && !user) {
     return next({ name: "Login" });
   }
 
-  if (to.meta.role && user?.role !== to.meta.role) {
-    return next(user?.role === "organization" ? "/organization" : "/app");
+  // 2. Block access if role does not match
+  if (to.meta.role && (!user || user.role !== to.meta.role)) {
+    return next({ name: "Login" });
   }
 
-  if (to.name === "Login" && user) {
-    return next(user.role === "organization" ? "/organization" : "/app");
-  }
 
+  // 4. Otherwise, continue
   next();
 });
 

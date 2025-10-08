@@ -17,5 +17,6 @@ protected $fillable = [
     'emailAddress',
     'password',
     'adminID',
+    'api_token',
 ];
 }

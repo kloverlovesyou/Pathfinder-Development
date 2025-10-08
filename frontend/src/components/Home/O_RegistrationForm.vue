@@ -1,6 +1,6 @@
 <template>
   <div
-    class="font-poppins pb-20 min-h-screen flex items-center justify-center bg-gray-50 p-4"
+    class="font-poppins pb-20 min-h-screen flex items-center justify-center p-4"
   >
     <div>
       <div>
@@ -375,6 +375,29 @@
         </div>
       </form>
     </div>
+
+        <!-- 🔵 Success Modal -->
+    <div
+      v-if="showSuccessModal"
+      class="fixed inset-0 flex items-center justify-center z-50"
+      style="background-color: rgba(0, 0, 0, 0.3)"
+    >
+      <div class="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full text-center relative">
+        <h2 class="text-lg font-bold text-green-600 mb-4">
+          Registration Successful 🎉
+        </h2>
+        <p class="text-sm mb-6">
+          Your organization account has been created successfully.<br />
+          Click OK to go to the login page.
+        </p>
+        <button
+          class="btn btn-primary w-3/4 bg-dark-slate text-white"
+          @click="goToLogin"
+        >
+          OK
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -390,47 +413,55 @@ const form = ref({
   location: "",
   websiteURL: "",
   emailAddress: "",
+  phoneNumber: "",
   password: "",
   confirmPassword: "",
 });
 
 const termsAccepted = ref(false);
 const showModal = ref(false);
+const showSuccessModal = ref(false);
 
 const handleSubmit = async () => {
   if (!termsAccepted.value) {
-    alert("You must accept the terms and conditions.");
     return;
   }
-
   if (form.value.password !== form.value.confirmPassword) {
-    alert("Passwords do not match.");
     return;
   }
 
   try {
-    // ✅ Remove confirmPassword before sending
     const { confirmPassword, ...payload } = form.value;
+    await axios.post("http://127.0.0.1:8000/api/organization", payload);
 
-    const response = await axios.post(
-      "http://127.0.0.1:8000/api/organization",
-      payload
-    );
+    // ✅ Show success modal instead of alert
+    showSuccessModal.value = true;
 
-    alert(response.data.message); // ✅ show success message
-    router.push("Login");
+    // ✅ Clear form
+    form.value = {
+      name: "",
+      location: "",
+      websiteURL: "",
+      emailAddress: "",
+      phoneNumber: "",
+      password: "",
+      confirmPassword: "",
+    };
+    termsAccepted.value = false;
   } catch (error) {
-    if (error.response?.data?.errors) {
-      alert(Object.values(error.response.data.errors).flat().join("\n"));
-    } else {
-      alert("Registration failed. Please try again.");
-    }
+    console.error(error.response?.data || error.message);
   }
 };
-// Two separate toggles (keeps behaviour clear and independent)
+
+const goToLogin = () => {
+  showSuccessModal.value = false;
+  router.push("Login");
+};
+
 const showPassword = ref(false);
 const showConfirm = ref(false);
 </script>
+
 <style scoped>
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear,
