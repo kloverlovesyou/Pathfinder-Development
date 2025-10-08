@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>Laravel</title>
+        <title>Pathfinder</title>
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -131,4 +131,4 @@
         </div>
     </body>
 </html>
-<?php /**PATH C:\Users\User\Documents\USL\pathfinder\Pathfinder-Development-1\backend\resources\views/welcome.blade.php ENDPATH**/ ?>
+<?php /**PATH C:\Users\Jerald Agustin\OneDrive\Desktop\Pathfinder\Pathfinder-Development\backend\resources\views/welcome.blade.php ENDPATH**/ ?>
