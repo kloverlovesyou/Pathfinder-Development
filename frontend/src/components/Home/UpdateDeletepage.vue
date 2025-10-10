@@ -135,7 +135,7 @@
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="$router.push({ name: 'Login' })"
+            @click="logout"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -426,17 +426,24 @@ const handleDelete = async () => {
     isDeleting.value = true;
     const res = await axios.delete("http://127.0.0.1:8000/api/user", {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      data: { currentPassword: form.value.currentPassword } // send password for verification
     });
-    alert(res.data.message || "Account deleted.");
+    alert(res.data.message);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    router.push("/loginform");
+    router.push("/auth/login");
   } catch (error) {
-    console.error(error.response);
     alert(error.response?.data?.message || "Deletion failed.");
   } finally {
     isDeleting.value = false;
     showDeleteModal.value = false;
   }
+};
+
+const logout = () => {
+  // Remove user data from localStorage
+  localStorage.removeItem("user");
+  // Redirect to login page
+  router.push({ name: "Login" });
 };
 </script>

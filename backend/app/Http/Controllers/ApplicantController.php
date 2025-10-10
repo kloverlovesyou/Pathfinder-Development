@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Applicant;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-
+use Illuminate\Support\Str;
 class ApplicantController extends Controller
 {
     public function a_register(Request $request)
@@ -35,6 +35,7 @@ class ApplicantController extends Controller
         'emailAddress' => $request->emailAddress,
         'phoneNumber'  => $request->phoneNumber,
         'password'     => bcrypt($request->password),
+        'api_token'    => Str::random(60),
     ]);
 
     return response()->json([
@@ -60,23 +61,58 @@ public function login(Request $request)
     return response()->json([
         'message' => 'Login successful',
         'user' => $applicant,
+        'token' => $applicant->api_token, // send token to frontend
     ]);
 }
 
-public function destroy(Request $request)
-{
-    $user = $request->user(); // get authenticated user
+ // Update applicant profile
+    public function update(Request $request)
+    {
+        $token = $request->bearerToken();
+        $applicant = Applicant::where('api_token', $token)->first();
 
-    if ($user) {
-        // delete the account
-        $user->delete();
+        if (!$applicant) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
 
-        // revoke all tokens (logout everywhere)
-        $user->tokens()->delete();
+        // Optional: Verify current password before allowing update
+        if (!Hash::check($request->currentPassword, $applicant->password)) {
+            return response()->json(['message' => 'Incorrect current password'], 403);
+        }
 
-        return response()->json(['message' => 'Account deleted successfully']);
+        // Update fields
+        $applicant->update([
+            'firstName' => $request->firstName,
+            'middleName' => $request->middleName,
+            'lastName' => $request->lastName,
+            'address' => $request->address,
+            'emailAddress' => $request->emailAddress,
+            'phoneNumber' => $request->phoneNumber,
+            'password' => $request->newPassword ? Hash::make($request->newPassword) : $applicant->password,
+        ]);
+
+        return response()->json(['message' => 'Profile updated successfully']);
     }
 
-    return response()->json(['message' => 'User not found'], 404);
+
+// Delete applicant account
+   public function destroy(Request $request)
+{
+    $token = $request->bearerToken();
+    $user = Applicant::where('api_token', $token)->first();
+
+    if (!$user) {
+        return response()->json(['message' => 'Unauthorized'], 401);
+    }
+
+    // Verify password
+    if (!Hash::check($request->currentPassword, $user->password)) {
+        return response()->json(['message' => 'Incorrect password'], 403);
+    }
+
+    $user->delete();
+
+    return response()->json(['message' => 'Account deleted successfully']);
 }
+
 }

@@ -17,6 +17,8 @@ import OrgTraining from "@/components/Organization/OrganizationTrainings.vue";
 import OrgCareer from "@/components/Organization/OrganizationCareers.vue";
 import MainLayout from "@/components/Layout/MainLayout.vue";
 import AuthLayout from "@/components/Layout/AuthLayout.vue";
+import OrgCalendar from "@/components/Organization/OrganizationCalendar.vue";
+
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 
@@ -28,8 +30,13 @@ const router = createRouter({
       path: "/",
       redirect: "/auth/login",
     },
+    {
+      path: "/OrgCalendar",
+      component: OrgCalendar,
+      meta: { requiresAuth: true, role: "organization" },
+    },
 
-// Auth pages
+      // Auth pages
     {
       path: "/auth",
       component: AuthLayout,
@@ -89,23 +96,25 @@ const router = createRouter({
       ],
     },
 
-    // Organization-specific pages
     {
-      path: "/organization",
-      component: OrgHomePage,
-      meta: { requiresAuth: true, role: "organization" },
-    },
-    {
-      path: "/org-trainings",
-      component: OrgTraining,
-      meta: { requiresAuth: true, role: "organization" },
-    },
-    {
-      path: "/org-careers",
-      component: OrgCareer,
-      meta: { requiresAuth: true, role: "organization" },
-    },
-
+    path: '/organization',
+    name: 'OrgHome',
+    component: OrgHomePage,
+    meta: { requiresAuth: true, role: 'organization' },
+  },
+  {
+    path: '/organization/org-trainings',
+    name: 'OrgTrainings',
+    component: OrgTraining,
+    meta: { requiresAuth: true, role: 'organization' },
+  },
+  {
+    path: '/organization/org-careers',
+    name: 'OrgCareers',
+    component: OrgCareer,
+    meta: { requiresAuth: true, role: 'organization' },
+  },
+    
     // 🚨 Catch-all must always be last
     {
       path: "/:pathMatch(.*)*",
@@ -117,14 +126,18 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const user = JSON.parse(localStorage.getItem("user"));
 
+  // 1. Block access if route requires auth and no user
   if (to.meta.requiresAuth && !user) {
     return next({ name: "Login" });
   }
 
-  if (to.meta.role && user?.role !== to.meta.role) {
-    return next({ name: "Login" }); // optional: redirect to 403 page
+  // 2. Block access if role does not match
+  if (to.meta.role && (!user || user.role !== to.meta.role)) {
+    return next({ name: "Login" });
   }
 
+
+  // 4. Otherwise, continue
   next();
 });
 

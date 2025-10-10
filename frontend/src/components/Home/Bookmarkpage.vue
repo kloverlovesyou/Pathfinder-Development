@@ -1,23 +1,11 @@
 <script setup>
 import { useRouter } from "vue-router";
 import { ref, onMounted } from "vue";
+const userName = ref("");
+// Get user data from localStorage
+
 
 const router = useRouter();
-const userName = ref("");
-
-onMounted(() => {
-  const savedUser = localStorage.getItem("user");
-  if (savedUser) {
-    const user = JSON.parse(savedUser);
-    if (user.firstName && user.lastName) {
-      userName.value = `${user.firstName} ${user.lastName}`;
-    } else {
-      userName.value = "Guest";
-    }
-  } else {
-    userName.value = "Guest";
-  }
-});
 </script>
 <template>
   <main class="font-poppins">
@@ -158,7 +146,7 @@ onMounted(() => {
             </button>
             <button
               class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-              @click="$router.push({ name: 'Login' })"
+              @click="logout"
             >
               <svg
                 class="size-6 flex-shrink-0"
