@@ -30,23 +30,18 @@ const router = createRouter({
       path: "/",
       redirect: "/auth/login",
     },
-    {
-      path: "/OrgCalendar",
-      component: OrgCalendar,
-      meta: { requiresAuth: true, role: "organization" },
-    },
 
-      // Auth pages
+    // Auth pages
     {
       path: "/auth",
       component: AuthLayout,
       children: [
         { path: "login", name: "Login", component: LoginForm },
-        { 
-          path: "register", 
+        {
+          path: "register",
           alias: "/typeofaccount",   // 👈 Now /typeofaccount works too
-          name: "Register", 
-          component: TypeOfAccount 
+          name: "Register",
+          component: TypeOfAccount
         },
         {
           path: "aregistration",
@@ -97,24 +92,30 @@ const router = createRouter({
     },
 
     {
-    path: '/organization',
-    name: 'OrgHome',
-    component: OrgHomePage,
-    meta: { requiresAuth: true, role: 'organization' },
-  },
-  {
-    path: '/organization/org-trainings',
-    name: 'OrgTrainings',
-    component: OrgTraining,
-    meta: { requiresAuth: true, role: 'organization' },
-  },
-  {
-    path: '/organization/org-careers',
-    name: 'OrgCareers',
-    component: OrgCareer,
-    meta: { requiresAuth: true, role: 'organization' },
-  },
-    
+      path: '/organization',
+      name: 'OrgHome',
+      component: OrgHomePage,
+      meta: { requiresAuth: true, role: 'organization' },
+    },
+    {
+      path: '/organization/org-trainings',
+      name: 'OrgTrainings',
+      component: OrgTraining,
+      meta: { requiresAuth: true, role: 'organization' },
+    },
+    {
+      path: '/organization/org-careers',
+      name: 'OrgCareers',
+      component: OrgCareer,
+      meta: { requiresAuth: true, role: 'organization' },
+    },
+    {
+      path: "/organization/org-calendar",
+      name: 'OrgCalendar', 
+      component: OrgCalendar,
+      meta: { requiresAuth: true, role: "organization" },
+    },
+
     // 🚨 Catch-all must always be last
     {
       path: "/:pathMatch(.*)*",

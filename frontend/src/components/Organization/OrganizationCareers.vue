@@ -78,7 +78,7 @@
           </svg>
           <span>Career</span>
         </div>
-        <div class="icon" @click="navigateTo('/app/calendar')">
+        <div class="icon" @click="navigateTo({ name: 'OrgCalendar' })">
           <svg
             width="26"
             height="26"
@@ -379,7 +379,7 @@ const goToProfile = () => router.push('/profile');
 const goToHome = () => router.push('/organization');
 const goToTrainings = () => router.push({ name: 'OrgTrainings' });
 const goToCareers = () => router.push({ name: 'OrgCareers' });
-const goToCalendar = () => router.push('/app/calendar');
+const goToCalendar = () => router.push({ name: 'OrgCalendar' });
 
 // Generic navigation function
 const navigateTo = (route) => {
