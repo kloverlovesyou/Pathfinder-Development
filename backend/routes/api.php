@@ -8,6 +8,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ResumeController;
 use App\Http\Controllers\ProfessionalExperienceController;
 use App\Http\Controllers\EducationController;
+use App\Http\Controllers\SkillController;
 
 Route::get('/organization', [OrganizationController::class, 'index']);
 
@@ -48,5 +49,10 @@ Route::middleware('auth.custom')->group(function () {
     Route::put('/education/{id}', [EducationController::class, 'update']);
     Route::delete('/education/{id}', [EducationController::class, 'destroy']);
 });
+
+// ✅ Skill routes
+Route::get('/skills/{resumeID}', [SkillController::class, 'index']);
+Route::post('/skills', [SkillController::class, 'store']);
+Route::delete('/skills/{id}', [SkillController::class, 'destroy']);
 
 Route::delete('/user', [ApplicantController::class, 'destroy']);
