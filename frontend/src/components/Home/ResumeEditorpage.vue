@@ -842,9 +842,11 @@ const logout = () => {
                 <p>{{ edu.graduationYear }}</p>
               </div>
             </div>
+
             <!-- Skills -->
             <div class="border rounded p-4 space-y-3">
               <label class="text-lg font-semibold">Skills</label>
+
               <div class="flex gap-2">
                 <!-- 👇 use newSkill, not resume.skills -->
                 <input
@@ -852,6 +854,7 @@ const logout = () => {
                   type="text"
                   placeholder="Type a skill"
                   class="input-field flex-1 border rounded p-2"
+                  @keyup.enter="addSkill" 
                 />
                 <button
                   type="button"
@@ -861,13 +864,14 @@ const logout = () => {
                   +
                 </button>
               </div>
+
               <div class="flex flex-wrap gap-2 mt-2">
                 <span
                   v-for="(skill, index) in resume.skills"
                   :key="index"
                   class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full flex items-center gap-2"
                 >
-                  {{ skill.skillName || skill }} 
+                  {{ skill.skillName || skill }}
                   <button
                     type="button"
                     @click="removeSkill(index)"
@@ -878,6 +882,7 @@ const logout = () => {
                 </span>
               </div>
             </div>
+
             <!-- URL -->
             <div class="border rounded p-4 space-y-4 relative">
               <h2 class="text-lg font-semibold">URL</h2>
