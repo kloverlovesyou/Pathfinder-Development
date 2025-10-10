@@ -160,18 +160,23 @@ const newEducation = reactive({
   }
 
   async function loadEducation() {
-    try {
-      const token = localStorage.getItem("token");
-      const { data } = await axios.get("http://127.0.0.1:8000/api/educations", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+  try {
+    const token = localStorage.getItem("token");
+    const resumeID = resume.resumeID || localStorage.getItem("resumeID");
 
-      resume.education = data || []; // 🔥 dito dapat siya ma-assign
-      console.log("Education Data:", resume.education);
-    } catch (error) {
-      console.error("Error loading education:", error.response?.data || error);
-    }
+    const { data } = await axios.get(
+      `http://127.0.0.1:8000/api/education?resumeID=${resumeID}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    resume.education = data || [];
+    console.log("✅ Education Data Loaded:", resume.education);
+  } catch (error) {
+    console.error("❌ Error loading education:", error.response?.data || error);
   }
+}
 
   async function removeEducation(index) {
     try {
