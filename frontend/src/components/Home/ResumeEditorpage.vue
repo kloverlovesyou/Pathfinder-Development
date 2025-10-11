@@ -645,13 +645,14 @@ const logout = () => {
               />
             </div>
 
-            <!-- URL -->
+             <!-- URL -->
             <div class="border rounded p-4 space-y-4 relative">
               <h2 class="text-lg font-semibold">Professional Link</h2>
               <input
                 type="url"
+                placeholder="URL"
                 class="input-field border rounded p-2 w-full"
-                v-model="resume.professionalLink"
+                v-model="resume.url"
               />
             </div>
             <!-- Professional Summary -->
@@ -931,16 +932,7 @@ const logout = () => {
               </div>
             </div>
 
-            <!-- URL -->
-            <div class="border rounded p-4 space-y-4 relative">
-              <h2 class="text-lg font-semibold">URL</h2>
-              <input
-                type="url"
-                placeholder="URL"
-                class="input-field border rounded p-2 w-full"
-                v-model="resume.url"
-              />
-            </div>
+
             <!-- Save Button -->
             <div class="flex gap-4">
               <button
