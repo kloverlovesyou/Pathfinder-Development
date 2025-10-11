@@ -94,7 +94,6 @@ async function loadResume() {
     console.error("Error loading resume:", error.response?.data || error);
   }
 }
-
 // --- Delete Resume ---
 async function deleteResume() {
   try {
@@ -645,6 +644,16 @@ const logout = () => {
                 class="input-field border rounded p-2"
               />
             </div>
+
+            <!-- URL -->
+            <div class="border rounded p-4 space-y-4 relative">
+              <h2 class="text-lg font-semibold">Professional Link</h2>
+              <input
+                type="url"
+                class="input-field border rounded p-2 w-full"
+                v-model="resume.professionalLink"
+              />
+            </div>
             <!-- Professional Summary -->
             <div class="border rounded p-4 space-y-4 relative">
               <label class="block text-lg font-semibold mb-1"
@@ -658,12 +667,14 @@ const logout = () => {
                 ></textarea>
               </div>
             </div>
-            
+
             <!-- Professional Experience -->
             <div class="border rounded p-4 space-y-4 relative">
               <!-- Header with Plus Button -->
               <div class="flex justify-between items-center">
-                <label class="text-lg font-semibold">Professional Experience</label>
+                <label class="text-lg font-semibold"
+                  >Professional Experience</label
+                >
                 <button
                   type="button"
                   @click="showNewExperienceForm = true"
@@ -674,26 +685,54 @@ const logout = () => {
               </div>
 
               <!-- New Experience Form -->
-              <div v-if="showNewExperienceForm" class="border p-3 rounded space-y-3 mt-3">
+              <div
+                v-if="showNewExperienceForm"
+                class="border p-3 rounded space-y-3 mt-3"
+              >
                 <div>
                   <label class="block font-medium mb-1">Job Title</label>
-                  <input v-model="newExperience.jobTitle" type="text" placeholder="Enter job title" class="input-field border rounded w-full p-2" />
+                  <input
+                    v-model="newExperience.jobTitle"
+                    type="text"
+                    placeholder="Enter job title"
+                    class="input-field border rounded w-full p-2"
+                  />
                 </div>
                 <div>
                   <label class="block font-medium mb-1">Company Name</label>
-                  <input v-model="newExperience.companyName" type="text" placeholder="Enter company name" class="input-field border rounded w-full p-2" />
+                  <input
+                    v-model="newExperience.companyName"
+                    type="text"
+                    placeholder="Enter company name"
+                    class="input-field border rounded w-full p-2"
+                  />
                 </div>
                 <div>
                   <label class="block font-medium mb-1">Company Address</label>
-                  <input v-model="newExperience.companyAddress" type="text" placeholder="Enter company address" class="input-field border rounded w-full p-2" />
+                  <input
+                    v-model="newExperience.companyAddress"
+                    type="text"
+                    placeholder="Enter company address"
+                    class="input-field border rounded w-full p-2"
+                  />
                 </div>
                 <div>
                   <label class="block font-medium mb-1">Start Year</label>
-                  <input v-model="newExperience.startYear" type="number" placeholder="e.g. 2020" class="input-field border rounded w-full p-2" />
+                  <input
+                    v-model="newExperience.startYear"
+                    type="number"
+                    placeholder="e.g. 2020"
+                    class="input-field border rounded w-full p-2"
+                  />
                 </div>
                 <div>
                   <label class="block font-medium mb-1">End Year</label>
-                  <input v-model="newExperience.endYear" type="number" placeholder="e.g. 2022" class="input-field border rounded w-full p-2" />
+                  <input
+                    v-model="newExperience.endYear"
+                    type="number"
+                    placeholder="e.g. 2022"
+                    class="input-field border rounded w-full p-2"
+                  />
                 </div>
                 <button
                   type="button"
@@ -718,7 +757,9 @@ const logout = () => {
                   ✕
                 </button>
 
-                <p><strong>{{ exp.jobTitle }}</strong></p>
+                <p>
+                  <strong>{{ exp.jobTitle }}</strong>
+                </p>
                 <p>{{ exp.companyName }}</p>
                 <p>{{ exp.companyAddress }}</p>
                 <p>
@@ -742,7 +783,10 @@ const logout = () => {
               </div>
 
               <!-- New Education Form -->
-              <div v-if="showNewEducationForm" class="border p-3 rounded space-y-3 mt-3">
+              <div
+                v-if="showNewEducationForm"
+                class="border p-3 rounded space-y-3 mt-3"
+              >
                 <!-- Education Level -->
                 <div>
                   <label class="block font-medium mb-1">Education Level</label>
@@ -790,7 +834,9 @@ const logout = () => {
 
                 <!-- Institution Address -->
                 <div>
-                  <label class="block font-medium mb-1">Institution Address</label>
+                  <label class="block font-medium mb-1"
+                    >Institution Address</label
+                  >
                   <input
                     v-model="newEducation.institutionAddress"
                     type="text"
@@ -835,7 +881,9 @@ const logout = () => {
                   ✕
                 </button>
 
-                <p><strong>{{ edu.educationLevel }}</strong></p>
+                <p>
+                  <strong>{{ edu.educationLevel }}</strong>
+                </p>
                 <p v-if="edu.major">{{ edu.major }}</p>
                 <p>{{ edu.institutionName }}</p>
                 <p>{{ edu.institutionAddress }}</p>
