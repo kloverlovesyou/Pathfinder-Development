@@ -14,7 +14,7 @@ const trainings = ref([
     id: 1,
     title: "Professional development in emerging technologies",
     description: "Learn about cutting-edge technologies and skills.",
-    type: "Workshop",
+    mode: "Onsite",
     schedule: "2025-11-24T13:30:00",
     location: "Tech Hall, Manila",
     trainingLink: "https://example.com/training/1",
@@ -25,7 +25,7 @@ const trainings = ref([
     id: 2,
     title: "Mind Over Machine: Navigating AI in Everyday Life",
     description: "Understand AI’s role in daily decision-making.",
-    type: "Seminar",
+    mode: "Online",
     schedule: "2025-09-20T19:30:00",
     location: "AI Center, Cebu",
     trainingLink: "https://example.com/training/2",
@@ -43,6 +43,7 @@ const trainingsWithOrg = computed(() =>
     const org = organizations.value.find((o) => o.id === t.organizationID);
     return {
       ...t,
+
       organizationName: org ? org.name : "Unknown",
       formattedSchedule: new Date(t.schedule).toLocaleString("en-US", {
         dateStyle: "medium",
@@ -200,7 +201,7 @@ onMounted(async () => {
           <div class="divider"></div>
 
           <p class="text-gray-600 mb-2">
-            <strong>Type:</strong> {{ selectedTraining.type }}
+            <strong>Mode:</strong> {{ selectedTraining.mode }}
           </p>
           <p class="mb-2">
             <strong>Schedule:</strong> {{ selectedTraining.formattedSchedule }}
