@@ -11,7 +11,7 @@ const posts = ref([
     organizationID: 1,
     location: "Main Hall",
     trainingLink: "#",
-    registrationLink: "#",
+    mode: "Onsite",
     description: "Learn about emerging technologies.",
   },
   {
@@ -21,7 +21,7 @@ const posts = ref([
     organizationID: 2,
     location: "Auditorium",
     trainingLink: "#",
-    registrationLink: "#",
+    mode: "Onsite",
     description: "Explore how AI affects daily life.",
   },
   {
@@ -31,7 +31,7 @@ const posts = ref([
     organizationID: 2,
     location: "Auditorium",
     trainingLink: "#",
-    registrationLink: "#",
+    mode: "Onsite",
     description: "Explore how AI affects daily life.",
   },
   {
@@ -41,7 +41,7 @@ const posts = ref([
     organizationID: 2,
     location: "Auditorium",
     trainingLink: "#",
-    registrationLink: "#",
+    mode: "Onsite",
     description: "Explore how AI affects daily life.",
   },
   {
@@ -348,14 +348,16 @@ function submitApplication() {
               Register
             </button>
           </div>
+          <p>
+            <strong>Mode:</strong> {{ selectedPost.mode || "Not specified" }}
+          </p>
+
           <p><strong>Description:</strong> {{ selectedPost.description }}</p>
           <p>
             <strong>Schedule:</strong>
             {{ formatDateTime(selectedPost.schedule) }}
           </p>
           <p><strong>Location:</strong> {{ selectedPost.location }}</p>
-
-          <!-- Buttons -->
         </div>
 
         <!-- Career -->
