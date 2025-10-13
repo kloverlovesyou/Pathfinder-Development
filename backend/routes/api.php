@@ -8,6 +8,19 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ResumeController;
 use App\Http\Controllers\ProfessionalExperienceController;
 use App\Http\Controllers\EducationController;
+use App\Http\Controllers\TrainingController;
+use App\Http\Controllers\CareerController;
+
+
+//no auth required
+Route::get('/trainings', [TrainingController::class, 'index']);
+Route::get('/careers', [CareerController::class, 'index']);
+//auth required
+Route::middleware('auth.custom')->group(function () {
+    Route::post('/trainings', [TrainingController::class, 'store']);
+    Route::post('/careers', [CareerController::class, 'store']);
+});
+
 
 Route::get('/organization', [OrganizationController::class, 'index']);
 
