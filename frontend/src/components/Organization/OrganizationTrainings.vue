@@ -109,16 +109,25 @@
         </div>
 
         <div class="training-slider">
-          <div class="training-card" v-for="training in upcomingtrainings" :key="training.id">
+          <div class="training-card" v-for="training in upcomingtrainings" :key="training.trainingID">
             <div class="training-left">
               <div class="training-avatar"></div>
             </div>
 
             <div class="training-right">
               <h3 class="training-title">{{ training.title }}</h3>
+              <p class="training-description">{{ training.description }}</p>
               <p class="training-date">
-                {{ training.date }} | {{ training.time }}
+                {{ formatSchedule(training.schedule) }}
               </p>
+              <p class="training-mode">{{ training.mode }}</p>
+              <p class="training-location" v-if="training.mode === 'On-Site'">
+                📍 {{ training.location }}
+              </p>
+              <p class="training-link" v-else-if="training.mode === 'Online'">
+                🔗 {{ training.trainingLink }}
+              </p>
+              <p class="training-organization">{{ training.name }}</p>
             </div>
 
             <!-- 3-dot menu -->
@@ -343,6 +352,7 @@
 
 <script>
 import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
+import axios from 'axios';
 
 export default {
   data() {
@@ -351,26 +361,8 @@ export default {
       openUpcomingMenu: null,
       openCompletedMenu: null,
 
-      registrantsList: [
-        { id: 1, name: "John Doe", img: "https://i.pravatar.cc/100?img=1" },
-        { id: 2, name: "Maria Santos", img: "https://i.pravatar.cc/100?img=2" },
-        { id: 3, name: "David Cruz", img: "https://i.pravatar.cc/100?img=3" },
-        { id: 4, name: "Anna Lee", img: "https://i.pravatar.cc/100?img=4" },
-        { id: 5, name: "Mark Reyes", img: "https://i.pravatar.cc/100?img=5" },
-        { id: 6, name: "Sophia Tan", img: "https://i.pravatar.cc/100?img=6" },
-        { id: 7, name: "James Lim", img: "https://i.pravatar.cc/100?img=7" },
-        { id: 8, name: "Christine Dela Cruz", img: "https://i.pravatar.cc/100?img=8" },
-        { id: 9, name: "Robert Mendoza", img: "https://i.pravatar.cc/100?img=9" },
-        { id: 10, name: "Isabella Garcia", img: "https://i.pravatar.cc/100?img=10" },
-        { id: 11, name: "Daniel Chua", img: "https://i.pravatar.cc/100?img=11" },
-        { id: 12, name: "Patricia Ong", img: "https://i.pravatar.cc/100?img=12" },
-        { id: 13, name: "Michael Torres", img: "https://i.pravatar.cc/100?img=13" },
-        { id: 14, name: "Angela Bautista", img: "https://i.pravatar.cc/100?img=14" },
-        { id: 15, name: "Kevin Ramirez", img: "https://i.pravatar.cc/100?img=15" }
-      ],
-      showRegistrantsModal: false,
+      registrantsList: [],
 
-      showCertUploadModal: false,
       selectedRegistrant: {
         name: '',
         dateRegistered: '',
@@ -380,27 +372,8 @@ export default {
         uploadedFile: null // New data field for the form
       },
 
-      upcomingtrainings: [
-
-      ],
-
-      completedtrainings: [
-        { id: 1, title: "Data Privacy and Security Essentials", date: "August 15, 2025", time: "2:00 PM – 4:00 PM" },
-        { id: 2, title: "Effective Team Communication Workshop", date: "August 12, 2025", time: "9:30 AM – 11:00 AM" },
-        { id: 3, title: "Introduction to Cloud Computing", date: "August 10, 2025", time: "1:00 PM – 3:30 PM" },
-        { id: 4, title: "Agile Project Kickoff", date: "August 7, 2025", time: "10:00 AM – 12:00 PM" },
-        { id: 5, title: "Basics of SQL", date: "August 5, 2025", time: "3:00 PM – 5:00 PM" },
-        { id: 6, title: "Public Speaking Bootcamp", date: "August 3, 2025", time: "9:00 AM – 11:00 AM" },
-        { id: 7, title: "Intro to Graphic Design", date: "July 31, 2025", time: "2:00 PM – 4:00 PM" },
-        { id: 8, title: "Conflict Resolution Training", date: "July 29, 2025", time: "11:00 AM – 1:00 PM" },
-        { id: 9, title: "Workplace Diversity & Inclusion", date: "July 27, 2025", time: "10:00 AM – 12:00 PM" },
-        { id: 10, title: "Excel for Data Analysis", date: "July 25, 2025", time: "9:00 AM – 11:30 AM" },
-        { id: 11, title: "Emotional Intelligence Workshop", date: "July 23, 2025", time: "1:30 PM – 3:30 PM" },
-        { id: 12, title: "Customer Service Excellence", date: "July 21, 2025", time: "2:00 PM – 4:00 PM" },
-        { id: 13, title: "Business Writing Skills", date: "July 19, 2025", time: "9:00 AM – 11:00 AM" },
-        { id: 14, title: "Leadership Essentials", date: "July 17, 2025", time: "3:00 PM – 5:00 PM" },
-        { id: 15, title: "Intro to Data Visualization", date: "July 15, 2025", time: "10:00 AM – 12:00 PM" }
-      ],
+      upcomingtrainings: [],
+      completedtrainings: [],
 
       // Popup state + form
       showTrainingPopup: false,
@@ -411,12 +384,12 @@ export default {
         time: "",
         mode: "",
         location: "",
-        trainingLink: "",
-        registrationLink: ""
+        trainingLink: ""
       },
       upcomingtrainings: []
     }
   },
+
   methods: {
     toggleUpcomingMenu(id) {
       this.openUpcomingMenu = this.openUpcomingMenu === id ? null : id
@@ -459,6 +432,16 @@ export default {
       this.selectedRegistrant = null;
     },
 
+    //fetch trainings
+    async fetchTrainings(){
+      try{
+        const response = await axios.get("http://127.0.0.1:8000/api/trainings");
+        this.upcomingtrainings = response.data;
+      } catch (error){
+        console.error("ERROR FETCHING TRAININGS: ", error);
+      }
+    },
+
 
     // Popup methods
     openTrainingPopup() {
@@ -469,32 +452,134 @@ export default {
       this.newTraining = {
         title: "",
         description: "",
-        schedule: "",
-        mode: "On-Site",
+        date: "",
+        time: "",
+        mode: "",
         location: "",
-        registrationLink: ""
+        trainingLink: ""
       }
     },
-    saveTraining() {
-      this.upcomingtrainings.push({
-        id: Date.now(),
-        title: this.newTraining.title,
-        description: this.newTraining.description,
-        date: this.newTraining.date,
-        time: this.newTraining.time
-      });
+    async saveTraining() {
+      try {
+        //ensure both date and time are filled
+        if(!this.newTraining.date || !this.newTraining.time){
+          alert("PLEASE SELECT BOTH A DATE AND TIME FOR THE TRAINING");
+          return; 
+        } 
 
-      // clear form
-      this.newTraining = {
-        title: "",
-        description: "",
-        date: "",
-        time: ""
-      };
-      this.closeTrainingPopup()
+        //combine datetime
+        const combinedSchedule = `${this.newTraining.date} ${this.newTraining.time}`;
+
+        //payload matching controller
+        const payload = {
+          title: this.newTraining.title,
+          description: this.newTraining.description,
+          schedule: combinedSchedule,
+          mode: this.newTraining.mode,
+          location: this.newTraining.location || null,
+          training_link: this.newTraining.trainingLink || null,
+        };
+
+        //just a debug log, remove later
+        console.log("PAYLOAD BEING SENT TO BACKEND: ", payload);
+
+        //send to API
+        const token = localStorage.getItem('token');
+        const response = await axios.post("http://127.0.0.1:8000/api/trainings", payload, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log("TRAINING SAVED:", response.data);
+
+        //add it to the upcoming trainings
+        if(response.data && response.data.data){
+          const newTraining = response.data.data;
+
+          //get organization name
+          const storedUser = localStorage.getItem("user");
+          let organizationName = "Unknown Organization";
+          if(storedUser){
+            const user = JSON.parse(storedUser);
+            organizationName = user.displayName || user.name || "Unknown Organization";
+          }
+
+          // Parse the schedule to separate date and time
+          const scheduleDate = new Date(newTraining.schedule);
+          const formattedDate = scheduleDate.toLocaleDateString('en-US', {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          });
+          const formattedTime = scheduleDate.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+
+          this.upcomingtrainings.push({
+            id: newTraining.trainingID,
+            title: newTraining.title,
+            description: newTraining.description,
+            schedule: newTraining.schedule,
+            date: formattedDate,
+            time: formattedTime,
+            mode: newTraining.mode,
+            ...(newTraining.mode === 'On-Site'
+            ? {location: newTraining.location}
+            : {trainingLink: newTraining.trainingLink}
+            ),
+            organizationName: organizationName
+          })
+        }
+
+        alert("TRAINING POSTED SUCCESSFULLY!!!");
+
+        //reset form
+        this.newTraining = {
+          title: "",
+          description: "",
+          date: "",
+          time: "",
+          mode: "",
+          location: "",
+          trainingLink: "",
+        };
+
+        this.showTrainingPopup = false;
+    } catch (error) {
+        console.error("ERROR SAVING TRAINING:", error.response?.data || error);
+        alert("SOMETHING WENT WRONG WHILE SAVING THE TRAINING");
+      }
+    },
+    formatSchedule(schedule) {
+      if (!schedule) return 'No schedule set';
+      
+      try {
+        const date = new Date(schedule);
+        return date.toLocaleString('en-US', {
+          weekday: 'short',
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      } catch (error) {
+        return schedule; // fallback to raw string
+      }
     }
+
+  },
+
+  mounted(){
+    this.fetchTrainings();
   }
-}
+
+
+};
 </script>
 
 
