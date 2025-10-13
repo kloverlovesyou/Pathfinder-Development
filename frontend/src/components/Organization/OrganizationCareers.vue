@@ -11,7 +11,7 @@
         <!-- Profile Section (only when sidebar is open) -->
         <transition name="fade">
           <div v-if="isSidebarOpen" class="profile-section">
-            <h3 class="org-name">{{ organizationName }}</h3>
+            <h3 class="org-name">{{ name }}</h3>
             <div class="profile-actions">
               <div class="action" @click="$router.push('/updateprofile')">
                 <!-- Update Profile Icon -->
@@ -143,20 +143,20 @@
         </div>
 
         <div class="career-slider">
-          <div class="career-card" v-for="career in upcomingCareers" :key="career.id">
+          <div class="career-card" v-for="career in upcomingCareers" :key="career.careerID">
             <div class="career-left">
             </div>
 
             <div class="career-right">
-              <h3 class="career-title">{{ career.title }}</h3>
+              <h3 class="career-title">{{ career.position }}</h3>
             </div>
 
             <!-- 3-dot menu -->
             <div class="menu">
-              <div class="menu-icon" @click="toggleUpcomingMenu(career.id)">
+              <div class="menu-icon" @click="toggleUpcomingMenu(career.careerID)">
                 ⋮
               </div>
-              <div v-if="openUpcomingMenu === career.id" class="dropdown-menu">
+              <div v-if="openUpcomingMenu === career.careerID" class="dropdown-menu">
                 <ul>
                   <li @click="openRegistrantsModal">Applicants</li>
                 </ul>
@@ -243,6 +243,7 @@
 
 <script>
 import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
+import axios from 'axios'; // Add this import
 
 export default {
   data() {
@@ -312,6 +313,17 @@ export default {
       this.showRegistrantsModal = false;
     },
 
+
+    //fetch careers
+    async fetchCareers(){
+      try{
+        const response = await axios.get("http://127.0.0.1:8000/api/careers");
+        this.upcomingCareers = response.data;
+      } catch(error){
+        console.error("ERROR FETCHING CAREERS:", error);
+      }
+    },
+
     // Popup methods
     openCareerPopup() {
       this.showCareerPopup = true;
@@ -322,19 +334,86 @@ export default {
     },
 
     // Save button function
-    saveCareer() {
-      if (!this.newCareer.position) return; // simple validation
+    async saveCareer() {
+      try {
+        // Basic validation
+        if (!this.newCareer.position || !this.newCareer.details || !this.newCareer.qualifications || !this.newCareer.requirements || !this.newCareer.letterAddress || !this.newCareer.deadline) {
+          alert("PLEASE FILL IN ALL REQUIRED FIELDS");
+          return;
+        }
 
-      this.upcomingCareers.push({
-        id: Date.now(),
-        title: this.newCareer.position,
-        details: this.newCareer.details,
-        qualifications: this.newCareer.qualifications,
-        requirements: this.newCareer.requirements,
-        letterAddress: this.newCareer.letterAddress,
-      });
+        //payload matching controller
+        const payload = {
+          position: this.newCareer.position,
+          details: this.newCareer.details,
+          qualifications: this.newCareer.qualifications,
+          requirements: this.newCareer.requirements,
+          letterAddress: this.newCareer.letterAddress,
+          deadline: this.newCareer.deadline
+        };
 
-      this.closeCareerPopup();
+        //just a debug log, remove later
+        console.log("PAYLOAD BEING SENT TO BACKEND: ", payload);
+
+        //send to API
+        const token = localStorage.getItem('token');
+        const response = await axios.post("http://127.0.0.1:8000/api/careers", payload, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log("CAREER SAVED:", response.data);
+
+        //add it to the upcoming careers
+        if(response.data && response.data.data){
+          const newCareer = response.data.data;
+
+          //get organization name from localStorage
+          const storedUser = localStorage.getItem("user");
+          let organizationName = "Unknown Organization";
+          if(storedUser){
+            const user = JSON.parse(storedUser);
+            organizationName = user.displayName || user.name || "Unknown Organization";
+          }
+
+          // Parse the deadline to separate date and time
+          const deadlineDate = new Date(newCareer.deadlineOfSubmission);
+          const formattedDate = deadlineDate.toLocaleDateString('en-US', {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          });
+          const formattedTime = deadlineDate.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+
+          this.upcomingCareers.push({
+            id: newCareer.careerID,
+            title: newCareer.position,
+            position: newCareer.position,
+            details: newCareer.detailsAndInstructions,
+            qualifications: newCareer.qualifications,
+            requirements: newCareer.requirements,
+            letterAddress: newCareer.applicationLetterAddress,
+            deadline: formattedDate,
+            time: formattedTime,
+            organizationName: organizationName
+          })
+        }
+
+        alert("CAREER POSTED SUCCESSFULLY!!!");
+
+        //reset form
+        this.resetNewCareer();
+        this.showCareerPopup = false;
+      } catch (error) {
+        console.error("ERROR SAVING CAREER:", error.response?.data || error);
+        alert("SOMETHING WENT WRONG WHILE SAVING THE CAREER");
+      }
     },
 
     resetNewCareer() {
@@ -346,7 +425,13 @@ export default {
         letterAddress: "",
       };
     },
+  },
+
+  mounted(){
+    this.fetchCareers();
   }
+
+
 }
 </script>
 
