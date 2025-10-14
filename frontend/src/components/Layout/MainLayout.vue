@@ -11,7 +11,11 @@
 
       <!-- Page Content -->
       <main class="flex-1 overflow-y-auto bg-gray-100">
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <keep-alive>
+            <component :is="Component" />
+          </keep-alive>
+        </router-view> 
       </main>
     </div>
   </div>

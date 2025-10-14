@@ -1,58 +1,31 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, onActivated } from "vue";
 import axios from "axios";
 
 // Example organizations (replace with API later)
-const organizations = ref([
-  { id: 1, name: "Global Tech Institute" },
-  { id: 2, name: "Future Skills Academy" },
-]);
+const organizations = ref([]);
 
 // Trainings data
-const trainings = ref([
-  {
-    id: 1,
-    title: "Professional development in emerging technologies",
-    description: "Learn about cutting-edge technologies and skills.",
-    type: "Workshop",
-    schedule: "2025-11-24T13:30:00",
-    location: "Tech Hall, Manila",
-    trainingLink: "https://example.com/training/1",
-    registrationLink: "https://example.com/register/1",
-    organizationID: 1,
-  },
-  {
-    id: 2,
-    title: "Mind Over Machine: Navigating AI in Everyday Life",
-    description: "Understand AI’s role in daily decision-making.",
-    type: "Seminar",
-    schedule: "2025-09-20T19:30:00",
-    location: "AI Center, Cebu",
-    trainingLink: "https://example.com/training/2",
-    registrationLink: "https://example.com/register/2",
-    organizationID: 2,
-  },
-]);
+const trainings = ref([]);
 
 // Modal + notifications
 const selectedTraining = ref(null);
 const isModalOpen = ref(false);
+const toasts = ref([]);
 
 const trainingsWithOrg = computed(() =>
   trainings.value.map((t) => {
     const org = organizations.value.find((o) => o.id === t.organizationID);
     return {
       ...t,
+
       organizationName: org ? org.name : "Unknown",
-      formattedSchedule: new Date(t.schedule).toLocaleString("en-US", {
-        dateStyle: "medium",
-        timeStyle: "short",
-      }),
+      displaySchedule: t.schedule || "TBD"
     };
   })
 );
 
-// Modal controls
+// Modal controls\
 function openTrainingModal(training) {
   selectedTraining.value = training;
   isModalOpen.value = true;
@@ -78,15 +51,40 @@ function isTrainingBookmarked(trainingId) {
   return bookmarkedTrainings.value.includes(trainingId);
 }
 
+//regster for training function
+function registerForTraining(){
+  addToast('REGISTRATION SUCCESSFUL!!!', 'success');
+}
+
+//toast notification function
+function addToast(message, type = 'info'){
+  const id = Date.now();
+  toasts.value.push({id, message, type});
+  setTimeout(() => {
+    toasts.value = toasts.value.filter(toast => toast.id !== id);
+  }, 3000);
+}
+
+
 // Fetch from API
-onMounted(async () => {
+async function fetchTrainings() {
   try {
     const response = await axios.get("http://127.0.0.1:8000/api/trainings");
     trainings.value = response.data;
   } catch (error) {
     console.error("Error fetching trainings:", error);
+    addToast('FAILED TO LOAD TRAININGS', 'error');
   }
+}
+
+
+//fetch trainings on mount 
+onMounted(fetchTrainings);
+
+onActivated(() => {
+  fetchTrainings();
 });
+
 </script>
 
 <template>
@@ -100,25 +98,25 @@ onMounted(async () => {
       <!-- Training Cards -->
       <div class="space-y-4">
         <div
-          v-for="training in trainingsWithOrg"
-          :key="training.id"
+          v-for="training in trainings"
+          :key="training.trainingID"
           class="p-4 bg-blue-gray rounded-lg relative hover:bg-gray-300 transition cursor-pointer"
           @click="openTrainingModal(training)"
         >
           <!-- Card content -->
           <h3 class="font-semibold text-lg">{{ training.title }}</h3>
           <p class="text-gray-700 font-medium">
-            {{ training.organizationName }}
+            {{ training.organization.name}}
           </p>
         </div>
       </div>
     </div>
     <!-- Training Details Modal -->
-    <dialog v-if="isModalOpen" open class="modal">
-      <div class="modal-box rounded-none relative w-full h-full sm:w-auto">
+    <dialog v-if="isModalOpen" open class="modal sm:modal-middle">
+      <div class="modal-box max-w-3xl relative font-poppins">
         <!-- Close (X) Button -->
         <button
-          class="btn btn-sm btn-circle absolute right-2 top-2 z-10 bg-transparent border-0"
+          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
           @click="closeModal"
         >
           ✕
@@ -129,15 +127,15 @@ onMounted(async () => {
           class="p-6 font-poppins overflow-y-auto h-full sm:h-auto"
         >
           <h1 class="text-2xl font-bold mb-2">{{ selectedTraining.title }}</h1>
-          <p class="mb-2">{{ selectedTraining.organizationName }}</p>
+          <p><strong>Organization:</strong> {{ selectedTraining.organization.name }}</p>
 
           <!-- Action buttons -->
           <div class="flex gap-2 justify-end mb-4">
             <button
               class="rounded-lg flex items-center gap-2 px-3 py-2 border border-gray-300 hover:bg-gray-100 transition"
-              @click.stop="toggleBookmark(selectedTraining.id)"
+              @click.stop="toggleBookmark(selectedTraining.trainingID)"
             >
-              <span v-if="!isTrainingBookmarked(selectedTraining.id)">
+              <span v-if="!isTrainingBookmarked(selectedTraining.trainingID)">
                 <svg
                   width="24"
                   height="24"
@@ -190,8 +188,8 @@ onMounted(async () => {
               </span>
             </button>
             <button
-              @click.stop="registerForTraining"
-              class="btn bg-customButton hover:bg-dark-slate text-white"
+              class="btn bg-customButton btn-sm text-white"
+              @click="registerTraining(selectedPost)"
             >
               Register
             </button>
@@ -200,10 +198,10 @@ onMounted(async () => {
           <div class="divider"></div>
 
           <p class="text-gray-600 mb-2">
-            <strong>Type:</strong> {{ selectedTraining.type }}
+            <strong>Mode:</strong> {{ selectedTraining.mode }}
           </p>
           <p class="mb-2">
-            <strong>Schedule:</strong> {{ selectedTraining.formattedSchedule }}
+            <strong>Schedule:</strong> {{ selectedTraining.schedule }}
           </p>
           <p class="mb-2">
             <strong>Location:</strong> {{ selectedTraining.location }}
@@ -211,6 +209,11 @@ onMounted(async () => {
           <p class="mb-4">
             <strong>Description:</strong> {{ selectedTraining.description }}
           </p>
+          <p>
+            <strong>Schedule:</strong>
+            {{ selectedTraining.formattedScheduleschedule }}
+          </p>
+          <p><strong>Location:</strong> {{ selectedTraining.location }}</p>
         </div>
       </div>
 
