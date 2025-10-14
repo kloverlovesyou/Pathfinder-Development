@@ -1,4 +1,11 @@
 <?php return array (
+  'barryvdh/laravel-ide-helper' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'Barryvdh\\LaravelIdeHelper\\IdeHelperServiceProvider',
+    ),
+  ),
   'laravel/sail' => 
   array (
     'providers' => 
@@ -39,6 +46,13 @@
     'providers' => 
     array (
       0 => 'Termwind\\Laravel\\TermwindServiceProvider',
+    ),
+  ),
+  'reliese/laravel' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'Reliese\\Coders\\CodersServiceProvider',
     ),
   ),
   'spatie/laravel-ignition' => 
