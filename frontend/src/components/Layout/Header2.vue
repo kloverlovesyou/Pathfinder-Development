@@ -84,7 +84,7 @@ onMounted(() => {
             <li class="flex flex-col items-center">
               <button
                 class="flex flex-col items-center w-full"
-                @click="router.push('/trainingpage')"
+                @click="router.push({name: 'Trainingpage'})"
               >
                 <svg
                   width="24"
@@ -320,7 +320,7 @@ onMounted(() => {
                 <li>
                   <button
                     class="text-white py-2 text-lg hover:bg-dark-slate flex items-center justify-start gap-2"
-                    @click="router.push('/trainingpage')"
+                    @click="router.push({name: 'Trainingpage'})"
                   >
                     <svg
                       class="size-6 flex-shrink-0"
