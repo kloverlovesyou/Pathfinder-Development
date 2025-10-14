@@ -122,7 +122,7 @@
         </div>
 
         <div class="career-slider">
-          <div class="career-card" v-for="career in upcomingCareers" :key="career.id"
+          <div class="career-card" v-for="career in upcomingCareers" :key="career.careerID"
             @click="openCareerDetails(career)">
             <div class="career-left">
             </div>
@@ -133,8 +133,8 @@
 
             <!-- 3-dot menu -->
             <div class="menu">
-              <div class="menu-icon" @click.stop="toggleUpcomingMenu(career.id)">⋮</div>
-              <div v-if="openUpcomingMenu === career.id" class="dropdown-menu">
+              <div class="menu-icon" @click.stop="toggleUpcomingMenu(career.careerID)">⋮</div>
+              <div v-if="openUpcomingMenu === career.careerID" class="dropdown-menu">
                 <ul>
                   <li @click.stop="openApplicantsModal">Applicants</li>
                 </ul>
