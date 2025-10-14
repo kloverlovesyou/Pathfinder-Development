@@ -422,7 +422,24 @@ export default {
       showTrainingDetailsModal: false,
       selectedTraining: {},
 
-      registrantsList: [],
+      registrantsList: [
+        { id: 1, name: "John Doe", status: "Attended", dateRegistered: "2025-09-01" },
+        { id: 2, name: "Maria Santos", status: "Attended", dateRegistered: "2025-09-01" },
+        { id: 3, name: "David Cruz", status: "Did not Attend", dateRegistered: "2025-09-02" },
+        { id: 4, name: "Anna Lee", status: "Attended", dateRegistered: "2025-09-03" },
+        { id: 5, name: "Mark Reyes", status: "Attended", dateRegistered: "2025-09-03" },
+        { id: 6, name: "Sophia Tan", status: "Attended", dateRegistered: "2025-09-04" },
+        { id: 7, name: "James Lim", status: "Attended", dateRegistered: "2025-09-05" },
+        { id: 8, name: "Christine Dela Cruz", status: "Did not Attend", dateRegistered: "2025-09-05" },
+        { id: 9, name: "Robert Mendoza", status: "Did not Attend", dateRegistered: "2025-09-06" },
+        { id: 10, name: "Isabella Garcia", status: "Attended", dateRegistered: "2025-09-07" },
+        { id: 11, name: "Daniel Chua", status: "Attended", dateRegistered: "2025-09-08" },
+        { id: 12, name: "Patricia Ong", status: "Attended", dateRegistered: "2025-09-08" },
+        { id: 13, name: "Michael Torres", status: "Attended", dateRegistered: "2025-09-09" },
+        { id: 14, name: "Angela Bautista", status: "Attended", dateRegistered: "2025-09-10" },
+        { id: 15, name: "Kevin Ramirez", status: "Did not Attend", dateRegistered: "2025-09-10" }
+      ],
+      showRegistrantsModal: false,
 
       selectedRegistrant: {
         name: '',
@@ -494,6 +511,17 @@ export default {
     dismissModal() {
       this.showCertUploadModal = false;
       this.selectedRegistrant = null;
+    },
+    openTrainingDetails(training) {
+      this.selectedTraining = training;
+      this.showTrainingDetailsModal = true;
+    },
+    closeTrainingDetails() {
+      this.showTrainingDetailsModal = false;
+    },
+    handleViewRegistrants() {
+      this.closeTrainingDetails(); // close the details modal
+      this.openRegistrantsModal(); // open your registrants modal
     },
 
     //fetch trainings
