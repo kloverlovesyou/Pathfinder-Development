@@ -1,8 +1,20 @@
 <template>
-  <div class="organization-trainings">
+  <div class="organization-careers">
+
+    <!-- Hamburger Toggle -->
+    <button class="hamburger" @click="toggleSidebar" :class="{ open: isSidebarOpen, shifted: isSidebarOpen }">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
     <!-- Sidebar -->
     <transition name="slide">
-      <aside class="sidebar" :class="{ collapsed: !isSidebarOpen }" @click.self="toggleSidebar">
+      <aside class="sidebar" :class="{ collapsed: !isSidebarOpen }">
+
+        <div class="space">
+
+        </div>
         <!-- Avatar always visible -->
         <div class="avatar">
           <img :src="dictLogo" alt="DICT Logo" class="avatar-img" />
@@ -11,9 +23,9 @@
         <!-- Profile Section (only when sidebar is open) -->
         <transition name="fade">
           <div v-if="isSidebarOpen" class="profile-section">
-            <h3 class="org-name">{{ organizationName }}</h3>
+            <h3 class="org-name">{{ name }}</h3>
             <div class="profile-actions">
-              <div class="action" @click="$router.push('/updateprofile')">
+              <div class="action" @click="navigateTo('/updateprofile')">
                 <!-- Update Profile Icon -->
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
@@ -27,13 +39,7 @@
         </transition>
 
         <div class="icon" @click="navigateTo('/organization')">
-          <svg
-            width="30"
-            height="30"
-            viewBox="0 0 30 30"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+          <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M6.25 17.0585C6.25 16.0494 6.25 15.5448 6.47166 15.1141C6.69333 14.6833 7.1039 14.3901 7.92505 13.8035L13.8375 9.58034C14.3989 9.17938 14.6795 8.9789 15 8.9789C15.3205 8.9789 15.6011 9.17938 16.1625 9.58034L22.075 13.8035C22.8961 14.3901 23.3067 14.6833 23.5283 15.1141C23.75 15.5448 23.75 16.0494 23.75 17.0585V24.25C23.75 25.1928 23.75 25.6642 23.4571 25.9571C23.1642 26.25 22.6928 26.25 21.75 26.25H8.25C7.30719 26.25 6.83579 26.25 6.54289 25.9571C6.25 25.6642 6.25 25.1928 6.25 24.25V17.0585Z"
               fill="white" />
@@ -48,27 +54,15 @@
           <span>Home</span>
         </div>
         <div class="icon" @click="navigateTo({ name: 'OrgTrainings' })">
-          <svg
-            width="29"
-            height="29"
-            viewBox="0 0 29 29"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+          <svg width="29" height="29" viewBox="0 0 29 29" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M20.5837 3.625C23.4119 3.625 24.8261 3.62526 25.7048 4.50391C26.5833 5.3826 26.5837 6.79675 26.5837 9.625V19.375C26.5837 22.2033 26.5833 23.6174 25.7048 24.4961C24.8261 25.3747 23.4119 25.375 20.5837 25.375H8.41666C5.58824 25.375 4.17425 25.3748 3.29557 24.4961C2.41689 23.6174 2.41666 22.2034 2.41666 19.375V9.625C2.41666 6.79657 2.41689 5.38259 3.29557 4.50391C4.17425 3.62523 5.58824 3.625 8.41666 3.625H20.5837ZM9.66666 12.292C9.11438 12.292 8.66666 12.7397 8.66666 13.292V20.542L8.67155 20.6445C8.72303 21.1485 9.1491 21.542 9.66666 21.542C10.1842 21.542 10.6103 21.1485 10.6618 20.6445L10.6667 20.542V13.292C10.6667 12.7397 10.2189 12.292 9.66666 12.292ZM19.3337 9.875C18.7814 9.875 18.3337 10.3227 18.3337 10.875V20.542L18.3385 20.6436C18.3896 21.148 18.8158 21.542 19.3337 21.542C19.8514 21.5418 20.2778 21.1479 20.3288 20.6436L20.3337 20.542V10.875C20.3337 10.3228 19.8858 9.87518 19.3337 9.875ZM14.4997 14.708C13.9476 14.7082 13.4998 15.156 13.4997 15.708V20.541L13.5046 20.6436C13.5557 21.1477 13.982 21.5408 14.4997 21.541C15.0175 21.541 15.4436 21.1478 15.4948 20.6436L15.4997 20.541V15.708C15.4995 15.1559 15.0518 14.708 14.4997 14.708Z"
               fill="white" />
           </svg>
           <span>Trainings</span>
         </div>
-        <div class="icon"  @click="navigateTo({ name: 'OrgCareers' })">
-          <svg
-            width="25"
-            height="25"
-            viewBox="0 0 25 25"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+        <div class="icon" @click="navigateTo({ name: 'OrgCareers' })">
+          <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M22.8798 11.0484C23.4046 10.8642 23.9845 11.1431 24.1081 11.6855C24.4792 13.3134 24.4217 15.0018 23.9268 16.6191C23.4739 18.0989 22.6698 19.4685 21.5787 20.6449C21.2148 21.0372 20.6017 21.0197 20.2239 20.6408L14.9487 15.3495C14.4292 14.8284 14.6314 13.9436 15.3257 13.6999L22.8798 11.0484ZM13 4.0826C13 3.50231 13.4932 3.04057 14.0672 3.12592C15.8633 3.39302 17.5788 4.00579 19.085 4.93161C20.3794 5.72731 21.4793 6.72976 22.3343 7.87824C22.709 8.38157 22.4513 9.07932 21.8592 9.28718L14.3313 11.9301C13.6809 12.1584 13 11.6758 13 10.9865V4.0826Z"
               fill="white" />
@@ -78,14 +72,8 @@
           </svg>
           <span>Career</span>
         </div>
-        <div class="icon" @click="navigateTo('/app/calendar')">
-          <svg
-            width="26"
-            height="26"
-            viewBox="0 0 26 26"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+        <div class="icon" @click="navigateTo({ name: 'OrgCalendar' })">
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M2.16675 9.4165C2.16675 7.53089 2.16675 6.58808 2.75253 6.00229C3.33832 5.4165 4.28113 5.4165 6.16675 5.4165H19.8334C21.719 5.4165 22.6618 5.4165 23.2476 6.00229C23.8334 6.58808 23.8334 7.53089 23.8334 9.4165V9.83317C23.8334 10.3046 23.8334 10.5403 23.687 10.6867C23.5405 10.8332 23.3048 10.8332 22.8334 10.8332H3.16675C2.69534 10.8332 2.45964 10.8332 2.31319 10.6867C2.16675 10.5403 2.16675 10.3046 2.16675 9.83317V9.4165Z"
               fill="white" />
@@ -101,17 +89,8 @@
         <div class="spacer"></div>
         <!-- pushes signout down -->
         <div class="icon signout" @click="logout">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
             <polyline points="16 17 21 12 16 7"></polyline>
             <line x1="21" y1="12" x2="9" y2="12"></line>
@@ -143,22 +122,21 @@
         </div>
 
         <div class="career-slider">
-          <div class="career-card" v-for="career in upcomingCareers" :key="career.id">
+          <div class="career-card" v-for="career in upcomingCareers" :key="career.careerID"
+            @click="openCareerDetails(career)">
             <div class="career-left">
             </div>
 
             <div class="career-right">
-              <h3 class="career-title">{{ career.title }}</h3>
+              <h3 class="career-title">{{ career.position }}</h3>
             </div>
 
             <!-- 3-dot menu -->
             <div class="menu">
-              <div class="menu-icon" @click="toggleUpcomingMenu(career.id)">
-                ⋮
-              </div>
-              <div v-if="openUpcomingMenu === career.id" class="dropdown-menu">
+              <div class="menu-icon" @click.stop="toggleUpcomingMenu(career.careerID)">⋮</div>
+              <div v-if="openUpcomingMenu === career.careerID" class="dropdown-menu">
                 <ul>
-                  <li @click="openRegistrantsModal">Applicants</li>
+                  <li @click.stop="openApplicantsModal">Applicants</li>
                 </ul>
               </div>
             </div>
@@ -174,7 +152,8 @@
           </h2>
         </div>
         <div class="career-slider">
-          <div class="career-card" v-for="career in completedCareers" :key="career.id">
+          <div class="career-card" v-for="career in completedCareers" :key="career.id"
+            @click="openCareerDetails(career)">
             <div class="career-left">
             </div>
 
@@ -184,32 +163,30 @@
 
             <!-- 3-dot menu -->
             <div class="menu">
-              <div class="menu-icon" @click="toggleCompletedMenu(career.id)">
-                ⋮
-              </div>
+              <div class="menu-icon" @click.stop="toggleCompletedMenu(career.id)">⋮</div>
               <div v-if="openCompletedMenu === career.id" class="dropdown-menu">
                 <ul>
-                  <li @click="openRegistrantsModal">Applicants</li>
+                  <li @click.stop="openApplicantsModal">Applicants</li>
                 </ul>
               </div>
             </div>
           </div>
         </div>
       </section>
-      <!-- Registrants Modal -->
-      <div v-if="showRegistrantsModal" class="modal-overlay" @click.self="closeModal">
+
+      <!-- Applicants Modal -->
+      <div v-if="showApplicantsModal" class="modal-overlay" @click.self="closeModal">
         <div class="modal-content">
           <button class="modal-close-btn" @click="closeModal">✕</button>
-          <h3 class="modal-title">List of Registrants</h3>
-          <div class="registrants-grid">
-            <div v-for="person in registrantsList" :key="person.id" class="registrant-card">
+          <h3 class="modal-title">List of Applicants</h3>
+          <div class="Applicants-grid">
+            <div v-for="person in applicantsList" :key="person.id" class="registrant-card">
               <img :src="person.img" alt="profile" class="profile-pic" />
               <p>{{ person.name }}</p>
             </div>
           </div>
         </div>
       </div>
-
 
       <!-- Career Popup Modal -->
       <div v-if="showCareerPopup" class="career-popup-overlay">
@@ -237,12 +214,32 @@
           </form>
         </div>
       </div>
+
+      <!-- Career Details Modal -->
+      <div v-if="showCareerDetailsModal" class="modal-overlay" @click.self="closeCareerDetails">
+        <div class="career-details-modal">
+          <button class="modal-close-btn" @click="closeCareerDetails">✕</button>
+          <h3 class="modal-title">{{ selectedCareer.title }}</h3>
+          <p class="career-info"><strong>Position:</strong> {{ selectedCareer.position }}</p>
+          <p class="career-info"><strong>Details:</strong> {{ selectedCareer.details }}</p>
+          <p class="career-info"><strong>Qualifications:</strong> {{ selectedCareer.qualifications }}</p>
+          <p class="career-info"><strong>Requirements:</strong> {{ selectedCareer.requirements }}</p>
+          <p class="career-info"><strong>Letter Address:</strong> {{ selectedCareer.letterAddress }}</p>
+          <p class="career-info"><strong>Deadline:</strong> {{ selectedCareer.deadline }}</p>
+          <div class="career-actions">
+            <button class="btn-view-applicants" @click="handleViewApplicants">
+              View Applicants
+            </button>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 </template>
 
 <script>
 import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
+import axios from 'axios'; // Add this import
 
 export default {
   data() {
@@ -250,8 +247,10 @@ export default {
       dictLogo,
       openUpcomingMenu: null,
       openCompletedMenu: null,
+      showCareerDetailsModal: false,
+      selectedCareer: {},
 
-      registrantsList: [
+      applicantsList: [
         { id: 1, name: "John Doe", img: "https://i.pravatar.cc/100?img=1" },
         { id: 2, name: "Maria Santos", img: "https://i.pravatar.cc/100?img=2" },
         { id: 3, name: "David Cruz", img: "https://i.pravatar.cc/100?img=3" },
@@ -275,14 +274,112 @@ export default {
           img: "https://i.pravatar.cc/100?img=10",
         },
       ],
-      showRegistrantsModal: false,
+      showApplicantsModal: false,
 
-      upcomingCareers: [],
+      upcomingCareers: [
+      ],
 
       completedCareers: [
-        { id: 1, title: "HR Specialist" },
-        { id: 2, title: "Graphic Designer" },
-        { id: 3, title: "Accountant" },
+        {
+          id: 1,
+          title: "HR Specialist",
+          position: "Human Resource Specialist",
+          details: "Responsible for managing employee relations, recruitment, and performance evaluations.",
+          qualifications: "Bachelor’s degree in Psychology, Human Resource Management, or related field.",
+          requirements: "At least 1 year of HR experience; excellent communication and organizational skills.",
+          letterAddress: "Address your application letter to the HR Department, DICT Regional Office.",
+          deadline: "October 30, 2025"
+        },
+        {
+          id: 2,
+          title: "Graphic Designer",
+          position: "Graphic Designer",
+          details: "Creates visual content for social media, print, and digital platforms to support organizational campaigns.",
+          qualifications: "Bachelor’s degree in Multimedia Arts, Fine Arts, or related field.",
+          requirements: "Proficient in Adobe Creative Suite; strong portfolio showcasing design skills.",
+          letterAddress: "Address your application letter to the Creative Services Unit, DICT Regional Office.",
+          deadline: "November 5, 2025"
+        },
+        {
+          id: 3,
+          title: "Accountant",
+          position: "Accountant",
+          details: "Prepares and examines financial records to ensure accuracy and compliance with government policies.",
+          qualifications: "Bachelor’s degree in Accountancy or related field; CPA is an advantage.",
+          requirements: "Knowledge of accounting software and government auditing processes.",
+          letterAddress: "Address your application letter to the Finance Division, DICT Regional Office.",
+          deadline: "November 15, 2025"
+        },
+        {
+          id: 4,
+          title: "IT Support Specialist",
+          position: "Information Technology Support Specialist",
+          details: "Provides technical assistance to end-users, maintains hardware and software systems, and ensures network stability.",
+          qualifications: "Bachelor’s degree in Information Technology, Computer Science, or related field.",
+          requirements: "Experience in troubleshooting, LAN/WAN setup, and computer maintenance.",
+          letterAddress: "Address your application letter to the ICT Operations Unit, DICT Regional Office.",
+          deadline: "November 20, 2025"
+        },
+        {
+          id: 5,
+          title: "Web Developer",
+          position: "Web Developer",
+          details: "Designs, develops, and maintains government websites and online applications for improved service delivery.",
+          qualifications: "Bachelor’s degree in Computer Science, Information Systems, or related field.",
+          requirements: "Proficient in HTML, CSS, JavaScript, and PHP; familiarity with CMS platforms.",
+          letterAddress: "Address your application letter to the Systems Development Division, DICT Regional Office.",
+          deadline: "November 22, 2025"
+        },
+        {
+          id: 6,
+          title: "Network Engineer",
+          position: "Network Engineer",
+          details: "Responsible for configuring and maintaining network devices, ensuring connectivity and security across DICT infrastructure.",
+          qualifications: "Bachelor’s degree in Computer Engineering, Electronics Engineering, or related field.",
+          requirements: "Hands-on experience with routers, switches, and firewalls; Cisco certification is a plus.",
+          letterAddress: "Address your application letter to the Network Operations Center, DICT Regional Office.",
+          deadline: "November 25, 2025"
+        },
+        {
+          id: 7,
+          title: "Administrative Assistant",
+          position: "Administrative Assistant",
+          details: "Provides clerical and logistical support to ensure efficient office operations.",
+          qualifications: "Bachelor’s degree in Business Administration or related field.",
+          requirements: "Proficient in MS Office applications; excellent written and verbal communication skills.",
+          letterAddress: "Address your application letter to the Administrative Division, DICT Regional Office.",
+          deadline: "November 28, 2025"
+        },
+        {
+          id: 8,
+          title: "Project Coordinator",
+          position: "Project Coordinator",
+          details: "Coordinates project activities, documentation, and stakeholder communications for ICT development programs.",
+          qualifications: "Bachelor’s degree in Public Administration, Management, or related field.",
+          requirements: "Strong organizational and multitasking abilities; knowledge in project management tools is an advantage.",
+          letterAddress: "Address your application letter to the Planning and Project Management Division, DICT Regional Office.",
+          deadline: "December 2, 2025"
+        },
+        {
+          id: 9,
+          title: "Public Information Officer",
+          position: "Public Information Officer",
+          details: "Develops and disseminates public communication materials, handles media relations, and manages social media presence.",
+          qualifications: "Bachelor’s degree in Communication, Journalism, or related field.",
+          requirements: "Excellent writing and public speaking skills; experience in PR or media management preferred.",
+          letterAddress: "Address your application letter to the Public Information Office, DICT Regional Office.",
+          deadline: "December 5, 2025"
+        },
+        {
+          id: 10,
+          title: "Data Analyst",
+          position: "Data Analyst",
+          details: "Analyzes and interprets data to support policy decisions, improve systems, and monitor ICT programs.",
+          qualifications: "Bachelor’s degree in Statistics, Computer Science, or related field.",
+          requirements: "Proficient in Excel, SQL, and data visualization tools such as Power BI or Tableau.",
+          letterAddress: "Address your application letter to the Data Analytics Division, DICT Regional Office.",
+          deadline: "December 10, 2025"
+        }
       ],
 
       // Popup state + form
@@ -305,11 +402,22 @@ export default {
     toggleCompletedMenu(id) {
       this.openCompletedMenu = this.openCompletedMenu === id ? null : id;
     },
-    openRegistrantsModal() {
-      this.showRegistrantsModal = true;
+    openApplicantsModal() {
+      this.showApplicantsModal = true;
     },
     closeModal() {
-      this.showRegistrantsModal = false;
+      this.showApplicantsModal = false;
+    },
+
+
+    //fetch careers
+    async fetchCareers(){
+      try{
+        const response = await axios.get("http://127.0.0.1:8000/api/careers");
+        this.upcomingCareers = response.data;
+      } catch(error){
+        console.error("ERROR FETCHING CAREERS:", error);
+      }
     },
 
     // Popup methods
@@ -320,21 +428,99 @@ export default {
       this.showCareerPopup = false;
       this.resetNewCareer();
     },
+    openCareerDetails(Career) {
+      this.selectedCareer = Career;
+      this.showCareerDetailsModal = true;
+    },
+    closeCareerDetails() {
+      this.showCareerDetailsModal = false;
+    },
+    handleViewApplicants() {
+      this.closeCareerDetails(); // close the details modal
+      this.openApplicantsModal(); // open your Applicants modal
+    },
 
     // Save button function
-    saveCareer() {
-      if (!this.newCareer.position) return; // simple validation
+    async saveCareer() {
+      try {
+        // Basic validation
+        if (!this.newCareer.position || !this.newCareer.details || !this.newCareer.qualifications || !this.newCareer.requirements || !this.newCareer.letterAddress || !this.newCareer.deadline) {
+          alert("PLEASE FILL IN ALL REQUIRED FIELDS");
+          return;
+        }
 
-      this.upcomingCareers.push({
-        id: Date.now(),
-        title: this.newCareer.position,
-        details: this.newCareer.details,
-        qualifications: this.newCareer.qualifications,
-        requirements: this.newCareer.requirements,
-        letterAddress: this.newCareer.letterAddress,
-      });
+        //payload matching controller
+        const payload = {
+          position: this.newCareer.position,
+          details: this.newCareer.details,
+          qualifications: this.newCareer.qualifications,
+          requirements: this.newCareer.requirements,
+          letterAddress: this.newCareer.letterAddress,
+          deadline: this.newCareer.deadline
+        };
 
-      this.closeCareerPopup();
+        //just a debug log, remove later
+        console.log("PAYLOAD BEING SENT TO BACKEND: ", payload);
+
+        //send to API
+        const token = localStorage.getItem('token');
+        const response = await axios.post("http://127.0.0.1:8000/api/careers", payload, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log("CAREER SAVED:", response.data);
+
+        //add it to the upcoming careers
+        if(response.data && response.data.data){
+          const newCareer = response.data.data;
+
+          //get organization name from localStorage
+          const storedUser = localStorage.getItem("user");
+          let organizationName = "Unknown Organization";
+          if(storedUser){
+            const user = JSON.parse(storedUser);
+            organizationName = user.displayName || user.name || "Unknown Organization";
+          }
+
+          // Parse the deadline to separate date and time
+          const deadlineDate = new Date(newCareer.deadlineOfSubmission);
+          const formattedDate = deadlineDate.toLocaleDateString('en-US', {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          });
+          const formattedTime = deadlineDate.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+
+          this.upcomingCareers.push({
+            id: newCareer.careerID,
+            title: newCareer.position,
+            position: newCareer.position,
+            details: newCareer.detailsAndInstructions,
+            qualifications: newCareer.qualifications,
+            requirements: newCareer.requirements,
+            letterAddress: newCareer.applicationLetterAddress,
+            deadline: formattedDate,
+            time: formattedTime,
+            organizationName: organizationName
+          })
+        }
+
+        alert("CAREER POSTED SUCCESSFULLY!!!");
+
+        //reset form
+        this.resetNewCareer();
+        this.showCareerPopup = false;
+      } catch (error) {
+        console.error("ERROR SAVING CAREER:", error.response?.data || error);
+        alert("SOMETHING WENT WRONG WHILE SAVING THE CAREER");
+      }
     },
 
     resetNewCareer() {
@@ -346,7 +532,13 @@ export default {
         letterAddress: "",
       };
     },
+  },
+
+  mounted(){
+    this.fetchCareers();
   }
+
+
 }
 </script>
 
@@ -379,17 +571,17 @@ const goToProfile = () => router.push('/profile');
 const goToHome = () => router.push('/organization');
 const goToTrainings = () => router.push({ name: 'OrgTrainings' });
 const goToCareers = () => router.push({ name: 'OrgCareers' });
-const goToCalendar = () => router.push('/app/calendar');
+const goToCalendar = () => router.push({ name: 'OrgCalendar' });
 
 // Generic navigation function
 const navigateTo = (route) => {
   router.push(route);
 }
 
-const logout = () => { 
-  localStorage.removeItem('user'); 
-  localStorage.removeItem('token'); 
-  router.push({ name: 'Login' }); 
+const logout = () => {
+  localStorage.removeItem('user');
+  localStorage.removeItem('token');
+  router.push({ name: 'Login' });
 };
 </script>
 
@@ -406,7 +598,7 @@ const logout = () => {
   transform: translateY(-10px);
 }
 
-.organization-trainings {
+.organization-careers {
   display: flex;
   height: 100vh;
   font-family: "Segoe UI", sans-serif;
@@ -471,6 +663,13 @@ const logout = () => {
   margin: 10px auto;
   width: 40px;
   height: 40px;
+  border-radius: 50%;
+}
+
+.sidebar.collapsed .space {
+  margin: 10px auto;
+  width: 40px;
+  height: 5px;
   border-radius: 50%;
 }
 
@@ -826,14 +1025,14 @@ const logout = () => {
   cursor: pointer;
 }
 
-.modal-title{
+.modal-title {
   font-size: 20px;
   font-weight: 600;
   color: #374151;
   margin-bottom: 16px;
 }
 
-.registrants-grid {
+.Applicants-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 20px;
@@ -1033,5 +1232,107 @@ const logout = () => {
 
 .plus-btn-text:hover {
   color: #000000;
+}
+
+/* Career Details */
+
+.career-details-modal {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 1rem;
+  width: 480px;
+  max-width: 90%;
+  position: relative;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  animation: fadeIn 0.25s ease;
+  z-index: 2100;
+  /* ensure above other overlays */
+}
+
+.career-info {
+  margin: 0.4rem 0;
+  color: #333;
+}
+
+.career-description {
+  margin-top: 1rem;
+  color: #555;
+  line-height: 1.5;
+}
+
+.career-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+}
+
+.btn-view-applicants {
+  background-color: #374151;
+  /* dark gray */
+  color: #ffffff;
+  /* white text */
+  border: none;
+  padding: 0.55rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  display: inline-block;
+  text-align: center;
+}
+
+.btn-view-applicants:hover {
+  background-color: #4b5563;
+  /* slightly lighter gray on hover */
+  transform: scale(1.02);
+}
+
+/* Smooth appear animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Animate position when sidebar opens */
+.hamburger {
+  position: fixed;
+  top: 15px;
+  left: 18px;
+  width: 25px;
+  height: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  cursor: pointer;
+  z-index: 2000;
+  /* ← raised from 100 to 2000 */
+  padding: 0;
+  transition: transform 0.6s ease;
+  /* smoother animation */
+}
+
+/* Hamburger lines */
+.hamburger span {
+  display: block;
+  height: 3px;
+  width: 100%;
+  background-color: white;
+  border-radius: 2px;
+}
+
+/* When sidebar is open, move hamburger to the right */
+.hamburger.shifted {
+  transform: translateX(140px);
+  /* Adjust this to your sidebar width */
 }
 </style>

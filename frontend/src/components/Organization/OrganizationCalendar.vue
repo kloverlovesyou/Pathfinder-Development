@@ -1,8 +1,20 @@
 <template>
   <div class="organization-calendar">
+
+    <!-- Hamburger Toggle -->
+    <button class="hamburger" @click="toggleSidebar" :class="{ open: isSidebarOpen, shifted: isSidebarOpen }">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
     <!-- Sidebar -->
     <transition name="slide">
-      <aside class="sidebar" :class="{ collapsed: !isSidebarOpen }" @click.self="toggleSidebar">
+      <aside class="sidebar" :class="{ collapsed: !isSidebarOpen }">
+
+        <div class="space">
+
+        </div>
         <!-- Avatar always visible -->
         <div class="avatar">
           <img :src="dictLogo" alt="DICT Logo" class="avatar-img" />
@@ -26,8 +38,7 @@
           </div>
         </transition>
 
-        <div class="icon" :class="{ active: $route.path === '/OrganizationHomePage' }"
-          @click="$router.push('/OrganizationHomePage')">
+        <div class="icon" @click="navigateTo('/organization')">
           <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M6.25 17.0585C6.25 16.0494 6.25 15.5448 6.47166 15.1141C6.69333 14.6833 7.1039 14.3901 7.92505 13.8035L13.8375 9.58034C14.3989 9.17938 14.6795 8.9789 15 8.9789C15.3205 8.9789 15.6011 9.17938 16.1625 9.58034L22.075 13.8035C22.8961 14.3901 23.3067 14.6833 23.5283 15.1141C23.75 15.5448 23.75 16.0494 23.75 17.0585V24.25C23.75 25.1928 23.75 25.6642 23.4571 25.9571C23.1642 26.25 22.6928 26.25 21.75 26.25H8.25C7.30719 26.25 6.83579 26.25 6.54289 25.9571C6.25 25.6642 6.25 25.1928 6.25 24.25V17.0585Z"
@@ -42,7 +53,7 @@
           </svg>
           <span>Home</span>
         </div>
-        <div class="icon" :class="{ active: $route.path === '/OrgTrainings' }" @click="$router.push('/OrgTrainings')">
+        <div class="icon" @click="navigateTo({ name: 'OrgTrainings' })">
           <svg width="29" height="29" viewBox="0 0 29 29" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M20.5837 3.625C23.4119 3.625 24.8261 3.62526 25.7048 4.50391C26.5833 5.3826 26.5837 6.79675 26.5837 9.625V19.375C26.5837 22.2033 26.5833 23.6174 25.7048 24.4961C24.8261 25.3747 23.4119 25.375 20.5837 25.375H8.41666C5.58824 25.375 4.17425 25.3748 3.29557 24.4961C2.41689 23.6174 2.41666 22.2034 2.41666 19.375V9.625C2.41666 6.79657 2.41689 5.38259 3.29557 4.50391C4.17425 3.62523 5.58824 3.625 8.41666 3.625H20.5837ZM9.66666 12.292C9.11438 12.292 8.66666 12.7397 8.66666 13.292V20.542L8.67155 20.6445C8.72303 21.1485 9.1491 21.542 9.66666 21.542C10.1842 21.542 10.6103 21.1485 10.6618 20.6445L10.6667 20.542V13.292C10.6667 12.7397 10.2189 12.292 9.66666 12.292ZM19.3337 9.875C18.7814 9.875 18.3337 10.3227 18.3337 10.875V20.542L18.3385 20.6436C18.3896 21.148 18.8158 21.542 19.3337 21.542C19.8514 21.5418 20.2778 21.1479 20.3288 20.6436L20.3337 20.542V10.875C20.3337 10.3228 19.8858 9.87518 19.3337 9.875ZM14.4997 14.708C13.9476 14.7082 13.4998 15.156 13.4997 15.708V20.541L13.5046 20.6436C13.5557 21.1477 13.982 21.5408 14.4997 21.541C15.0175 21.541 15.4436 21.1478 15.4948 20.6436L15.4997 20.541V15.708C15.4995 15.1559 15.0518 14.708 14.4997 14.708Z"
@@ -50,7 +61,7 @@
           </svg>
           <span>Trainings</span>
         </div>
-        <div class="icon" :class="{ active: $route.path === '/OrgCareers' }" @click="$router.push('/OrgCareers')">
+        <div class="icon" @click="navigateTo({ name: 'OrgCareers' })">
           <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M22.8798 11.0484C23.4046 10.8642 23.9845 11.1431 24.1081 11.6855C24.4792 13.3134 24.4217 15.0018 23.9268 16.6191C23.4739 18.0989 22.6698 19.4685 21.5787 20.6449C21.2148 21.0372 20.6017 21.0197 20.2239 20.6408L14.9487 15.3495C14.4292 14.8284 14.6314 13.9436 15.3257 13.6999L22.8798 11.0484ZM13 4.0826C13 3.50231 13.4932 3.04057 14.0672 3.12592C15.8633 3.39302 17.5788 4.00579 19.085 4.93161C20.3794 5.72731 21.4793 6.72976 22.3343 7.87824C22.709 8.38157 22.4513 9.07932 21.8592 9.28718L14.3313 11.9301C13.6809 12.1584 13 11.6758 13 10.9865V4.0826Z"
@@ -61,7 +72,7 @@
           </svg>
           <span>Career</span>
         </div>
-        <div class="icon" :class="{ active: $route.path === '/OrgCalendar' }" @click="$router.push('/OrgCalendar')">
+        <div class="icon" @click="navigateTo({ name: 'OrgCalendar' })">
           <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M2.16675 9.4165C2.16675 7.53089 2.16675 6.58808 2.75253 6.00229C3.33832 5.4165 4.28113 5.4165 6.16675 5.4165H19.8334C21.719 5.4165 22.6618 5.4165 23.2476 6.00229C23.8334 6.58808 23.8334 7.53089 23.8334 9.4165V9.83317C23.8334 10.3046 23.8334 10.5403 23.687 10.6867C23.5405 10.8332 23.3048 10.8332 22.8334 10.8332H3.16675C2.69534 10.8332 2.45964 10.8332 2.31319 10.6867C2.16675 10.5403 2.16675 10.3046 2.16675 9.83317V9.4165Z"
@@ -107,8 +118,17 @@
 
         <div class="calendar-grid">
           <div class="day-name" v-for="day in dayNames" :key="day">{{ day }}</div>
-          <div v-for="(date, index) in calendarDays" :key="index" class="day-cell" :class="{ today: isToday(date) }">
-            <span v-if="date">{{ date.getDate() }}</span>
+
+          <div v-for="(date, index) in calendarDays" :key="index" class="day-cell" :class="{
+            today: isToday(date),
+            event: hasEvent(date)
+          }" :style="{ backgroundColor: getEventColor(date) }">
+            <span v-if="date" class="date-number">{{ date.getDate() }}</span>
+            <div v-if="date && getEventTitles(date).length" class="events-list">
+              <div v-for="(title, i) in getEventTitles(date)" :key="i" class="event-title">
+                {{ title }}
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -120,19 +140,153 @@
 import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
 
 export default {
+  name: "OrganizationCalendar",
   data() {
     return {
-      dictLogo
+      dictLogo,
+      currentDate: new Date(),
+      dayNames: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+
+      // Hardcoded upcoming trainings
+      trainings: [
+        { title: "Cybersecurity Fundamentals", date: "2025-10-12" },
+        { title: "Web Development Bootcamp", date: "2025-10-18" },
+        { title: "Data Privacy Awareness Seminar", date: "2025-10-25" },
+        { title: "Python for Beginners Workshop", date: "2025-11-02" },
+        { title: "Digital Transformation Strategies", date: "2025-11-10" },
+        { title: "Cloud Computing Essentials", date: "2025-11-15" },
+        { title: "Advanced Networking Configuration", date: "2025-11-20" },
+        { title: "Leadership and Communication Skills", date: "2025-11-22" },
+        { title: "AI Tools for Productivity", date: "2025-11-28" },
+        { title: "Disaster Recovery and Risk Management", date: "2025-12-03" }
+      ],
+
+      // Hardcoded on-going careers
+      careers: [
+        { title: "DICT Frontend Development Intern", date: "2025-10-10" },
+        { title: "Network Engineer Trainee", date: "2025-10-15" },
+        { title: "Cybersecurity Analyst Intern", date: "2025-10-20" },
+        { title: "UI/UX Design Associate Program", date: "2025-10-22" },
+        { title: "Software QA Tester Trainee", date: "2025-10-25" },
+        { title: "Technical Support Specialist Program", date: "2025-10-30" },
+        { title: "Database Administration Internship", date: "2025-11-05" },
+        { title: "AI Research Assistant Program", date: "2025-11-08" },
+        { title: "Mobile App Development Internship", date: "2025-11-12" },
+        { title: "Project Management Apprentice", date: "2025-11-20" }
+      ]
+    }
+  },
+  computed: {
+    monthYear() {
+      return this.currentDate.toLocaleString("default", {
+        month: "long",
+        year: "numeric"
+      });
+    },
+    calendarDays() {
+      const year = this.currentDate.getFullYear();
+      const month = this.currentDate.getMonth();
+
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const daysInMonth = lastDay.getDate();
+
+      const days = [];
+      for (let i = 0; i < firstDay.getDay(); i++) days.push(null);
+      for (let d = 1; d <= daysInMonth; d++) days.push(new Date(year, month, d));
+
+      return days;
+    }
+  },
+  methods: {
+    prevMonth() {
+      this.currentDate.setMonth(this.currentDate.getMonth() - 1);
+      this.currentDate = new Date(this.currentDate);
+    },
+    nextMonth() {
+      this.currentDate.setMonth(this.currentDate.getMonth() + 1);
+      this.currentDate = new Date(this.currentDate);
+    },
+    isToday(date) {
+      if (!date) return false;
+      const today = new Date();
+      return (
+        date.getDate() === today.getDate() &&
+        date.getMonth() === today.getMonth() &&
+        date.getFullYear() === today.getFullYear()
+      );
+    },
+    hasEvent(date) {
+      if (!date) return false;
+      return (
+        this.trainings.some(t => t.date === this.formatDate(date)) ||
+        this.careers.some(c => c.date === this.formatDate(date))
+      );
+    },
+    getEventTitles(date) {
+      if (!date) return [];
+      const formatted = this.formatDate(date);
+      const trainingTitles = this.trainings
+        .filter(t => t.date === formatted)
+        .map(t => "🟦 " + t.title);
+      const careerTitles = this.careers
+        .filter(c => c.date === formatted)
+        .map(c => "🟨 " + c.title);
+      return [...trainingTitles, ...careerTitles];
+    },
+    getEventColor(date) {
+      if (!date) return "";
+      const formatted = this.formatDate(date);
+      if (this.trainings.some(t => t.date === formatted)) return "#d0e6ff"; // light blue
+      if (this.careers.some(c => c.date === formatted)) return "#fff5c2"; // light yellow
+      return "";
+    },
+    formatDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
     }
   }
-}
+};
 </script>
 
 <script setup>
 import { ref, onMounted, computed } from "vue";
+import { useRouter } from 'vue-router';
 
+const router = useRouter();
 const isSidebarOpen = ref(true);
 const organizationName = ref("");
+
+// Get org name from localStorage on mount
+onMounted(() => {
+  const storedUser = localStorage.getItem("user");
+  if (storedUser) {
+    const user = JSON.parse(storedUser);
+    if (user.role === "organization") {
+      organizationName.value = user.displayName || user.name;
+    }
+  }
+});
+
+// Sidebar navigation functions
+const goToProfile = () => router.push('/profile');
+const goToHome = () => router.push('/organization');
+const goToTrainings = () => router.push({ name: 'OrgTrainings' });
+const goToCareers = () => router.push({ name: 'OrgCareers' });
+const goToCalendar = () => router.push({ name: 'OrgCalendar' });
+
+// Generic navigation function
+const navigateTo = (route) => {
+  router.push(route);
+}
+
+const logout = () => {
+  localStorage.removeItem('user');
+  localStorage.removeItem('token');
+  router.push({ name: 'Login' });
+};
 
 onMounted(() => {
   const storedUser = localStorage.getItem("user");
@@ -234,6 +388,11 @@ const isToday = (date) => {
   background-color: #f4f4f4;
 }
 
+.calendar-container {
+  width: 100%;
+  max-width: 700px;
+}
+
 /* Sidebar */
 .sidebar {
   width: 200px;
@@ -292,6 +451,13 @@ const isToday = (date) => {
   margin: 10px auto;
   width: 40px;
   height: 40px;
+  border-radius: 50%;
+}
+
+.sidebar.collapsed .space {
+  margin: 10px auto;
+  width: 40px;
+  height: 5px;
   border-radius: 50%;
 }
 
@@ -414,7 +580,7 @@ const isToday = (date) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .calendar-header h2 {
@@ -444,22 +610,90 @@ const isToday = (date) => {
 
 .day-name {
   text-align: center;
-  font-weight: 600;
-  color: #666;
+  font-weight: bold;
+  color: #555;
 }
 
 .day-cell {
-  min-height: 80px;
+  position: relative;
   border: 1px solid #ddd;
   border-radius: 6px;
-  text-align: right;
-  padding: 5px;
-  background: #fafafa;
+  height: 100px;
+  /* fixed height */
+  width: 100%;
+  /* fill column space */
+  background-color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: 4px;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .day-cell.today {
-  background: #44576D;
-  color: white;
+  border: 2px solid #007bff;
+}
+
+.date-number {
   font-weight: bold;
+  margin-bottom: 3px;
+}
+
+.events-list {
+  flex: 1;
+  width: 100%;
+  overflow-y: auto;
+  /* scrolls if too long, doesn’t resize cell */
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.event-title {
+  font-size: 0.7rem;
+  /* smaller text fits better */
+  line-height: 1rem;
+  word-wrap: break-word;
+  white-space: normal;
+  /* allows text to wrap */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Animate position when sidebar opens */
+.hamburger {
+  position: fixed;
+  top: 15px;
+  left: 18px;
+  width: 25px;
+  height: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  cursor: pointer;
+  z-index: 2000;
+  /* ← raised from 100 to 2000 */
+  padding: 0;
+  transition: transform 0.6s ease;
+  /* smoother animation */
+}
+
+/* Hamburger lines */
+.hamburger span {
+  display: block;
+  height: 3px;
+  width: 100%;
+  background-color: white;
+  border-radius: 2px;
+}
+
+/* When sidebar is open, move hamburger to the right */
+.hamburger.shifted {
+  transform: translateX(140px);
+  /* Adjust this to your sidebar width */
 }
 </style>

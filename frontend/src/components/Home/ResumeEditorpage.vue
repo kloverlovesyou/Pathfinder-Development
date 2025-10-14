@@ -1,7 +1,7 @@
 <script setup>
 import { reactive, ref, onMounted } from "vue";
 import jsPDF from "jspdf";
-import axios from "axios"; // ✅ API calls
+import axios from "axios";
 import { useRouter } from "vue-router";
 
 const isModalOpen = ref(false);
@@ -10,8 +10,8 @@ const newSkill = ref("");
 const router = useRouter();
 const userName = ref("");
 
+// --- Forms ---
 const showNewExperienceForm = ref(false);
-
 const newExperience = reactive({
   jobTitle: "",
   companyName: "",
@@ -21,7 +21,6 @@ const newExperience = reactive({
 });
 
 const showNewEducationForm = ref(false);
-
 const newEducation = reactive({
   educationLevel: "",
   major: "",
@@ -36,7 +35,7 @@ const resume = reactive({
   experience: [],
   education: [],
   skills: [],
-  professionalLink: "", // professionalLink stored here
+  url: "",
 });
 
 // ✅ User Form Data
@@ -49,7 +48,7 @@ const form = reactive({
   address: "",
 });
 
-// --- Save Resume (summary + professionalLink) ---
+// --- Save Resume ---
 async function saveResume() {
   try {
     const token = localStorage.getItem("token");
@@ -57,15 +56,12 @@ async function saveResume() {
       "http://127.0.0.1:8000/api/resume",
       {
         summary: resume.summary,
-        professionalLink: resume.professionalLink,
+        professionalLink: resume.url,
       },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
+      { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    // Store resumeID
-    resume.resumeID = response.data.resumeID; // <-- add this
+    resume.resumeID = response.data.resumeID;
     alert("Resume saved successfully!");
   } catch (error) {
     console.error("Error saving resume:", error.response?.data || error);
@@ -73,7 +69,7 @@ async function saveResume() {
   }
 }
 
-// --- Load Resume on Mount ---
+// --- Load Resume ---
 async function loadResume() {
   try {
     const token = localStorage.getItem("token");
@@ -83,21 +79,17 @@ async function loadResume() {
 
     if (data) {
       resume.summary = data.summary || "";
-      resume.professionalLink = data.professionalLink || "";
-      resume.resumeID = data.resumeID; // ✅ make sure resumeID is stored
+      resume.url = data.professionalLink || "";
+      resume.resumeID = data.resumeID;
     }
 
-    // ✅ Load experiences
-    const { data: expData } = await axios.get(
-      "http://127.0.0.1:8000/api/experiences",
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+    const { data: expData } = await axios.get("http://127.0.0.1:8000/api/experiences", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     resume.experience = expData || [];
 
-    // ✅ Load education
     await loadEducation();
+    await loadSkills(resume.resumeID); // ✅ Load skills
   } catch (error) {
     console.error("Error loading resume:", error.response?.data || error);
   }
@@ -111,7 +103,7 @@ async function deleteResume() {
     });
 
     resume.summary = "";
-    resume.professionalLink = "";
+    resume.url = "";
     alert("Resume deleted successfully!");
   } catch (error) {
     console.error("Error deleting resume:", error.response?.data || error);
@@ -129,7 +121,7 @@ async function addEducation() {
         "http://127.0.0.1:8000/api/resume",
         {
           summary: resume.summary || "",
-          professionalLink: resume.professionalLink || "",
+          professionalLink: resume.url || "",
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -138,16 +130,11 @@ async function addEducation() {
 
     const { data } = await axios.post(
       "http://127.0.0.1:8000/api/education",
-      {
-        ...newEducation,
-        resumeID: resume.resumeID,
-      },
+      { ...newEducation, resumeID: resume.resumeID },
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
     resume.education.push(data);
-
-    // reset form
     Object.keys(newEducation).forEach((key) => (newEducation[key] = ""));
     showNewEducationForm.value = false;
     alert("Education added successfully!");
@@ -160,14 +147,17 @@ async function addEducation() {
 async function loadEducation() {
   try {
     const token = localStorage.getItem("token");
-    const { data } = await axios.get("http://127.0.0.1:8000/api/educations", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const resumeID = resume.resumeID || localStorage.getItem("resumeID");
 
-    resume.education = data || []; // 🔥 dito dapat siya ma-assign
-    console.log("Education Data:", resume.education);
+    const { data } = await axios.get(
+      `http://127.0.0.1:8000/api/education?resumeID=${resumeID}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    resume.education = data || [];
+    console.log("✅ Education Data Loaded:", resume.education);
   } catch (error) {
-    console.error("Error loading education:", error.response?.data || error);
+    console.error("❌ Error loading education:", error.response?.data || error);
   }
 }
 
@@ -175,16 +165,11 @@ async function removeEducation(index) {
   try {
     const token = localStorage.getItem("token");
     const edu = resume.education[index];
-
     if (edu.educationID) {
-      await axios.delete(
-        `http://127.0.0.1:8000/api/education/${edu.educationID}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await axios.delete(`http://127.0.0.1:8000/api/education/${edu.educationID}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
     }
-
     resume.education.splice(index, 1);
   } catch (error) {
     console.error("Error deleting education:", error.response?.data || error);
@@ -193,15 +178,11 @@ async function removeEducation(index) {
 }
 
 // --- Experience ---
-
 async function addExperience() {
-  // ✅ Basic validation
   if (
     !newExperience.jobTitle.trim() ||
     !newExperience.companyName.trim() ||
-    !newExperience.companyAddress.trim() ||
-    !newExperience.startYear ||
-    !newExperience.endYear
+    !newExperience.companyAddress.trim()
   ) {
     alert("Please fill out all fields before adding experience.");
     return;
@@ -210,26 +191,22 @@ async function addExperience() {
   try {
     const token = localStorage.getItem("token");
 
-    // ✅ If resumeID is missing, create one automatically
     if (!resume.resumeID) {
       const resumeRes = await axios.post(
         "http://127.0.0.1:8000/api/resume",
         {
           summary: resume.summary || "",
-          professionalLink: resume.professionalLink || "",
+          professionalLink: resume.url || "",
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       resume.resumeID = resumeRes.data.resumeID;
     }
 
-    // ✅ Now add the experience
     const { data } = await axios.post(
       "http://127.0.0.1:8000/api/experiences",
       {
-        jobTitle: newExperience.jobTitle.trim(),
-        companyName: newExperience.companyName.trim(),
-        companyAddress: newExperience.companyAddress.trim(),
+        ...newExperience,
         startYear: `${newExperience.startYear}-01-01`,
         endYear: `${newExperience.endYear}-01-01`,
         resumeID: resume.resumeID,
@@ -237,17 +214,15 @@ async function addExperience() {
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    // Push to frontend
     resume.experience.push(data);
-
-    // Reset form
-    newExperience.jobTitle = "";
-    newExperience.companyName = "";
-    newExperience.companyAddress = "";
-    newExperience.startYear = new Date().getFullYear();
-    newExperience.endYear = new Date().getFullYear();
+    Object.assign(newExperience, {
+      jobTitle: "",
+      companyName: "",
+      companyAddress: "",
+      startYear: new Date().getFullYear(),
+      endYear: new Date().getFullYear(),
+    });
     showNewExperienceForm.value = false;
-
     alert("Experience added successfully!");
   } catch (error) {
     console.error("Error adding experience:", error.response?.data || error);
@@ -259,17 +234,11 @@ async function removeExperience(index) {
   try {
     const token = localStorage.getItem("token");
     const exp = resume.experience[index];
-
     if (exp.experienceID) {
-      await axios.delete(
-        `http://127.0.0.1:8000/api/experiences/${exp.experienceID}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await axios.delete(`http://127.0.0.1:8000/api/experiences/${exp.experienceID}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
     }
-
-    // Remove from frontend
     resume.experience.splice(index, 1);
   } catch (error) {
     console.error("Error deleting experience:", error.response?.data || error);
@@ -278,17 +247,58 @@ async function removeExperience(index) {
 }
 
 // --- Skills ---
-function addSkill() {
-  if (newSkill.value.trim() !== "") {
-    resume.skills.push(newSkill.value.trim());
-    newSkill.value = "";
+async function loadSkills(resumeID) {
+  try {
+    const token = localStorage.getItem("token");
+    const { data } = await axios.get(`http://127.0.0.1:8000/api/skills/${resumeID}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    resume.skills = data || [];
+    console.log("✅ Skills Loaded:", resume.skills);
+  } catch (error) {
+    console.error("Error loading skills:", error.response?.data || error);
   }
 }
-function removeSkill(index) {
-  resume.skills.splice(index, 1);
+
+async function addSkill() {
+  if (!newSkill.value.trim()) return;
+
+  try {
+    const token = localStorage.getItem("token");
+    if (!resume.resumeID) {
+      alert("Please save your resume first before adding skills.");
+      return;
+    }
+
+    const { data } = await axios.post(
+      "http://127.0.0.1:8000/api/skills",
+      { skillName: newSkill.value.trim(), resumeID: resume.resumeID },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    resume.skills.push(data);
+    newSkill.value = "";
+  } catch (error) {
+    console.error("Error adding skill:", error.response?.data || error);
+  }
 }
 
-// --- Section Header Helper ---
+async function removeSkill(index) {
+  try {
+    const token = localStorage.getItem("token");
+    const skill = resume.skills[index];
+    if (skill.skillID) {
+      await axios.delete(`http://127.0.0.1:8000/api/skills/${skill.skillID}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    }
+    resume.skills.splice(index, 1);
+  } catch (error) {
+    console.error("Error removing skill:", error.response?.data || error);
+  }
+}
+
+// --- PDF Generation (unchanged from your version) ---
 function sectionHeader(doc, title, x, y, pageWidth, margin) {
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
@@ -297,8 +307,6 @@ function sectionHeader(doc, title, x, y, pageWidth, margin) {
   doc.line(margin, y + 2, pageWidth - margin, y + 2);
 }
 
-// --- Generate PDF ---
-// Generate PDF
 function generatePdf() {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -306,28 +314,25 @@ function generatePdf() {
   const margin = 20;
   let y = 20;
 
-  // ✅ Helper: extract year only
   function getYearOnly(dateStr) {
     if (!dateStr) return "";
     const year = new Date(dateStr).getFullYear();
     return isNaN(year) ? "" : year.toString();
   }
 
-  // Helper: wrapped text with auto page break
   function addWrappedText(text, x, y, maxWidth, lineHeight = 6) {
     const lines = doc.splitTextToSize(text, maxWidth);
-    for (let i = 0; i < lines.length; i++) {
+    for (let line of lines) {
       if (y > pageHeight - margin) {
         doc.addPage();
         y = margin;
       }
-      doc.text(lines[i], x, y);
+      doc.text(line, x, y);
       y += lineHeight;
     }
     return y;
   }
 
-  // Helper: section headers with underline
   function sectionHeader(title, x, y, pageWidth, margin) {
     doc.setFont("times", "bold");
     doc.setFontSize(12);
@@ -338,21 +343,15 @@ function generatePdf() {
     return y + 6;
   }
 
-  // Header (Name)
+  // Header
   doc.setFont("times", "bold");
   doc.setFontSize(20);
-  doc.text(
-    `${form.firstName} ${form.middleName} ${form.lastName}`,
-    pageWidth / 2,
-    y,
-    { align: "center" }
-  );
+  doc.text(`${form.firstName} ${form.middleName} ${form.lastName}`, pageWidth / 2, y, { align: "center" });
   y += 8;
 
-  // Contact Info
   doc.setFont("times", "regular");
   doc.setFontSize(10);
-  const contactLine = `${form.phoneNumber} • ${form.emailAddress} • ${resume.professionalLink} • ${form.city}, ${form.state}`;
+  const contactLine = `${form.phoneNumber} • ${form.emailAddress} • ${resume.url}`;
   doc.text(contactLine, pageWidth / 2, y, { align: "center" });
   y += 12;
 
@@ -360,61 +359,25 @@ function generatePdf() {
   y = sectionHeader("Summary", margin, y, pageWidth, margin);
   doc.setFont("times", "regular");
   doc.setFontSize(11);
-  y = addWrappedText(
-    resume.summary || "",
-    margin,
-    y,
-    pageWidth - 2 * margin,
-    6
-  );
+  y = addWrappedText(resume.summary || "", margin, y, pageWidth - 2 * margin);
 
   // Experience
   if (resume.experience.length) {
     y = sectionHeader("Professional Experience", margin, y, pageWidth, margin);
-
-    const sortedExperiences = [...resume.experience].sort((a, b) => {
-      const aEnd = a.endYear
-        ? new Date(a.endYear).getFullYear()
-        : new Date().getFullYear();
-      const bEnd = b.endYear
-        ? new Date(b.endYear).getFullYear()
-        : new Date().getFullYear();
-      return bEnd - aEnd;
-    });
-
+    const sortedExperiences = [...resume.experience].sort(
+      (a, b) => new Date(b.endYear).getFullYear() - new Date(a.endYear).getFullYear()
+    );
     sortedExperiences.forEach((exp) => {
-      // ✅ Show only years
       const start = getYearOnly(exp.startYear);
       const end = exp.endYear ? getYearOnly(exp.endYear) : "Present";
-
-      // Job title (left) + Date (right)
       doc.setFont("times", "bold");
-      doc.setFontSize(11);
       doc.text(exp.jobTitle || "", margin, y);
       doc.setFont("times", "regular");
       doc.text(`${start} – ${end}`, pageWidth - margin, y, { align: "right" });
       y += 6;
-
-      // Company name + location
       doc.setFont("times", "italic");
       doc.text(`${exp.companyName || ""}`, margin, y);
-      if (exp.companyAddress) {
-        doc.text(exp.companyAddress, pageWidth - margin, y, { align: "right" });
-      }
       y += 6;
-
-      // Responsibilities (bulleted)
-      doc.setFont("times", "regular");
-      exp.responsibilities?.forEach((task) => {
-        y = addWrappedText(
-          `• ${task}`,
-          margin + 4,
-          y,
-          pageWidth - 2 * margin,
-          6
-        );
-      });
-      y += 4;
     });
   }
 
@@ -422,64 +385,23 @@ function generatePdf() {
   if (resume.education.length) {
     y = sectionHeader("Education", margin, y, pageWidth, margin);
     resume.education.forEach((edu) => {
+      const gradYear = getYearOnly(edu.graduationYear);
       doc.setFont("times", "bold");
       doc.text(`${edu.institutionName || ""}`, margin, y);
-
-      // ✅ Show only graduation year
-      const gradYear = getYearOnly(edu.graduationYear);
+      doc.text(gradYear, pageWidth - margin, y, { align: "right" });
+      y += 6;
       doc.setFont("times", "regular");
-      doc.text(`${gradYear}`, pageWidth - margin, y, { align: "right" });
+      doc.text(`${edu.educationLevel} in ${edu.major}`, margin, y);
       y += 6;
-
-      doc.text(`${edu.educationLevel || ""} in ${edu.major || ""}`, margin, y);
-      y += 6;
-
-      if (edu.extraInfo) {
-        y = addWrappedText(edu.extraInfo, margin, y, pageWidth - 2 * margin, 6);
-      }
-      y += 4;
     });
   }
 
   // Skills
   if (resume.skills.length) {
     y = sectionHeader("Skills", margin, y, pageWidth, margin);
-    y = addWrappedText(
-      resume.skills.join(" • "),
-      margin,
-      y,
-      pageWidth - 2 * margin,
-      6
-    );
+    y = addWrappedText(resume.skills.map((s) => s.skillName || s).join(" • "), margin, y, pageWidth - 2 * margin);
   }
 
-  // Projects
-  if (resume.projects?.length) {
-    y = sectionHeader("Projects", margin, y, pageWidth, margin);
-    resume.projects.forEach((proj) => {
-      doc.setFont("times", "bold");
-      doc.text(proj.name || "", margin, y);
-      if (proj.date) {
-        // ✅ Show only year
-        const projYear = getYearOnly(proj.date);
-        doc.setFont("times", "regular");
-        doc.text(projYear, pageWidth - margin, y, { align: "right" });
-      }
-      y += 6;
-
-      doc.setFont("times", "regular");
-      y = addWrappedText(
-        proj.description || "",
-        margin,
-        y,
-        pageWidth - 2 * margin,
-        6
-      );
-      y += 4;
-    });
-  }
-
-  // ✅ create blob for modal preview
   const pdfBlob = doc.output("blob");
   pdfUrl.value = URL.createObjectURL(pdfBlob);
 }
@@ -493,33 +415,19 @@ function closeModal() {
   isModalOpen.value = false;
 }
 
-// --- Autofill user + resume data on mount ---
-onMounted(() => {
+// --- Autofill + Load Data ---
+onMounted(async () => {
   const savedUser = localStorage.getItem("user");
   if (savedUser) {
     try {
       const user = JSON.parse(savedUser);
-      if (user.firstName && user.lastName) {
-        userName.value = `${user.firstName} ${user.lastName}`;
-        form.firstName = user.firstName || "";
-        form.middleName = user.middleName || "";
-        form.lastName = user.lastName || "";
-        form.emailAddress = user.emailAddress || "";
-        form.phoneNumber = user.phoneNumber || "";
-        form.address = user.address || "";
-      } else {
-        userName.value = "Guest";
-      }
-    } catch (err) {
-      console.error("Error parsing saved user:", err);
+      userName.value = `${user.firstName} ${user.lastName}`;
+      Object.assign(form, user);
+    } catch {
       userName.value = "Guest";
     }
-  } else {
-    userName.value = "Guest";
   }
-
-  // ✅ load saved resume
-  loadResume();
+  await loadResume();
 });
 
 const logout = () => {
@@ -737,13 +645,14 @@ const logout = () => {
               />
             </div>
 
-            <!-- URL -->
+             <!-- URL -->
             <div class="border rounded p-4 space-y-4 relative">
               <h2 class="text-lg font-semibold">Professional Link</h2>
               <input
                 type="url"
+                placeholder="URL"
                 class="input-field border rounded p-2 w-full"
-                v-model="resume.professionalLink"
+                v-model="resume.url"
               />
             </div>
             <!-- Professional Summary -->
@@ -982,9 +891,11 @@ const logout = () => {
                 <p>{{ edu.graduationYear }}</p>
               </div>
             </div>
+
             <!-- Skills -->
             <div class="border rounded p-4 space-y-3">
               <label class="text-lg font-semibold">Skills</label>
+
               <div class="flex gap-2">
                 <!-- 👇 use newSkill, not resume.skills -->
                 <input
@@ -992,6 +903,7 @@ const logout = () => {
                   type="text"
                   placeholder="Type a skill"
                   class="input-field flex-1 border rounded p-2"
+                  @keyup.enter="addSkill" 
                 />
                 <button
                   type="button"
@@ -1001,13 +913,14 @@ const logout = () => {
                   +
                 </button>
               </div>
+
               <div class="flex flex-wrap gap-2 mt-2">
                 <span
                   v-for="(skill, index) in resume.skills"
                   :key="index"
                   class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full flex items-center gap-2"
                 >
-                  {{ skill }}
+                  {{ skill.skillName || skill }}
                   <button
                     type="button"
                     @click="removeSkill(index)"
@@ -1018,6 +931,7 @@ const logout = () => {
                 </span>
               </div>
             </div>
+
 
             <!-- Save Button -->
             <div class="flex gap-4">

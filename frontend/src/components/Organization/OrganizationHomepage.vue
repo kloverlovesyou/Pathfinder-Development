@@ -1,8 +1,20 @@
 <template>
   <div class="organization-homepage">
+
+    <!-- Hamburger Toggle -->
+    <button class="hamburger" @click="toggleSidebar" :class="{ open: isSidebarOpen, shifted: isSidebarOpen }">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
     <!-- Sidebar -->
     <transition name="slide">
-      <aside class="sidebar" :class="{ collapsed: !isSidebarOpen }" @click.self="toggleSidebar">
+      <aside class="sidebar" :class="{ collapsed: !isSidebarOpen }">
+
+        <div class="space">
+
+        </div>
         <!-- Avatar always visible -->
         <div class="avatar">
           <img :src="dictLogo" alt="DICT Logo" class="avatar-img" />
@@ -59,7 +71,7 @@
           </svg>
           <span>Career</span>
         </div>
-        <div class="icon"  @click="navigateTo('/app/calendar')">
+        <div class="icon" @click="navigateTo({ name: 'OrgCalendar' })">
           <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M2.16675 9.4165C2.16675 7.53089 2.16675 6.58808 2.75253 6.00229C3.33832 5.4165 4.28113 5.4165 6.16675 5.4165H19.8334C21.719 5.4165 22.6618 5.4165 23.2476 6.00229C23.8334 6.58808 23.8334 7.53089 23.8334 9.4165V9.83317C23.8334 10.3046 23.8334 10.5403 23.687 10.6867C23.5405 10.8332 23.3048 10.8332 22.8334 10.8332H3.16675C2.69534 10.8332 2.45964 10.8332 2.31319 10.6867C2.16675 10.5403 2.16675 10.3046 2.16675 9.83317V9.4165Z"
@@ -342,22 +354,22 @@ onMounted(() => {
     new Chart(ctx, {
       type: 'line',
       data: {
-        labels: ["Jan","Feb","Mar","Apr","May","Jun"],
+        labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
         datasets: [
-          { label:"Training Applicants", data:[10,20,15,25,40,30], borderColor:"#3182ce", fill:false, tension:0.4 },
-          { label:"Job Applicants", data:[5,15,20,22,50,35], borderColor:"#9f7aea", fill:false, tension:0.4 }
+          { label: "Training Applicants", data: [10, 20, 15, 25, 40, 30], borderColor: "#3182ce", fill: false, tension: 0.4 },
+          { label: "Job Applicants", data: [5, 15, 20, 22, 50, 35], borderColor: "#9f7aea", fill: false, tension: 0.4 }
         ]
       },
-      options: { responsive:true, plugins:{legend:{display:false}} }
+      options: { responsive: true, plugins: { legend: { display: false } } }
     });
   }
 });
 
 const toggleSidebar = () => isSidebarOpen.value = !isSidebarOpen.value;
-const logout = () => { 
-  localStorage.removeItem('user'); 
-  localStorage.removeItem('token'); 
-  router.push({ name: 'Login' }); 
+const logout = () => {
+  localStorage.removeItem('user');
+  localStorage.removeItem('token');
+  router.push({ name: 'Login' });
 }
 const closeCareerPopup = () => showCareerPopup.value = false;
 const closeTrainingPopup = () => showTrainingPopup.value = false;
@@ -444,6 +456,13 @@ const saveTraining = () => { console.log('Training saved'); closeTrainingPopup()
   margin: 10px auto;
   width: 40px;
   height: 40px;
+  border-radius: 50%;
+}
+
+.sidebar.collapsed .space {
+  margin: 10px auto;
+  width: 40px;
+  height: 5px;
   border-radius: 50%;
 }
 
@@ -822,5 +841,40 @@ const saveTraining = () => { console.log('Training saved'); closeTrainingPopup()
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
+}
+
+/* Animate position when sidebar opens */
+.hamburger {
+  position: fixed;
+  top: 15px;
+  left: 18px;
+  width: 25px;
+  height: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  cursor: pointer;
+  z-index: 2000;
+  /* ← raised from 100 to 2000 */
+  padding: 0;
+  transition: transform 0.6s ease;
+  /* smoother animation */
+}
+
+/* Hamburger lines */
+.hamburger span {
+  display: block;
+  height: 3px;
+  width: 100%;
+  background-color: white;
+  border-radius: 2px;
+}
+
+/* When sidebar is open, move hamburger to the right */
+.hamburger.shifted {
+  transform: translateX(140px);
+  /* Adjust this to your sidebar width */
 }
 </style>
