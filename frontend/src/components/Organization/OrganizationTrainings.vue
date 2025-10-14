@@ -495,6 +495,17 @@ export default {
       this.showCertUploadModal = false;
       this.selectedRegistrant = null;
     },
+    openTrainingDetails(training) {
+      this.selectedTraining = training;
+      this.showTrainingDetailsModal = true;
+    },
+    closeTrainingDetails() {
+      this.showTrainingDetailsModal = false;
+    },
+    handleViewRegistrants() {
+      this.closeTrainingDetails(); // close the details modal
+      this.openRegistrantsModal(); // open your registrants modal
+    },
 
     //fetch trainings
     async fetchTrainings(){
