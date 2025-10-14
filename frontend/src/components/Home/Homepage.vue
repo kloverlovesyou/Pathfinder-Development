@@ -229,13 +229,17 @@ function submitApplication() {
       <main
         class="bg-white m-3 px-4 rounded-lg flex flex-col max-h-[60vh] overflow-y-auto lg:max-h-none lg:overflow-visible"
       >
-        <div class="sticky top-0 bg-white z-10 pt-4 px-4">
-          <h2 class="text-lg font-bold -mb-1">Career</h2>
-          <h2 class="text-2xl font-bold mb-4">Match Recommendation</h2>
+        <!-- Sticky Header -->
+        <div
+          class="sticky top-0 z-10 bg-white pt-4 px-4 pb-2 border-b shadow-sm"
+        >
+          <!-- 👆 Added pb-2 + border + shadow to give clean visual separation -->
+          <h2 class="text-lg font-bold">Career</h2>
+          <h2 class="text-2xl font-bold mb-2">Match Recommendation</h2>
         </div>
 
         <!-- Scrollable Posts Container -->
-        <div class="space-y-4 flex-1 pb-2">
+        <div class="space-y-4 flex-1 pb-2 pt-4">
           <div
             v-for="post in posts"
             :key="post.trainingID || post.careerID"
