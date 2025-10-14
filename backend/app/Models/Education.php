@@ -1,30 +1,51 @@
 <?php
 
+/**
+ * Created by Reliese Model.
+ */
+
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Class Education
+ * 
+ * @property int $educationID
+ * @property string $educationLevel
+ * @property string|null $major
+ * @property string $institutionName
+ * @property string $institutionAddress
+ * @property Carbon $graduationYear
+ * @property int|null $resumeID
+ * 
+ * @property Resume|null $resume
+ *
+ * @package App\Models
+ */
 class Education extends Model
 {
+	protected $table = 'education';
+	protected $primaryKey = 'educationID';
+	public $timestamps = false;
 
-    protected $table = 'education';
-    protected $primaryKey = 'educationID';
-    public $timestamps = false;
+	protected $casts = [
+		'graduationYear' => 'datetime',
+		'resumeID' => 'int'
+	];
 
-    protected $fillable = [
-        'educationLevel',
-        'major',
-        'institutionName',
-        'institutionAddress',
-        'graduationYear',
-        'resumeID',
-    ];
-    
+	protected $fillable = [
+		'educationLevel',
+		'major',
+		'institutionName',
+		'institutionAddress',
+		'graduationYear',
+		'resumeID'
+	];
 
-        // ✅ Relationship (each experience belongs to one resume)
-    public function resume()
-    {
-        return $this->belongsTo(Resume::class, 'resumeID', 'resumeID');
-    }
+	public function resume()
+	{
+		return $this->belongsTo(Resume::class, 'resumeID');
+	}
 }
