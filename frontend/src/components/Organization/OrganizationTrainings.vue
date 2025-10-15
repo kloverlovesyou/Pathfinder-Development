@@ -121,15 +121,24 @@
         </div>
 
         <div class="training-slider">
-          <div class="training-card" v-for="training in upcomingtrainings" :key="training.id">
+          <div class="training-card" v-for="training in upcomingtrainings" :key="training.trainingID">
             <div class="training-left">
             </div>
 
             <div class="training-right" @click="openTrainingDetails(training)">
               <h3 class="training-title">{{ training.title }}</h3>
+              <p class="training-description">{{ training.description }}</p>
               <p class="training-date">
-                {{ training.date }} | {{ training.time }}
+                {{ formatSchedule(training.schedule) }}
               </p>
+              <p class="training-mode">{{ training.mode }}</p>
+              <p class="training-location" v-if="training.mode === 'On-Site'">
+                📍 {{ training.location }}
+              </p>
+              <p class="training-link" v-else-if="training.mode === 'Online'">
+                🔗 {{ training.trainingLink }}
+              </p>
+              <p class="training-organization">{{ training.name }}</p>
             </div>
 
             <!-- 3-dot menu -->
@@ -402,6 +411,7 @@
 
 <script>
 import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
+import axios from 'axios';
 
 export default {
   data() {
@@ -412,26 +422,8 @@ export default {
       showTrainingDetailsModal: false,
       selectedTraining: {},
 
-      registrantsList: [
-        { id: 1, name: "John Doe", status: "Attended", dateRegistered: "2025-09-01" },
-        { id: 2, name: "Maria Santos", status: "Attended", dateRegistered: "2025-09-01" },
-        { id: 3, name: "David Cruz", status: "Did not Attend", dateRegistered: "2025-09-02" },
-        { id: 4, name: "Anna Lee", status: "Attended", dateRegistered: "2025-09-03" },
-        { id: 5, name: "Mark Reyes", status: "Attended", dateRegistered: "2025-09-03" },
-        { id: 6, name: "Sophia Tan", status: "Attended", dateRegistered: "2025-09-04" },
-        { id: 7, name: "James Lim", status: "Attended", dateRegistered: "2025-09-05" },
-        { id: 8, name: "Christine Dela Cruz", status: "Did not Attend", dateRegistered: "2025-09-05" },
-        { id: 9, name: "Robert Mendoza", status: "Did not Attend", dateRegistered: "2025-09-06" },
-        { id: 10, name: "Isabella Garcia", status: "Attended", dateRegistered: "2025-09-07" },
-        { id: 11, name: "Daniel Chua", status: "Attended", dateRegistered: "2025-09-08" },
-        { id: 12, name: "Patricia Ong", status: "Attended", dateRegistered: "2025-09-08" },
-        { id: 13, name: "Michael Torres", status: "Attended", dateRegistered: "2025-09-09" },
-        { id: 14, name: "Angela Bautista", status: "Attended", dateRegistered: "2025-09-10" },
-        { id: 15, name: "Kevin Ramirez", status: "Did not Attend", dateRegistered: "2025-09-10" }
-      ],
-      showRegistrantsModal: false,
+      registrantsList: [],
 
-      showCertUploadModal: false,
       selectedRegistrant: {
         name: '',
         dateRegistered: '',
@@ -441,100 +433,8 @@ export default {
         uploadedFile: null // New data field for the form
       },
 
-      upcomingtrainings: [
-
-      ],
-
-      completedtrainings: [
-        {
-          id: 1,
-          title: "Data Privacy and Security Essentials",
-          description: "Learn how to protect sensitive information and ensure compliance with data protection laws.",
-          date: "August 15, 2025",
-          time: "2:00 PM – 4:00 PM",
-          mode: "Online",
-          location: "N/A",
-          trainingLink: "https://zoom.us/j/1234567890",
-          registrationLink: "https://forms.gle/data-privacy-signup"
-        },
-        {
-          id: 2,
-          title: "Effective Team Communication Workshop",
-          description: "Enhance your communication and collaboration skills for better team performance.",
-          date: "August 12, 2025",
-          time: "9:30 AM – 11:00 AM",
-          mode: "On-site",
-          location: "DICT Regional Office, Conference Room B",
-          trainingLink: "N/A",
-          registrationLink: "https://forms.gle/team-comm-workshop"
-        },
-        {
-          id: 3,
-          title: "Introduction to Cloud Computing",
-          description: "Understand cloud technologies, deployment models, and advantages for modern organizations.",
-          date: "August 10, 2025",
-          time: "1:00 PM – 3:30 PM",
-          mode: "Online",
-          location: "N/A",
-          trainingLink: "https://meet.google.com/cloud-intro",
-          registrationLink: "https://forms.gle/cloud-intro-signup"
-        },
-        {
-          id: 4,
-          title: "Agile Project Kickoff",
-          description: "Discover the principles of Agile methodology and how to apply them in real-world projects.",
-          date: "August 7, 2025",
-          time: "10:00 AM – 12:00 PM",
-          mode: "On-site",
-          location: "DICT HQ, Training Room 2A",
-          trainingLink: "N/A",
-          registrationLink: "https://forms.gle/agile-kickoff"
-        },
-        {
-          id: 5,
-          title: "Public Speaking Bootcamp",
-          description: "Build confidence and polish your presentation skills with hands-on speaking exercises.",
-          date: "August 3, 2025",
-          time: "9:00 AM – 11:00 AM",
-          mode: "On-site",
-          location: "DICT Auditorium, 2nd Floor",
-          trainingLink: "N/A",
-          registrationLink: "https://forms.gle/public-speaking-bootcamp"
-        },
-        {
-          id: 6,
-          title: "Excel for Data Analysis",
-          description: "Master essential Excel tools for managing and analyzing datasets effectively.",
-          date: "July 25, 2025",
-          time: "9:00 AM – 11:30 AM",
-          mode: "Online",
-          location: "N/A",
-          trainingLink: "https://zoom.us/j/9876543210",
-          registrationLink: "https://forms.gle/excel-analysis-signup"
-        },
-        {
-          id: 7,
-          title: "Leadership Essentials",
-          description: "Develop leadership and decision-making skills for effective team management.",
-          date: "July 17, 2025",
-          time: "3:00 PM – 5:00 PM",
-          mode: "On-site",
-          location: "DICT Training Center, Room 101",
-          trainingLink: "N/A",
-          registrationLink: "https://forms.gle/leadership-essentials"
-        },
-        {
-          id: 8,
-          title: "Intro to Data Visualization",
-          description: "Learn how to turn complex data into clear and actionable visuals using modern tools.",
-          date: "July 15, 2025",
-          time: "10:00 AM – 12:00 PM",
-          mode: "Online",
-          location: "N/A",
-          trainingLink: "https://meet.google.com/data-viz-101",
-          registrationLink: "https://forms.gle/data-viz-signup"
-        }
-      ],
+      upcomingtrainings: [],
+      completedtrainings: [],
 
       // Popup state + form
       showTrainingPopup: false,
@@ -545,12 +445,12 @@ export default {
         time: "",
         mode: "",
         location: "",
-        trainingLink: "",
-        registrationLink: ""
+        trainingLink: ""
       },
       upcomingtrainings: []
     }
   },
+
   methods: {
     toggleSidebar() {
       this.isSidebarOpen = !this.isSidebarOpen;
@@ -606,6 +506,18 @@ export default {
       this.closeTrainingDetails(); // close the details modal
       this.openRegistrantsModal(); // open your registrants modal
     },
+
+    //fetch trainings
+    async fetchTrainings(){
+      try{
+        const response = await axios.get("http://127.0.0.1:8000/api/trainings");
+        this.upcomingtrainings = response.data;
+      } catch (error){
+        console.error("ERROR FETCHING TRAININGS: ", error);
+      }
+    },
+
+
     // Popup methods
     openTrainingPopup() {
       this.showTrainingPopup = true
@@ -615,32 +527,134 @@ export default {
       this.newTraining = {
         title: "",
         description: "",
-        schedule: "",
-        mode: "On-Site",
+        date: "",
+        time: "",
+        mode: "",
         location: "",
-        registrationLink: ""
+        trainingLink: ""
       }
     },
-    saveTraining() {
-      this.upcomingtrainings.push({
-        id: Date.now(),
-        title: this.newTraining.title,
-        description: this.newTraining.description,
-        date: this.newTraining.date,
-        time: this.newTraining.time
-      });
+    async saveTraining() {
+      try {
+        //ensure both date and time are filled
+        if(!this.newTraining.date || !this.newTraining.time){
+          alert("PLEASE SELECT BOTH A DATE AND TIME FOR THE TRAINING");
+          return; 
+        } 
 
-      // clear form
-      this.newTraining = {
-        title: "",
-        description: "",
-        date: "",
-        time: ""
-      };
-      this.closeTrainingPopup()
+        //combine datetime
+        const combinedSchedule = `${this.newTraining.date} ${this.newTraining.time}`;
+
+        //payload matching controller
+        const payload = {
+          title: this.newTraining.title,
+          description: this.newTraining.description,
+          schedule: combinedSchedule,
+          mode: this.newTraining.mode,
+          location: this.newTraining.location || null,
+          training_link: this.newTraining.trainingLink || null,
+        };
+
+        //just a debug log, remove later
+        console.log("PAYLOAD BEING SENT TO BACKEND: ", payload);
+
+        //send to API
+        const token = localStorage.getItem('token');
+        const response = await axios.post("http://127.0.0.1:8000/api/trainings", payload, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log("TRAINING SAVED:", response.data);
+
+        //add it to the upcoming trainings
+        if(response.data && response.data.data){
+          const newTraining = response.data.data;
+
+          //get organization name
+          const storedUser = localStorage.getItem("user");
+          let organizationName = "Unknown Organization";
+          if(storedUser){
+            const user = JSON.parse(storedUser);
+            organizationName = user.displayName || user.name || "Unknown Organization";
+          }
+
+          // Parse the schedule to separate date and time
+          const scheduleDate = new Date(newTraining.schedule);
+          const formattedDate = scheduleDate.toLocaleDateString('en-US', {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          });
+          const formattedTime = scheduleDate.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+
+          this.upcomingtrainings.push({
+            id: newTraining.trainingID,
+            title: newTraining.title,
+            description: newTraining.description,
+            schedule: newTraining.schedule,
+            date: formattedDate,
+            time: formattedTime,
+            mode: newTraining.mode,
+            ...(newTraining.mode === 'On-Site'
+            ? {location: newTraining.location}
+            : {trainingLink: newTraining.trainingLink}
+            ),
+            organizationName: organizationName
+          })
+        }
+
+        alert("TRAINING POSTED SUCCESSFULLY!!!");
+
+        //reset form
+        this.newTraining = {
+          title: "",
+          description: "",
+          date: "",
+          time: "",
+          mode: "",
+          location: "",
+          trainingLink: "",
+        };
+
+        this.showTrainingPopup = false;
+    } catch (error) {
+        console.error("ERROR SAVING TRAINING:", error.response?.data || error);
+        alert("SOMETHING WENT WRONG WHILE SAVING THE TRAINING");
+      }
+    },
+    formatSchedule(schedule) {
+      if (!schedule) return 'No schedule set';
+      
+      try {
+        const date = new Date(schedule);
+        return date.toLocaleString('en-US', {
+          weekday: 'short',
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      } catch (error) {
+        return schedule; // fallback to raw string
+      }
     }
+
+  },
+
+  mounted(){
+    this.fetchTrainings();
   }
-}
+
+
+};
 </script>
 
 

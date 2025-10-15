@@ -4,7 +4,19 @@ import { ref, onMounted } from "vue";
 const userName = ref("");
 // Get user data from localStorage
 
-
+onMounted(() => {
+  const savedUser = localStorage.getItem("user");
+  if (savedUser) {
+    const user = JSON.parse(savedUser);
+    if (user.firstName && user.lastName) {
+      userName.value = `${user.firstName} ${user.lastName}`;
+    } else {
+      userName.value = "Guest";
+    }
+  } else {
+    userName.value = "Guest";
+  }
+});
 const router = useRouter();
 </script>
 <template>
