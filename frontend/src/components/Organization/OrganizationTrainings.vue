@@ -244,7 +244,6 @@
           <p class="training-info"><strong>Time:</strong> {{ selectedTraining.time }}</p>
           <p class="training-info"><strong>Location:</strong> {{ selectedTraining.location }}</p>
           <p class="training-info"><strong>Training Link:</strong> {{ selectedTraining.trainingLink }}</p>
-          <p class="training-info"><strong>Registration Link:</strong> {{ selectedTraining.registrationLink }}</p>
 
           <div class="training-actions">
             <button class="btn-view-registrants" @click="handleViewRegistrants">
@@ -396,12 +395,8 @@
             <input v-else-if="newTraining.mode === 'Online'" v-model="newTraining.trainingLink" type="url"
               placeholder="Training Link" class="training-input" />
 
-            <!-- Always shown -->
-            <input v-model="newTraining.registrationLink" type="url" placeholder="Registration Link"
-              class="training-input" />
-
             <!-- Save -->
-            <button type="submit" class="training-save-btn">Save</button>
+            <button type="submit" class="training-post-btn">Post</button>
           </form>
         </div>
       </div>
@@ -423,7 +418,7 @@ export default {
       selectedTraining: {},
 
       registrantsList: [
-        { id: 1, name: "John Doe", status: "Attended", dateRegistered: "2025-09-01" },
+        
         { id: 2, name: "Maria Santos", status: "Attended", dateRegistered: "2025-09-01" },
         { id: 3, name: "David Cruz", status: "Did not Attend", dateRegistered: "2025-09-02" },
         { id: 4, name: "Anna Lee", status: "Attended", dateRegistered: "2025-09-03" },
@@ -1365,7 +1360,7 @@ tbody td {
   color: #111827;
 }
 
-.training-save-btn {
+.training-post-btn {
   background: #374151;
   color: white;
   font-size: 14px;
