@@ -384,7 +384,7 @@ const isToday = (date) => {
 .organization-calendar {
   display: flex;
   height: 100vh;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: 'Poppins', sans-serif;
   background-color: #f4f4f4;
 }
 
@@ -497,7 +497,7 @@ const isToday = (date) => {
   font-size: 26px;
   font-weight: 700;
   color: #44576D;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: 'Poppins', sans-serif;
 }
 
 .sidebar .signout {

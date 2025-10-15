@@ -23,7 +23,7 @@
         <!-- Profile Section (only when sidebar is open) -->
         <transition name="fade">
           <div v-if="isSidebarOpen" class="profile-section">
-            <h3 class="org-name">{{ name }}</h3>
+            <h3 class="org-name">{{ organizationName }}</h3>
             <div class="profile-actions">
               <div class="action" @click="navigateTo('/updateprofile')">
                 <!-- Update Profile Icon -->
@@ -411,11 +411,11 @@ export default {
 
 
     //fetch careers
-    async fetchCareers(){
-      try{
+    async fetchCareers() {
+      try {
         const response = await axios.get("http://127.0.0.1:8000/api/careers");
         this.upcomingCareers = response.data;
-      } catch(error){
+      } catch (error) {
         console.error("ERROR FETCHING CAREERS:", error);
       }
     },
@@ -474,13 +474,13 @@ export default {
         console.log("CAREER SAVED:", response.data);
 
         //add it to the upcoming careers
-        if(response.data && response.data.data){
+        if (response.data && response.data.data) {
           const newCareer = response.data.data;
 
           //get organization name from localStorage
           const storedUser = localStorage.getItem("user");
           let organizationName = "Unknown Organization";
-          if(storedUser){
+          if (storedUser) {
             const user = JSON.parse(storedUser);
             organizationName = user.displayName || user.name || "Unknown Organization";
           }
@@ -534,7 +534,7 @@ export default {
     },
   },
 
-  mounted(){
+  mounted() {
     this.fetchCareers();
   }
 
@@ -601,7 +601,7 @@ const logout = () => {
 .organization-careers {
   display: flex;
   height: 100vh;
-  font-family: "Segoe UI", sans-serif;
+  font-family: 'Poppins', sans-serif;
   background-color: #f4f4f4;
 }
 
@@ -709,7 +709,7 @@ const logout = () => {
   font-size: 26px;
   font-weight: 700;
   color: #44576d;
-  font-family: "Segoe UI", sans-serif;
+  font-family: 'Poppins', sans-serif;
 }
 
 .search-container {

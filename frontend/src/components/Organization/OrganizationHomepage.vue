@@ -394,7 +394,7 @@ const saveTraining = () => { console.log('Training saved'); closeTrainingPopup()
 .organization-homepage {
   display: flex;
   height: 100vh;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: 'Poppins', sans-serif;
   background-color: #f4f4f4;
 }
 
@@ -502,7 +502,7 @@ const saveTraining = () => { console.log('Training saved'); closeTrainingPopup()
   font-size: 26px;
   font-weight: 700;
   color: #44576D;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: 'Poppins', sans-serif;
 }
 
 
