@@ -13,16 +13,16 @@ class AuthCustom
     {
         $token = $request->bearerToken();
 
-        $user = \App\Models\Applicant::where('api_token', $token)->first()
-            ?? \App\Models\Organization::where('api_token', $token)->first();
+        // Try to match token to either Applicant or Organization
+        $user = Applicant::where('api_token', $token)->first()
+              ?? Organization::where('api_token', $token)->first();
 
         if (!$user) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $request->setUserResolver(function () use ($user) {
-            return $user;
-        });
+        // ✅ Attach authenticated user
+        $request->authUser = $user;
 
         return $next($request);
     }

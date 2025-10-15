@@ -37,45 +37,44 @@ class TrainingController extends Controller
     }
 
     public function store(Request $request)
-    {
-        \Log::info('INCOMING TRAINING DATA:', $request->all());
-        
-        //validate incoming data
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string|max:255',
-            'schedule' => 'required',
-            'mode' => 'required|string|in:On-Site,Online',
-            'location' => 'nullable|string|max:255',
-            'training_link' => 'nullable|url'
-        ]); 
+{
+    $user = $request->authUser;
 
-        //parse the datetime into proper format
-        $schedule = Carbon::parse($validated['schedule'])->format('Y-m-d H:i');
-
-        //get auth user
-        $user = $request->authUser;
-        
-        //create the training entry
-        $training = Training::create([
-            'title' => $validated['title'],
-            'description' => $validated['description'],
-            'schedule' => $schedule,
-            'mode' => $validated['mode'],
-            'location' => $validated['location'] ?? null,
-            'trainingLink' => $validated['training_link'] ?? null,
-            'organizationID' => $user->organizationID
-        ]);
-
-        //return json response
-        return response()->json([
-            'message' => 'TRAINING CREATED SUCCESSFULLY!!!',
-            'data' => $training->load('organization')
-        ], 201);
-
-
+    if (!$user) {
+        return response()->json(['message' => 'Unauthorized - no auth user found'], 401);
     }
 
+    // Ensure only organizations can post trainings
+    if (!isset($user->organizationID)) {
+        return response()->json(['message' => 'Only organizations can create trainings'], 403);
+    }
+
+    $validated = $request->validate([
+        'title' => 'required|string|max:255',
+        'description' => 'required|string|max:255',
+        'schedule' => 'required',
+        'mode' => 'required|string|in:On-Site,Online',
+        'location' => 'nullable|string|max:255',
+        'training_link' => 'nullable|url'
+    ]);
+
+    $schedule = \Carbon\Carbon::parse($validated['schedule'])->format('Y-m-d H:i');
+
+    $training = \App\Models\Training::create([
+        'title' => $validated['title'],
+        'description' => $validated['description'],
+        'schedule' => $schedule,
+        'mode' => $validated['mode'],
+        'location' => $validated['location'] ?? null,
+        'trainingLink' => $validated['training_link'] ?? null,
+        'organizationID' => $user->organizationID,
+    ]);
+
+    return response()->json([
+        'message' => 'TRAINING CREATED SUCCESSFULLY!!!',
+        'data' => $training->load('organization')
+    ], 201);
+}
     /**
      * Display the specified resource.
      */
