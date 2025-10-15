@@ -16,10 +16,23 @@ use App\Http\Controllers\CareerController;
 //no auth required
 Route::get('/trainings', [TrainingController::class, 'index']);
 Route::get('/careers', [CareerController::class, 'index']);
+
 //auth required
 Route::middleware('auth.custom')->group(function () {
     Route::post('/trainings', [TrainingController::class, 'store']);
     Route::post('/careers', [CareerController::class, 'store']);
+
+    //registrations
+    Route::get('/registrations', [\App\Http\Controllers\RegistrationController::class, 'index']);
+    Route::post('/registrations', [\App\Http\Controllers\RegistrationController::class, 'store']);
+    Route::delete('/registrations/{id}', [\App\Http\Controllers\RegistrationController::class, 'destroy']);
+
+    //applications
+    // Applications
+    Route::get('/applications', [\App\Http\Controllers\ApplicationController::class, 'index']);
+    Route::post('/applications', [\App\Http\Controllers\ApplicationController::class, 'store']);
+    Route::delete('/applications/{id}', [\App\Http\Controllers\ApplicationController::class, 'destroy']);
+
 });
 
 
