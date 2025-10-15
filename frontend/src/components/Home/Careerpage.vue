@@ -1,43 +1,25 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
+import axios from "axios";
 
-const organizations = ref([
-  { id: 1, name: "Tech Corp" },
-  { id: 2, name: "Analytics Inc" },
-]);
+const organizations = ref([]);
+const careers = ref([]);
 
-const careers = ref([
-  {
-    id: 1,
-    position: "Software Engineer",
-    deadlineOfSubmission: "2025-07-24",
-    detailsAndInstructions: "Build and maintain software applications.",
-    qualifications: "Bachelor’s in Computer Science or related field.",
-    requirements: "Resume, Transcript, Certificate of Employment",
-    applicationLetterAddress: "HR Dept, Tech Corp, Manila",
-    organizationID: 1,
-  },
-  {
-    id: 2,
-    position: "Data Analyst",
-    deadlineOfSubmission: "2025-08-15",
-    detailsAndInstructions: "Analyze data to support business decisions.",
-    qualifications: "Background in Statistics or Data Science.",
-    requirements: "Resume, TOR, Sample Reports",
-    applicationLetterAddress: "Data Team, Analytics Inc, Cebu",
-    organizationID: 2,
-  },
-]);
+onMounted(async () => {
+  try {
+    const response = await axios.get("http://127.0.0.1:8000/api/careers");
+    careers.value = response.data;
+  } catch (error) {
+    console.error("Error fetching careers:", error);
+  }
+});
 
 // Merge careers with organization name
 const careersWithOrg = computed(() =>
-  careers.value.map((career) => {
-    const org = organizations.value.find((o) => o.id === career.organizationID);
-    return {
-      ...career,
-      organizationName: org ? org.name : "Unknown",
-    };
-  })
+  careers.value.map((career) => ({
+    ...career,
+    organizationName: career.organizationName || "Unknown",
+  }))
 );
 
 const showModal = ref(false);
