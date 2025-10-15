@@ -252,11 +252,6 @@ onActivated(() => {
           <p class="mb-4">
             <strong>Description:</strong> {{ selectedTraining.description }}
           </p>
-          <p>
-            <strong>Schedule:</strong>
-            {{ selectedTraining.formattedScheduleschedule }}
-          </p>
-          <p><strong>Location:</strong> {{ selectedTraining.location }}</p>
         </div>
       </div>
 
