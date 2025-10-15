@@ -12,6 +12,7 @@ const trainings = ref([]);
 const selectedTraining = ref(null);
 const isModalOpen = ref(false);
 const toasts = ref([]);
+const myRegistrations = ref(new Set());
 
 const trainingsWithOrg = computed(() =>
   trainings.value.map((t) => {
@@ -51,9 +52,35 @@ function isTrainingBookmarked(trainingId) {
   return bookmarkedTrainings.value.includes(trainingId);
 }
 
-//regster for training function
-function registerForTraining(){
-  addToast('REGISTRATION SUCCESSFUL!!!', 'success');
+//register for training function
+async function registerForTraining(training){
+  if(!training) return;
+
+  try{
+    const token = localStorage.getItem('token');
+    if(!token){
+      addToast('PLEASE LOG IN FIRST', 'accent');
+      return;
+    }
+
+    await axios.post(
+      'http://127.0.0.1:8000/api/registrations',
+      { trainingID: training.trainingID },
+      {headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    addToast('REGISTRATION SUCCESSFUL!!!', 'success');
+    myRegistrations.value.add(training.trainingID);
+  } catch (error){
+    if(error.response?.status ===409){
+      addToast('YOU ARE ALREADY REGISTERED', 'accent');
+    }else if(error.response?.status === 401){
+      addToast('UNAUTHORIZED PLEASE LOG IN AGAIN', 'accent');
+    }else {
+      addToast('FAILED TO REGISTER', 'accent');
+    }
+  }
+
 }
 
 //toast notification function
@@ -78,8 +105,23 @@ async function fetchTrainings() {
 }
 
 
+async function fetchMyRegistrations(){
+  try{
+    const token = localStorage.getItem('token');
+    if(!token) return;
+    const res = await axios.get('http://127.0.0.1:8000/api/registrations', {
+      headers: { Authorization: `Bearer ${token}`},
+    });
+    myRegistrations.value = new Set(res.data.map(r => r.trainingID));
+  } catch (_) {}
+}
+
+
 //fetch trainings on mount 
-onMounted(fetchTrainings);
+onMounted(async () => {
+  await fetchTrainings();
+  await fetchMyRegistrations();
+});
 
 onActivated(() => {
   fetchTrainings();
@@ -189,9 +231,10 @@ onActivated(() => {
             </button>
             <button
               class="btn bg-customButton btn-sm text-white"
-              @click="registerTraining(selectedPost)"
+              :disabled="myRegistrations.has(selectedTraining.trainingID)"
+              @click.stop="registerForTraining(selectedTraining)"
             >
-              Register
+              {{ myRegistrations.has(selectedTraining.trainingID) ? 'Registered' : 'Register' }}
             </button>
           </div>
 
@@ -209,11 +252,6 @@ onActivated(() => {
           <p class="mb-4">
             <strong>Description:</strong> {{ selectedTraining.description }}
           </p>
-          <p>
-            <strong>Schedule:</strong>
-            {{ selectedTraining.formattedScheduleschedule }}
-          </p>
-          <p><strong>Location:</strong> {{ selectedTraining.location }}</p>
         </div>
       </div>
 
