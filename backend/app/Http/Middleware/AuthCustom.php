@@ -9,20 +9,21 @@ use App\Models\Organization;
 
 class AuthCustom
 {
-public function handle(Request $request, Closure $next)
-{
-    $token = $request->bearerToken();
+    public function handle(Request $request, Closure $next)
+    {
+        $token = $request->bearerToken();
 
-    $user = Applicant::where('api_token', $token)->first()
-         ?? Organization::where('api_token', $token)->first();
+        $user = \App\Models\Applicant::where('api_token', $token)->first()
+            ?? \App\Models\Organization::where('api_token', $token)->first();
 
-    if (!$user) {
-        return response()->json(['message' => 'Unauthorized'], 401);
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $request->setUserResolver(function () use ($user) {
+            return $user;
+        });
+
+        return $next($request);
     }
-
-    // attach user directly
-    $request->authUser = $user;
-
-    return $next($request);
-}
 }

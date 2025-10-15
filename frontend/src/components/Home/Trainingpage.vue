@@ -2,7 +2,7 @@
 import { ref, onMounted, computed, onActivated } from "vue";
 import axios from "axios";
 
-// Example organizations (replace with API later)
+// Organizations
 const organizations = ref([]);
 
 // Trainings data
@@ -14,19 +14,24 @@ const isModalOpen = ref(false);
 const toasts = ref([]);
 const myRegistrations = ref(new Set());
 
+// Bookmarked trainings (IDs)
+const bookmarkedTrainings = ref([]);
+
+// Computed trainings with org info
 const trainingsWithOrg = computed(() =>
   trainings.value.map((t) => {
     const org = organizations.value.find((o) => o.id === t.organizationID);
     return {
       ...t,
-
       organizationName: org ? org.name : "Unknown",
       displaySchedule: t.schedule || "TBD"
     };
   })
 );
 
-// Modal controls\
+// ============================
+// 📌 Modal Controls
+// ============================
 function openTrainingModal(training) {
   selectedTraining.value = training;
   isModalOpen.value = true;
@@ -36,15 +41,63 @@ function closeModal() {
   selectedTraining.value = null;
 }
 
-const bookmarkedTrainings = ref([]); // stores IDs of bookmarked trainings
+// ============================
+// 🔖 Bookmark Functions
+// ============================
 
-function toggleBookmark(trainingId) {
-  if (bookmarkedTrainings.value.includes(trainingId)) {
-    bookmarkedTrainings.value = bookmarkedTrainings.value.filter(
-      (id) => id !== trainingId
-    );
-  } else {
-    bookmarkedTrainings.value.push(trainingId);
+// Fetch user's bookmarks
+async function fetchBookmarks() {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const { data } = await axios.get("http://127.0.0.1:8000/api/bookmarks", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    bookmarkedTrainings.value = data;
+  } catch (error) {
+    console.error("Error fetching bookmarks:", error);
+  }
+}
+
+// Toggle bookmark
+async function toggleBookmark(trainingId) {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    addToast("PLEASE LOG IN FIRST", "accent");
+    return;
+  }
+
+  // Remove bookmark
+  if (isTrainingBookmarked(trainingId)) {
+    try {
+      await axios.delete(`http://127.0.0.1:8000/api/bookmarks/${trainingId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      bookmarkedTrainings.value = bookmarkedTrainings.value.filter(
+        (id) => id !== trainingId
+      );
+      addToast("Bookmark removed", "info");
+    } catch (error) {
+      console.error("Error removing bookmark:", error);
+      addToast("Failed to remove bookmark", "error");
+    }
+  } 
+  // Add bookmark
+  else {
+    try {
+      await axios.post(
+        "http://127.0.0.1:8000/api/bookmarks",
+        { trainingID: trainingId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      bookmarkedTrainings.value.push(trainingId);
+      addToast("Bookmarked!", "success");
+    } catch (error) {
+      if (error.response?.status === 409)
+        addToast("Already bookmarked", "accent");
+      else addToast("Failed to bookmark", "error");
+    }
   }
 }
 
@@ -52,81 +105,85 @@ function isTrainingBookmarked(trainingId) {
   return bookmarkedTrainings.value.includes(trainingId);
 }
 
-//register for training function
-async function registerForTraining(training){
-  if(!training) return;
+// ============================
+// 📝 Registration Function
+// ============================
+async function registerForTraining(training) {
+  if (!training) return;
 
-  try{
-    const token = localStorage.getItem('token');
-    if(!token){
-      addToast('PLEASE LOG IN FIRST', 'accent');
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      addToast("PLEASE LOG IN FIRST", "accent");
       return;
     }
 
     await axios.post(
-      'http://127.0.0.1:8000/api/registrations',
+      "http://127.0.0.1:8000/api/registrations",
       { trainingID: training.trainingID },
-      {headers: { Authorization: `Bearer ${token}` } }
+      { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    addToast('REGISTRATION SUCCESSFUL!!!', 'success');
+    addToast("REGISTRATION SUCCESSFUL!!!", "success");
     myRegistrations.value.add(training.trainingID);
-  } catch (error){
-    if(error.response?.status ===409){
-      addToast('YOU ARE ALREADY REGISTERED', 'accent');
-    }else if(error.response?.status === 401){
-      addToast('UNAUTHORIZED PLEASE LOG IN AGAIN', 'accent');
-    }else {
-      addToast('FAILED TO REGISTER', 'accent');
+  } catch (error) {
+    if (error.response?.status === 409) {
+      addToast("YOU ARE ALREADY REGISTERED", "accent");
+    } else if (error.response?.status === 401) {
+      addToast("UNAUTHORIZED PLEASE LOG IN AGAIN", "accent");
+    } else {
+      addToast("FAILED TO REGISTER", "accent");
     }
   }
-
 }
 
-//toast notification function
-function addToast(message, type = 'info'){
+// ============================
+// 🔔 Toast Function
+// ============================
+function addToast(message, type = "info") {
   const id = Date.now();
-  toasts.value.push({id, message, type});
+  toasts.value.push({ id, message, type });
   setTimeout(() => {
-    toasts.value = toasts.value.filter(toast => toast.id !== id);
+    toasts.value = toasts.value.filter((toast) => toast.id !== id);
   }, 3000);
 }
 
-
-// Fetch from API
+// ============================
+// 📡 API Fetch Functions
+// ============================
 async function fetchTrainings() {
   try {
     const response = await axios.get("http://127.0.0.1:8000/api/trainings");
     trainings.value = response.data;
   } catch (error) {
     console.error("Error fetching trainings:", error);
-    addToast('FAILED TO LOAD TRAININGS', 'error');
+    addToast("FAILED TO LOAD TRAININGS", "error");
   }
 }
 
-
-async function fetchMyRegistrations(){
-  try{
-    const token = localStorage.getItem('token');
-    if(!token) return;
-    const res = await axios.get('http://127.0.0.1:8000/api/registrations', {
-      headers: { Authorization: `Bearer ${token}`},
+async function fetchMyRegistrations() {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    const res = await axios.get("http://127.0.0.1:8000/api/registrations", {
+      headers: { Authorization: `Bearer ${token}` },
     });
-    myRegistrations.value = new Set(res.data.map(r => r.trainingID));
+    myRegistrations.value = new Set(res.data.map((r) => r.trainingID));
   } catch (_) {}
 }
 
-
-//fetch trainings on mount 
+// ============================
+// 🚀 Lifecycle Hooks
+// ============================
 onMounted(async () => {
   await fetchTrainings();
   await fetchMyRegistrations();
+  await fetchBookmarks(); // ✅ Fetch user bookmarks from backend
 });
 
 onActivated(() => {
   fetchTrainings();
 });
-
 </script>
 
 <template>

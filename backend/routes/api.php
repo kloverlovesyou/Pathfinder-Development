@@ -11,7 +11,7 @@ use App\Http\Controllers\EducationController;
 use App\Http\Controllers\SkillController;
 use App\Http\Controllers\TrainingController;
 use App\Http\Controllers\CareerController;
-
+use App\Http\Controllers\TrainingBookmarkController;
 
 //no auth required
 Route::get('/trainings', [TrainingController::class, 'index']);
@@ -82,3 +82,10 @@ Route::post('/skills', [SkillController::class, 'store']);
 Route::delete('/skills/{id}', [SkillController::class, 'destroy']);
 
 Route::delete('/user', [ApplicantController::class, 'destroy']);
+
+Route::middleware('auth.custom')->group(function () {
+    Route::get('/bookmarks', [TrainingBookmarkController::class, 'index']);
+    Route::post('/bookmarks', [TrainingBookmarkController::class, 'store']);
+    Route::delete('/bookmarks/{trainingID}', [TrainingBookmarkController::class, 'destroy']);
+});
+
