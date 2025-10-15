@@ -34,7 +34,7 @@ class Registration extends Model
 
 	protected $casts = [
 		'registrationDate' => 'datetime',
-		'registrationStatus' => 'datetime',
+		'registrationStatus' => 'string',
 		'certGivenDate' => 'datetime',
 		'trainingID' => 'int',
 		'applicantID' => 'int'

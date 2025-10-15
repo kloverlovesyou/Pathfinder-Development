@@ -26,7 +26,6 @@ onMounted(() => {
     userName.value = "Guest";
   }
 });
-
 </script>
 <template>
   <div class="min-h-screen bg-gray-100 font-poppins">

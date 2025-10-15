@@ -5,7 +5,7 @@
     <!-- Main Area -->
     <div class="flex flex-col flex-1">
       <!-- Header -->
-      <header class="h-16 text-dark-slate flex items-center px-4 shadow">
+      <header class="h-16 text-dark-slate flex items-center px-4">
         <TopBar />
       </header>
 

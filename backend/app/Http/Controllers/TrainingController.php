@@ -9,9 +9,6 @@ use App\Http\Controllers\Controller;
 
 class TrainingController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         //fetch all trainings

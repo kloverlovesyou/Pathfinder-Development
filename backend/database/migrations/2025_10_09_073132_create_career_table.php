@@ -6,29 +6,42 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('career', function (Blueprint $table) {
-            $table->id('careerID');
-
-            $table->string('position');
-            $table->text('detailsAndInstructions');
-            $table->text('qualifications');
-            $table->text('requirements');
-            $table->string('applicationLetterAddress');
-            $table->datetime('deadlineOfSubmission');
-            
-            //foreign key constraints
-            $table->foreign('organizationID')->nullable();
-        });
+        if(!Schema::hasTable('career')){
+            Schema::create('career', function (Blueprint $table) {
+                $table->id('careerID');
+    
+                $table->string('position');
+                $table->text('detailsAndInstructions');
+                $table->text('qualifications');
+                $table->text('requirements');
+                $table->string('applicationLetterAddress');
+                $table->datetime('deadlineOfSubmission');
+                
+                //foreign key constraints
+                $table->unsignedBigInteger('organizationID')->nullable();
+                $table->foreign('organizationID')
+                    ->references('organizationID')
+                    ->on('organization')
+                    ->nullOnDelete();
+            });
+        } else{
+            Schema::table('career', function (Blueprint $table){
+                if(!Schema::hasColumn('career', 'organizationID')){
+                    $table->unsignedBigInteger('organizationID')->nullable()->after('deadlineOfSubmission');
+                    $table->foreign('organizationID')
+                        ->references('organizationID')
+                        ->on('organization')
+                        ->nullOnDelete();
+                }
+            });
+        }
+        
+        
     }
 
-    /**
-     * Reverse the migrations.
-     */
+    
     public function down(): void
     {
         Schema::dropIfExists('career');
