@@ -214,10 +214,11 @@
             <!-- Email & Phone -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <input
-                class="border border-gray-300 input w-full"
+                class="border border-gray-300 input w-full text-gray-600"
                 type="email"
                 placeholder="Email"
                 v-model="form.emailAddress"
+                readonly
               />
               <input
                 type="tel"
@@ -252,14 +253,13 @@
             <!-- Divider for large screens -->
             <div class="hidden lg:block h-px bg-gray-300"></div>
 
-            <!-- Current Password -->
             <div>
               <input
                 type="password"
                 class="border border-gray-300 input w-full"
-                required
                 placeholder="Confirm Password"
                 v-model="form.currentPassword"
+                required
               />
             </div>
 
@@ -426,7 +426,7 @@ const handleDelete = async () => {
     isDeleting.value = true;
     const res = await axios.delete("http://127.0.0.1:8000/api/user", {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      data: { currentPassword: form.value.currentPassword } // send password for verification
+      data: { currentPassword: form.value.currentPassword }, // send password for verification
     });
     alert(res.data.message);
     localStorage.removeItem("token");

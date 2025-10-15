@@ -1,8 +1,20 @@
 <template>
   <div class="organization-calendar">
+
+    <!-- Hamburger Toggle -->
+    <button class="hamburger" @click="toggleSidebar" :class="{ open: isSidebarOpen, shifted: isSidebarOpen }">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
     <!-- Sidebar -->
     <transition name="slide">
-      <aside class="sidebar" :class="{ collapsed: !isSidebarOpen }" @click.self="toggleSidebar">
+      <aside class="sidebar" :class="{ collapsed: !isSidebarOpen }">
+
+        <div class="space">
+
+        </div>
         <!-- Avatar always visible -->
         <div class="avatar">
           <img :src="dictLogo" alt="DICT Logo" class="avatar-img" />
@@ -74,9 +86,8 @@
           <span>Calendar</span>
         </div>
 
-        <div class="spacer"></div>
-        <!-- pushes signout down -->
-        <div class="icon signout" @click="logout">
+        <div class="spacer"></div> <!-- pushes signout down -->
+        <div class="icon signout" @click="$router.push('/loginform')">
           <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -107,8 +118,17 @@
 
         <div class="calendar-grid">
           <div class="day-name" v-for="day in dayNames" :key="day">{{ day }}</div>
-          <div v-for="(date, index) in calendarDays" :key="index" class="day-cell" :class="{ today: isToday(date) }">
-            <span v-if="date">{{ date.getDate() }}</span>
+
+          <div v-for="(date, index) in calendarDays" :key="index" class="day-cell" :class="{
+            today: isToday(date),
+            event: hasEvent(date)
+          }" :style="{ backgroundColor: getEventColor(date) }">
+            <span v-if="date" class="date-number">{{ date.getDate() }}</span>
+            <div v-if="date && getEventTitles(date).length" class="events-list">
+              <div v-for="(title, i) in getEventTitles(date)" :key="i" class="event-title">
+                {{ title }}
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -120,12 +140,115 @@
 import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
 
 export default {
+  name: "OrganizationCalendar",
   data() {
     return {
-      dictLogo
+      dictLogo,
+      currentDate: new Date(),
+      dayNames: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+
+      // Hardcoded upcoming trainings
+      trainings: [
+        { title: "Cybersecurity Fundamentals", date: "2025-10-12" },
+        { title: "Web Development Bootcamp", date: "2025-10-18" },
+        { title: "Data Privacy Awareness Seminar", date: "2025-10-25" },
+        { title: "Python for Beginners Workshop", date: "2025-11-02" },
+        { title: "Digital Transformation Strategies", date: "2025-11-10" },
+        { title: "Cloud Computing Essentials", date: "2025-11-15" },
+        { title: "Advanced Networking Configuration", date: "2025-11-20" },
+        { title: "Leadership and Communication Skills", date: "2025-11-22" },
+        { title: "AI Tools for Productivity", date: "2025-11-28" },
+        { title: "Disaster Recovery and Risk Management", date: "2025-12-03" }
+      ],
+
+      // Hardcoded on-going careers
+      careers: [
+        { title: "DICT Frontend Development Intern", date: "2025-10-10" },
+        { title: "Network Engineer Trainee", date: "2025-10-15" },
+        { title: "Cybersecurity Analyst Intern", date: "2025-10-20" },
+        { title: "UI/UX Design Associate Program", date: "2025-10-22" },
+        { title: "Software QA Tester Trainee", date: "2025-10-25" },
+        { title: "Technical Support Specialist Program", date: "2025-10-30" },
+        { title: "Database Administration Internship", date: "2025-11-05" },
+        { title: "AI Research Assistant Program", date: "2025-11-08" },
+        { title: "Mobile App Development Internship", date: "2025-11-12" },
+        { title: "Project Management Apprentice", date: "2025-11-20" }
+      ]
+    }
+  },
+  computed: {
+    monthYear() {
+      return this.currentDate.toLocaleString("default", {
+        month: "long",
+        year: "numeric"
+      });
+    },
+    calendarDays() {
+      const year = this.currentDate.getFullYear();
+      const month = this.currentDate.getMonth();
+
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const daysInMonth = lastDay.getDate();
+
+      const days = [];
+      for (let i = 0; i < firstDay.getDay(); i++) days.push(null);
+      for (let d = 1; d <= daysInMonth; d++) days.push(new Date(year, month, d));
+
+      return days;
+    }
+  },
+  methods: {
+    prevMonth() {
+      this.currentDate.setMonth(this.currentDate.getMonth() - 1);
+      this.currentDate = new Date(this.currentDate);
+    },
+    nextMonth() {
+      this.currentDate.setMonth(this.currentDate.getMonth() + 1);
+      this.currentDate = new Date(this.currentDate);
+    },
+    isToday(date) {
+      if (!date) return false;
+      const today = new Date();
+      return (
+        date.getDate() === today.getDate() &&
+        date.getMonth() === today.getMonth() &&
+        date.getFullYear() === today.getFullYear()
+      );
+    },
+    hasEvent(date) {
+      if (!date) return false;
+      return (
+        this.trainings.some(t => t.date === this.formatDate(date)) ||
+        this.careers.some(c => c.date === this.formatDate(date))
+      );
+    },
+    getEventTitles(date) {
+      if (!date) return [];
+      const formatted = this.formatDate(date);
+      const trainingTitles = this.trainings
+        .filter(t => t.date === formatted)
+        .map(t => "🟦 " + t.title);
+      const careerTitles = this.careers
+        .filter(c => c.date === formatted)
+        .map(c => "🟨 " + c.title);
+      return [...trainingTitles, ...careerTitles];
+    },
+    getEventColor(date) {
+      if (!date) return "";
+      const formatted = this.formatDate(date);
+      if (this.trainings.some(t => t.date === formatted)) return "#d0e6ff"; // light blue
+      if (this.careers.some(c => c.date === formatted)) return "#fff5c2"; // light yellow
+      return "";
+    },
+    formatDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
     }
   }
-}
+};
 </script>
 
 <script setup>
@@ -135,6 +258,35 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 const isSidebarOpen = ref(true);
 const organizationName = ref("");
+
+// Get org name from localStorage on mount
+onMounted(() => {
+  const storedUser = localStorage.getItem("user");
+  if (storedUser) {
+    const user = JSON.parse(storedUser);
+    if (user.role === "organization") {
+      organizationName.value = user.displayName || user.name;
+    }
+  }
+});
+
+// Sidebar navigation functions
+const goToProfile = () => router.push('/profile');
+const goToHome = () => router.push('/organization');
+const goToTrainings = () => router.push({ name: 'OrgTrainings' });
+const goToCareers = () => router.push({ name: 'OrgCareers' });
+const goToCalendar = () => router.push({ name: 'OrgCalendar' });
+
+// Generic navigation function
+const navigateTo = (route) => {
+  router.push(route);
+}
+
+const logout = () => {
+  localStorage.removeItem('user');
+  localStorage.removeItem('token');
+  router.push({ name: 'Login' });
+};
 
 onMounted(() => {
   const storedUser = localStorage.getItem("user");
@@ -154,24 +306,6 @@ onMounted(() => {
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
 };
-
-// Generic navigation function
-const navigateTo = (route) => {
-  router.push(route);
-}
-
-const logout = () => { 
-  localStorage.removeItem('user'); 
-  localStorage.removeItem('token'); 
-  router.push({ name: 'Login' }); 
-};
-
-// Sidebar navigation functions
-const goToProfile = () => router.push('/profile');
-const goToHome = () => router.push('/organization');
-const goToTrainings = () => router.push({ name: 'OrgTrainings' });
-const goToCareers = () => router.push({ name: 'OrgCareers' });
-const goToCalendar = () => router.push({ name: 'OrgCalendar' });
 
 // Calendar logic
 const today = new Date();
@@ -254,6 +388,11 @@ const isToday = (date) => {
   background-color: #f4f4f4;
 }
 
+.calendar-container {
+  width: 100%;
+  max-width: 700px;
+}
+
 /* Sidebar */
 .sidebar {
   width: 200px;
@@ -312,6 +451,13 @@ const isToday = (date) => {
   margin: 10px auto;
   width: 40px;
   height: 40px;
+  border-radius: 50%;
+}
+
+.sidebar.collapsed .space {
+  margin: 10px auto;
+  width: 40px;
+  height: 5px;
   border-radius: 50%;
 }
 
@@ -434,7 +580,7 @@ const isToday = (date) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .calendar-header h2 {
@@ -464,22 +610,90 @@ const isToday = (date) => {
 
 .day-name {
   text-align: center;
-  font-weight: 600;
-  color: #666;
+  font-weight: bold;
+  color: #555;
 }
 
 .day-cell {
-  min-height: 80px;
+  position: relative;
   border: 1px solid #ddd;
   border-radius: 6px;
-  text-align: right;
-  padding: 5px;
-  background: #fafafa;
+  height: 100px;
+  /* fixed height */
+  width: 100%;
+  /* fill column space */
+  background-color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: 4px;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .day-cell.today {
-  background: #44576D;
-  color: white;
+  border: 2px solid #007bff;
+}
+
+.date-number {
   font-weight: bold;
+  margin-bottom: 3px;
+}
+
+.events-list {
+  flex: 1;
+  width: 100%;
+  overflow-y: auto;
+  /* scrolls if too long, doesn’t resize cell */
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.event-title {
+  font-size: 0.7rem;
+  /* smaller text fits better */
+  line-height: 1rem;
+  word-wrap: break-word;
+  white-space: normal;
+  /* allows text to wrap */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Animate position when sidebar opens */
+.hamburger {
+  position: fixed;
+  top: 15px;
+  left: 18px;
+  width: 25px;
+  height: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  cursor: pointer;
+  z-index: 2000;
+  /* ← raised from 100 to 2000 */
+  padding: 0;
+  transition: transform 0.6s ease;
+  /* smoother animation */
+}
+
+/* Hamburger lines */
+.hamburger span {
+  display: block;
+  height: 3px;
+  width: 100%;
+  background-color: white;
+  border-radius: 2px;
+}
+
+/* When sidebar is open, move hamburger to the right */
+.hamburger.shifted {
+  transform: translateX(140px);
+  /* Adjust this to your sidebar width */
 }
 </style>
