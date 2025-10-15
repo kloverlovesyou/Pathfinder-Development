@@ -108,85 +108,110 @@
       </header>
 
       <!-- Insert job picks style block here -->
-      <section class="upcoming">
-        <div class="flex items-center justify-between">
-          <!-- Left side: title + count -->
-          <h2 class="section-title flex items-center gap-1">
-            Upcoming Trainings
-            <span class="count-badge">{{ upcomingtrainings.length }}</span>
-          </h2>
+<section class="upcoming">
+  <div class="flex items-center justify-between">
+    <!-- Left side: title + count -->
+    <h2 class="section-title flex items-center gap-1">
+      Upcoming Trainings
+      <span class="count-badge">{{ upcomingtrainings.length }}</span>
+    </h2>
 
-          <!-- Right side: plain plus -->
-          <button class="plus-btn-text" @click="openTrainingPopup">+</button>
-        </div>
+    <!-- Right side: plain plus -->
+    <button class="plus-btn-text" @click="openTrainingPopup">+</button>
+  </div>
 
-        <div class="training-slider">
-          <div class="training-card" v-for="training in upcomingtrainings" :key="training.trainingID">
-            <div class="training-left">
-            </div>
+              <div class="training-slider">
+                <div
+                  class="training-card"
+                  v-for="training in upcomingtrainings"
+                  :key="training.trainingID"
+                >
+                  <div class="training-left"></div>
 
-            <div class="training-right" @click="openTrainingDetails(training)">
-              <h3 class="training-title">{{ training.title }}</h3>
-              <p class="training-description">{{ training.description }}</p>
-              <p class="training-date">
-                {{ formatSchedule(training.schedule) }}
-              </p>
-              <p class="training-mode">{{ training.mode }}</p>
-              <p class="training-location" v-if="training.mode === 'On-Site'">
-                📍 {{ training.location }}
-              </p>
-              <p class="training-link" v-else-if="training.mode === 'Online'">
-                🔗 {{ training.trainingLink }}
-              </p>
-              <p class="training-organization">{{ training.name }}</p>
-            </div>
+                  <div class="training-right" @click="openTrainingDetails(training)">
+                    <h3 class="training-title">{{ training.title }}</h3>
+                    <p class="training-description">{{ training.description }}</p>
+                    <p class="training-date">
+                      {{ formatSchedule(training.schedule) }}
+                    </p>
+                    <p class="training-mode">{{ training.mode }}</p>
+                    <p class="training-location" v-if="training.mode === 'On-Site'">
+                      📍 {{ training.location }}
+                    </p>
+                    <p class="training-link" v-else-if="training.mode === 'Online'">
+                      🔗 {{ training.trainingLink }}
+                    </p>
+                    <p class="training-organization">{{ training.name }}</p>
+                  </div>
 
-            <!-- 3-dot menu -->
-            <div class="menu">
-              <div class="menu-icon" @click="toggleUpcomingMenu(training.id)">⋮</div>
-              <div v-if="openUpcomingMenu === training.id" class="dropdown-menu">
-                <ul>
-                  <li @click="openRegistrantsModal">Registrants</li>
-                  <li>Delete Training</li>
-                </ul>
+                  <!-- ✅ For Upcoming Trainings -->
+                  <div class="menu">
+                    <div
+                      class="menu-icon"
+                      @click.stop="toggleUpcomingMenu(training.trainingID)"
+                    >
+                      ⋮
+                    </div>
+                    <div
+                      v-if="openUpcomingMenu === training.trainingID"
+                      class="dropdown-menu"
+                      @click.stop
+                    >
+                      <ul>
+                        <li @click="openRegistrantsModal">Registrants</li>
+                        <li>Delete Training</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
+            </section>
 
-      <section class="completed">
-        <div class="flex items-center justify-between">
-          <h2 class="section-title flex items-center gap-1">Completed Trainings
-            <span class="count-badge">{{ completedtrainings.length }}</span>
-          </h2>
-        </div>
-
-        <div class="training-slider">
-          <div class="training-card" v-for="training in completedtrainings" :key="training.id">
-            <div class="training-left">
-            </div>
-
-            <div class="training-right" @click="openTrainingDetails(training)">
-              <h3 class="training-title">{{ training.title }}</h3>
-              <p class="training-date">
-                {{ training.date }} | {{ training.time }}
-              </p>
-            </div>
-
-            <!-- 3-dot menu -->
-            <div class="menu">
-              <div class="menu-icon" @click="toggleCompletedMenu(training.id)">⋮</div>
-              <div v-if="openCompletedMenu === training.id" class="dropdown-menu">
-                <ul>
-                  <li @click="openRegistrantsModal">Registrants</li>
-                  <li>Delete Training</li>
-                </ul>
+            <section class="completed">
+              <div class="flex items-center justify-between">
+                <h2 class="section-title flex items-center gap-1">
+                  Completed Trainings
+                  <span class="count-badge">{{ completedtrainings.length }}</span>
+                </h2>
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
+
+              <div class="training-slider">
+                <div
+                  class="training-card"
+                  v-for="training in completedtrainings"
+                  :key="training.id"
+                >
+                  <div class="training-left"></div>
+
+                  <div class="training-right" @click="openTrainingDetails(training)">
+                    <h3 class="training-title">{{ training.title }}</h3>
+                    <p class="training-date">
+                      {{ training.date }} | {{ training.time }}
+                    </p>
+                  </div>
+
+                  <!-- ✅ For Completed Trainings -->
+                  <div class="menu">
+                    <div
+                      class="menu-icon"
+                      @click.stop="toggleCompletedMenu(training.id)"
+                    >
+                      ⋮
+                    </div>
+                    <div
+                      v-if="openCompletedMenu === training.id"
+                      class="dropdown-menu"
+                      @click.stop
+                    >
+                      <ul>
+                        <li @click="openRegistrantsModal">Registrants</li>
+                        <li>Delete Training</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
 
       <!-- Registrants Modal -->
       <div v-if="showRegistrantsModal" class="modal-overlay" @click.self="closeModal">
@@ -406,19 +431,23 @@
 
 <script>
 import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
-import axios from 'axios';
+import axios from "axios";
 
 export default {
   data() {
     return {
       dictLogo,
+
+      /* ==========================
+         ✅ Dropdown Menu States
+      ========================== */
       openUpcomingMenu: null,
       openCompletedMenu: null,
+
       showTrainingDetailsModal: false,
       selectedTraining: {},
 
       registrantsList: [
-        
         { id: 2, name: "Maria Santos", status: "Attended", dateRegistered: "2025-09-01" },
         { id: 3, name: "David Cruz", status: "Did not Attend", dateRegistered: "2025-09-02" },
         { id: 4, name: "Anna Lee", status: "Attended", dateRegistered: "2025-09-03" },
@@ -432,17 +461,19 @@ export default {
         { id: 12, name: "Patricia Ong", status: "Attended", dateRegistered: "2025-09-08" },
         { id: 13, name: "Michael Torres", status: "Attended", dateRegistered: "2025-09-09" },
         { id: 14, name: "Angela Bautista", status: "Attended", dateRegistered: "2025-09-10" },
-        { id: 15, name: "Kevin Ramirez", status: "Did not Attend", dateRegistered: "2025-09-10" }
+        { id: 15, name: "Kevin Ramirez", status: "Did not Attend", dateRegistered: "2025-09-10" },
       ],
+
       showRegistrantsModal: false,
+      showCertUploadModal: false,
 
       selectedRegistrant: {
-        name: '',
-        dateRegistered: '',
-        img: '',
-        certificateTrackingID: '', // New data field for the form
-        certificateGivenDate: '', // New data field for the form
-        uploadedFile: null // New data field for the form
+        name: "",
+        dateRegistered: "",
+        img: "",
+        certificateTrackingID: "",
+        certificateGivenDate: "",
+        uploadedFile: null,
       },
 
       upcomingtrainings: [],
@@ -457,85 +488,126 @@ export default {
         time: "",
         mode: "",
         location: "",
-        trainingLink: ""
+        trainingLink: "",
       },
-      upcomingtrainings: []
-    }
+    };
   },
 
   methods: {
     toggleSidebar() {
       this.isSidebarOpen = !this.isSidebarOpen;
     },
+
+    /* ==========================
+       ✅ Dropdown Menu Logic
+    ========================== */
     toggleUpcomingMenu(id) {
-      this.openUpcomingMenu = this.openUpcomingMenu === id ? null : id
+      // toggle only one menu at a time
+      this.openUpcomingMenu = this.openUpcomingMenu === id ? null : id;
+      this.openCompletedMenu = null; // close the other one
     },
+
     toggleCompletedMenu(id) {
-      this.openCompletedMenu = this.openCompletedMenu === id ? null : id
+      this.openCompletedMenu = this.openCompletedMenu === id ? null : id;
+      this.openUpcomingMenu = null; // close the other one
     },
+
+    closeAllMenus() {
+      this.openUpcomingMenu = null;
+      this.openCompletedMenu = null;
+    },
+
+    handleOutsideClick(e) {
+      // Close menus only if click is outside .menu elements
+      if (!e.target.closest(".menu")) {
+        this.closeAllMenus();
+      }
+    },
+
+    /* ==========================
+       ✅ Registrants Modal
+    ========================== */
     openRegistrantsModal() {
-      this.showRegistrantsModal = true
+      this.showRegistrantsModal = true;
+      this.closeAllMenus();
     },
+
     closeModal() {
-      this.showRegistrantsModal = false
+      this.showRegistrantsModal = false;
     },
-    // *** NEW METHODS FOR REGISTRANT DETAIL MODAL ***
+
+    /* ==========================
+       ✅ Certificate Upload Modal
+    ========================== */
     openCertUploadModal(registrant) {
       this.selectedRegistrant = {
         ...registrant,
-        certificateTrackingID: '',
-        certificateGivenDate: '',
-        uploadedFile: null
+        certificateTrackingID: "",
+        certificateGivenDate: "",
+        uploadedFile: null,
       };
       this.showCertUploadModal = true;
+      this.closeAllMenus(); // auto-close dropdowns
     },
+
     closeCertUploadModal() {
       this.showCertUploadModal = false;
-      this.selectedRegistrant = { name: '', dateRegistered: '', img: '' }; // Reset selected registrant
+      this.selectedRegistrant = { name: "", dateRegistered: "", img: "" };
     },
+
     handleFileUpload(event) {
-      // Logic to handle file selection
       this.selectedRegistrant.uploadedFile = event.target.files[0];
-      // You might want to display the file name in the Upload File input placeholder/label
     },
+
     sendCertificateDetails() {
-      console.log('Sending Certificate Details:', this.selectedRegistrant);
-      // Implement your API call to send the data here
+      console.log("Sending Certificate Details:", this.selectedRegistrant);
       this.closeCertUploadModal();
     },
+
     dismissModal() {
       this.showCertUploadModal = false;
       this.selectedRegistrant = null;
     },
+
+    /* ==========================
+       ✅ Training Details Modal
+    ========================== */
     openTrainingDetails(training) {
       this.selectedTraining = training;
       this.showTrainingDetailsModal = true;
+      this.closeAllMenus();
     },
+
     closeTrainingDetails() {
       this.showTrainingDetailsModal = false;
     },
+
     handleViewRegistrants() {
-      this.closeTrainingDetails(); // close the details modal
-      this.openRegistrantsModal(); // open your registrants modal
+      this.closeTrainingDetails();
+      this.openRegistrantsModal();
     },
 
-    //fetch trainings
-    async fetchTrainings(){
-      try{
+    /* ==========================
+       ✅ Trainings Fetch
+    ========================== */
+    async fetchTrainings() {
+      try {
         const response = await axios.get("http://127.0.0.1:8000/api/trainings");
         this.upcomingtrainings = response.data;
-      } catch (error){
+      } catch (error) {
         console.error("ERROR FETCHING TRAININGS: ", error);
       }
     },
 
-
-    // Popup methods
+    /* ==========================
+       ✅ Training Popup Methods
+    ========================== */
     openTrainingPopup() {
-      this.showTrainingPopup = true
+      this.showTrainingPopup = true;
     },
+
     closeTrainingPopup() {
-      this.showTrainingPopup = false
+      this.showTrainingPopup = false;
       this.newTraining = {
         title: "",
         description: "",
@@ -543,21 +615,18 @@ export default {
         time: "",
         mode: "",
         location: "",
-        trainingLink: ""
-      }
+        trainingLink: "",
+      };
     },
+
     async saveTraining() {
       try {
-        //ensure both date and time are filled
-        if(!this.newTraining.date || !this.newTraining.time){
+        if (!this.newTraining.date || !this.newTraining.time) {
           alert("PLEASE SELECT BOTH A DATE AND TIME FOR THE TRAINING");
-          return; 
-        } 
+          return;
+        }
 
-        //combine datetime
         const combinedSchedule = `${this.newTraining.date} ${this.newTraining.time}`;
-
-        //payload matching controller
         const payload = {
           title: this.newTraining.title,
           description: this.newTraining.description,
@@ -567,43 +636,38 @@ export default {
           training_link: this.newTraining.trainingLink || null,
         };
 
-        //just a debug log, remove later
         console.log("PAYLOAD BEING SENT TO BACKEND: ", payload);
 
-        //send to API
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem("token");
         const response = await axios.post("http://127.0.0.1:8000/api/trainings", payload, {
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         });
 
         console.log("TRAINING SAVED:", response.data);
 
-        //add it to the upcoming trainings
-        if(response.data && response.data.data){
+        if (response.data && response.data.data) {
           const newTraining = response.data.data;
 
-          //get organization name
           const storedUser = localStorage.getItem("user");
           let organizationName = "Unknown Organization";
-          if(storedUser){
+          if (storedUser) {
             const user = JSON.parse(storedUser);
             organizationName = user.displayName || user.name || "Unknown Organization";
           }
 
-          // Parse the schedule to separate date and time
           const scheduleDate = new Date(newTraining.schedule);
-          const formattedDate = scheduleDate.toLocaleDateString('en-US', {
-            weekday: 'short',
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
+          const formattedDate = scheduleDate.toLocaleDateString("en-US", {
+            weekday: "short",
+            year: "numeric",
+            month: "short",
+            day: "numeric",
           });
-          const formattedTime = scheduleDate.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit'
+          const formattedTime = scheduleDate.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
           });
 
           this.upcomingtrainings.push({
@@ -614,17 +678,15 @@ export default {
             date: formattedDate,
             time: formattedTime,
             mode: newTraining.mode,
-            ...(newTraining.mode === 'On-Site'
-            ? {location: newTraining.location}
-            : {trainingLink: newTraining.trainingLink}
-            ),
-            organizationName: organizationName
-          })
+            ...(newTraining.mode === "On-Site"
+              ? { location: newTraining.location }
+              : { trainingLink: newTraining.trainingLink }),
+            organizationName: organizationName,
+          });
         }
 
         alert("TRAINING POSTED SUCCESSFULLY!!!");
 
-        //reset form
         this.newTraining = {
           title: "",
           description: "",
@@ -636,36 +698,39 @@ export default {
         };
 
         this.showTrainingPopup = false;
-    } catch (error) {
+      } catch (error) {
         console.error("ERROR SAVING TRAINING:", error.response?.data || error);
         alert("SOMETHING WENT WRONG WHILE SAVING THE TRAINING");
       }
     },
+
     formatSchedule(schedule) {
-      if (!schedule) return 'No schedule set';
-      
+      if (!schedule) return "No schedule set";
+
       try {
         const date = new Date(schedule);
-        return date.toLocaleString('en-US', {
-          weekday: 'short',
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
+        return date.toLocaleString("en-US", {
+          weekday: "short",
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
         });
       } catch (error) {
-        return schedule; // fallback to raw string
+        return schedule;
       }
-    }
-
+    },
   },
 
-  mounted(){
+  mounted() {
     this.fetchTrainings();
-  }
+    document.addEventListener("click", this.handleOutsideClick);
+  },
 
-
+  beforeUnmount() {
+    document.removeEventListener("click", this.handleOutsideClick);
+  },
 };
 </script>
 
