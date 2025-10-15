@@ -127,18 +127,27 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const user = JSON.parse(localStorage.getItem("user"));
 
-  // 1. Block access if route requires auth and no user
+  // 1️⃣ Block access if route requires auth and no user
   if (to.meta.requiresAuth && !user) {
     return next({ name: "Login" });
   }
 
-  // 2. Block access if role does not match
+  // 2️⃣ Block access if role does not match
   if (to.meta.role && (!user || user.role !== to.meta.role)) {
     return next({ name: "Login" });
   }
 
+  // 3️⃣ Prevent logged-in users from accessing login/register routes
+  if (user && to.path.startsWith("/auth")) {
+    // Optional: redirect based on role
+    if (user.role === "organization") {
+      return next({ name: "OrgHome" });
+    } else {
+      return next({ name: "Homepage" });
+    }
+  }
 
-  // 4. Otherwise, continue
+  // 4️⃣ Otherwise, continue
   next();
 });
 

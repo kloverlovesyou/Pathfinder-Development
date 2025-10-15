@@ -1,8 +1,20 @@
 <template>
   <div class="organization-trainings">
+
+    <!-- Hamburger Toggle -->
+    <button class="hamburger" @click="toggleSidebar" :class="{ open: isSidebarOpen, shifted: isSidebarOpen }">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
     <!-- Sidebar -->
     <transition name="slide">
-      <aside class="sidebar" :class="{ collapsed: !isSidebarOpen }" @click.self="toggleSidebar">
+      <aside class="sidebar" :class="{ collapsed: !isSidebarOpen }">
+
+        <div class="space">
+
+        </div>
         <!-- Avatar always visible -->
         <div class="avatar">
           <img :src="dictLogo" alt="DICT Logo" class="avatar-img" />
@@ -13,7 +25,7 @@
           <div v-if="isSidebarOpen" class="profile-section">
             <h3 class="org-name">{{ organizationName }}</h3>
             <div class="profile-actions">
-              <div class="action"  @click="navigateTo('/profile')">
+              <div class="action" @click="navigateTo('/profile')">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M11.7278 8.27191C12.7534 9.87525 14.1247 11.2375 15.7464 12.2534L8.85673 19.144C8.43166 19.569 8.21841 19.7816 7.95731 19.9213C7.69637 20.0609 7.40171 20.1199 6.81278 20.2377L3.73563 20.853C3.40302 20.9195 3.23649 20.9525 3.14188 20.8578C3.04759 20.7632 3.08035 20.5971 3.14677 20.2651L3.76298 17.1879C3.88087 16.5985 3.93965 16.3035 4.07938 16.0424C4.21912 15.7814 4.43173 15.569 4.85673 15.144L11.7278 8.27191ZM16.1116 4.03656C16.6711 3.75929 17.3284 3.75931 17.888 4.03656C18.1821 4.18229 18.455 4.45518 19.0003 5.00043C19.5453 5.54545 19.8184 5.81774 19.9641 6.11175C20.2414 6.67123 20.2413 7.32861 19.9641 7.88812C19.8184 8.18221 19.5455 8.45517 19.0003 9.00043L17.2034 10.7963C15.5308 9.84498 14.1456 8.46859 13.1819 6.81781L15.0003 5.00043C15.5453 4.45539 15.8176 4.18234 16.1116 4.03656Z"
@@ -111,10 +123,9 @@
         <div class="training-slider">
           <div class="training-card" v-for="training in upcomingtrainings" :key="training.trainingID">
             <div class="training-left">
-              <div class="training-avatar"></div>
             </div>
 
-            <div class="training-right">
+            <div class="training-right" @click="openTrainingDetails(training)">
               <h3 class="training-title">{{ training.title }}</h3>
               <p class="training-description">{{ training.description }}</p>
               <p class="training-date">
@@ -154,10 +165,9 @@
         <div class="training-slider">
           <div class="training-card" v-for="training in completedtrainings" :key="training.id">
             <div class="training-left">
-              <div class="training-avatar"></div>
             </div>
 
-            <div class="training-right">
+            <div class="training-right" @click="openTrainingDetails(training)">
               <h3 class="training-title">{{ training.title }}</h3>
               <p class="training-date">
                 {{ training.date }} | {{ training.time }}
@@ -178,22 +188,73 @@
         </div>
       </section>
 
+      <!-- Registrants Modal -->
       <div v-if="showRegistrantsModal" class="modal-overlay" @click.self="closeModal">
         <div class="modal-content">
           <button class="modal-close-btn" @click="closeModal">✕</button>
-          <h3 class="modal-title">List of Registrants</h3>
-          <div class="registrants-grid">
-            <div v-for="person in registrantsList" :key="person.id" class="registrant-card"
-              @click="openCertUploadModal(person)">
-              <img :src="person.img" alt="profile" class="profile-pic" />
-              <p>{{ person.name }}</p>
-            </div>
+          <h3 class="modal-title">Registrants</h3>
+
+          <div class="registrants-table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>NAME</th>
+                  <th>STATUS</th>
+                  <th class="cert-col-header">Certification</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="person in registrantsList" :key="person.id">
+                  <td>
+                    <p class="registrant-name">{{ person.name }}</p>
+                  </td>
+
+                  <td
+                    :class="{ 'status-attended': person.status === 'Attended', 'status-did-not-attend': person.status === 'Did not Attend' }">
+                    {{ person.status }}
+                  </td>
+
+                  <td>
+                    <template v-if="person.status === 'Did not Attend'">
+                      <button class="action-btn issue-cert-btn-regonly" @click="openCertUploadModal(person)" disabled>
+                        Issue Certificate
+                      </button>
+                    </template>
+                    <template v-else>
+                      <button class="action-btn issue-cert-btn" @click="openCertUploadModal(person)">
+                        Issue Certificate
+                      </button>
+                    </template>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Training Details Modal -->
+      <div v-if="showTrainingDetailsModal" class="modal-overlay" @click.self="closeTrainingDetails">
+        <div class="training-details-modal">
+          <button class="modal-close-btn" @click="closeTrainingDetails">✕</button>
+          <h3 class="modal-title">{{ selectedTraining.title }}</h3>
+          <p class="training-info"><strong>Description: </strong>{{ selectedTraining.description }}</p>
+          <p class="training-info"><strong>Date:</strong> {{ selectedTraining.date }}</p>
+          <p class="training-info"><strong>Time:</strong> {{ selectedTraining.time }}</p>
+          <p class="training-info"><strong>Location:</strong> {{ selectedTraining.location }}</p>
+          <p class="training-info"><strong>Training Link:</strong> {{ selectedTraining.trainingLink }}</p>
+          <p class="training-info"><strong>Registration Link:</strong> {{ selectedTraining.registrationLink }}</p>
+
+          <div class="training-actions">
+            <button class="btn-view-registrants" @click="handleViewRegistrants">
+              View Registrants
+            </button>
           </div>
         </div>
       </div>
 
       <!-- Certificate Upload -->
-
       <div v-if="showCertUploadModal" class="modal-overlay" @click.self="closeCertUploadModal">
         <div class="certificate-modal">
 
@@ -219,11 +280,11 @@
           </div>
 
           <p class="status">
-            Status: **{{ selectedRegistrant.status }}**
+            Status: {{ selectedRegistrant.status }}
           </p>
 
           <p class="date-registered">
-            Date Registered: **{{ selectedRegistrant.dateRegistered }}**
+            Date Registered: {{ selectedRegistrant.dateRegistered }}
           </p>
 
           <form @submit.prevent="sendCertificateDetails" class="cert-form">
@@ -316,8 +377,6 @@
               </div>
             </div>
 
-
-
             <!-- On-Site / Online -->
             <div class="training-radio-group">
               <label>
@@ -360,8 +419,27 @@ export default {
       dictLogo,
       openUpcomingMenu: null,
       openCompletedMenu: null,
+      showTrainingDetailsModal: false,
+      selectedTraining: {},
 
-      registrantsList: [],
+      registrantsList: [
+        { id: 1, name: "John Doe", status: "Attended", dateRegistered: "2025-09-01" },
+        { id: 2, name: "Maria Santos", status: "Attended", dateRegistered: "2025-09-01" },
+        { id: 3, name: "David Cruz", status: "Did not Attend", dateRegistered: "2025-09-02" },
+        { id: 4, name: "Anna Lee", status: "Attended", dateRegistered: "2025-09-03" },
+        { id: 5, name: "Mark Reyes", status: "Attended", dateRegistered: "2025-09-03" },
+        { id: 6, name: "Sophia Tan", status: "Attended", dateRegistered: "2025-09-04" },
+        { id: 7, name: "James Lim", status: "Attended", dateRegistered: "2025-09-05" },
+        { id: 8, name: "Christine Dela Cruz", status: "Did not Attend", dateRegistered: "2025-09-05" },
+        { id: 9, name: "Robert Mendoza", status: "Did not Attend", dateRegistered: "2025-09-06" },
+        { id: 10, name: "Isabella Garcia", status: "Attended", dateRegistered: "2025-09-07" },
+        { id: 11, name: "Daniel Chua", status: "Attended", dateRegistered: "2025-09-08" },
+        { id: 12, name: "Patricia Ong", status: "Attended", dateRegistered: "2025-09-08" },
+        { id: 13, name: "Michael Torres", status: "Attended", dateRegistered: "2025-09-09" },
+        { id: 14, name: "Angela Bautista", status: "Attended", dateRegistered: "2025-09-10" },
+        { id: 15, name: "Kevin Ramirez", status: "Did not Attend", dateRegistered: "2025-09-10" }
+      ],
+      showRegistrantsModal: false,
 
       selectedRegistrant: {
         name: '',
@@ -391,6 +469,9 @@ export default {
   },
 
   methods: {
+    toggleSidebar() {
+      this.isSidebarOpen = !this.isSidebarOpen;
+    },
     toggleUpcomingMenu(id) {
       this.openUpcomingMenu = this.openUpcomingMenu === id ? null : id
     },
@@ -430,6 +511,17 @@ export default {
     dismissModal() {
       this.showCertUploadModal = false;
       this.selectedRegistrant = null;
+    },
+    openTrainingDetails(training) {
+      this.selectedTraining = training;
+      this.showTrainingDetailsModal = true;
+    },
+    closeTrainingDetails() {
+      this.showTrainingDetailsModal = false;
+    },
+    handleViewRegistrants() {
+      this.closeTrainingDetails(); // close the details modal
+      this.openRegistrantsModal(); // open your registrants modal
     },
 
     //fetch trainings
@@ -618,10 +710,10 @@ onMounted(() => {
   }
 });
 
-const logout = () => { 
-  localStorage.removeItem('user'); 
-  localStorage.removeItem('token'); 
-  router.push({ name: 'Login' }); 
+const logout = () => {
+  localStorage.removeItem('user');
+  localStorage.removeItem('token');
+  router.push({ name: 'Login' });
 }
 </script>
 
@@ -703,6 +795,13 @@ const logout = () => {
   margin: 10px auto;
   width: 40px;
   height: 40px;
+  border-radius: 50%;
+}
+
+.sidebar.collapsed .space {
+  margin: 10px auto;
+  width: 40px;
+  height: 5px;
   border-radius: 50%;
 }
 
@@ -909,19 +1008,6 @@ const logout = () => {
   margin-right: 12px;
 }
 
-.training-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #e2e8f0;
-  /* placeholder circle */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  color: #718096;
-}
-
 .training:last-child {
   border-bottom: none;
 }
@@ -1048,6 +1134,96 @@ const logout = () => {
   margin-bottom: 16px;
 }
 
+.registrants-table-container {
+  /* Ensures table fits on smaller screens if needed */
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead th {
+  text-align: left;
+  padding: 12px 15px;
+  color: #777;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  font-weight: 600;
+  border-bottom: 1px solid #eee;
+}
+
+tbody tr {
+  border-bottom: 1px solid #f5f5f5;
+  /* Light separator line */
+}
+
+tbody td {
+  padding: 15px 15px;
+  color: #333;
+  font-size: 0.95rem;
+  /* Vertically aligns content in the middle */
+  vertical-align: middle;
+}
+
+/* Status Colors (like in your image) */
+.status-attended {
+  color: #4CAF50;
+  /* Green */
+  font-weight: 500;
+}
+
+.status-did-not-attend {
+  color: #d30707;
+  /* Blue */
+  font-weight: 500;
+}
+
+/* Specific Styles for Issue Certificate Button */
+.issue-cert-btn {
+  /* This is the primary action button, usually a distinct color */
+  background-color: #374151;
+  /* Example: A standard blue */
+  color: white;
+}
+
+.issue-cert-btn-regonly {
+  /* This is the primary action button, usually a distinct color */
+  background-color: #ffffff;
+  /* Example: A standard blue */
+  color: rgb(105, 105, 105);
+}
+
+.issue-cert-btn:hover {
+  background-color: #374151;
+}
+
+/* General Action Button Styles (ensures consistent size) */
+.action-btn {
+  /* Set a consistent minimum width for all buttons (fixes the sizing issue) */
+  min-width: 150px;
+  white-space: nowrap;
+  /* Prevents text wrapping */
+
+  padding: 8px 15px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s;
+}
+
+/* 'Certificate Issued' button (the disabled, lighter one) */
+.certificate-issued-btn {
+  background-color: #f0f0f0;
+  color: #aaa;
+  /* Lighter text color */
+  cursor: not-allowed;
+  pointer-events: none;
+  /* Visually disabled */
+}
+
 .modal-overlay {
   /* Covers the entire viewport */
   position: fixed;
@@ -1072,8 +1248,8 @@ const logout = () => {
   background: #fff;
   padding: 20px;
   border-radius: 12px;
-  width: 500px;
-  max-height: 80vh;
+  width: 700px;
+  max-height: 85vh;
   overflow-y: auto;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
@@ -1350,24 +1526,13 @@ const logout = () => {
 
 /* The new modal container for the specific content */
 .certificate-modal {
-  /* Use 'relative' as the anchor for absolute children like the close button (cert-close-btn) */
-  position: relative;
-
-  /* Set dimensions and appearance */
-  background: #FFFFFF;
-  /* White background is correct */
-  border-radius: 12px;
+  background: #fff;
   padding: 30px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  /* Increase padding for more breathing room */
+  border-radius: 8px;
+  position: relative;
   width: 90%;
-  max-width: 350px;
-  z-index: 1001;
-  /* Slightly above the overlay */
-
-  /* Ensure content is stacked correctly */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  max-width: 600px;
 }
 
 /* Close Button Styling */
@@ -1425,7 +1590,7 @@ const logout = () => {
   font-size: 1.1rem;
   font-weight: 600;
   color: #4a4a4a;
-  text-align: center;
+  text-align: left;
 }
 
 /* Date Registered Text */
@@ -1595,5 +1760,106 @@ const logout = () => {
   margin-top: 10px;
   align-self: flex-end;
   width: auto;
+}
+
+/* Training details */
+.training-details-modal {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 1rem;
+  width: 480px;
+  max-width: 90%;
+  position: relative;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  animation: fadeIn 0.25s ease;
+  z-index: 2100;
+  /* ensure above other overlays */
+}
+
+.training-info {
+  margin: 0.4rem 0;
+  color: #333;
+}
+
+.training-description {
+  margin-top: 1rem;
+  color: #555;
+  line-height: 1.5;
+}
+
+.training-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+}
+
+.btn-view-registrants {
+  background-color: #374151;
+  /* dark gray */
+  color: #ffffff;
+  /* white text */
+  border: none;
+  padding: 0.55rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  display: inline-block;
+  text-align: center;
+}
+
+.btn-view-registrants:hover {
+  background-color: #4b5563;
+  /* slightly lighter gray on hover */
+  transform: scale(1.02);
+}
+
+/* Smooth appear animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Animate position when sidebar opens */
+.hamburger {
+  position: fixed;
+  top: 15px;
+  left: 18px;
+  width: 25px;
+  height: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  cursor: pointer;
+  z-index: 2000;
+  /* ← raised from 100 to 2000 */
+  padding: 0;
+  transition: transform 0.6s ease;
+  /* smoother animation */
+}
+
+/* Hamburger lines */
+.hamburger span {
+  display: block;
+  height: 3px;
+  width: 100%;
+  background-color: white;
+  border-radius: 2px;
+}
+
+/* When sidebar is open, move hamburger to the right */
+.hamburger.shifted {
+  transform: translateX(140px);
+  /* Adjust this to your sidebar width */
 }
 </style>
