@@ -25,7 +25,7 @@
           <div v-if="isSidebarOpen" class="profile-section">
             <h3 class="org-name">{{ organizationName }}</h3>
             <div class="profile-actions">
-              <div class="action" @click="navigateTo('/profile')">
+              <div class="action" @click="navigateTo('/updateprofile')">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M11.7278 8.27191C12.7534 9.87525 14.1247 11.2375 15.7464 12.2534L8.85673 19.144C8.43166 19.569 8.21841 19.7816 7.95731 19.9213C7.69637 20.0609 7.40171 20.1199 6.81278 20.2377L3.73563 20.853C3.40302 20.9195 3.23649 20.9525 3.14188 20.8578C3.04759 20.7632 3.08035 20.5971 3.14677 20.2651L3.76298 17.1879C3.88087 16.5985 3.93965 16.3035 4.07938 16.0424C4.21912 15.7814 4.43173 15.569 4.85673 15.144L11.7278 8.27191ZM16.1116 4.03656C16.6711 3.75929 17.3284 3.75931 17.888 4.03656C18.1821 4.18229 18.455 4.45518 19.0003 5.00043C19.5453 5.54545 19.8184 5.81774 19.9641 6.11175C20.2414 6.67123 20.2413 7.32861 19.9641 7.88812C19.8184 8.18221 19.5455 8.45517 19.0003 9.00043L17.2034 10.7963C15.5308 9.84498 14.1456 8.46859 13.1819 6.81781L15.0003 5.00043C15.5453 4.45539 15.8176 4.18234 16.1116 4.03656Z"
@@ -107,111 +107,86 @@
         </div>
       </header>
 
-      <!-- Insert job picks style block here -->
-<section class="upcoming">
-  <div class="flex items-center justify-between">
-    <!-- Left side: title + count -->
-    <h2 class="section-title flex items-center gap-1">
-      Upcoming Trainings
-      <span class="count-badge">{{ upcomingtrainings.length }}</span>
-    </h2>
+      <!-- ✅ Upcoming Trainings Section -->
+      <section class="upcoming">
+        <div class="flex items-center justify-between">
+          <h2 class="section-title flex items-center gap-1">
+            Upcoming Trainings
+            <span class="count-badge">{{ sortedUpcomingTrainings.length }}</span>
+          </h2>
 
-    <!-- Right side: plain plus -->
-    <button class="plus-btn-text" @click="openTrainingPopup">+</button>
-  </div>
+          <button class="plus-btn-text" @click="openTrainingPopup">+</button>
+        </div>
 
-              <div class="training-slider">
-                <div
-                  class="training-card"
-                  v-for="training in upcomingtrainings"
-                  :key="training.trainingID"
-                >
-                  <div class="training-left"></div>
+        <!-- ✅ Grid Layout -->
+        <div class="trainings-grid">
+          <div v-for="training in visibleUpcomingTrainings" :key="training.trainingID" class="training-card">
+            <div class="training-right" @click="openTrainingDetails(training)">
+              <h3 class="training-title">{{ training.title }}</h3>
+              <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
+            </div>
 
-                  <div class="training-right" @click="openTrainingDetails(training)">
-                    <h3 class="training-title">{{ training.title }}</h3>
-                    <p class="training-description">{{ training.description }}</p>
-                    <p class="training-date">
-                      {{ formatSchedule(training.schedule) }}
-                    </p>
-                    <p class="training-mode">{{ training.mode }}</p>
-                    <p class="training-location" v-if="training.mode === 'On-Site'">
-                      📍 {{ training.location }}
-                    </p>
-                    <p class="training-link" v-else-if="training.mode === 'Online'">
-                      🔗 {{ training.trainingLink }}
-                    </p>
-                    <p class="training-organization">{{ training.name }}</p>
-                  </div>
-
-                  <!-- ✅ For Upcoming Trainings -->
-                  <div class="menu">
-                    <div
-                      class="menu-icon"
-                      @click.stop="toggleUpcomingMenu(training.trainingID)"
-                    >
-                      ⋮
-                    </div>
-                    <div
-                      v-if="openUpcomingMenu === training.trainingID"
-                      class="dropdown-menu"
-                      @click.stop
-                    >
-                      <ul>
-                        <li @click="openRegistrantsModal">Registrants</li>
-                        <li>Delete Training</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
+            <!-- Menu -->
+            <div class="menu">
+              <div class="menu-icon" @click.stop="toggleUpcomingMenu(training.trainingID)">
+                ⋮
               </div>
-            </section>
-
-            <section class="completed">
-              <div class="flex items-center justify-between">
-                <h2 class="section-title flex items-center gap-1">
-                  Completed Trainings
-                  <span class="count-badge">{{ completedtrainings.length }}</span>
-                </h2>
+              <div v-if="openUpcomingMenu === training.trainingID" class="dropdown-menu" @click.stop>
+                <ul>
+                  <li @click="openRegistrantsModal">Registrants</li>
+                  <li>Delete Training</li>
+                </ul>
               </div>
+            </div>
+          </div>
+        </div>
 
-              <div class="training-slider">
-                <div
-                  class="training-card"
-                  v-for="training in completedtrainings"
-                  :key="training.id"
-                >
-                  <div class="training-left"></div>
+        <!-- Show More Button -->
+        <button v-if="sortedUpcomingTrainings.length > 4" class="show-more-btn"
+          @click="showAllUpcoming = !showAllUpcoming">
+          {{ showAllUpcoming ? 'Show Less' : 'Show More' }}
+        </button>
+      </section>
 
-                  <div class="training-right" @click="openTrainingDetails(training)">
-                    <h3 class="training-title">{{ training.title }}</h3>
-                    <p class="training-date">
-                      {{ training.date }} | {{ training.time }}
-                    </p>
-                  </div>
+      <!-- ✅ Completed Trainings Section -->
+      <section class="completed">
+        <div class="flex items-center justify-between">
+          <h2 class="section-title flex items-center gap-1">
+            Completed Trainings
+            <span class="count-badge">{{ sortedCompletedTrainings.length }}</span>
+          </h2>
+        </div>
 
-                  <!-- ✅ For Completed Trainings -->
-                  <div class="menu">
-                    <div
-                      class="menu-icon"
-                      @click.stop="toggleCompletedMenu(training.id)"
-                    >
-                      ⋮
-                    </div>
-                    <div
-                      v-if="openCompletedMenu === training.id"
-                      class="dropdown-menu"
-                      @click.stop
-                    >
-                      <ul>
-                        <li @click="openRegistrantsModal">Registrants</li>
-                        <li>Delete Training</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
+        <!-- ✅ Grid Layout -->
+        <div class="trainings-grid">
+          <div v-for="training in visibleCompletedTrainings" :key="training.trainingID" class="training-card">
+            <div class="training-right" @click="openTrainingDetails(training)">
+              <h3 class="training-title">{{ training.title }}</h3>
+              <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
+            </div>
+
+            <!-- Menu -->
+            <div class="menu">
+              <div class="menu-icon" @click.stop="toggleCompletedMenu(training.trainingID)">
+                ⋮
               </div>
-            </section>
+              <div v-if="openCompletedMenu === training.trainingID" class="dropdown-menu" @click.stop>
+                <ul>
+                  <li @click="openRegistrantsModal">Registrants</li>
+                  <li>Delete Training</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Show More Button -->
+        <button v-if="sortedCompletedTrainings.length > 4" class="show-more-btn"
+          @click="showAllCompleted = !showAllCompleted">
+          {{ showAllCompleted ? 'Show Less' : 'Show More' }}
+        </button>
+        
+      </section>
 
       <!-- Registrants Modal -->
       <div v-if="showRegistrantsModal" class="modal-overlay" @click.self="closeModal">
@@ -263,12 +238,30 @@
       <div v-if="showTrainingDetailsModal" class="modal-overlay" @click.self="closeTrainingDetails">
         <div class="training-details-modal">
           <button class="modal-close-btn" @click="closeTrainingDetails">✕</button>
+
           <h3 class="modal-title">{{ selectedTraining.title }}</h3>
-          <p class="training-info"><strong>Description: </strong>{{ selectedTraining.description }}</p>
-          <p class="training-info"><strong>Date:</strong> {{ selectedTraining.date }}</p>
-          <p class="training-info"><strong>Time:</strong> {{ selectedTraining.time }}</p>
-          <p class="training-info"><strong>Location:</strong> {{ selectedTraining.location }}</p>
-          <p class="training-info"><strong>Training Link:</strong> {{ selectedTraining.trainingLink }}</p>
+          <p class="training-info">
+            <strong>Description:</strong> {{ selectedTraining.description }}
+          </p>
+          <p class="training-info">
+            <strong>Date and Time:</strong> {{ formatSchedule(selectedTraining.schedule) }}
+          </p>
+          <p class="training-info">
+            <strong>Mode:</strong> {{ selectedTraining.mode }}
+          </p>
+
+          <!-- ✅ Show only if training is On-Site -->
+          <p class="training-info" v-if="selectedTraining.mode === 'On-Site'">
+            <strong>Location:</strong> {{ selectedTraining.location }}
+          </p>
+
+          <!-- ✅ Show only if training is Online -->
+          <p class="training-info" v-if="selectedTraining.mode === 'Online'">
+            <strong>Training Link: </strong>
+            <a :href="selectedTraining.trainingLink" target="_blank" class="training-link">
+              {{ selectedTraining.trainingLink }}
+            </a>
+          </p>
 
           <div class="training-actions">
             <button class="btn-view-registrants" @click="handleViewRegistrants">
@@ -394,9 +387,22 @@
                   </span>
                 </div>
 
-                <!-- Time input -->
+                <!-- Time -->
                 <div class="time-input-wrapper">
-                  <input type="time" id="time" v-model="newTraining.time" />
+                  <label for="time">Time</label>
+                  <div class="date-input-wrapper">
+                    <input type="time" id="time" v-model="newTraining.time" placeholder="Time" />
+                    <span class="calendar-icon">
+                      <!-- your SVG clock icon -->
+                      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                          d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
+                          fill="black" />
+                        <path d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
+                          fill="black" />
+                      </svg>
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -437,6 +443,8 @@ export default {
   data() {
     return {
       dictLogo,
+      showAllUpcoming: false,
+      showAllCompleted: false,
 
       /* ==========================
          ✅ Dropdown Menu States
@@ -731,6 +739,32 @@ export default {
   beforeUnmount() {
     document.removeEventListener("click", this.handleOutsideClick);
   },
+
+  computed: {
+    visibleUpcomingTrainings() {
+      const list = this.sortedUpcomingTrainings;
+      return this.showAllUpcoming ? list : list.slice(0, 4); // show 4 first
+    },
+
+    visibleCompletedTrainings() {
+      const list = this.sortedCompletedTrainings;
+      return this.showAllCompleted ? list : list.slice(0, 4);
+    },
+
+    sortedUpcomingTrainings() {
+      const now = new Date();
+      return this.upcomingtrainings
+        .filter(t => new Date(t.schedule) >= now)
+        .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
+    },
+
+    sortedCompletedTrainings() {
+      const now = new Date();
+      return this.upcomingtrainings
+        .filter(t => new Date(t.schedule) < now)
+        .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
+    },
+  },
 };
 </script>
 
@@ -793,7 +827,7 @@ const logout = () => {
 .organization-trainings {
   display: flex;
   height: 100vh;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: 'Poppins', sans-serif;
   background-color: #f4f4f4;
 }
 
@@ -901,7 +935,7 @@ const logout = () => {
   font-size: 26px;
   font-weight: 700;
   color: #44576D;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: 'Poppins', sans-serif;
 }
 
 .search-container {
@@ -1020,12 +1054,14 @@ const logout = () => {
 
 .training-slider {
   display: flex;
-  gap: 16px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  padding: 10px 0;
-  scrollbar-width: thin;
-  scrollbar-color: #cbd5e0 #edf2f7;
+  flex-direction: column;
+  /* ✅ vertical */
+  overflow-y: auto;
+  /* ✅ vertical scroll */
+  max-height: 400px;
+  /* adjust as needed */
+  gap: 1rem;
+  /* spacing between cards */
 }
 
 .upcoming {
@@ -1051,17 +1087,32 @@ const logout = () => {
   color: #2d3748;
 }
 
+.trainings-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  /* 4 per row */
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
 .training-card {
-  flex: 0 0 auto;
-  width: 350px;
-  display: flex;
-  align-items: flex-start;
-  background: white;
+  background: #fff;
+  border: 1px solid #ddd;
   border-radius: 10px;
-  padding: 15px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   position: relative;
-  scroll-snap-align: start;
+}
+
+.training-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.training-card.completed {
+  opacity: 0.85;
+  background-color: #f8f9fa;
 }
 
 .training-left {
@@ -1921,5 +1972,124 @@ tbody td {
 .hamburger.shifted {
   transform: translateX(140px);
   /* Adjust this to your sidebar width */
+}
+
+/* Show more css */
+.show-more-btn {
+  background-color: #374151;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 10px;
+  /* smaller padding */
+  font-size: 0.85rem;
+  /* smaller text */
+  margin: 6px auto 0;
+  /* centered horizontally */
+  display: block;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.show-more-btn:hover {
+  background-color: #1d222b;
+}
+
+.show-more-btn:active {
+  transform: scale(0.97);
+}
+
+/* Time Picker */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-field {
+  width: 100%;
+  padding: 10px 36px 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input-field:focus {
+  border-color: #4c6ef5;
+}
+
+
+/* To fix the alignment of schedule and time */
+/* ✅ Shared wrapper for date and time inputs */
+.date-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.date-input-wrapper input[type="date"],
+.date-input-wrapper input[type="time"] {
+  width: 100%;
+  padding: 10px 40px 10px 12px;
+  /* extra right padding for the icon */
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  color: #333;
+  outline: none;
+  background-color: #fff;
+  box-sizing: border-box;
+}
+
+.date-input-wrapper input[type="date"]:focus,
+.date-input-wrapper input[type="time"]:focus {
+  border-color: #4c6ef5;
+}
+
+/* ✅ Use same icon position for both schedule and time fields */
+.calendar-icon,
+.clock-icon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 15px;
+  pointer-events: none;
+  /* keep clicks working on the input */
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-icon svg,
+.clock-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: #4a4a4a;
+  stroke: #4a4a4a;
+}
+
+/* ✅ Hide native picker indicators (keeps the clean icon look) */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  position: absolute;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
 }
 </style>
