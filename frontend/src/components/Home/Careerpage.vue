@@ -4,6 +4,38 @@ import axios from "axios";
 
 const organizations = ref([]);
 const careers = ref([]);
+const toasts = ref([]);
+const myApplications = ref(new Set());
+
+function addToast(message, type = 'info'){
+  const id = Date.now();
+  toasts.value.push({id, message, type});
+  setTimeout(() => {
+    toasts.value = toasts.value.filter(t => t.id !== id);
+  }, 3000);
+}
+
+async function fetchMyApplications() {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    const res = await axios.get('http://127.0.0.1:8000/api/applications', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    myApplications.value = new Set(res.data.map(a => a.careerID));
+  } catch (_) {}
+}
+
+onMounted(async () => {
+  try {
+    const response = await axios.get("http://127.0.0.1:8000/api/careers");
+    careers.value = response.data;
+  } catch (error) {
+    console.error("Error fetching careers:", error);
+  }
+  await fetchMyApplications();
+});
+
 
 onMounted(async () => {
   try {
@@ -51,17 +83,50 @@ function handleFileUpload(event) {
   uploadedFile.value = event.target.files[0];
 }
 
-function submitApplication() {
-  if (uploadedFile.value) {
-    alert(
-      `Applied for ${selectedCareer.value.position} with file: ${uploadedFile.value.name}`
-    );
+async function submitApplication() {
+  if (!selectedCareer.value) return;
+
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      addToast('PLEASE LOG IN FIRST', 'accent');
+      return;
+    }
+
+    const form = new FormData();
+    form.append('careerID', selectedCareer.value.careerID ?? selectedCareer.value.id);
+    if (uploadedFile.value) {
+      form.append('requirements', uploadedFile.value);
+    }
+
+    await axios.post('http://127.0.0.1:8000/api/applications', form, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    addToast('APPLICATION SUBMITTED SUCCESSFULLY', 'success');
+    // Mark as applied in UI
+    const id = selectedCareer.value.careerID ?? selectedCareer.value.id;
+    myApplications.value.add(id);
+
     closeUploadModal();
     closeModal();
-  } else {
-    alert("Please upload a PDF file before submitting.");
+  } catch (error) {
+    if (error.response?.status === 409) {
+      addToast('YOU ALREADY APPLIED TO THIS CAREER', 'accent');
+    } else if (error.response?.status === 401) {
+      addToast('UNAUTHORIZED. PLEASE LOG IN AGAIN', 'accent');
+    } else if (error.response?.status === 422) {
+      addToast('INVALID INPUT. ONLY PDF UP TO 5MB', 'accent');
+    } else {
+      addToast('FAILED TO SUBMIT APPLICATION', 'accent');
+    }
   }
 }
+
+
 // Track bookmarked careers (store IDs)
 const bookmarkedCareers = ref(new Set());
 
@@ -164,8 +229,9 @@ function toggleCareerBookmark(careerId) {
             <button
               @click.stop="openUploadModal"
               class="btn btn-primary bg-customButton hover:bg-dark-slate text-white"
-            >
-              Apply
+              :disabled="myApplications.has(selectedCareer.careerID ?? selectedCareer.id)"
+              >
+              {{ myApplications.has(selectedCareer.careerID ?? selectedCareer.id) ? 'Applied' : 'Apply' }}
             </button>
           </div>
 
@@ -236,4 +302,18 @@ function toggleCareerBookmark(careerId) {
       </form>
     </dialog>
   </main>
+  <div class="toast toast-end toast-top z-50">
+  <div
+    v-for="toast in toasts"
+    :key="toast.id"
+    class="alert"
+    :class="{
+      'alert-info': toast.type === 'info',
+      'alert-success': toast.type === 'success',
+      'alert-accent': toast.type === 'accent',
+    }"
+  >
+    {{ toast.message }}
+  </div>
+</div>
 </template>
