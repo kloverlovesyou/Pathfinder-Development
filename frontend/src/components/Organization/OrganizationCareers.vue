@@ -122,8 +122,7 @@
         </div>
 
         <div class="career-slider">
-          <div class="career-card" v-for="career in upcomingCareers" :key="career.careerID"
-            @click="openCareerDetails(career)">
+          <div class="career-card" v-for="career in upcomingCareers" :key="career.careerID">
             <div class="career-left">
             </div>
 
@@ -132,14 +131,14 @@
             </div>
 
             <!-- 3-dot menu -->
-            <div class="menu">
-              <div class="menu-icon" @click.stop="toggleUpcomingMenu(career.careerID)">⋮</div>
-              <div v-if="openUpcomingMenu === career.careerID" class="dropdown-menu">
-                <ul>
-                  <li @click.stop="openApplicantsModal">Applicants</li>
-                </ul>
+            <div class="menu" :key="career.careerID">
+                <div class="menu-icon" @click.stop="toggleUpcomingMenu(career.careerID)">⋮</div>
+                <div v-if="openUpcomingMenu === career.careerID" class="dropdown-menu">
+                  <ul>
+                    <li @click.stop="openApplicantsModal">Applicants</li>
+                  </ul>
+                </div>
               </div>
-            </div>
           </div>
         </div>
       </section>
@@ -239,14 +238,16 @@
 
 <script>
 import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
-import axios from 'axios'; // Add this import
+import axios from "axios";
 
 export default {
   data() {
     return {
       dictLogo,
+      // ✅ Dropdown states
       openUpcomingMenu: null,
       openCompletedMenu: null,
+
       showCareerDetailsModal: false,
       selectedCareer: {},
 
@@ -258,128 +259,42 @@ export default {
         { id: 5, name: "Mark Reyes", img: "https://i.pravatar.cc/100?img=5" },
         { id: 6, name: "Sophia Tan", img: "https://i.pravatar.cc/100?img=6" },
         { id: 7, name: "James Lim", img: "https://i.pravatar.cc/100?img=7" },
-        {
-          id: 8,
-          name: "Christine Dela Cruz",
-          img: "https://i.pravatar.cc/100?img=8",
-        },
-        {
-          id: 9,
-          name: "Robert Mendoza",
-          img: "https://i.pravatar.cc/100?img=9",
-        },
-        {
-          id: 10,
-          name: "Isabella Garcia",
-          img: "https://i.pravatar.cc/100?img=10",
-        },
+        { id: 8, name: "Christine Dela Cruz", img: "https://i.pravatar.cc/100?img=8" },
+        { id: 9, name: "Robert Mendoza", img: "https://i.pravatar.cc/100?img=9" },
+        { id: 10, name: "Isabella Garcia", img: "https://i.pravatar.cc/100?img=10" },
       ],
+
       showApplicantsModal: false,
-
-      upcomingCareers: [
-      ],
-
+      upcomingCareers: [],
       completedCareers: [
         {
           id: 1,
           title: "HR Specialist",
           position: "Human Resource Specialist",
-          details: "Responsible for managing employee relations, recruitment, and performance evaluations.",
-          qualifications: "Bachelor’s degree in Psychology, Human Resource Management, or related field.",
-          requirements: "At least 1 year of HR experience; excellent communication and organizational skills.",
-          letterAddress: "Address your application letter to the HR Department, DICT Regional Office.",
-          deadline: "October 30, 2025"
+          details:
+            "Responsible for managing employee relations, recruitment, and performance evaluations.",
+          qualifications:
+            "Bachelor’s degree in Psychology, Human Resource Management, or related field.",
+          requirements:
+            "At least 1 year of HR experience; excellent communication and organizational skills.",
+          letterAddress:
+            "Address your application letter to the HR Department, DICT Regional Office.",
+          deadline: "October 30, 2025",
         },
         {
           id: 2,
           title: "Graphic Designer",
           position: "Graphic Designer",
-          details: "Creates visual content for social media, print, and digital platforms to support organizational campaigns.",
-          qualifications: "Bachelor’s degree in Multimedia Arts, Fine Arts, or related field.",
-          requirements: "Proficient in Adobe Creative Suite; strong portfolio showcasing design skills.",
-          letterAddress: "Address your application letter to the Creative Services Unit, DICT Regional Office.",
-          deadline: "November 5, 2025"
+          details:
+            "Creates visual content for social media, print, and digital platforms to support organizational campaigns.",
+          qualifications:
+            "Bachelor’s degree in Multimedia Arts, Fine Arts, or related field.",
+          requirements:
+            "Proficient in Adobe Creative Suite; strong portfolio showcasing design skills.",
+          letterAddress:
+            "Address your application letter to the Creative Services Unit, DICT Regional Office.",
+          deadline: "November 5, 2025",
         },
-        {
-          id: 3,
-          title: "Accountant",
-          position: "Accountant",
-          details: "Prepares and examines financial records to ensure accuracy and compliance with government policies.",
-          qualifications: "Bachelor’s degree in Accountancy or related field; CPA is an advantage.",
-          requirements: "Knowledge of accounting software and government auditing processes.",
-          letterAddress: "Address your application letter to the Finance Division, DICT Regional Office.",
-          deadline: "November 15, 2025"
-        },
-        {
-          id: 4,
-          title: "IT Support Specialist",
-          position: "Information Technology Support Specialist",
-          details: "Provides technical assistance to end-users, maintains hardware and software systems, and ensures network stability.",
-          qualifications: "Bachelor’s degree in Information Technology, Computer Science, or related field.",
-          requirements: "Experience in troubleshooting, LAN/WAN setup, and computer maintenance.",
-          letterAddress: "Address your application letter to the ICT Operations Unit, DICT Regional Office.",
-          deadline: "November 20, 2025"
-        },
-        {
-          id: 5,
-          title: "Web Developer",
-          position: "Web Developer",
-          details: "Designs, develops, and maintains government websites and online applications for improved service delivery.",
-          qualifications: "Bachelor’s degree in Computer Science, Information Systems, or related field.",
-          requirements: "Proficient in HTML, CSS, JavaScript, and PHP; familiarity with CMS platforms.",
-          letterAddress: "Address your application letter to the Systems Development Division, DICT Regional Office.",
-          deadline: "November 22, 2025"
-        },
-        {
-          id: 6,
-          title: "Network Engineer",
-          position: "Network Engineer",
-          details: "Responsible for configuring and maintaining network devices, ensuring connectivity and security across DICT infrastructure.",
-          qualifications: "Bachelor’s degree in Computer Engineering, Electronics Engineering, or related field.",
-          requirements: "Hands-on experience with routers, switches, and firewalls; Cisco certification is a plus.",
-          letterAddress: "Address your application letter to the Network Operations Center, DICT Regional Office.",
-          deadline: "November 25, 2025"
-        },
-        {
-          id: 7,
-          title: "Administrative Assistant",
-          position: "Administrative Assistant",
-          details: "Provides clerical and logistical support to ensure efficient office operations.",
-          qualifications: "Bachelor’s degree in Business Administration or related field.",
-          requirements: "Proficient in MS Office applications; excellent written and verbal communication skills.",
-          letterAddress: "Address your application letter to the Administrative Division, DICT Regional Office.",
-          deadline: "November 28, 2025"
-        },
-        {
-          id: 8,
-          title: "Project Coordinator",
-          position: "Project Coordinator",
-          details: "Coordinates project activities, documentation, and stakeholder communications for ICT development programs.",
-          qualifications: "Bachelor’s degree in Public Administration, Management, or related field.",
-          requirements: "Strong organizational and multitasking abilities; knowledge in project management tools is an advantage.",
-          letterAddress: "Address your application letter to the Planning and Project Management Division, DICT Regional Office.",
-          deadline: "December 2, 2025"
-        },
-        {
-          id: 9,
-          title: "Public Information Officer",
-          position: "Public Information Officer",
-          details: "Develops and disseminates public communication materials, handles media relations, and manages social media presence.",
-          qualifications: "Bachelor’s degree in Communication, Journalism, or related field.",
-          requirements: "Excellent writing and public speaking skills; experience in PR or media management preferred.",
-          letterAddress: "Address your application letter to the Public Information Office, DICT Regional Office.",
-          deadline: "December 5, 2025"
-        },
-        {
-          id: 10,
-          title: "Data Analyst",
-          position: "Data Analyst",
-          details: "Analyzes and interprets data to support policy decisions, improve systems, and monitor ICT programs.",
-          qualifications: "Bachelor’s degree in Statistics, Computer Science, or related field.",
-          requirements: "Proficient in Excel, SQL, and data visualization tools such as Power BI or Tableau.",
-          letterAddress: "Address your application letter to the Data Analytics Division, DICT Regional Office.",
-          deadline: "December 10, 2025"
-        }
       ],
 
       // Popup state + form
@@ -392,16 +307,29 @@ export default {
         letterAddress: "",
         deadline: "",
       },
-      upcomingCareers: [],
     };
   },
+
   methods: {
-    toggleUpcomingMenu(id) {
-      this.openUpcomingMenu = this.openUpcomingMenu === id ? null : id;
-    },
-    toggleCompletedMenu(id) {
-      this.openCompletedMenu = this.openCompletedMenu === id ? null : id;
-    },
+    methods: {
+  toggleUpcomingMenu(id) {
+    this.openUpcomingMenu = this.openUpcomingMenu === id ? null : id;
+    this.openCompletedMenu = null;
+  },
+  toggleCompletedMenu(id) {
+    this.openCompletedMenu = this.openCompletedMenu === id ? null : id;
+    this.openUpcomingMenu = null;
+  },
+  handleClickOutside(event) {
+    const clickedInside = event.target.closest(".menu-icon, .dropdown-menu");
+    if (!clickedInside) {
+      this.openUpcomingMenu = null;
+      this.openCompletedMenu = null;
+    }
+  },
+},
+    // -------------------------------------------------
+
     openApplicantsModal() {
       this.showApplicantsModal = true;
     },
@@ -409,8 +337,7 @@ export default {
       this.showApplicantsModal = false;
     },
 
-
-    //fetch careers
+    // Fetch careers
     async fetchCareers() {
       try {
         const response = await axios.get("http://127.0.0.1:8000/api/careers");
@@ -436,66 +363,57 @@ export default {
       this.showCareerDetailsModal = false;
     },
     handleViewApplicants() {
-      this.closeCareerDetails(); // close the details modal
-      this.openApplicantsModal(); // open your Applicants modal
+      this.closeCareerDetails();
+      this.openApplicantsModal();
     },
 
-    // Save button function
     async saveCareer() {
       try {
-        // Basic validation
-        if (!this.newCareer.position || !this.newCareer.details || !this.newCareer.qualifications || !this.newCareer.requirements || !this.newCareer.letterAddress || !this.newCareer.deadline) {
+        if (
+          !this.newCareer.position ||
+          !this.newCareer.details ||
+          !this.newCareer.qualifications ||
+          !this.newCareer.requirements ||
+          !this.newCareer.letterAddress ||
+          !this.newCareer.deadline
+        ) {
           alert("PLEASE FILL IN ALL REQUIRED FIELDS");
           return;
         }
 
-        //payload matching controller
-        const payload = {
-          position: this.newCareer.position,
-          details: this.newCareer.details,
-          qualifications: this.newCareer.qualifications,
-          requirements: this.newCareer.requirements,
-          letterAddress: this.newCareer.letterAddress,
-          deadline: this.newCareer.deadline
-        };
-
-        //just a debug log, remove later
-        console.log("PAYLOAD BEING SENT TO BACKEND: ", payload);
-
-        //send to API
-        const token = localStorage.getItem('token');
-        const response = await axios.post("http://127.0.0.1:8000/api/careers", payload, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+        const payload = { ...this.newCareer };
+        const token = localStorage.getItem("token");
+        const response = await axios.post(
+          "http://127.0.0.1:8000/api/careers",
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
           }
-        });
+        );
 
-        console.log("CAREER SAVED:", response.data);
-
-        //add it to the upcoming careers
         if (response.data && response.data.data) {
           const newCareer = response.data.data;
-
-          //get organization name from localStorage
           const storedUser = localStorage.getItem("user");
           let organizationName = "Unknown Organization";
+
           if (storedUser) {
             const user = JSON.parse(storedUser);
-            organizationName = user.displayName || user.name || "Unknown Organization";
+            organizationName = user.displayName || user.name || organizationName;
           }
 
-          // Parse the deadline to separate date and time
           const deadlineDate = new Date(newCareer.deadlineOfSubmission);
-          const formattedDate = deadlineDate.toLocaleDateString('en-US', {
-            weekday: 'short',
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
+          const formattedDate = deadlineDate.toLocaleDateString("en-US", {
+            weekday: "short",
+            year: "numeric",
+            month: "short",
+            day: "numeric",
           });
-          const formattedTime = deadlineDate.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit'
+          const formattedTime = deadlineDate.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
           });
 
           this.upcomingCareers.push({
@@ -508,13 +426,11 @@ export default {
             letterAddress: newCareer.applicationLetterAddress,
             deadline: formattedDate,
             time: formattedTime,
-            organizationName: organizationName
-          })
+            organizationName: organizationName,
+          });
         }
 
         alert("CAREER POSTED SUCCESSFULLY!!!");
-
-        //reset form
         this.resetNewCareer();
         this.showCareerPopup = false;
       } catch (error) {
@@ -530,20 +446,23 @@ export default {
         qualifications: "",
         requirements: "",
         letterAddress: "",
+        deadline: "",
       };
     },
   },
 
   mounted() {
     this.fetchCareers();
-  }
-
-
-}
+    document.addEventListener("click", this.handleClickOutside);
+  },
+  beforeUnmount() {
+    document.removeEventListener("click", this.handleClickOutside);
+  },
+};
 </script>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onBeforeUnmount } from "vue";
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
@@ -555,6 +474,23 @@ const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
 };
 
+// For On-Going Careers
+const openUpcomingMenu = ref(null);
+function toggleUpcomingMenu(id) {
+  openUpcomingMenu.value = openUpcomingMenu.value === id ? null : id;
+}
+
+// For Filled Out Careers
+const openCompletedMenu = ref(null);
+function toggleCompletedMenu(id) {
+  openCompletedMenu.value = openCompletedMenu.value === id ? null : id;
+}
+
+// Close all dropdowns when clicking outside
+function closeAllMenus() {
+  openUpcomingMenu.value = null;
+  openCompletedMenu.value = null;
+}
 // Get org name from localStorage on mount
 onMounted(() => {
   const storedUser = localStorage.getItem("user");
@@ -564,6 +500,10 @@ onMounted(() => {
       organizationName.value = user.displayName || user.name;
     }
   }
+  document.addEventListener("click", closeAllMenus);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener("click", closeAllMenus);
 });
 
 // Sidebar navigation functions
