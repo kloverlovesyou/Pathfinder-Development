@@ -188,51 +188,50 @@
         
       </section>
 
-      <!-- Registrants Modal -->
-      <div v-if="showRegistrantsModal" class="modal-overlay" @click.self="closeModal">
-        <div class="modal-content">
-          <button class="modal-close-btn" @click="closeModal">✕</button>
-          <h3 class="modal-title">Registrants</h3>
+<!-- Registrants Modal -->
+<div v-if="showRegistrantsModal" class="modal-overlay" @click.self="closeModal">
+  <div class="modal-content">
+    <button class="modal-close-btn" @click="closeModal">✕</button>
+    <h3 class="modal-title">Registrants</h3>
 
-          <div class="registrants-table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>NAME</th>
-                  <th>STATUS</th>
-                  <th class="cert-col-header">Certification</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="person in registrantsList" :key="person.id">
-                  <td>
-                    <p class="registrant-name">{{ person.name }}</p>
-                  </td>
+    <div class="registrants-table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>NAME</th>
+            <th>STATUS</th>
+            <th class="cert-col-header">Certification</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="person in registrantsList" :key="person.id">
+            <td>
+              <p class="registrant-name">{{ person.name }}</p>
+            </td>
 
-                  <td
-                    :class="{ 'status-attended': person.status === 'Attended', 'status-did-not-attend': person.status === 'Did not Attend' }">
-                    {{ person.status }}
-                  </td>
+            <td :class="{
+                  'status-attended': person.status === 'Attended',
+                  'status-did-not-attend': person.status === 'Did not Attend'
+                }">
+              {{ person.status }}
+            </td>
 
-                  <td>
-                    <template v-if="person.status === 'Did not Attend'">
-                      <button class="action-btn issue-cert-btn-regonly" @click="openCertUploadModal(person)" disabled>
-                        Issue Certificate
-                      </button>
-                    </template>
-                    <template v-else>
-                      <button class="action-btn issue-cert-btn" @click="openCertUploadModal(person)">
-                        Issue Certificate
-                      </button>
-                    </template>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-        </div>
-      </div>
+            <td>
+              <button
+                class="action-btn"
+                :class="person.status === 'Attended' ? 'issue-cert-btn' : 'issue-cert-btn-regonly'"
+                :disabled="person.status !== 'Attended'"
+                @click="openCertUploadModal(person)"
+              >
+                Issue Certificate
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
       <!-- Training Details Modal -->
       <div v-if="showTrainingDetailsModal" class="modal-overlay" @click.self="closeTrainingDetails">
@@ -455,22 +454,7 @@ export default {
       showTrainingDetailsModal: false,
       selectedTraining: {},
 
-      registrantsList: [
-        { id: 2, name: "Maria Santos", status: "Attended", dateRegistered: "2025-09-01" },
-        { id: 3, name: "David Cruz", status: "Did not Attend", dateRegistered: "2025-09-02" },
-        { id: 4, name: "Anna Lee", status: "Attended", dateRegistered: "2025-09-03" },
-        { id: 5, name: "Mark Reyes", status: "Attended", dateRegistered: "2025-09-03" },
-        { id: 6, name: "Sophia Tan", status: "Attended", dateRegistered: "2025-09-04" },
-        { id: 7, name: "James Lim", status: "Attended", dateRegistered: "2025-09-05" },
-        { id: 8, name: "Christine Dela Cruz", status: "Did not Attend", dateRegistered: "2025-09-05" },
-        { id: 9, name: "Robert Mendoza", status: "Did not Attend", dateRegistered: "2025-09-06" },
-        { id: 10, name: "Isabella Garcia", status: "Attended", dateRegistered: "2025-09-07" },
-        { id: 11, name: "Daniel Chua", status: "Attended", dateRegistered: "2025-09-08" },
-        { id: 12, name: "Patricia Ong", status: "Attended", dateRegistered: "2025-09-08" },
-        { id: 13, name: "Michael Torres", status: "Attended", dateRegistered: "2025-09-09" },
-        { id: 14, name: "Angela Bautista", status: "Attended", dateRegistered: "2025-09-10" },
-        { id: 15, name: "Kevin Ramirez", status: "Did not Attend", dateRegistered: "2025-09-10" },
-      ],
+      registrantsList: [], // removed hardcoded list, fetch from DB
 
       showRegistrantsModal: false,
       showCertUploadModal: false,
@@ -510,14 +494,15 @@ export default {
        ✅ Dropdown Menu Logic
     ========================== */
     toggleUpcomingMenu(id) {
-      // toggle only one menu at a time
       this.openUpcomingMenu = this.openUpcomingMenu === id ? null : id;
-      this.openCompletedMenu = null; // close the other one
+      this.openCompletedMenu = null;
     },
-
+    closeModal() {
+  this.showRegistrantsModal = false;
+    },
     toggleCompletedMenu(id) {
       this.openCompletedMenu = this.openCompletedMenu === id ? null : id;
-      this.openUpcomingMenu = null; // close the other one
+      this.openUpcomingMenu = null;
     },
 
     closeAllMenus() {
@@ -526,23 +511,37 @@ export default {
     },
 
     handleOutsideClick(e) {
-      // Close menus only if click is outside .menu elements
       if (!e.target.closest(".menu")) {
         this.closeAllMenus();
       }
     },
 
     /* ==========================
-       ✅ Registrants Modal
-    ========================== */
-    openRegistrantsModal() {
-      this.showRegistrantsModal = true;
-      this.closeAllMenus();
-    },
+   ✅ Registrants Modal
+========================== */
+async openRegistrantsModal(training) {
+  try {
+    this.selectedTraining = training;
 
-    closeModal() {
-      this.showRegistrantsModal = false;
-    },
+    const token = localStorage.getItem("token"); // get stored token
+    const response = await axios.get(
+      `http://127.0.0.1:8000/api/trainings/${training.id}/registrants`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`, // send token
+          Accept: "application/json",
+        },
+      }
+    );
+
+    this.registrantsList = response.data; // populate dynamically
+    this.showRegistrantsModal = true;
+    this.closeAllMenus();
+  } catch (error) {
+    console.error("ERROR FETCHING REGISTRANTS:", error);
+    alert("Failed to fetch registrants.");
+  }
+},
 
     /* ==========================
        ✅ Certificate Upload Modal
@@ -555,7 +554,7 @@ export default {
         uploadedFile: null,
       };
       this.showCertUploadModal = true;
-      this.closeAllMenus(); // auto-close dropdowns
+      this.closeAllMenus();
     },
 
     closeCertUploadModal() {
@@ -590,9 +589,9 @@ export default {
       this.showTrainingDetailsModal = false;
     },
 
-    handleViewRegistrants() {
+    handleViewRegistrants(training) {
       this.closeTrainingDetails();
-      this.openRegistrantsModal();
+      this.openRegistrantsModal(training); // pass training to fetch registrants
     },
 
     /* ==========================
@@ -644,8 +643,6 @@ export default {
           training_link: this.newTraining.trainingLink || null,
         };
 
-        console.log("PAYLOAD BEING SENT TO BACKEND: ", payload);
-
         const token = localStorage.getItem("token");
         const response = await axios.post("http://127.0.0.1:8000/api/trainings", payload, {
           headers: {
@@ -653,8 +650,6 @@ export default {
             "Content-Type": "application/json",
           },
         });
-
-        console.log("TRAINING SAVED:", response.data);
 
         if (response.data && response.data.data) {
           const newTraining = response.data.data;
@@ -694,17 +689,7 @@ export default {
         }
 
         alert("TRAINING POSTED SUCCESSFULLY!!!");
-
-        this.newTraining = {
-          title: "",
-          description: "",
-          date: "",
-          time: "",
-          mode: "",
-          location: "",
-          trainingLink: "",
-        };
-
+        this.newTraining = { title: "", description: "", date: "", time: "", mode: "", location: "", trainingLink: "" };
         this.showTrainingPopup = false;
       } catch (error) {
         console.error("ERROR SAVING TRAINING:", error.response?.data || error);
@@ -714,7 +699,6 @@ export default {
 
     formatSchedule(schedule) {
       if (!schedule) return "No schedule set";
-
       try {
         const date = new Date(schedule);
         return date.toLocaleString("en-US", {
@@ -743,7 +727,7 @@ export default {
   computed: {
     visibleUpcomingTrainings() {
       const list = this.sortedUpcomingTrainings;
-      return this.showAllUpcoming ? list : list.slice(0, 4); // show 4 first
+      return this.showAllUpcoming ? list : list.slice(0, 4);
     },
 
     visibleCompletedTrainings() {

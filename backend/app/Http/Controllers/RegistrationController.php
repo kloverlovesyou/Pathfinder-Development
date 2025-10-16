@@ -89,4 +89,30 @@ class RegistrationController extends Controller
 
         return response()->json(['message' => 'REGISTRATION CANCELLED'], 200);
     }
+
+    // Get all registrants for a specific training
+    public function getRegistrantsByTraining(Request $request, $trainingID)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $registrants = Registration::with('applicant')
+            ->where('trainingID', $trainingID)
+            ->get()
+            ->map(function($r) {
+                return [
+                    'id' => $r->applicantID,
+                    'name' => $r->applicant->firstName . ' ' . $r->applicant->lastName,
+                    'status' => $r->registrationStatus,
+                    'dateRegistered' => $r->registrationDate,
+                    'certificateTrackingID' => $r->certTrackingID,
+                    'certificateGivenDate' => $r->certGivenDate,
+                ];
+            });
+
+        return response()->json($registrants);
+    }
 }
