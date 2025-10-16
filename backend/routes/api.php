@@ -91,3 +91,7 @@ Route::middleware('auth.custom')->group(function () {
     Route::delete('/bookmarks/{trainingID}', [TrainingBookmarkController::class, 'destroy']);
 });
 
+Route::middleware('auth.custom')->group(function () {
+    Route::get('/trainings/{trainingID}/registrants', [RegistrationController::class, 'getRegistrantsByTraining']);
+});
+
