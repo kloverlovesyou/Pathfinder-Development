@@ -5,16 +5,18 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Registration;
-use Illuminate\Validation\ValidationException;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Carbon;
 
 class RegistrationController extends Controller
 {
-    //list applicants's registrations
+    // List applicant's registrations
     public function index(Request $request)
     {
-        $user = $request->authUser;
+        $user = $request->user(); // ✅ Use Laravel's user resolver
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
 
         $registrations = Registration::with('training')
             ->where('applicantID', $user->applicantID)
@@ -23,23 +25,27 @@ class RegistrationController extends Controller
         return response()->json($registrations);
     }
 
-    //register applicant
+    // Register applicant
     public function store(Request $request)
     {
-        $user = $request->authUser;
+        $user = $request->user(); // ✅ Use user resolver
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
 
         $validated = $request->validate([
-            'trainingID' => 'required|exists:training,trainingID', 
+            'trainingID' => 'required|exists:training,trainingID',
         ]);
 
         $trainingID = (int) $validated['trainingID'];
 
-        //ensure not already registered
+        // Ensure not already registered
         $existing = Registration::where('applicantID', $user->applicantID)
             ->where('trainingID', $trainingID)
             ->first();
 
-        if($existing){
+        if ($existing) {
             return response()->json([
                 'message' => 'ALREADY REGISTERED FOR THIS TRAINING',
                 'registrationID' => $existing->registrationID,
@@ -62,22 +68,25 @@ class RegistrationController extends Controller
         ], 201);
     }
 
-    //cancel registration
+    // Cancel registration
     public function destroy(Request $request, int $id)
     {
-        $user = $request->authUser;
+        $user = $request->user(); // ✅ Use user resolver
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
 
         $registration = Registration::where('registrationID', $id)
             ->where('applicantID', $user->applicantID)
             ->first();
-            
-        if(!$registration){
-            return response()->json(['message' => ' REGISTRATION NOT FOUND'], 404);
+
+        if (!$registration) {
+            return response()->json(['message' => 'REGISTRATION NOT FOUND'], 404);
         }
 
         $registration->delete();
 
         return response()->json(['message' => 'REGISTRATION CANCELLED'], 200);
     }
-
 }
