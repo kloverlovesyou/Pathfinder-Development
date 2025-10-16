@@ -21,8 +21,8 @@ class AuthCustom
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        // ✅ Attach authenticated user
-        $request->authUser = $user;
+        // ✅ Attach authenticated user for $request->user()
+        $request->setUserResolver(fn() => $user);
 
         return $next($request);
     }
