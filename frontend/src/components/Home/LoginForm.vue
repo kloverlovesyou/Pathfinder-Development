@@ -91,7 +91,7 @@ const handleLogin = async () => {
   loginError.value = "";
   if (emailError.value || passwordError.value) return;
 
-  try {
+  try {   
     const response = await axios.post("http://127.0.0.1:8000/api/login", {
       emailAddress: email.value,
       password: password.value,
