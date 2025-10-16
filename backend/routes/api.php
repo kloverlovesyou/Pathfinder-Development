@@ -6,6 +6,8 @@ use App\Http\Controllers\ApplicantController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ResumeController;
+use App\Http\Controllers\ApplicationController;
+use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\ProfessionalExperienceController;
 use App\Http\Controllers\EducationController;
 use App\Http\Controllers\SkillController;
