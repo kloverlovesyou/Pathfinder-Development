@@ -516,32 +516,61 @@ export default {
       }
     },
 
-    /* ==========================
-   ✅ Registrants Modal
-========================== */
-async openRegistrantsModal(training) {
-  try {
-    this.selectedTraining = training;
+          /* ==========================
+        ✅ Registrants Modal
+      ========================== */
+      async openRegistrantsModal(training) {
+        try {
+          // Set selected training
+          this.selectedTraining = training;
 
-    const token = localStorage.getItem("token"); // get stored token
-    const response = await axios.get(
-      `http://127.0.0.1:8000/api/trainings/${training.id}/registrants`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`, // send token
-          Accept: "application/json",
-        },
-      }
-    );
+          // Get token from localStorage
+          const token = localStorage.getItem("token");
+          if (!token) {
+            console.error("No token found. Please log in first.");
+            alert("You must log in to view registrants.");
+            return;
+          }
 
-    this.registrantsList = response.data; // populate dynamically
-    this.showRegistrantsModal = true;
-    this.closeAllMenus();
-  } catch (error) {
-    console.error("ERROR FETCHING REGISTRANTS:", error);
-    alert("Failed to fetch registrants.");
-  }
-},
+          // Fetch registrants from API
+          const response = await axios.get(
+            `http://127.0.0.1:8000/api/trainings/${training.id}/registrants`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+              },
+            }
+          );
+
+          // Populate registrants list dynamically
+          this.registrantsList = response.data;
+
+          // Open the modal
+          this.showRegistrantsModal = true;
+
+          // Close any dropdown menus
+          this.closeAllMenus();
+
+        } catch (error) {
+          if (error.response) {
+            console.error("Error fetching registrants:", error.response.status, error.response.data);
+            if (error.response.status === 401) {
+              alert("Unauthorized. Please log in again.");
+            } else {
+              alert("Failed to fetch registrants. Please try again.");
+            }
+          } else {
+            console.error("Network or other error:", error.message);
+            alert("An error occurred while fetching registrants.");
+          }
+        }
+      },
+
+      closeRegistrantsModal() {
+        this.showRegistrantsModal = false;
+        this.registrantsList = [];
+      },
 
     /* ==========================
        ✅ Certificate Upload Modal
