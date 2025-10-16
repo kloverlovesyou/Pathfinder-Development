@@ -34,47 +34,39 @@ class CareerController extends Controller
     }
     
     public function store(Request $request)
-    {
-        \Log::info('INCOMING CAREER DATA:', $request->all());
+{
+    \Log::info('INCOMING CAREER DATA:', $request->all());
 
-        //validate incoming data
-        $validated = $request->validate([
-            'position' => 'required|string|max:255',
-            'details' => 'required|string|max:255',
-            'qualifications' => 'required|string|max:255',
-            'requirements' => 'required|string|max:255',
-            'letterAddress' => 'required|string|max:255',
-            'deadline' => 'required|date'
-        ]);
+    $validated = $request->validate([
+        'position' => 'required|string|max:255',
+        'details' => 'required|string|max:255',
+        'qualifications' => 'required|string|max:255',
+        'requirements' => 'required|string|max:255',
+        'letterAddress' => 'required|string|max:255',
+        'deadline' => 'required|date'
+    ]);
 
-        //parse the deadline
-        $deadline = Carbon::parse($validated['deadline'])->format('Y-m-d');
+    $deadline = Carbon::parse($validated['deadline'])->format('Y-m-d');
 
-        //get auth user
-        $user = $request->authUser;
+    // ✅ Correct way to get authenticated user
+    $user = $request->user();
 
-        //create the career entry
-        $career = Career::create([
-            'position' => $validated['position'],
-            'detailsAndInstructions' => $validated['details'],
-            'qualifications' => $validated['qualifications'],
-            'requirements' => $validated['requirements'],
-            'applicationLetterAddress' => $validated['letterAddress'],
-            'deadlineOfSubmission' => $deadline,
-            'organizationID' => $user->organizationID
-        ]);
+    // Optional: log to verify
+    \Log::info('AUTHENTICATED USER:', ['user' => $user]);
 
-        //return json response
-        return response()->json([
-            'message' => 'CAREER POSTED SUCCESSFULLY!!!',
-            'data' => $career
-        ], 201);
+    $career = Career::create([
+        'position' => $validated['position'],
+        'detailsAndInstructions' => $validated['details'],
+        'qualifications' => $validated['qualifications'],
+        'requirements' => $validated['requirements'],
+        'applicationLetterAddress' => $validated['letterAddress'],
+        'deadlineOfSubmission' => $deadline,
+        'organizationID' => $user->organizationID ?? null, // safe access
+    ]);
 
-
-
-
-
-        
-
-    }
+    return response()->json([
+        'message' => 'CAREER POSTED SUCCESSFULLY!!!',
+        'data' => $career
+    ], 201);
+}
 }
