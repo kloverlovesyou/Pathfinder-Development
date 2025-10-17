@@ -1,6 +1,6 @@
 <script setup>
 import { useRouter } from "vue-router";
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import axios from "axios";
 
 const activeTab = ref("career"); // Default to Career tab
@@ -32,6 +32,15 @@ const logout = () => {
   router.push({ name: "Loginpage" });
 };
 
+// Map bookmarks API data to a display-friendly format
+const displayedTrainings = computed(() =>
+  bookmarks.value
+    .filter((b) => b.training && b.training.title) // only valid trainings
+    .map((b) => ({
+      ...b.training,
+      trainingID: b.trainingID,
+    }))
+);;
 const organizations = {
   1: "Tech Corp",
   2: "Future Academy",
@@ -377,33 +386,40 @@ const removeBookmark = async (trainingID) => {
               </div>
 
               <!-- Training Bookmarks -->
+              <!-- Training Bookmarks -->
               <div
                 v-show="activeTab === 'training'"
                 class="flex flex-col h-full min-h-0"
               >
-                <div
-                  v-if="bookmarkedTrainings.length === 0"
-                  class="text-gray-500 text-sm"
-                >
+                <div v-if="displayedTrainings.length === 0" class="text-gray-500 text-sm">
                   No bookmarked trainings yet.
                 </div>
+
                 <div
                   v-else
                   class="space-y-3 overflow-y-auto pr-2 flex-1 min-h-0 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100"
                 >
                   <div
-                    v-for="training in bookmarkedTrainings"
+                    v-for="training in displayedTrainings"
                     :key="training.trainingID"
-                    class="p-4 bg-gray-100 rounded-lg shadow-sm hover:bg-gray-200 transition cursor-pointer"
-                    @click="openModal(training)"
+                    class="p-4 bg-gray-100 rounded-lg shadow-sm hover:bg-gray-200 transition cursor-pointer flex justify-between items-start"
                   >
-                    <h4 class="font-semibold text-sm">{{ training.title }}</h4>
-                    <p class="text-xs text-gray-600">
-                      {{ organizations[training.organizationID] }}
-                    </p>
-                    <p class="text-xs text-gray-500 mt-1">
-                      Schedule: {{ formatDate(training.schedule) }}
-                    </p>
+                    <div @click="openModal(training)">
+                      <h4 class="font-semibold text-sm">{{ training.title }}</h4>
+                      <p class="text-xs text-gray-600">
+                        {{ organizations[training.organizationID] }}
+                      </p>
+                      <p class="text-xs text-gray-500 mt-1">
+                        Schedule: {{ formatDate(training.schedule) }}
+                      </p>
+                    </div>
+
+                    <button
+                      class="ml-4 text-red-500 text-xs font-semibold hover:underline"
+                      @click.stop="removeBookmark(training.trainingID)"
+                    >
+                      Remove
+                    </button>
                   </div>
                 </div>
               </div>
