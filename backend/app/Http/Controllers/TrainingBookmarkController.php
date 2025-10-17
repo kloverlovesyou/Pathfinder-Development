@@ -32,7 +32,11 @@ class TrainingBookmarkController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $trainingID = $request->trainingID;
+        $trainingID = $request->input('trainingID'); // ✅ use input()
+
+        if (!$trainingID) {
+            return response()->json(['message' => 'trainingID is required'], 400);
+        }
 
         // Prevent duplicates
         $exists = TrainingBookmark::where('applicantID', $user->applicantID)
