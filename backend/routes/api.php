@@ -14,6 +14,7 @@ use App\Http\Controllers\SkillController;
 use App\Http\Controllers\TrainingController;
 use App\Http\Controllers\CareerController;
 use App\Http\Controllers\TrainingBookmarkController;
+use App\Http\Controllers\CertificateController;
 
 //no auth required
 Route::get('/trainings', [TrainingController::class, 'index']);
@@ -21,20 +22,40 @@ Route::get('/careers', [CareerController::class, 'index']);
 
 //auth required
 Route::middleware('auth.custom')->group(function () {
+    // Careers & Trainings
     Route::post('/trainings', [TrainingController::class, 'store']);
     Route::post('/careers', [CareerController::class, 'store']);
+    
+    // Registrations
+    Route::get('/registrations', [RegistrationController::class, 'index']);
+    Route::post('/registrations', [RegistrationController::class, 'store']);
+    Route::delete('/registrations/{id}', [RegistrationController::class, 'destroy']);
 
-    //registrations
-    Route::get('/registrations', [\App\Http\Controllers\RegistrationController::class, 'index']);
-    Route::post('/registrations', [\App\Http\Controllers\RegistrationController::class, 'store']);
-    Route::delete('/registrations/{id}', [\App\Http\Controllers\RegistrationController::class, 'destroy']);
-
-    //applications
     // Applications
-    Route::get('/applications', [\App\Http\Controllers\ApplicationController::class, 'index']);
-    Route::post('/applications', [\App\Http\Controllers\ApplicationController::class, 'store']);
-    Route::delete('/applications/{id}', [\App\Http\Controllers\ApplicationController::class, 'destroy']);
+    Route::get('/applications', [ApplicationController::class, 'index']);
+    Route::post('/applications', [ApplicationController::class, 'store']);
+    Route::delete('/applications/{id}', [ApplicationController::class, 'destroy']);
 
+    // Certificates ✅
+    Route::get('/certificates/{applicantID}', [CertificateController::class, 'index']);
+    Route::post('/certificates', [CertificateController::class, 'store']);
+
+    // Experience, Education, Skills, Bookmarks, etc.
+    Route::get('/experiences', [ProfessionalExperienceController::class, 'show']);
+    Route::post('/experiences', [ProfessionalExperienceController::class, 'store']);
+    Route::put('/experiences/{id}', [ProfessionalExperienceController::class, 'update']);
+    Route::delete('/experiences/{id}', [ProfessionalExperienceController::class, 'destroy']);
+
+    Route::get('/education', [EducationController::class, 'show']);
+    Route::post('/education', [EducationController::class, 'store']);
+    Route::put('/education/{id}', [EducationController::class, 'update']);
+    Route::delete('/education/{id}', [EducationController::class, 'destroy']);
+
+    Route::get('/bookmarks', [TrainingBookmarkController::class, 'index']);
+    Route::post('/bookmarks', [TrainingBookmarkController::class, 'store']);
+    Route::delete('/bookmarks/{trainingID}', [TrainingBookmarkController::class, 'destroy']);
+
+    Route::get('/trainings/{trainingID}/registrants', [RegistrationController::class, 'getRegistrantsByTraining']);
 });
 
 
@@ -91,7 +112,5 @@ Route::middleware('auth.custom')->group(function () {
     Route::delete('/bookmarks/{trainingID}', [TrainingBookmarkController::class, 'destroy']);
 });
 
-Route::middleware('auth.custom')->group(function () {
-    Route::get('/trainings/{trainingID}/registrants', [RegistrationController::class, 'getRegistrantsByTraining']);
-});
+
 
