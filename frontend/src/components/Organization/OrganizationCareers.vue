@@ -244,7 +244,6 @@ export default {
   data() {
     return {
       dictLogo,
-      // ✅ Dropdown states
       openUpcomingMenu: null,
       openCompletedMenu: null,
 
@@ -311,24 +310,21 @@ export default {
   },
 
   methods: {
-    methods: {
-  toggleUpcomingMenu(id) {
-    this.openUpcomingMenu = this.openUpcomingMenu === id ? null : id;
-    this.openCompletedMenu = null;
-  },
-  toggleCompletedMenu(id) {
-    this.openCompletedMenu = this.openCompletedMenu === id ? null : id;
-    this.openUpcomingMenu = null;
-  },
-  handleClickOutside(event) {
-    const clickedInside = event.target.closest(".menu-icon, .dropdown-menu");
-    if (!clickedInside) {
-      this.openUpcomingMenu = null;
+    toggleUpcomingMenu(id) {
+      this.openUpcomingMenu = this.openUpcomingMenu === id ? null : id;
       this.openCompletedMenu = null;
-    }
-  },
-},
-    // -------------------------------------------------
+    },
+    toggleCompletedMenu(id) {
+      this.openCompletedMenu = this.openCompletedMenu === id ? null : id;
+      this.openUpcomingMenu = null;
+    },
+    handleClickOutside(event) {
+      const clickedInside = event.target.closest(".menu-icon, .dropdown-menu");
+      if (!clickedInside) {
+        this.openUpcomingMenu = null;
+        this.openCompletedMenu = null;
+      }
+    },
 
     openApplicantsModal() {
       this.showApplicantsModal = true;
@@ -337,7 +333,6 @@ export default {
       this.showApplicantsModal = false;
     },
 
-    // Fetch careers
     async fetchCareers() {
       try {
         const response = await axios.get("http://127.0.0.1:8000/api/careers");
@@ -347,7 +342,6 @@ export default {
       }
     },
 
-    // Popup methods
     openCareerPopup() {
       this.showCareerPopup = true;
     },
@@ -377,65 +371,15 @@ export default {
           !this.newCareer.letterAddress ||
           !this.newCareer.deadline
         ) {
-          alert("PLEASE FILL IN ALL REQUIRED FIELDS");
+          alert("Please fill out all fields before saving.");
           return;
         }
 
-        const payload = { ...this.newCareer };
-        const token = localStorage.getItem("token");
-        const response = await axios.post(
-          "http://127.0.0.1:8000/api/careers",
-          payload,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (response.data && response.data.data) {
-          const newCareer = response.data.data;
-          const storedUser = localStorage.getItem("user");
-          let organizationName = "Unknown Organization";
-
-          if (storedUser) {
-            const user = JSON.parse(storedUser);
-            organizationName = user.displayName || user.name || organizationName;
-          }
-
-          const deadlineDate = new Date(newCareer.deadlineOfSubmission);
-          const formattedDate = deadlineDate.toLocaleDateString("en-US", {
-            weekday: "short",
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          });
-          const formattedTime = deadlineDate.toLocaleTimeString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-
-          this.upcomingCareers.push({
-            id: newCareer.careerID,
-            title: newCareer.position,
-            position: newCareer.position,
-            details: newCareer.detailsAndInstructions,
-            qualifications: newCareer.qualifications,
-            requirements: newCareer.requirements,
-            letterAddress: newCareer.applicationLetterAddress,
-            deadline: formattedDate,
-            time: formattedTime,
-            organizationName: organizationName,
-          });
-        }
-
-        alert("CAREER POSTED SUCCESSFULLY!!!");
-        this.resetNewCareer();
-        this.showCareerPopup = false;
+        const response = await axios.post("http://127.0.0.1:8000/api/careers", this.newCareer);
+        this.upcomingCareers.push(response.data);
+        this.closeCareerPopup();
       } catch (error) {
-        console.error("ERROR SAVING CAREER:", error.response?.data || error);
-        alert("SOMETHING WENT WRONG WHILE SAVING THE CAREER");
+        console.error("ERROR SAVING CAREER:", error);
       }
     },
 
@@ -455,6 +399,7 @@ export default {
     this.fetchCareers();
     document.addEventListener("click", this.handleClickOutside);
   },
+
   beforeUnmount() {
     document.removeEventListener("click", this.handleClickOutside);
   },
