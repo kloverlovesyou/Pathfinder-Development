@@ -32,7 +32,6 @@ class CertificateController extends Controller
             'applicantID' => 'required|integer'
         ]);
 
-        // Store the image as BLOB
         $file = $request->file('certificate');
         $binaryData = file_get_contents($file->getRealPath());
 
@@ -42,7 +41,6 @@ class CertificateController extends Controller
             'applicantID' => $request->applicantID
         ]);
 
-        // ✅ Don’t return the raw binary field
         $safeCert = $cert->toArray();
         unset($safeCert['certificate']);
 
@@ -51,4 +49,7 @@ class CertificateController extends Controller
             'data' => $safeCert,
         ]);
     }
+
+    // ✅ Delete a certificate
+       
 }

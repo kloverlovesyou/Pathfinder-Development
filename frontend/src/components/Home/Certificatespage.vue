@@ -49,6 +49,7 @@ async function fetchCertificates(applicantID) {
     );
 
     uploadedCertificates.value = response.data.map((cert) => ({
+      id: cert.certificationID, // ✅ include correct ID
       title: cert.certificationName,
       image: cert.certificate, // already base64 from backend
     }));
@@ -98,6 +99,28 @@ async function uploadCertificate(cert, index) {
     await fetchCertificates(user.applicantID);
   } catch (error) {
     console.error("❌ Upload error:", error.response?.data || error);
+  }
+}
+
+// ✅ Delete certificate
+async function deleteCertificate(id) {
+  if (!confirm("Are you sure you want to delete this certificate?")) return;
+
+  const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  try {
+    await axios.delete(`http://127.0.0.1:8000/api/certificates/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    console.log("✅ Deleted certificate:", id);
+
+    // ✅ Instantly remove from frontend
+    uploadedCertificates.value = uploadedCertificates.value.filter(cert => cert.id !== id);
+
+  } catch (error) {
+    console.error("❌ Delete error:", error.response?.data || error);
   }
 }
 
@@ -359,8 +382,17 @@ onMounted(async () => {
             <div
               v-for="(cert, index) in uploadedCertificates"
               :key="'uploaded-' + index"
-              class="flex flex-col items-center bg-white shadow rounded-lg p-4"
+              class="flex flex-col items-center bg-white shadow rounded-lg p-4 relative"
             >
+              <!-- ❌ Delete Button -->
+              <button
+                @click="deleteCertificate(cert.id)"
+                class="absolute top-2 right-2 text-gray-500 hover:text-red-600"
+                title="Delete certificate"
+              >
+                ✕
+              </button>
+
               <div
                 class="w-full h-48 bg-gray-200 flex items-center justify-center rounded cursor-pointer hover:opacity-90 transition"
                 @click="openModal(cert.image, cert.title)"
