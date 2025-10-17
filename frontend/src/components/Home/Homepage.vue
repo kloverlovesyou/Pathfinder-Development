@@ -1,7 +1,18 @@
 <script setup>
 import { ref, onMounted, nextTick } from "vue";
 import "cally";
-const isSidebarOpen = ref(true);
+const isSidebarOpen = ref(false);
+
+const selectedTraining = ref(null);
+
+function openTrainingModal(training) {
+  selectedTraining.value = training;
+}
+
+function closeTrainingModal() {
+  selectedTraining.value = null;
+}
+
 const posts = ref([
   // Mock data only for frontend
   {
@@ -183,9 +194,8 @@ function formatDate(d) {
   });
 }
 
-const applyModalOpen = ref(false);
 const uploadedFile = ref(null);
-
+const applyModalOpen = ref(false);
 function openApplyModal(post) {
   selectedPost.value = post;
   applyModalOpen.value = true;
@@ -403,13 +413,60 @@ function submitApplication() {
           </p>
           <p><strong>Location:</strong> {{ selectedPost.location }}</p>
         </div>
+        <!-- Training Modal (Opened from inside a Career Post) -->
+        <dialog v-if="selectedTraining" open class="modal sm:modal-middle">
+          <div class="modal-box max-w-3xl relative font-poppins">
+            <button
+              class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
+              @click="closeTrainingModal"
+            >
+              ✕
+            </button>
 
+            <h2 class="text-xl font-bold mb-2">{{ selectedTraining.title }}</h2>
+            <p class="text-sm text-gray-600 mb-2">
+              Organization: {{ organizations[selectedTraining.organizationID] }}
+            </p>
+
+            <div class="my-4 flex justify-end gap-2">
+              <button
+                class="btn btn-outline btn-sm"
+                @click="bookmarkPost(selectedTraining)"
+              >
+                Bookmark
+              </button>
+              <button
+                class="btn bg-customButton btn-sm text-white"
+                @click="registerTraining(selectedTraining)"
+              >
+                Register
+              </button>
+            </div>
+
+            <p>
+              <strong>Mode:</strong>
+              {{ selectedTraining.mode || "Not specified" }}
+            </p>
+            <p>
+              <strong>Description:</strong> {{ selectedTraining.description }}
+            </p>
+            <p>
+              <strong>Schedule:</strong>
+              {{ formatDateTime(selectedTraining.schedule) }}
+            </p>
+            <p><strong>Location:</strong> {{ selectedTraining.location }}</p>
+          </div>
+        </dialog>
+
+        <!-- Career -->
         <!-- Career -->
         <div v-else>
           <h2 class="text-xl font-bold mb-2">{{ selectedPost.position }}</h2>
           <p class="text-sm text-gray-600 mb-2">
             Organization: {{ organizations[selectedPost.organizationID] }}
           </p>
+
+          <!-- Buttons -->
           <div class="my-4 flex justify-end gap-2">
             <button
               class="btn btn-outline btn-sm"
@@ -424,6 +481,8 @@ function submitApplication() {
               Apply
             </button>
           </div>
+
+          <!-- Career Details -->
           <p>
             <strong>Details:</strong> {{ selectedPost.detailsAndInstructions }}
           </p>
@@ -439,6 +498,31 @@ function submitApplication() {
             <strong>Deadline:</strong>
             {{ formatDate(selectedPost.deadlineOfSubmission) }}
           </p>
+
+          <!-- Recommended Trainings Section -->
+          <div class="mt-6">
+            <h3 class="text-base font-semibold mb-3">Recommended Trainings</h3>
+
+            <!-- Scrollable container -->
+            <div
+              class="flex overflow-x-auto space-x-3 pb-2 snap-x snap-mandatory"
+              style="scrollbar-width: thin"
+            >
+              <div
+                v-for="post in posts.filter((p) => isTraining(p))"
+                :key="post.trainingID"
+                class="snap-start w-[180px] flex-shrink-0 p-3 bg-blue-gray rounded-lg cursor-pointer hover:bg-gray-200 transition shadow-sm"
+                @click.stop="openTrainingModal(post)"
+              >
+                <h4 class="font-semibold text-sm leading-snug mb-1">
+                  {{ post.title }}
+                </h4>
+                <p class="text-[11px] text-gray-600 truncate">
+                  {{ organizations[post.organizationID] }}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </dialog>
