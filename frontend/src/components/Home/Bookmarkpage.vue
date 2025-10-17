@@ -41,6 +41,15 @@ const displayedTrainings = computed(() =>
       trainingID: b.trainingID,
     }))
 );;
+
+const displayedCareers = computed(() =>
+  bookmarks.value
+    .filter((b) => b.career) // only valid careers
+    .map((b) => ({
+      ...b.career,
+      careerID: b.careerID,
+    }))
+);;
 const organizations = {
   1: "Tech Corp",
   2: "Future Academy",
@@ -358,34 +367,39 @@ const removeBookmark = async (trainingID) => {
                 v-show="activeTab === 'career'"
                 class="flex flex-col h-full min-h-0"
               >
-                <div
-                  v-if="bookmarkedCareers.length === 0"
-                  class="text-gray-500 text-sm"
-                >
+                <div v-if="displayedCareers.length === 0" class="text-gray-500 text-sm">
                   No bookmarked careers yet.
                 </div>
+
                 <div
                   v-else
                   class="space-y-3 overflow-y-auto pr-2 flex-1 min-h-0 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100"
                 >
                   <div
-                    v-for="career in bookmarkedCareers"
+                    v-for="career in displayedCareers"
                     :key="career.careerID"
-                    class="p-4 bg-gray-100 rounded-lg shadow-sm hover:bg-gray-200 transition cursor-pointer"
-                    @click="openModal(career)"
+                    class="p-4 bg-gray-100 rounded-lg shadow-sm hover:bg-gray-200 transition cursor-pointer flex justify-between items-start"
                   >
-                    <h4 class="font-semibold text-sm">{{ career.position }}</h4>
-                    <p class="text-xs text-gray-600">
-                      {{ organizations[career.organizationID] }}
-                    </p>
-                    <p class="text-xs text-gray-500 mt-1">
-                      Deadline: {{ formatDate(career.deadlineOfSubmission) }}
-                    </p>
+                    <div @click="openModal(career)">
+                      <h4 class="font-semibold text-sm">{{ career.position }}</h4>
+                      <p class="text-xs text-gray-600">
+                        {{ organizations[career.organizationID] }}
+                      </p>
+                      <p class="text-xs text-gray-500 mt-1">
+                        Deadline: {{ formatDate(career.deadlineOfSubmission) }}
+                      </p>
+                    </div>
+
+                    <button
+                      class="ml-4 text-red-500 text-xs font-semibold hover:underline"
+                      @click.stop="removeBookmark(career.careerID)"
+                    >
+                      Remove
+                    </button>
                   </div>
                 </div>
               </div>
-
-              <!-- Training Bookmarks -->
+              
               <!-- Training Bookmarks -->
               <div
                 v-show="activeTab === 'training'"

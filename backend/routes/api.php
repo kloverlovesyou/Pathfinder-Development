@@ -39,6 +39,7 @@ Route::middleware('auth.custom')->group(function () {
     // Certificates ✅
     Route::get('/certificates/{applicantID}', [CertificateController::class, 'index']);
     Route::post('/certificates', [CertificateController::class, 'store']);
+    Route::delete('/certificates/{id}', [CertificateController::class, 'destroy']);
 
     // Experience, Education, Skills, Bookmarks, etc.
     Route::get('/experiences', [ProfessionalExperienceController::class, 'show']);

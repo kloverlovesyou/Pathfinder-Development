@@ -51,5 +51,18 @@ class CertificateController extends Controller
     }
 
     // ✅ Delete a certificate
-       
+       // Delete a certificate
+        public function destroy($id)
+        {
+            $cert = Certification::find($id);
+
+            if (!$cert) {
+                return response()->json(['message' => 'Certificate not found'], 404);
+            }
+
+            $cert->delete();
+
+            return response()->json(['message' => 'Certificate deleted successfully']);
+        }
+
 }
