@@ -1,70 +1,131 @@
 <script setup>
 import { useRouter } from "vue-router";
+import axios from "axios";
+import { ref, onMounted } from "vue";
 
 const router = useRouter();
 
-import { ref, onMounted } from "vue";
+const certificates = ref([]); // Pending uploads
+const uploadedCertificates = ref([]); // Successfully uploaded
+const userName = ref("");
+const isModalOpen = ref(false);
+const selectedImage = ref(null);
+const selectedTitle = ref(null);
 
-// Certificates state
-const certificates = ref([]);
-
-// Add a new empty certificate entry
+// ➤ Add a new upload entry
 function addCertificate() {
   certificates.value.push({
     title: "",
-    image: null, // base64 or URL after upload
-    file: null, // actual file (optional if you want to send to backend)
+    image: null,
+    file: null,
   });
 }
 
-// Remove a certificate by index
+// ➤ Remove an upload entry
 function removeCertificate(index) {
   certificates.value.splice(index, 1);
 }
 
-// Handle file upload
+// ➤ File preview handler
 function handleFileUpload(event, index) {
   const file = event.target.files[0];
   if (!file) return;
 
   const reader = new FileReader();
   reader.onload = (e) => {
-    certificates.value[index].image = e.target.result; // base64 preview
-    certificates.value[index].file = file; // keep original file for backend
+    certificates.value[index].image = e.target.result;
+    certificates.value[index].file = file;
   };
   reader.readAsDataURL(file);
 }
 
-const userName = ref("");
-const isModalOpen = ref(false);
-const selectedImage = ref(null);
-const selectedTitle = ref(null);
+// ➤ Fetch uploaded certificates only
+async function fetchCertificates(applicantID) {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.get(
+      `http://127.0.0.1:8000/api/certificates/${applicantID}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-const logout = () => {
-  // Remove user data from localStorage
-  localStorage.removeItem("user");
-  // Redirect to login page
-  router.push({ name: "Login" });
-};
+    uploadedCertificates.value = response.data.map((cert) => ({
+      title: cert.certificationName,
+      image: cert.certificate, // already base64 from backend
+    }));
+  } catch (error) {
+    console.error("❌ Error fetching certificates:", error.response?.data || error);
+  }
+}
 
+// ➤ Upload a new certificate
+async function uploadCertificate(cert, index) {
+  const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  if (!token || !user) {
+    console.error("No token or user found");
+    return;
+  }
+
+  if (!(cert.file instanceof File)) {
+    console.error("❌ cert.file is not a valid File object:", cert.file);
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("certificationName", cert.title || "Untitled");
+  formData.append("certificate", cert.file);
+  formData.append("applicantID", user.applicantID);
+
+  try {
+    const response = await axios.post(
+      "http://127.0.0.1:8000/api/certificates",
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    console.log("✅ Upload success:", response.data);
+
+    // Remove the uploaded item from pending list
+    certificates.value.splice(index, 1);
+
+    // Refresh uploaded certificates
+    await fetchCertificates(user.applicantID);
+  } catch (error) {
+    console.error("❌ Upload error:", error.response?.data || error);
+  }
+}
+
+// Modal handlers
 function openModal(image, title) {
   selectedImage.value = image;
   selectedTitle.value = title;
   isModalOpen.value = true;
 }
-
 function closeModal() {
   isModalOpen.value = false;
 }
 
-onMounted(() => {
+// Logout
+function logout() {
+  localStorage.removeItem("user");
+  router.push({ name: "Login" });
+}
+
+// Load user info and fetch certificates
+onMounted(async () => {
   const savedUser = localStorage.getItem("user");
   if (savedUser) {
     const user = JSON.parse(savedUser);
-    if (user.firstName && user.lastName) {
-      userName.value = `${user.firstName} ${user.lastName}`;
-    } else {
-      userName.value = "Guest";
+    userName.value = user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : "Guest";
+
+    if (user.applicantID) {
+      await fetchCertificates(user.applicantID);
     }
   } else {
     userName.value = "Guest";
@@ -74,25 +135,18 @@ onMounted(() => {
 
 <template>
   <div class="min-h-screen p-3 rounded-lg font-poppins">
-    <!--Large screen-->
     <div class="min-h-screen font-poppins lg:flex">
-      <!-- Left Column -->
-      <div
-        class="w-full lg:w-1/4 bg-white rounded-lg shadow p-6 flex flex-col items-center hidden lg:flex"
-      >
-        <!-- Avatar -->
+      <!-- Sidebar -->
+      <div class="w-full lg:w-1/4 bg-white rounded-lg shadow p-6 flex flex-col items-center hidden lg:flex">
         <div class="w-24 h-24 rounded-full bg-white mb-4">
-          <div class="avatar w-24 h-24 rounded-full bg-white mb-4">
-            <img
-              src="https://img.daisyui.com/images/profile/demo/yellingcat@192.webp"
-              alt="User Avatar"
-              class="w-full h-full object-cover rounded-full"
-            />
-          </div>
+          <img
+            src="https://img.daisyui.com/images/profile/demo/yellingcat@192.webp"
+            alt="User Avatar"
+            class="w-full h-full object-cover rounded-full"
+          />
         </div>
-
-        <!-- Name -->
         <h2 class="text-xl font-semibold mb-6">{{ userName }}</h2>
+        
         <div
           class="w-full flex items-center justify-center gap-6 mb-6 relative"
         >
@@ -127,7 +181,6 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Buttons -->
         <div class="w-full flex flex-col gap-3">
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
@@ -236,11 +289,10 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Right Column -->
+      <!-- Right content -->
       <div class="w-full lg:w-3/4 lg:pl-6 lg:mt-0 flex flex-col gap-6">
-        <!-- Certificates Upload -->
+        <!-- Upload form -->
         <div class="border bg-white rounded-lg p-4 space-y-4 relative">
-          <!-- Header with Plus Button -->
           <div class="flex justify-between items-center">
             <h2 class="text-lg font-semibold">Upload Certificates</h2>
             <button
@@ -252,13 +304,12 @@ onMounted(() => {
             </button>
           </div>
 
-          <!-- Certificate Items -->
+          <!-- Only show upload forms for pending uploads -->
           <div
             v-for="(cert, index) in certificates"
             :key="index"
             class="space-y-2 border p-3 rounded relative"
           >
-            <!-- Delete Button -->
             <button
               type="button"
               @click="removeCertificate(index)"
@@ -267,7 +318,6 @@ onMounted(() => {
               ✕
             </button>
 
-            <!-- Certificate Fields -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
                 v-model="cert.title"
@@ -283,30 +333,18 @@ onMounted(() => {
               />
             </div>
 
-            <!-- Certificate Preview -->
-            <div>
-              <div
-                v-if="cert.image"
-                class="h-32 w-full flex items-center justify-center border rounded"
-              >
-                <img
-                  :src="cert.image"
-                  alt="Certificate Preview"
-                  class="h-32 object-cover rounded-lg"
-                />
-              </div>
-              <div
-                v-else
-                class="h-32 w-full flex items-center justify-center border rounded text-gray-400 text-sm"
-              >
-                Certificate Preview
-              </div>
+            <div v-if="cert.image" class="h-32 w-full flex items-center justify-center border rounded">
+              <img :src="cert.image" alt="Preview" class="h-32 object-cover rounded-lg" />
             </div>
-            <!-- Upload Button -->
+
+            <div v-else class="h-32 w-full flex items-center justify-center border rounded text-gray-400 text-sm">
+              Certificate Preview
+            </div>
+
             <div class="flex justify-end mt-2">
               <button
                 type="button"
-                @click="uploadCertificate(index)"
+                @click="uploadCertificate(cert, index)"
                 class="px-4 py-2 bg-customButton text-white rounded hover:bg-dark-slate"
               >
                 Upload
@@ -314,73 +352,45 @@ onMounted(() => {
             </div>
           </div>
         </div>
-        <!-- Bottom Row: Event List -->
+
+        <!-- Uploaded certificates display -->
         <div class="bg-white rounded-lg shadow p-6 flex-1">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <!-- Certificate card 1 -->
             <div
+              v-for="(cert, index) in uploadedCertificates"
+              :key="'uploaded-' + index"
               class="flex flex-col items-center bg-white shadow rounded-lg p-4"
             >
-              <!-- Certificate image -->
               <div
                 class="w-full h-48 bg-gray-200 flex items-center justify-center rounded cursor-pointer hover:opacity-90 transition"
-                @click="openModal('image1.jpg', 'Certificate Title 1')"
+                @click="openModal(cert.image, cert.title)"
               >
-                <span class="text-gray-500">Upload Image</span>
+                <img
+                  v-if="cert.image"
+                  :src="cert.image"
+                  alt="Certificate Image"
+                  class="h-full w-full object-cover rounded"
+                />
+                <span v-else class="text-gray-500">No Image</span>
               </div>
-
-              <!-- Certificate title -->
-              <p class="mt-2 text-center font-medium text-gray-800">
-                Certificate Title 1
-              </p>
-            </div>
-
-            <!-- Certificate card 2 -->
-            <div
-              class="flex flex-col items-center bg-white shadow rounded-lg p-4"
-            >
-              <!-- Certificate image -->
-              <div
-                class="w-full h-48 bg-gray-200 flex items-center justify-center rounded cursor-pointer hover:opacity-90 transition"
-                @click="openModal('image2.jpg', 'Certificate Title 2')"
-              >
-                <span class="text-gray-500">Upload Image</span>
-              </div>
-
-              <!-- Certificate title -->
-              <p class="mt-2 text-center font-medium text-gray-800">
-                Certificate Title 2
-              </p>
+              <p class="mt-2 text-center font-medium text-gray-800">{{ cert.title }}</p>
             </div>
           </div>
 
           <!-- Modal -->
           <div
             v-if="isModalOpen"
-            class="fixed inset-0 flex items-center justify-center z-50"
+            class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
           >
-            <div
-              class="bg-white rounded-lg shadow-lg max-w-3xl w-full p-4 relative"
-            >
-              <!-- Close button -->
+            <div class="bg-white rounded-lg shadow-lg max-w-3xl w-full p-4 relative">
               <button
                 class="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
                 @click="closeModal"
               >
                 ✕
               </button>
-
-              <!-- Full-size image -->
-              <img
-                :src="selectedImage"
-                :alt="selectedTitle"
-                class="max-h-[80vh] w-auto mx-auto rounded"
-              />
-
-              <!-- Title -->
-              <p class="mt-4 text-center text-lg font-semibold text-gray-800">
-                {{ selectedTitle }}
-              </p>
+              <img :src="selectedImage" :alt="selectedTitle" class="max-h-[80vh] w-auto mx-auto rounded" />
+              <p class="mt-4 text-center text-lg font-semibold text-gray-800">{{ selectedTitle }}</p>
             </div>
           </div>
         </div>
