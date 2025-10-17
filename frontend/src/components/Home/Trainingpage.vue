@@ -86,6 +86,9 @@ async function toggleBookmark(trainingId) {
   // Add bookmark
   else {
     try {
+      // <-- Added console.log here
+      console.log("Bookmarking training ID:", trainingId);
+
       await axios.post(
         "http://127.0.0.1:8000/api/bookmarks",
         { trainingID: trainingId },
@@ -97,10 +100,10 @@ async function toggleBookmark(trainingId) {
       if (error.response?.status === 409)
         addToast("Already bookmarked", "accent");
       else addToast("Failed to bookmark", "error");
+      console.error("Failed to toggle bookmark:", error);
     }
   }
 }
-
 function isTrainingBookmarked(trainingId) {
   return bookmarkedTrainings.value.includes(trainingId);
 }
