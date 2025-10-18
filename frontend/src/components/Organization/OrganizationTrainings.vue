@@ -188,54 +188,54 @@
         
       </section>
 
-<!-- Registrants Modal -->
-<div v-if="showRegistrantsModal" class="modal-overlay" @click.self="closeModal">
-  <div class="modal-content">
-    <button class="modal-close-btn" @click="closeModal">✕</button>
-    <h3 class="modal-title">Registrants for {{ selectedTraining.title }}</h3>
+          <!-- Registrants Modal -->
+          <div v-if="showRegistrantsModal" class="modal-overlay" @click.self="closeModal">
+            <div class="modal-content">
+              <button class="modal-close-btn" @click="closeModal">✕</button>
+              <h3 class="modal-title">Registrants for {{ selectedTraining.title }}</h3>
 
-    <div class="registrants-table-container">
-      <table>
-        <thead>
-          <tr>
-            <th>FULL NAME</th>
-            <th>REGISTRATION DATE</th>
-            <th>STATUS</th>
-            <th class="cert-col-header">CERTIFICATE</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="person in registrantsList" :key="person.id">
-            <td>
-              <p class="registrant-name">{{ person.name }}</p>
-            </td>
-            <td>
-               <p class="registration-date">{{ person.dateRegistered }}</p>
-            </td>
-            <td :class="{
-             'status-attended': person.status === 'Attended',
-             'status-registered': person.status === 'Registered',
-             'status-did-not-attend': person.status === 'Did not Attend'
-                  }">
-             {{ person.status }}
-           </td>
+              <div class="registrants-table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>FULL NAME</th>
+                      <th>REGISTRATION DATE</th>
+                      <th>STATUS</th>
+                      <th class="cert-col-header">CERTIFICATE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="person in registrantsList" :key="person.id">
+                      <td>
+                        <p class="registrant-name">{{ person.name }}</p>
+                      </td>
+                      <td>
+                        <p class="registration-date">{{ person.dateRegistered }}</p>
+                      </td>
+                      <td :class="{
+                      'status-attended': person.status === 'Attended',
+                      'status-registered': person.status === 'Registered',
+                      'status-did-not-attend': person.status === 'Did not Attend'
+                            }">
+                      {{ person.status }}
+                    </td>
 
-            <td>
-              <button
-                class="action-btn"
-                :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
-                :disabled="person.hasCertificate"
-                @click="openCertUploadModal(person)"
-              >
-                 {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
+                      <td>
+                        <button
+                          class="action-btn"
+                          :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
+                          :disabled="person.hasCertificate"
+                          @click="openCertUploadModal(person)"
+                        >
+                          {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
 
       <!-- Training Details Modal -->
       <div v-if="showTrainingDetailsModal" class="modal-overlay" @click.self="closeTrainingDetails">
@@ -267,7 +267,7 @@
           </p>
 
           <div class="training-actions">
-            <button class="btn-view-registrants" @click="handleViewRegistrants">
+            <button class="btn-view-registrants" @click="handleViewRegistrants(selectedTraining)">
               View Registrants
             </button>
           </div>
@@ -493,6 +493,14 @@ export default {
     toggleSidebar() {
       this.isSidebarOpen = !this.isSidebarOpen;
     },
+
+      handleViewRegistrants(training) {
+    if (!training) {
+      console.error("❌ handleViewRegistrants called without training");
+      return;
+    }
+    this.openRegistrantsModal(training);
+  },
 
     /* ==========================
        ✅ Dropdown Menu Logic
