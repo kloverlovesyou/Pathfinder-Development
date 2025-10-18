@@ -99,19 +99,36 @@ class RegistrationController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
+        //ensure only orgs can view registrants for their trainings
+        if (!isset($user->organizationID)) {
+            return response()->json(['message' => 'Only organizations can view registrants'], 403);
+        }
+
+        //verify the that the training belongs to the organization
+        $training = \App\Models\Training::where('trainingID', $trainingID)
+        ->where('organizationID', $user->organizationID)
+        ->first();
+
+        if (!$training) {
+             return response()->json(['message' => 'Training not found or access denied'], 404);
+        }
+
+
         $registrants = Registration::with('applicant')
-            ->where('trainingID', $trainingID)
-            ->get()
-            ->map(function($r) {
-                return [
-                    'id' => $r->applicantID,
-                    'name' => $r->applicant->firstName . ' ' . $r->applicant->lastName,
-                    'status' => $r->registrationStatus,
-                    'dateRegistered' => $r->registrationDate,
-                    'certificateTrackingID' => $r->certTrackingID,
-                    'certificateGivenDate' => $r->certGivenDate,
-                ];
-            });
+        ->where('trainingID', $trainingID)
+        ->get()
+        ->map(function($r) {
+            return [
+                'id' => $r->registrationID,
+                'applicantID' => $r->applicantID,
+                'name' => $r->applicant->firstName . ' ' . $r->applicant->lastName,
+                'status' => $r->registrationStatus,
+                'dateRegistered' => $r->registrationDate ? $r->registrationDate->format('M d, Y') : null,
+                'certificateTrackingID' => $r->certTrackingID,
+                'certificateGivenDate' => $r->certGivenDate ? $r->certGivenDate->format('M d, Y') : null,
+                'hasCertificate' => !is_null($r->certTrackingID) && !is_null($r->certGivenDate),
+            ];
+        });
 
         return response()->json($registrants);
     }
