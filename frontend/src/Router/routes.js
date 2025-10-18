@@ -18,6 +18,7 @@ import OrgCareer from "@/components/Organization/OrganizationCareers.vue";
 import MainLayout from "@/components/Layout/MainLayout.vue";
 import AuthLayout from "@/components/Layout/AuthLayout.vue";
 import OrgCalendar from "@/components/Organization/OrganizationCalendar.vue";
+import OrgProfile from "@/components/Organization/Profile.vue";
 
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
@@ -91,7 +92,7 @@ const router = createRouter({
       ],
     },
 
-    {
+        {
       path: '/organization',
       name: 'OrgHome',
       component: OrgHomePage,
@@ -111,11 +112,16 @@ const router = createRouter({
     },
     {
       path: "/organization/org-calendar",
-      name: 'OrgCalendar', 
+      name: 'OrgCalendar',
       component: OrgCalendar,
       meta: { requiresAuth: true, role: "organization" },
     },
-
+    {
+      path: "/organization/org-profile",
+      name: 'OrgProfile',
+      component: OrgProfile,
+      meta: { requiresAuth: true, role: "organization" },
+    },
     // 🚨 Catch-all must always be last
     {
       path: "/:pathMatch(.*)*",
