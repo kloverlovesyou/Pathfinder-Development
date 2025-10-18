@@ -36,9 +36,9 @@ class TrainingController extends Controller
         return response()->json($formatted);
     }
 
-    public function store(Request $request)
+ public function store(Request $request)
 {
-    $user = $request->authUser;
+    $user = $request->user(); // ✅ Correct way to get auth user
 
     if (!$user) {
         return response()->json(['message' => 'Unauthorized - no auth user found'], 401);
@@ -58,9 +58,9 @@ class TrainingController extends Controller
         'training_link' => 'nullable|url'
     ]);
 
-    $schedule = \Carbon\Carbon::parse($validated['schedule'])->format('Y-m-d H:i');
+    $schedule = Carbon::parse($validated['schedule'])->format('Y-m-d H:i');
 
-    $training = \App\Models\Training::create([
+    $training = Training::create([
         'title' => $validated['title'],
         'description' => $validated['description'],
         'schedule' => $schedule,
@@ -71,7 +71,7 @@ class TrainingController extends Controller
     ]);
 
     return response()->json([
-        'message' => 'TRAINING CREATED SUCCESSFULLY!!!',
+        'message' => 'Training created successfully!',
         'data' => $training->load('organization')
     ], 201);
 }
