@@ -3,6 +3,7 @@ import { useRouter } from "vue-router";
 import axios from "axios";
 import { ref, onMounted } from "vue";
 
+const toasts = ref([]);
 const router = useRouter();
 
 const certificates = ref([]); // Pending uploads
@@ -97,8 +98,12 @@ async function uploadCertificate(cert, index) {
 
     // Refresh uploaded certificates
     await fetchCertificates(user.applicantID);
+
+    // ✅ Show success toast
+    showToast(`Certificate "${cert.title || 'Untitled'}" uploaded successfully!`, "success");
   } catch (error) {
     console.error("❌ Upload error:", error.response?.data || error);
+    showToast("Failed to upload certificate", "error");
   }
 }
 
@@ -107,7 +112,6 @@ async function deleteCertificate(id) {
   if (!confirm("Are you sure you want to delete this certificate?")) return;
 
   const token = localStorage.getItem("token");
-  const user = JSON.parse(localStorage.getItem("user"));
 
   try {
     await axios.delete(`http://127.0.0.1:8000/api/certificates/${id}`, {
@@ -119,8 +123,10 @@ async function deleteCertificate(id) {
     // ✅ Instantly remove from frontend
     uploadedCertificates.value = uploadedCertificates.value.filter(cert => cert.id !== id);
 
+    showToast("Certificate deleted successfully", "success");
   } catch (error) {
     console.error("❌ Delete error:", error.response?.data || error);
+    showToast("Failed to delete certificate", "error");
   }
 }
 
@@ -154,6 +160,16 @@ onMounted(async () => {
     userName.value = "Guest";
   }
 });
+
+// ➤ Toast helper
+function showToast(message, type = "success", duration = 3000) {
+  const id = Date.now();
+  toasts.value.push({ id, message, type });
+
+  setTimeout(() => {
+    toasts.value = toasts.value.filter(t => t.id !== id);
+  }, duration);
+}
 </script>
 
 <template>
@@ -425,6 +441,21 @@ onMounted(async () => {
               <p class="mt-4 text-center text-lg font-semibold text-gray-800">{{ selectedTitle }}</p>
             </div>
           </div>
+
+          <!-- Toast notifications -->
+            <div class="fixed top-5 right-5 space-y-2 z-50">
+              <div
+                v-for="toast in toasts"
+                :key="toast.id"
+                :class="[
+                  'px-4 py-2 rounded shadow text-white',
+                  toast.type === 'success' ? 'bg-green-500' :
+                  toast.type === 'error' ? 'bg-red-500' : 'bg-gray-500'
+                ]"
+              >
+                {{ toast.message }}
+              </div>
+            </div>
         </div>
       </div>
     </div>
