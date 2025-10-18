@@ -133,7 +133,7 @@
               </div>
               <div v-if="openUpcomingMenu === training.trainingID" class="dropdown-menu" @click.stop>
                 <ul>
-                  <li @click="openRegistrantsModal">Registrants</li>
+                  <li @click="openRegistrantsModal(training)">Registrants</li>
                   <li>Delete Training</li>
                 </ul>
               </div>
@@ -172,7 +172,7 @@
               </div>
               <div v-if="openCompletedMenu === training.trainingID" class="dropdown-menu" @click.stop>
                 <ul>
-                  <li @click="openRegistrantsModal">Registrants</li>
+                  <li @click="openRegistrantsModal(training)">Registrants</li>
                   <li>Delete Training</li>
                 </ul>
               </div>
@@ -192,15 +192,16 @@
 <div v-if="showRegistrantsModal" class="modal-overlay" @click.self="closeModal">
   <div class="modal-content">
     <button class="modal-close-btn" @click="closeModal">✕</button>
-    <h3 class="modal-title">Registrants</h3>
+    <h3 class="modal-title">Registrants for {{ selectedTraining.title }}</h3>
 
     <div class="registrants-table-container">
       <table>
         <thead>
           <tr>
-            <th>NAME</th>
+            <th>FULL NAME</th>
+            <th>REGISTRATION DATE</th>
             <th>STATUS</th>
-            <th class="cert-col-header">Certification</th>
+            <th class="cert-col-header">CERTIFICATE</th>
           </tr>
         </thead>
         <tbody>
@@ -208,22 +209,25 @@
             <td>
               <p class="registrant-name">{{ person.name }}</p>
             </td>
-
-            <td :class="{
-                  'status-attended': person.status === 'Attended',
-                  'status-did-not-attend': person.status === 'Did not Attend'
-                }">
-              {{ person.status }}
+            <td>
+               <p class="registration-date">{{ person.dateRegistered }}</p>
             </td>
+            <td :class="{
+             'status-attended': person.status === 'Attended',
+             'status-registered': person.status === 'Registered',
+             'status-did-not-attend': person.status === 'Did not Attend'
+                  }">
+             {{ person.status }}
+           </td>
 
             <td>
               <button
                 class="action-btn"
-                :class="person.status === 'Attended' ? 'issue-cert-btn' : 'issue-cert-btn-regonly'"
-                :disabled="person.status !== 'Attended'"
+                :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
+                :disabled="person.hasCertificate"
                 @click="openCertUploadModal(person)"
               >
-                Issue Certificate
+                 {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
               </button>
             </td>
           </tr>
@@ -534,7 +538,7 @@ export default {
 
           // Fetch registrants from API
           const response = await axios.get(
-            `http://127.0.0.1:8000/api/trainings/${training.id}/registrants`,
+           `http://127.0.0.1:8000/api/trainings/${training.trainingID}/registrants`,
             {
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -557,6 +561,10 @@ export default {
             console.error("Error fetching registrants:", error.response.status, error.response.data);
             if (error.response.status === 401) {
               alert("Unauthorized. Please log in again.");
+            } else if (error.response.status === 403) {
+              alert("You don't have permission to view registrants for this training.");
+            } else if (error.response.status === 404) {
+              alert("Training not found or you don't have access to it.");
             } else {
               alert("Failed to fetch registrants. Please try again.");
             }
@@ -578,8 +586,8 @@ export default {
     openCertUploadModal(registrant) {
       this.selectedRegistrant = {
         ...registrant,
-        certificateTrackingID: "",
-        certificateGivenDate: "",
+        certificateTrackingID: registrant.certificateTrackingID || "",
+        certificateGivenDate: registrant.certificateGivenDate || "",
         uploadedFile: null,
       };
       this.showCertUploadModal = true;
