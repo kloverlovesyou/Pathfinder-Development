@@ -1,147 +1,10 @@
 <template>
-  <div class="min-h-screen bg-gray-100 font-poppins">
-    <div class="lg:hidden block font-poppins">
-      <div class="pb-20 font-poppins flex justify-center bg-blue-gray p-4">
-        <div
-          class="w-full max-w-3xl flex-grow bg-white p-6 rounded-lg shadow-md py-14"
-        >
-          <div class="flex justify-start gap-4 mb-4 py-4">
-            <h2 class="text-2xl font-bold">Update Account</h2>
-          </div>
-
-          <!-- FORM -->
-          <form @submit.prevent="handleUpdate" class="space-y-4">
-            <!-- First, Middle, Last Name -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <input
-                class="input w-full"
-                type="text"
-                placeholder="First Name"
-                v-model="form.firstName"
-              />
-              <input
-                class="input w-full"
-                type="text"
-                placeholder="Middle Name"
-                v-model="form.middleName"
-              />
-              <input
-                class="input w-full"
-                type="text"
-                placeholder="Last Name"
-                v-model="form.lastName"
-              />
-            </div>
-
-            <!-- Address -->
-            <div>
-              <input
-                class="input w-full"
-                type="text"
-                placeholder="Address"
-                v-model="form.address"
-              />
-            </div>
-
-            <!-- Email & Phone -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <input
-                class="input w-full"
-                type="email"
-                placeholder="Email"
-                v-model="form.emailAddress"
-              />
-              <input
-                type="tel"
-                class="input w-full"
-                placeholder="Phone Number"
-                minlength="11"
-                maxlength="11"
-                pattern="[0-9]*"
-                v-model="form.phoneNumber"
-              />
-            </div>
-
-            <!-- New & Confirm Password -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <input
-                type="password"
-                class="input w-full"
-                placeholder="New Password (optional)"
-                v-model="form.newPassword"
-              />
-              <input
-                type="password"
-                class="input w-full"
-                placeholder="Confirm New Password"
-                v-model="form.confirmPassword"
-              />
-            </div>
-
-            <!-- Current Password -->
-            <div>
-              <input
-                type="password"
-                class="input w-full"
-                required
-                placeholder="Confirm Password"
-                v-model="form.currentPassword"
-              />
-            </div>
-
-            <!-- Buttons -->
-            <div class="grid grid-cols-2 gap-4 flex-col sm:flex-row pt-6">
-              <button
-                type="button"
-                class="btn bg-customButton hover:bg-dark-slate text-white w-full sm:w-auto"
-                @click="showDeleteModal = true"
-              >
-                Delete Account
-              </button>
-              <button
-                type="submit"
-                class="btn bg-customButton hover:bg-dark-slate text-white w-full sm:w-auto"
-              >
-                Save Changes
-              </button>
-            </div>
-          </form>
-
-          <!-- Delete Confirmation Modal -->
-          <div
-            v-if="showDeleteModal"
-            class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
-          >
-            <div class="bg-white p-6 rounded-lg max-w-sm w-full">
-              <h2 class="text-lg font-semibold mb-4">
-                Confirm Account Deletion
-              </h2>
-              <p class="mb-4 text-sm">
-                This action is irreversible. Are you sure you want to delete
-                your account?
-              </p>
-              <div class="flex justify-end gap-2">
-                <button class="btn btn-sm" @click="showDeleteModal = false">
-                  Cancel
-                </button>
-                <button
-                  class="btn btn-error btn-sm text-white"
-                  @click="handleDelete"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
+  <div class="min-h-screen p-3 rounded-lg font-poppins">
     <!--Large screen-->
-    <div class="min-h-screen p-6 font-poppins hidden lg:flex">
+    <div class="min-h-screen font-poppins lg:flex">
       <!-- Left Column -->
       <div
-        class="w-full lg:w-1/4 bg-white rounded-lg shadow p-6 flex flex-col items-center"
+        class="w-full lg:w-1/4 lg:mr-3 bg-white rounded-lg shadow p-6 flex flex-col items-center hidden lg:flex"
       >
         <!-- Avatar -->
         <div class="w-24 h-24 rounded-full bg-white mb-4">
@@ -155,13 +18,46 @@
         </div>
 
         <!-- Name -->
-        <h2 class="text-xl font-semibold mb-6">Keiro Musician</h2>
+        <h2 class="text-xl font-semibold mb-6">{{ userName }}</h2>
+        <div
+          class="w-full flex items-center justify-center gap-6 mb-6 relative"
+        >
+          <!-- Upcoming -->
+          <div class="relative">
+            <div
+              class="flex items-center justify-center bg-gray-100 rounded-full px-6 py-2"
+            >
+              <span class="font-semibold text-gray-700">Upcoming</span>
+            </div>
+            <!-- Floating Bubble -->
+            <span
+              class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
+            >
+              0
+            </span>
+          </div>
+
+          <!-- Completed -->
+          <div class="relative">
+            <div
+              class="flex items-center justify-center bg-gray-100 rounded-full px-6 py-2"
+            >
+              <span class="font-semibold text-gray-700">Completed</span>
+            </div>
+            <!-- Floating Bubble -->
+            <span
+              class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
+            >
+              0
+            </span>
+          </div>
+        </div>
 
         <!-- Buttons -->
         <div class="w-full flex flex-col gap-3">
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="router.push('/resumepage')"
+            @click="$router.push({ name: 'ResumeEditorpage' })"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -181,6 +77,7 @@
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
+            @click="$router.push({ name: 'Certificatespage' })"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -198,44 +95,10 @@
             </svg>
             <span>Certificates</span>
           </button>
+
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="router.push('/calendarpage')"
-          >
-            <svg
-              class="size-6 flex-shrink-0"
-              viewBox="0 0 33 34"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M2.75 11.0697C2.75 9.18408 2.75 8.24128 3.33579 7.65549C3.92157 7.0697 4.86438 7.0697 6.75 7.0697H26.25C28.1356 7.0697 29.0784 7.0697 29.6642 7.65549C30.25 8.24128 30.25 9.18408 30.25 11.0697V13.1394C30.25 13.6108 30.25 13.8465 30.1036 13.9929C29.9571 14.1394 29.7214 14.1394 29.25 14.1394H3.75C3.2786 14.1394 3.04289 14.1394 2.89645 13.9929C2.75 13.8465 2.75 13.6108 2.75 13.1394V11.0697Z"
-                fill="white"
-              />
-              <path
-                fill-rule="evenodd"
-                clip-rule="evenodd"
-                d="M2.75 27.1065C2.75 28.9921 2.75 29.9349 3.33579 30.5207C3.92157 31.1065 4.86438 31.1065 6.75 31.1065H26.25C28.1356 31.1065 29.0784 31.1065 29.6642 30.5207C30.25 29.9349 30.25 28.9921 30.25 27.1065V17.9672C30.25 17.4958 30.25 17.2601 30.1036 17.1136C29.9571 16.9672 29.7214 16.9672 29.25 16.9672H3.75C3.2786 16.9672 3.04289 16.9672 2.89645 17.1136C2.75 17.2601 2.75 17.4958 2.75 17.9672V27.1065ZM9.625 20.795C9.625 20.3236 9.625 20.0879 9.77145 19.9415C9.91789 19.795 10.1536 19.795 10.625 19.795H14.125C14.5964 19.795 14.8321 19.795 14.9786 19.9415C15.125 20.0879 15.125 20.3236 15.125 20.795V21.6229C15.125 22.0943 15.125 22.33 14.9786 22.4765C14.8321 22.6229 14.5964 22.6229 14.125 22.6229H10.625C10.1536 22.6229 9.91789 22.6229 9.77145 22.4765C9.625 22.33 9.625 22.0943 9.625 21.6229V20.795ZM9.77145 25.5972C9.625 25.7437 9.625 25.9794 9.625 26.4508V27.2786C9.625 27.75 9.625 27.9857 9.77145 28.1322C9.91789 28.2786 10.1536 28.2786 10.625 28.2786H14.125C14.5964 28.2786 14.8321 28.2786 14.9786 28.1322C15.125 27.9857 15.125 27.75 15.125 27.2786V26.4508C15.125 25.9794 15.125 25.7437 14.9786 25.5972C14.8321 25.4508 14.5964 25.4508 14.125 25.4508H10.625C10.1536 25.4508 9.91789 25.4508 9.77145 25.5972ZM17.875 20.795C17.875 20.3236 17.875 20.0879 18.0214 19.9415C18.1679 19.795 18.4036 19.795 18.875 19.795H22.375C22.8464 19.795 23.0821 19.795 23.2286 19.9415C23.375 20.0879 23.375 20.3236 23.375 20.795V21.6229C23.375 22.0943 23.375 22.33 23.2286 22.4765C23.0821 22.6229 22.8464 22.6229 22.375 22.6229H18.875C18.4036 22.6229 18.1679 22.6229 18.0214 22.4765C17.875 22.33 17.875 22.0943 17.875 21.6229V20.795ZM18.0214 25.5972C17.875 25.7437 17.875 25.9794 17.875 26.4508V27.2786C17.875 27.75 17.875 27.9857 18.0214 28.1322C18.1679 28.2786 18.4036 28.2786 18.875 28.2786H22.375C22.8464 28.2786 23.0821 28.2786 23.2286 28.1322C23.375 27.9857 23.375 27.75 23.375 27.2786V26.4508C23.375 25.9794 23.375 25.7437 23.2286 25.5972C23.0821 25.4508 22.8464 25.4508 22.375 25.4508H18.875C18.4036 25.4508 18.1679 25.4508 18.0214 25.5972Z"
-                fill="white"
-              />
-              <path
-                d="M9.625 4.24182L9.625 8.48362"
-                stroke="white"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-              <path
-                d="M23.375 4.24182L23.375 8.48362"
-                stroke="white"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-            </svg>
-            <span>Calendar</span>
-          </button>
-          <button
-            class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="router.push('/bookmarkpage')"
+            @click="$router.push({ name: 'Bookmarkpage' })"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -254,6 +117,7 @@
           <div class="divider"></div>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
+            @click="$router.push({ name: 'UpdateDeletepage' })"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -267,10 +131,11 @@
               />
             </svg>
 
-            <span>Update/Delete Account</span>
+            <span>Account Setting</span>
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
+            @click="logout"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -296,13 +161,12 @@
           </button>
         </div>
       </div>
-
       <!-- Right Column -->
-      <div class="w-full lg:w-3/4 lg:pl-6 mt-6 lg:mt-0 flex flex-col gap-6">
+      <div class="w-full lg:mt-0 lg:ml-3 flex flex-col gap-6">
         <!-- Bottom Row: Event List -->
         <div class="bg-white rounded-lg shadow p-6 flex-1">
           <div class="flex justify-start gap-4 mb-4 py-4">
-            <h2 class="text-2xl font-bold">Update/Delete Account</h2>
+            <h2 class="text-2xl font-bold">Account Setting</h2>
           </div>
 
           <!-- FORM -->
@@ -312,19 +176,19 @@
             <!-- First, Middle, Last Name -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <input
-                class="input w-full"
+                class="border border-gray-300 input w-full"
                 type="text"
                 placeholder="First Name"
                 v-model="form.firstName"
               />
               <input
-                class="input w-full"
+                class="border border-gray-300 input w-full"
                 type="text"
                 placeholder="Middle Name"
                 v-model="form.middleName"
               />
               <input
-                class="input w-full"
+                class="border border-gray-300 input w-full"
                 type="text"
                 placeholder="Last Name"
                 v-model="form.lastName"
@@ -337,7 +201,7 @@
             <!-- Address -->
             <div>
               <input
-                class="input w-full"
+                class="border border-gray-300 input w-full"
                 type="text"
                 placeholder="Address"
                 v-model="form.address"
@@ -350,14 +214,15 @@
             <!-- Email & Phone -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <input
-                class="input w-full"
+                class="border border-gray-300 input w-full text-gray-600"
                 type="email"
                 placeholder="Email"
                 v-model="form.emailAddress"
+                readonly
               />
               <input
                 type="tel"
-                class="input w-full"
+                class="border border-gray-300 input w-full"
                 placeholder="Phone Number"
                 minlength="11"
                 maxlength="11"
@@ -373,13 +238,13 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <input
                 type="password"
-                class="input w-full"
+                class="border border-gray-300 input w-full"
                 placeholder="New Password (optional)"
                 v-model="form.newPassword"
               />
               <input
                 type="password"
-                class="input w-full"
+                class="border border-gray-300 input w-full"
                 placeholder="Confirm New Password"
                 v-model="form.confirmPassword"
               />
@@ -388,14 +253,13 @@
             <!-- Divider for large screens -->
             <div class="hidden lg:block h-px bg-gray-300"></div>
 
-            <!-- Current Password -->
             <div>
               <input
                 type="password"
-                class="input w-full"
-                required
+                class="border border-gray-300 input w-full"
                 placeholder="Confirm Password"
                 v-model="form.currentPassword"
+                required
               />
             </div>
 
@@ -403,14 +267,7 @@
             <div class="hidden lg:block h-px bg-gray-300"></div>
 
             <!-- Buttons -->
-            <div class="grid grid-cols-2 gap-4 flex-col sm:flex-row pt-6">
-              <button
-                type="button"
-                class="btn bg-customButton hover:bg-dark-slate text-white w-full sm:w-auto"
-                @click="showDeleteModal = true"
-              >
-                Delete Account
-              </button>
+            <div class="flex justify-end pt-6">
               <button
                 type="submit"
                 class="btn bg-customButton hover:bg-dark-slate text-white w-full sm:w-auto"
@@ -434,14 +291,19 @@
                 your account?
               </p>
               <div class="flex justify-end gap-2">
-                <button class="btn btn-sm" @click="showDeleteModal = false">
+                <button
+                  class="btn btn-sm"
+                  @click="showDeleteModal = false"
+                  :disabled="isDeleting"
+                >
                   Cancel
                 </button>
                 <button
                   class="btn btn-error btn-sm text-white"
                   @click="handleDelete"
+                  :disabled="isDeleting"
                 >
-                  Delete
+                  {{ isDeleting ? "Deleting..." : "Delete" }}
                 </button>
               </div>
             </div>
@@ -459,6 +321,7 @@ import { useRouter } from "vue-router";
 
 const router = useRouter();
 const showDeleteModal = ref(false);
+const isDeleting = ref(false);
 
 const form = ref({
   firstName: "",
@@ -471,17 +334,75 @@ const form = ref({
   currentPassword: "",
 });
 
-// Load current user info
+const userName = ref("");
+
 onMounted(async () => {
   try {
+    // --- Fetch user from API ---
     const res = await axios.get("http://127.0.0.1:8000/api/user", {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
-    form.value = { ...form.value, ...res.data };
+
+    const user = res.data;
+
+    // Update form (including middle name)
+    form.value = {
+      ...form.value,
+      firstName: user.firstName || user.first_name || "",
+      middleName: user.middleName || user.middle_name || "",
+      lastName: user.lastName || user.last_name || "",
+      emailAddress: user.emailAddress || user.email || "",
+      phoneNumber: user.phoneNumber || user.phone || "",
+      address: user.address || "",
+    };
+
+    // Set userName (display only first + last)
+    userName.value = `${form.value.firstName} ${form.value.lastName}`.trim();
+
+    // Save backup
+    localStorage.setItem("user", JSON.stringify(user));
   } catch (err) {
-    console.error(err);
+    console.error("API failed, fallback to localStorage:", err);
+
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+
+      form.value = {
+        ...form.value,
+        firstName: user.firstName || user.first_name || "",
+        middleName: user.middleName || user.middle_name || "",
+        lastName: user.lastName || user.last_name || "",
+        emailAddress: user.emailAddress || user.email || "",
+        phoneNumber: user.phoneNumber || user.phone || "",
+        address: user.address || "",
+      };
+
+      userName.value = `${form.value.firstName} ${form.value.lastName}`.trim();
+    }
   }
 });
+
+function deleteAccount() {
+  axios
+    .delete("http://127.0.0.1:8000/api/user", {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    })
+    .then((res) => {
+      alert(res.data.message);
+
+      // clear saved data
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      // redirect to login
+      router.push("/loginform");
+    })
+    .catch((err) => {
+      console.error(err);
+      alert("Failed to delete account.");
+    });
+}
 
 const handleUpdate = async () => {
   if (!form.value.currentPassword) {
@@ -502,14 +423,27 @@ const handleUpdate = async () => {
 
 const handleDelete = async () => {
   try {
-    await axios.delete("http://127.0.0.1:8000/api/user", {
+    isDeleting.value = true;
+    const res = await axios.delete("http://127.0.0.1:8000/api/user", {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      data: { currentPassword: form.value.currentPassword }, // send password for verification
     });
-    alert("Account deleted.");
+    alert(res.data.message);
     localStorage.removeItem("token");
-    router.push("/register");
+    localStorage.removeItem("user");
+    router.push("/auth/login");
   } catch (error) {
     alert(error.response?.data?.message || "Deletion failed.");
+  } finally {
+    isDeleting.value = false;
+    showDeleteModal.value = false;
   }
+};
+
+const logout = () => {
+  // Remove user data from localStorage
+  localStorage.removeItem("user");
+  // Redirect to login page
+  router.push({ name: "Login" });
 };
 </script>

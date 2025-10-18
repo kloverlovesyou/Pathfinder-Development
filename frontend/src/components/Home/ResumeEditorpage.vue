@@ -1,86 +1,413 @@
 <script setup>
+import { reactive, ref, onMounted } from "vue";
+import jsPDF from "jspdf";
+import axios from "axios";
 import { useRouter } from "vue-router";
 
-import { reactive, ref, onMounted } from "vue";
-
-import html2pdf from "html2pdf.js";
-import { computed } from "vue";
-
-const filteredExperiences = computed(() =>
-  resume.experiences.filter((exp) => exp.text)
-);
-
-
-const router = useRouter();
 const isModalOpen = ref(false);
-const selectedImage = ref(null);
-const selectedTitle = ref(null);
+const pdfUrl = ref(null);
 const newSkill = ref("");
-const skills = ref([]);
-const resumePreview = ref(null);
-const experiences = reactive([{ text: "" }]);
-const showModal = ref(false);
+const router = useRouter();
+const userName = ref("");
 
-// Resume data
-const resume = ref({
-  firstName: "John",
-  middleName: "M.",
-  lastName: "Doe",
-  email: "john@example.com",
-  mobile: "09123456789",
-  address: "Manila, Philippines",
-  summary: "Experienced developer with expertise in Vue.js and Tailwind.",
-  experiences: [{ text: "Software Engineer at ABC Corp (2020–2023)" }],
-  education: [
-    {
-      attainment: "Bachelor's Degree",
-      university: "XYZ University",
-      year: "2020",
-    },
-  ],
-  skills: ["Vue.js", "Tailwind", "JavaScript"],
-  certificates: [{ title: "AWS Certified Developer" }],
-  url: "https://portfolio.example.com",
+// --- Forms ---
+const showNewExperienceForm = ref(false);
+const newExperience = reactive({
+  jobTitle: "",
+  companyName: "",
+  companyAddress: "",
+  startYear: new Date().getFullYear(),
+  endYear: new Date().getFullYear(),
 });
 
-function openPreview() {
-  showModal.value = true;
-}
+const showNewEducationForm = ref(false);
+const newEducation = reactive({
+  educationLevel: "",
+  major: "",
+  institutionName: "",
+  institutionAddress: "",
+  graduationYear: "",
+});
 
-function downloadPDF() {
-  const element = resumePreview.value;
-  const opt = {
-    margin: 0.5,
-    filename: "resume.pdf",
-    image: { type: "jpeg", quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true },
-    jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
-  };
-  html2pdf().set(opt).from(element).save();
-}
+// ✅ Resume Data
+const resume = reactive({
+  summary: "",
+  experience: [],
+  education: [],
+  skills: [],
+  url: "",
+});
 
-function addExperience() {
-  resume.experiences.push({ text: "" });
-}
+// ✅ User Form Data
+const form = reactive({
+  firstName: "",
+  middleName: "",
+  lastName: "",
+  emailAddress: "",
+  phoneNumber: "",
+  address: "",
+});
 
-function removeExperience(index) {
-  resume.experiences.splice(index, 1);
-}
+// --- Save Resume ---
+async function saveResume() {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.post(
+      "http://127.0.0.1:8000/api/resume",
+      {
+        summary: resume.summary,
+        professionalLink: resume.url,
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-function addSkill() {
-  if (newSkill.value.trim() !== "") {
-    skills.value.push(newSkill.value.trim());
-    newSkill.value = "";
+    resume.resumeID = response.data.resumeID;
+    alert("Resume saved successfully!");
+  } catch (error) {
+    console.error("Error saving resume:", error.response?.data || error);
+    alert("Failed to save resume.");
   }
 }
 
-function removeSkill(index) {
-  skills.value.splice(index, 1);
+// --- Load Resume ---
+async function loadResume() {
+  try {
+    const token = localStorage.getItem("token");
+    const { data } = await axios.get("http://127.0.0.1:8000/api/resume", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (data) {
+      resume.summary = data.summary || "";
+      resume.url = data.professionalLink || "";
+      resume.resumeID = data.resumeID;
+    }
+
+    const { data: expData } = await axios.get("http://127.0.0.1:8000/api/experiences", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    resume.experience = expData || [];
+
+    await loadEducation();
+    await loadSkills(resume.resumeID); // ✅ Load skills
+  } catch (error) {
+    console.error("Error loading resume:", error.response?.data || error);
+  }
+}
+// --- Delete Resume ---
+async function deleteResume() {
+  try {
+    const token = localStorage.getItem("token");
+    await axios.delete("http://127.0.0.1:8000/api/resume", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    resume.summary = "";
+    resume.url = "";
+    alert("Resume deleted successfully!");
+  } catch (error) {
+    console.error("Error deleting resume:", error.response?.data || error);
+    alert("Failed to delete resume.");
+  }
 }
 
-function openModal(image, title) {
-  selectedImage.value = image;
-  selectedTitle.value = title;
+// --- Education ---
+async function addEducation() {
+  try {
+    const token = localStorage.getItem("token");
+
+    if (!resume.resumeID) {
+      const resumeRes = await axios.post(
+        "http://127.0.0.1:8000/api/resume",
+        {
+          summary: resume.summary || "",
+          professionalLink: resume.url || "",
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      resume.resumeID = resumeRes.data.resumeID;
+    }
+
+    const { data } = await axios.post(
+      "http://127.0.0.1:8000/api/education",
+      { ...newEducation, resumeID: resume.resumeID },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    resume.education.push(data);
+    Object.keys(newEducation).forEach((key) => (newEducation[key] = ""));
+    showNewEducationForm.value = false;
+    alert("Education added successfully!");
+  } catch (error) {
+    console.error("Error adding education:", error.response?.data || error);
+    alert("Failed to add education.");
+  }
+}
+
+async function loadEducation() {
+  try {
+    const token = localStorage.getItem("token");
+    const resumeID = resume.resumeID || localStorage.getItem("resumeID");
+
+    const { data } = await axios.get(
+      `http://127.0.0.1:8000/api/education?resumeID=${resumeID}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    resume.education = data || [];
+    console.log("✅ Education Data Loaded:", resume.education);
+  } catch (error) {
+    console.error("❌ Error loading education:", error.response?.data || error);
+  }
+}
+
+async function removeEducation(index) {
+  try {
+    const token = localStorage.getItem("token");
+    const edu = resume.education[index];
+    if (edu.educationID) {
+      await axios.delete(`http://127.0.0.1:8000/api/education/${edu.educationID}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    }
+    resume.education.splice(index, 1);
+  } catch (error) {
+    console.error("Error deleting education:", error.response?.data || error);
+    alert("Failed to delete education.");
+  }
+}
+
+// --- Experience ---
+async function addExperience() {
+  if (
+    !newExperience.jobTitle.trim() ||
+    !newExperience.companyName.trim() ||
+    !newExperience.companyAddress.trim()
+  ) {
+    alert("Please fill out all fields before adding experience.");
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem("token");
+
+    if (!resume.resumeID) {
+      const resumeRes = await axios.post(
+        "http://127.0.0.1:8000/api/resume",
+        {
+          summary: resume.summary || "",
+          professionalLink: resume.url || "",
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      resume.resumeID = resumeRes.data.resumeID;
+    }
+
+    const { data } = await axios.post(
+      "http://127.0.0.1:8000/api/experiences",
+      {
+        ...newExperience,
+        startYear: `${newExperience.startYear}-01-01`,
+        endYear: `${newExperience.endYear}-01-01`,
+        resumeID: resume.resumeID,
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    resume.experience.push(data);
+    Object.assign(newExperience, {
+      jobTitle: "",
+      companyName: "",
+      companyAddress: "",
+      startYear: new Date().getFullYear(),
+      endYear: new Date().getFullYear(),
+    });
+    showNewExperienceForm.value = false;
+    alert("Experience added successfully!");
+  } catch (error) {
+    console.error("Error adding experience:", error.response?.data || error);
+    alert("Failed to add experience.");
+  }
+}
+
+async function removeExperience(index) {
+  try {
+    const token = localStorage.getItem("token");
+    const exp = resume.experience[index];
+    if (exp.experienceID) {
+      await axios.delete(`http://127.0.0.1:8000/api/experiences/${exp.experienceID}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    }
+    resume.experience.splice(index, 1);
+  } catch (error) {
+    console.error("Error deleting experience:", error.response?.data || error);
+    alert("Failed to delete experience.");
+  }
+}
+
+// --- Skills ---
+async function loadSkills(resumeID) {
+  try {
+    const token = localStorage.getItem("token");
+    const { data } = await axios.get(`http://127.0.0.1:8000/api/skills/${resumeID}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    resume.skills = data || [];
+    console.log("✅ Skills Loaded:", resume.skills);
+  } catch (error) {
+    console.error("Error loading skills:", error.response?.data || error);
+  }
+}
+
+async function addSkill() {
+  if (!newSkill.value.trim()) return;
+
+  try {
+    const token = localStorage.getItem("token");
+    if (!resume.resumeID) {
+      alert("Please save your resume first before adding skills.");
+      return;
+    }
+
+    const { data } = await axios.post(
+      "http://127.0.0.1:8000/api/skills",
+      { skillName: newSkill.value.trim(), resumeID: resume.resumeID },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    resume.skills.push(data);
+    newSkill.value = "";
+  } catch (error) {
+    console.error("Error adding skill:", error.response?.data || error);
+  }
+}
+
+async function removeSkill(index) {
+  try {
+    const token = localStorage.getItem("token");
+    const skill = resume.skills[index];
+    if (skill.skillID) {
+      await axios.delete(`http://127.0.0.1:8000/api/skills/${skill.skillID}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    }
+    resume.skills.splice(index, 1);
+  } catch (error) {
+    console.error("Error removing skill:", error.response?.data || error);
+  }
+}
+
+// --- PDF Generation (unchanged from your version) ---
+function sectionHeader(doc, title, x, y, pageWidth, margin) {
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text(title, margin, y);
+  doc.setLineWidth(0.5);
+  doc.line(margin, y + 2, pageWidth - margin, y + 2);
+}
+
+function generatePdf() {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 20;
+  let y = 20;
+
+  function getYearOnly(dateStr) {
+    if (!dateStr) return "";
+    const year = new Date(dateStr).getFullYear();
+    return isNaN(year) ? "" : year.toString();
+  }
+
+  function addWrappedText(text, x, y, maxWidth, lineHeight = 6) {
+    const lines = doc.splitTextToSize(text, maxWidth);
+    for (let line of lines) {
+      if (y > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+      }
+      doc.text(line, x, y);
+      y += lineHeight;
+    }
+    return y;
+  }
+
+  function sectionHeader(title, x, y, pageWidth, margin) {
+    doc.setFont("times", "bold");
+    doc.setFontSize(12);
+    doc.text(title, x, y);
+    y += 2;
+    doc.setLineWidth(0.5);
+    doc.line(margin, y, pageWidth - margin, y);
+    return y + 6;
+  }
+
+  // Header
+  doc.setFont("times", "bold");
+  doc.setFontSize(20);
+  doc.text(`${form.firstName} ${form.middleName} ${form.lastName}`, pageWidth / 2, y, { align: "center" });
+  y += 8;
+
+  doc.setFont("times", "regular");
+  doc.setFontSize(10);
+  const contactLine = `${form.phoneNumber} • ${form.emailAddress} • ${resume.url}`;
+  doc.text(contactLine, pageWidth / 2, y, { align: "center" });
+  y += 12;
+
+  // Summary
+  y = sectionHeader("Summary", margin, y, pageWidth, margin);
+  doc.setFont("times", "regular");
+  doc.setFontSize(11);
+  y = addWrappedText(resume.summary || "", margin, y, pageWidth - 2 * margin);
+
+  // Experience
+  if (resume.experience.length) {
+    y = sectionHeader("Professional Experience", margin, y, pageWidth, margin);
+    const sortedExperiences = [...resume.experience].sort(
+      (a, b) => new Date(b.endYear).getFullYear() - new Date(a.endYear).getFullYear()
+    );
+    sortedExperiences.forEach((exp) => {
+      const start = getYearOnly(exp.startYear);
+      const end = exp.endYear ? getYearOnly(exp.endYear) : "Present";
+      doc.setFont("times", "bold");
+      doc.text(exp.jobTitle || "", margin, y);
+      doc.setFont("times", "regular");
+      doc.text(`${start} – ${end}`, pageWidth - margin, y, { align: "right" });
+      y += 6;
+      doc.setFont("times", "italic");
+      doc.text(`${exp.companyName || ""}`, margin, y);
+      y += 6;
+    });
+  }
+
+  // Education
+  if (resume.education.length) {
+    y = sectionHeader("Education", margin, y, pageWidth, margin);
+    resume.education.forEach((edu) => {
+      const gradYear = getYearOnly(edu.graduationYear);
+      doc.setFont("times", "bold");
+      doc.text(`${edu.institutionName || ""}`, margin, y);
+      doc.text(gradYear, pageWidth - margin, y, { align: "right" });
+      y += 6;
+      doc.setFont("times", "regular");
+      doc.text(`${edu.educationLevel} in ${edu.major}`, margin, y);
+      y += 6;
+    });
+  }
+
+  // Skills
+  if (resume.skills.length) {
+    y = sectionHeader("Skills", margin, y, pageWidth, margin);
+    y = addWrappedText(resume.skills.map((s) => s.skillName || s).join(" • "), margin, y, pageWidth - 2 * margin);
+  }
+
+  const pdfBlob = doc.output("blob");
+  pdfUrl.value = URL.createObjectURL(pdfBlob);
+}
+
+function generateAndOpenPdf() {
+  generatePdf();
   isModalOpen.value = true;
 }
 
@@ -88,641 +415,35 @@ function closeModal() {
   isModalOpen.value = false;
 }
 
-const certificates = reactive([
-  {
-    title: "",
-    image: null,
-  },
-]);
-
-function addCertificate() {
-  certificates.push({ title: "", image: null });
-}
-
-function removeCertificate(index) {
-  certificates.splice(index, 1);
-}
-
-function handleFileUpload(event, index) {
-  const file = event.target.files[0];
-  if (file) {
-    certificates[index].image = URL.createObjectURL(file);
-  }
-}
-
-const educationList = reactive([{ text: "" }]);
-
-function addEducation() {
-  resume.value.education.push({
-    attainment: "",
-    university: "",
-    year: "",
-  });
-}
-
-function removeEducation(index) {
-  resume.value.education.splice(index, 1);
-}
-
-// 👇 NEW: Form data for autofill
-const form = reactive({
-  firstName: "",
-  middleName: "",
-  lastName: "",
-  emailAddress: "",
-  phoneNumber: "",
-  address: ""
-});
-
-const userName = ref("Guest");
-
-onMounted(() => {
+// --- Autofill + Load Data ---
+onMounted(async () => {
   const savedUser = localStorage.getItem("user");
   if (savedUser) {
-    const user = JSON.parse(savedUser);
-
-    // Autofill form fields
-    form.firstName = user.firstName || "";
-    form.middleName = user.middleName || "";
-    form.lastName = user.lastName || "";
-    form.emailAddress = user.emailAddress || "";
-    form.phoneNumber = user.phoneNumber || "";
-    form.address = user.address || "";
-
-    // Display username on UI
-    if (user.firstName && user.lastName) {
+    try {
+      const user = JSON.parse(savedUser);
       userName.value = `${user.firstName} ${user.lastName}`;
-    } else {
+      Object.assign(form, user);
+    } catch {
       userName.value = "Guest";
     }
-  } else {
-    userName.value = "Guest";
   }
+  await loadResume();
 });
+
+const logout = () => {
+  localStorage.removeItem("user");
+  localStorage.removeItem("token");
+  router.push({ name: "Login" });
+};
 </script>
 
-
 <template>
-  <div class="min-h-screen bg-gray-100 font-poppins">
-    <div class="absolute right-5 dropdown dropdown-end lg:hidden">
-      <div tabindex="0" role="button" class="group m-5">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="size-5 flex-shrink-0 group-hover:hidden"
-          viewBox="0 0 24 24"
-          fill="white"
-        >
-          <path
-            d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-          />
-        </svg>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="size-5 flex-shrink-0 group-hover:block hidden"
-          viewBox="0 0 24 24"
-          fill="dark-slate"
-        >
-          <path
-            d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-          />
-        </svg>
-      </div>
-      <ul
-        tabindex="0"
-        class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-      >
-        <li>Update/Delete Account</li>
-        <li><a>Logout</a></li>
-      </ul>
-    </div>
-    <div class="lg:hidden block font-poppins">
-      <!-- Row 1: Profile Info -->
-      <div class="bg-dark-slate text-white p-6 flex flex-col items-center">
-        <!-- Avatar -->
-        <div class="avatar w-24 h-24 rounded-full bg-white mb-4">
-          <img
-            src="https://img.daisyui.com/images/profile/demo/yellingcat@192.webp"
-            alt="User Avatar"
-            class="w-full h-full object-cover rounded-full"
-          />
-        </div>
-
-        <!-- Name -->
-        <h2 class="text-xl font-semibold mb-2">{{ userName }}</h2>
-
-        <!-- Stats -->
-        <div class="flex gap-8 mb-4">
-          <div class="text-center">
-            <p class="text-2xl font-bold">0</p>
-            <p class="text-sm">Upcoming</p>
-          </div>
-          <div class="text-center">
-            <p class="text-2xl font-bold">0</p>
-            <p class="text-sm">Completed</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Row 2: Buttons -->
-      <div class="bg-customButton text-white p-4 flex justify-center gap-4">
-        <button
-          class="group flex flex-col items-center justify-center px-4 py-3 rounded text-white hover:text-dark-slate"
-          @click="router.push('/calendarpage')"
-        >
-          <svg
-            class="size-6 flex-shrink-0 group-hover:hidden"
-            viewBox="0 0 33 34"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M2.75 11.0697C2.75 9.18408 2.75 8.24128 3.33579 7.65549C3.92157 7.0697 4.86438 7.0697 6.75 7.0697H26.25C28.1356 7.0697 29.0784 7.0697 29.6642 7.65549C30.25 8.24128 30.25 9.18408 30.25 11.0697V13.1394C30.25 13.6108 30.25 13.8465 30.1036 13.9929C29.9571 14.1394 29.7214 14.1394 29.25 14.1394H3.75C3.2786 14.1394 3.04289 14.1394 2.89645 13.9929C2.75 13.8465 2.75 13.6108 2.75 13.1394V11.0697Z"
-              fill="white"
-            />
-            <path
-              fill-rule="evenodd"
-              clip-rule="evenodd"
-              d="M2.75 27.1065C2.75 28.9921 2.75 29.9349 3.33579 30.5207C3.92157 31.1065 4.86438 31.1065 6.75 31.1065H26.25C28.1356 31.1065 29.0784 31.1065 29.6642 30.5207C30.25 29.9349 30.25 28.9921 30.25 27.1065V17.9672C30.25 17.4958 30.25 17.2601 30.1036 17.1136C29.9571 16.9672 29.7214 16.9672 29.25 16.9672H3.75C3.2786 16.9672 3.04289 16.9672 2.89645 17.1136C2.75 17.2601 2.75 17.4958 2.75 17.9672V27.1065ZM9.625 20.795C9.625 20.3236 9.625 20.0879 9.77145 19.9415C9.91789 19.795 10.1536 19.795 10.625 19.795H14.125C14.5964 19.795 14.8321 19.795 14.9786 19.9415C15.125 20.0879 15.125 20.3236 15.125 20.795V21.6229C15.125 22.0943 15.125 22.33 14.9786 22.4765C14.8321 22.6229 14.5964 22.6229 14.125 22.6229H10.625C10.1536 22.6229 9.91789 22.6229 9.77145 22.4765C9.625 22.33 9.625 22.0943 9.625 21.6229V20.795ZM9.77145 25.5972C9.625 25.7437 9.625 25.9794 9.625 26.4508V27.2786C9.625 27.75 9.625 27.9857 9.77145 28.1322C9.91789 28.2786 10.1536 28.2786 10.625 28.2786H14.125C14.5964 28.2786 14.8321 28.2786 14.9786 28.1322C15.125 27.9857 15.125 27.75 15.125 27.2786V26.4508C15.125 25.9794 15.125 25.7437 14.9786 25.5972C14.8321 25.4508 14.5964 25.4508 14.125 25.4508H10.625C10.1536 25.4508 9.91789 25.4508 9.77145 25.5972ZM17.875 20.795C17.875 20.3236 17.875 20.0879 18.0214 19.9415C18.1679 19.795 18.4036 19.795 18.875 19.795H22.375C22.8464 19.795 23.0821 19.795 23.2286 19.9415C23.375 20.0879 23.375 20.3236 23.375 20.795V21.6229C23.375 22.0943 23.375 22.33 23.2286 22.4765C23.0821 22.6229 22.8464 22.6229 22.375 22.6229H18.875C18.4036 22.6229 18.1679 22.6229 18.0214 22.4765C17.875 22.33 17.875 22.0943 17.875 21.6229V20.795ZM18.0214 25.5972C17.875 25.7437 17.875 25.9794 17.875 26.4508V27.2786C17.875 27.75 17.875 27.9857 18.0214 28.1322C18.1679 28.2786 18.4036 28.2786 18.875 28.2786H22.375C22.8464 28.2786 23.0821 28.2786 23.2286 28.1322C23.375 27.9857 23.375 27.75 23.375 27.2786V26.4508C23.375 25.9794 23.375 25.7437 23.2286 25.5972C23.0821 25.4508 22.8464 25.4508 22.375 25.4508H18.875C18.4036 25.4508 18.1679 25.4508 18.0214 25.5972Z"
-              fill="white"
-            />
-            <path
-              d="M9.625 4.24182L9.625 8.48362"
-              stroke="white"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-            <path
-              d="M23.375 4.24182L23.375 8.48362"
-              stroke="white"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-          </svg>
-          <svg
-            class="size-6 flex-shrink-0 hidden group-hover:block"
-            viewBox="0 0 33 34"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M2.75 11.0697C2.75 9.18408 2.75 8.24128 3.33579 7.65549C3.92157 7.0697 4.86438 7.0697 6.75 7.0697H26.25C28.1356 7.0697 29.0784 7.0697 29.6642 7.65549C30.25 8.24128 30.25 9.18408 30.25 11.0697V13.1394C30.25 13.6108 30.25 13.8465 30.1036 13.9929C29.9571 14.1394 29.7214 14.1394 29.25 14.1394H3.75C3.2786 14.1394 3.04289 14.1394 2.89645 13.9929C2.75 13.8465 2.75 13.6108 2.75 13.1394V11.0697Z"
-              fill="#44576D"
-            />
-            <path
-              fill-rule="evenodd"
-              clip-rule="evenodd"
-              d="M2.75 27.1065C2.75 28.9921 2.75 29.9349 3.33579 30.5207C3.92157 31.1065 4.86438 31.1065 6.75 31.1065H26.25C28.1356 31.1065 29.0784 31.1065 29.6642 30.5207C30.25 29.9349 30.25 28.9921 30.25 27.1065V17.9672C30.25 17.4958 30.25 17.2601 30.1036 17.1136C29.9571 16.9672 29.7214 16.9672 29.25 16.9672H3.75C3.2786 16.9672 3.04289 16.9672 2.89645 17.1136C2.75 17.2601 2.75 17.4958 2.75 17.9672V27.1065ZM9.625 20.795C9.625 20.3236 9.625 20.0879 9.77145 19.9415C9.91789 19.795 10.1536 19.795 10.625 19.795H14.125C14.5964 19.795 14.8321 19.795 14.9786 19.9415C15.125 20.0879 15.125 20.3236 15.125 20.795V21.6229C15.125 22.0943 15.125 22.33 14.9786 22.4765C14.8321 22.6229 14.5964 22.6229 14.125 22.6229H10.625C10.1536 22.6229 9.91789 22.6229 9.77145 22.4765C9.625 22.33 9.625 22.0943 9.625 21.6229V20.795ZM9.77145 25.5972C9.625 25.7437 9.625 25.9794 9.625 26.4508V27.2786C9.625 27.75 9.625 27.9857 9.77145 28.1322C9.91789 28.2786 10.1536 28.2786 10.625 28.2786H14.125C14.5964 28.2786 14.8321 28.2786 14.9786 28.1322C15.125 27.9857 15.125 27.75 15.125 27.2786V26.4508C15.125 25.9794 15.125 25.7437 14.9786 25.5972C14.8321 25.4508 14.5964 25.4508 14.125 25.4508H10.625C10.1536 25.4508 9.91789 25.4508 9.77145 25.5972ZM17.875 20.795C17.875 20.3236 17.875 20.0879 18.0214 19.9415C18.1679 19.795 18.4036 19.795 18.875 19.795H22.375C22.8464 19.795 23.0821 19.795 23.2286 19.9415C23.375 20.0879 23.375 20.3236 23.375 20.795V21.6229C23.375 22.0943 23.375 22.33 23.2286 22.4765C23.0821 22.6229 22.8464 22.6229 22.375 22.6229H18.875C18.4036 22.6229 18.1679 22.6229 18.0214 22.4765C17.875 22.33 17.875 22.0943 17.875 21.6229V20.795ZM18.0214 25.5972C17.875 25.7437 17.875 25.9794 17.875 26.4508V27.2786C17.875 27.75 17.875 27.9857 18.0214 28.1322C18.1679 28.2786 18.4036 28.2786 18.875 28.2786H22.375C22.8464 28.2786 23.0821 28.2786 23.2286 28.1322C23.375 27.9857 23.375 27.75 23.375 27.2786V26.4508C23.375 25.9794 23.375 25.7437 23.2286 25.5972C23.0821 25.4508 22.8464 25.4508 22.375 25.4508H18.875C18.4036 25.4508 18.1679 25.4508 18.0214 25.5972Z"
-              fill="#44576D"
-            />
-            <path
-              d="M9.625 4.24182L9.625 8.48362"
-              stroke="#44576D"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-            <path
-              d="M23.375 4.24182L23.375 8.48362"
-              stroke="#44576D"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-          </svg>
-
-          <span>Calendar</span>
-        </button>
-        <button
-          class="group flex flex-col items-center justify-center px-4 py-3 rounded text-white hover:text-dark-slate"
-          @click="router.push('/bookmarkpage')"
-        >
-          <svg
-            class="size-6 flex-shrink-0 group-hover:hidden"
-            viewBox="0 0 18 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M3 3V24L10.5 16.5L18 24V3H3ZM15 0H0V21L1.5 19.5V1.5H15V0Z"
-              fill="white"
-            />
-          </svg>
-          <svg
-            class="size-6 flex-shrink-0 group-hover:block hidden"
-            viewBox="0 0 31 30"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M7.75 3.75V30L17.4375 20.625L27.125 30V3.75H7.75ZM23.25 0H3.875V26.25L5.8125 24.375V1.875H23.25V0Z"
-              fill="#44576D"
-            />
-          </svg>
-
-          <span>Bookmark</span>
-        </button>
-        <button
-          class="group flex flex-col items-center justify-center px-4 py-3 rounded text-white hover:text-dark-slate"
-          @click="router.push('/certificatespage')"
-        >
-          <svg
-            class="size-6 flex-shrink-0 group-hover:hidden"
-            viewBox="0 0 35 35"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M9.47917 29.1666H7.29167C5.68084 29.1666 4.375 27.8608 4.375 26.25V5.83329C4.375 4.22246 5.68084 2.91663 7.29167 2.91663H27.7083C29.3192 2.91663 30.625 4.22246 30.625 5.83329V26.25C30.625 27.8608 29.3192 29.1666 27.7083 29.1666H25.5208M17.5 27.7083C19.9162 27.7083 21.875 25.7495 21.875 23.3333C21.875 20.917 19.9162 18.9583 17.5 18.9583C15.0838 18.9583 13.125 20.917 13.125 23.3333C13.125 25.7495 15.0838 27.7083 17.5 27.7083ZM17.5 27.7083L17.5313 27.708L12.8751 32.3641L8.75036 28.2393L13.1537 23.836M17.5 27.7083L22.1562 32.3641L26.281 28.2393L21.8777 23.836M13.125 8.74996H21.875M10.2083 13.8541H24.7917"
-              stroke="white"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-          <svg
-            class="size-6 flex-shrink-0 hidden group-hover:block"
-            viewBox="0 0 35 35"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M9.47917 29.1666H7.29167C5.68084 29.1666 4.375 27.8608 4.375 26.25V5.83329C4.375 4.22246 5.68084 2.91663 7.29167 2.91663H27.7083C29.3192 2.91663 30.625 4.22246 30.625 5.83329V26.25C30.625 27.8608 29.3192 29.1666 27.7083 29.1666H25.5208M17.5 27.7083C19.9162 27.7083 21.875 25.7495 21.875 23.3333C21.875 20.917 19.9162 18.9583 17.5 18.9583C15.0838 18.9583 13.125 20.917 13.125 23.3333C13.125 25.7495 15.0838 27.7083 17.5 27.7083ZM17.5 27.7083L17.5313 27.708L12.8751 32.3641L8.75036 28.2393L13.1537 23.836M17.5 27.7083L22.1562 32.3641L26.281 28.2393L21.8777 23.836M13.125 8.74996H21.875M10.2083 13.8541H24.7917"
-              stroke="#44576D"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-
-          <span>Certificates</span>
-        </button>
-        <button
-          class="group flex flex-col items-center justify-center px-4 py-3 rounded text-white hover:text-dark-slate"
-        >
-          <svg
-            class="size-6 flex-shrink-0 group-hover:hidden"
-            viewBox="0 0 34 34"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M19.8333 3.21521V9.06681C19.8333 9.86022 19.8333 10.2569 19.9877 10.56C20.1235 10.8265 20.3402 11.0432 20.6068 11.1791C20.9098 11.3335 21.3066 11.3335 22.1 11.3335H27.9516M22.6666 18.4167H11.3333M22.6666 24.0834H11.3333M14.1666 12.75H11.3333M19.8333 2.83337H12.4666C10.0864 2.83337 8.89629 2.83337 7.98717 3.2966C7.18748 3.70406 6.53731 4.35423 6.12985 5.15391C5.66663 6.06304 5.66663 7.25315 5.66663 9.63337V24.3667C5.66663 26.7469 5.66663 27.937 6.12985 28.8462C6.53731 29.6459 7.18748 30.296 7.98717 30.7035C8.89629 31.1667 10.0864 31.1667 12.4666 31.1667H21.5333C23.9135 31.1667 25.1036 31.1667 26.0128 30.7035C26.8124 30.296 27.4626 29.6459 27.8701 28.8462C28.3333 27.937 28.3333 26.7469 28.3333 24.3667V11.3334L19.8333 2.83337Z"
-              stroke="white"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-          <svg
-            class="size-6 flex-shrink-0 hidden group-hover:block"
-            viewBox="0 0 34 34"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M19.8333 3.21521V9.06681C19.8333 9.86022 19.8333 10.2569 19.9877 10.56C20.1235 10.8265 20.3402 11.0432 20.6068 11.1791C20.9098 11.3335 21.3066 11.3335 22.1 11.3335H27.9516M22.6666 18.4167H11.3333M22.6666 24.0834H11.3333M14.1666 12.75H11.3333M19.8333 2.83337H12.4666C10.0864 2.83337 8.89629 2.83337 7.98717 3.2966C7.18748 3.70406 6.53731 4.35423 6.12985 5.15391C5.66663 6.06304 5.66663 7.25315 5.66663 9.63337V24.3667C5.66663 26.7469 5.66663 27.937 6.12985 28.8462C6.53731 29.6459 7.18748 30.296 7.98717 30.7035C8.89629 31.1667 10.0864 31.1667 12.4666 31.1667H21.5333C23.9135 31.1667 25.1036 31.1667 26.0128 30.7035C26.8124 30.296 27.4626 29.6459 27.8701 28.8462C28.3333 27.937 28.3333 26.7469 28.3333 24.3667V11.3334L19.8333 2.83337Z"
-              stroke="#44576D"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-
-          <span>Resume</span>
-        </button>
-      </div>
-
-      <!-- Row 3: Editor -->
-      <div class="bg-white p-6">
-        <div class="p-6 bg-white shadow-lg rounded-2xl">
-          <div class="absolute right-4 dropdown dropdown-end">
-            <div tabindex="0" role="button" class="group">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="size-5 flex-shrink-0 group-hover:hidden"
-                viewBox="0 0 24 24"
-                fill="dark-slate"
-              >
-                <path
-                  d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-                />
-              </svg>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="size-5 flex-shrink-0 group-hover:block hidden"
-                viewBox="0 0 24 24"
-                fill="gray"
-              >
-                <path
-                  d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-                />
-              </svg>
-            </div>
-            <ul
-              tabindex="0"
-              class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-            >
-              <li>
-                <button @click="isModalOpen = true">Download Resume</button>
-              </li>
-            </ul>
-          </div>
-          <h1 class="text-2xl font-bold mb-6">Resume Editor</h1>
-
-          <form class="space-y-6">
-            <!-- Personal Info -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input
-                type="text"
-                placeholder="First Name"
-                class="input-field border rounded p-2"
-                v-model="resume.firstName"
-              />
-              <input
-                type="text"
-                placeholder="Middle Name"
-                class="input-field border rounded p-2"
-                v-model="resume.middleName"
-              />
-              <input
-                type="text"
-                placeholder="Last Name"
-                class="input-field border rounded p-2"
-                v-model="resume.lastName"
-              />
-              <input
-                type="email"
-                placeholder="Email"
-                class="input-field border rounded p-2"
-                v-model="resume.email"
-              />
-              <input
-                type="text"
-                placeholder="Mobile Number"
-                class="input-field border rounded p-2"
-                v-model="resume.mobile"
-              />
-              <input
-                type="text"
-                placeholder="Address"
-                class="input-field border rounded p-2"
-                v-model="resume.address"
-              />
-            </div>
-
-            <!-- Professional Summary -->
-            <div class="border rounded-xl p-4 space-y-3">
-              <label class="block text-lg font-semibold mb-1"
-                >Professional Summary</label
-              >
-              <textarea
-                rows="3"
-                class="border rounded input-field w-full"
-                v-model="resume.summary"
-              ></textarea>
-            </div>
-
-            <!-- Professional Experience -->
-            <div class="border rounded-xl p-4 space-y-4 relative">
-              <!-- Header with Plus Button -->
-              <div class="flex justify-between items-center">
-                <label class="text-lg font-semibold"
-                  >Professional Experience</label
-                >
-                <button
-                  type="button"
-                  @click="addExperience"
-                  class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
-                >
-                  +
-                </button>
-              </div>
-
-              <!-- Experience Items -->
-              <div
-                v-for="(exp, index) in resume.experiences"
-                :key="index"
-                class="relative border p-3 rounded"
-              >
-                <!-- Delete Button -->
-                <button
-                  type="button"
-                  @click="removeExperience(index)"
-                  class="absolute top-2 right-2 text-gray-500 hover:text-red-500"
-                >
-                  ✕
-                </button>
-
-                <!-- Experience Field -->
-                <textarea
-                  v-model="resume.experiences[index].text"
-                  rows="3"
-                  placeholder="Describe your professional experience..."
-                  class="input-field w-full"
-                ></textarea>
-              </div>
-            </div>
-
-            <div class="border rounded-xl p-4 space-y-4 relative">
-              <!-- Header with Plus Button -->
-              <div class="flex justify-between items-center">
-                <label class="text-lg font-semibold">Education</label>
-                <button
-                  type="button"
-                  @click="addEducation"
-                  class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
-                >
-                  +
-                </button>
-              </div>
-
-              <!-- Education Items -->
-              <div
-                v-for="(edu, index) in resume.education"
-                :key="index"
-                class="relative border p-3 rounded-lg space-y-3"
-              >
-                <!-- Delete Button -->
-                <button
-                  type="button"
-                  @click="removeEducation(index)"
-                  class="absolute top-2 right-2 text-gray-500 hover:text-red-500"
-                >
-                  ✕
-                </button>
-
-                <!-- Educational Attainment -->
-                <div>
-                  <label class="block font-medium mb-1"
-                    >Educational Attainment</label
-                  >
-                  <select
-                    v-model="edu.attainment"
-                    class="input-field border rounded w-full p-2"
-                  >
-                    <option value="" disabled>Select level</option>
-                    <option>High School</option>
-                    <option>Bachelor's Degree</option>
-                    <option>Master's Degree</option>
-                    <option>Doctorate</option>
-                    <option>Others</option>
-                  </select>
-                </div>
-
-                <!-- University Name -->
-                <div>
-                  <label class="block font-medium mb-1">University</label>
-                  <input
-                    v-model="edu.university"
-                    type="text"
-                    placeholder="Enter university name"
-                    class="input-field border p-2 w-full rounded"
-                  />
-                </div>
-
-                <!-- Year -->
-                <div>
-                  <label class="block font-medium mb-1">Year</label>
-                  <input
-                    v-model="edu.year"
-                    type="text"
-                    placeholder="e.g. 2020"
-                    class="input-field border p-2 w-full rounded"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- Skills -->
-            <div class="border rounded-xl p-4 space-y-3">
-              <label class="text-lg font-semibold">Skills</label>
-              <div class="flex gap-2">
-                <input
-                  v-model="newSkill"
-                  @keyup.enter="addSkill"
-                  type="text"
-                  placeholder="Type a skill and press Enter"
-                  class="input-field flex-1 border rounded"
-                />
-                <button
-                  type="button"
-                  @click="addSkill"
-                  class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
-                >
-                  +
-                </button>
-              </div>
-              <div class="flex flex-wrap gap-2 mt-2">
-                <span
-                  v-for="(skill, index) in resume.skills"
-                  :key="index"
-                  class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full flex items-center gap-2"
-                >
-                  {{ skill }}
-                  <button
-                    type="button"
-                    @click="removeSkill(index)"
-                    class="text-blue-500 hover:text-red-500"
-                  >
-                    ✕
-                  </button>
-                </span>
-              </div>
-            </div>
-
-            <!-- Certificates -->
-            <div class="border rounded-xl p-4 space-y-4 relative">
-              <!-- Header with Plus Button -->
-              <div class="flex justify-between items-center">
-                <h2 class="text-lg font-semibold">Certificates</h2>
-                <button
-                  type="button"
-                  @click="addCertificate"
-                  class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
-                >
-                  +
-                </button>
-              </div>
-
-              <!-- Certificate Items -->
-              <div
-                v-for="(cert, index) in certificates"
-                :key="index"
-                class="space-y-2 border rounded p-3 rounded-lg relative"
-              >
-                <!-- Delete Button -->
-                <button
-                  type="button"
-                  @click="removeCertificate(index)"
-                  class="absolute top-2 right-2 text-gray-500 hover:text-red-500"
-                >
-                  ✕
-                </button>
-
-                <!-- Certificate Fields -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input
-                    v-model="cert.title"
-                    type="text"
-                    placeholder="Certificate Title"
-                    class="input-field border rounded p-2"
-                  />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    class="file-input"
-                    @change="handleFileUpload($event, index)"
-                  />
-                </div>
-
-                <!-- Certificate Preview -->
-                <div>
-                  <div
-                    v-if="cert.image"
-                    class="h-32 w-full flex items-center justify-center border rounded"
-                  >
-                    <img
-                      :src="cert.image"
-                      alt="Certificate Preview"
-                      class="h-32 object-cover rounded-lg"
-                    />
-                  </div>
-                  <div
-                    v-else
-                    class="h-32 w-full flex items-center justify-center border rounded text-gray-400 text-sm"
-                  >
-                    Certificate Preview
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- URL -->
-            <div class="border rounded p-4 space-y-4 relative">
-              <h2 class="text-lg font-semibold">URL</h2>
-              <input
-                type="url"
-                placeholder="URL"
-                class="input-field border rounded p-2 w-full"
-                v-model="resume.url"
-              />
-            </div>
-
-            <!-- Save Button -->
-            <button
-              type="button"
-              class="w-full py-3 bg-customButton text-white rounded-xl hover:bg-dark-slate transition"
-            >
-              Save Resume
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-
+  <div class="min-h-screen p-3 rounded-lg font-poppins">
     <!--Large screen-->
-    <div class="min-h-screen p-6 font-poppins hidden lg:flex">
+    <div class="min-h-screen font-poppins lg:flex">
       <!-- Left Column -->
       <div
-        class="w-full lg:w-1/4 bg-white rounded-lg shadow p-6 flex flex-col items-center"
+        class="w-full lg:w-1/4 bg-white rounded-lg shadow p-6 flex flex-col items-center hidden lg:flex"
       >
         <!-- Avatar -->
         <div class="w-24 h-24 rounded-full bg-white mb-4">
@@ -737,12 +458,45 @@ onMounted(() => {
 
         <!-- Name -->
         <h2 class="text-xl font-semibold mb-6">{{ userName }}</h2>
+        <div
+          class="w-full flex items-center justify-center gap-6 mb-6 relative"
+        >
+          <!-- Upcoming -->
+          <div class="relative">
+            <div
+              class="flex items-center justify-center bg-gray-100 rounded-full px-6 py-2"
+            >
+              <span class="font-semibold text-gray-700">Upcoming</span>
+            </div>
+            <!-- Floating Bubble -->
+            <span
+              class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
+            >
+              0
+            </span>
+          </div>
+
+          <!-- Completed -->
+          <div class="relative">
+            <div
+              class="flex items-center justify-center bg-gray-100 rounded-full px-6 py-2"
+            >
+              <span class="font-semibold text-gray-700">Completed</span>
+            </div>
+            <!-- Floating Bubble -->
+            <span
+              class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
+            >
+              0
+            </span>
+          </div>
+        </div>
 
         <!-- Buttons -->
         <div class="w-full flex flex-col gap-3">
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="router.push('/resumepage')"
+            @click="$router.push({ name: 'ResumeEditorpage' })"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -762,7 +516,7 @@ onMounted(() => {
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="router.push('/certificatespage')"
+            @click="$router.push({ name: 'Certificatespage' })"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -780,44 +534,10 @@ onMounted(() => {
             </svg>
             <span>Certificates</span>
           </button>
+
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="router.push('/calendarpage')"
-          >
-            <svg
-              class="size-6 flex-shrink-0"
-              viewBox="0 0 33 34"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M2.75 11.0697C2.75 9.18408 2.75 8.24128 3.33579 7.65549C3.92157 7.0697 4.86438 7.0697 6.75 7.0697H26.25C28.1356 7.0697 29.0784 7.0697 29.6642 7.65549C30.25 8.24128 30.25 9.18408 30.25 11.0697V13.1394C30.25 13.6108 30.25 13.8465 30.1036 13.9929C29.9571 14.1394 29.7214 14.1394 29.25 14.1394H3.75C3.2786 14.1394 3.04289 14.1394 2.89645 13.9929C2.75 13.8465 2.75 13.6108 2.75 13.1394V11.0697Z"
-                fill="white"
-              />
-              <path
-                fill-rule="evenodd"
-                clip-rule="evenodd"
-                d="M2.75 27.1065C2.75 28.9921 2.75 29.9349 3.33579 30.5207C3.92157 31.1065 4.86438 31.1065 6.75 31.1065H26.25C28.1356 31.1065 29.0784 31.1065 29.6642 30.5207C30.25 29.9349 30.25 28.9921 30.25 27.1065V17.9672C30.25 17.4958 30.25 17.2601 30.1036 17.1136C29.9571 16.9672 29.7214 16.9672 29.25 16.9672H3.75C3.2786 16.9672 3.04289 16.9672 2.89645 17.1136C2.75 17.2601 2.75 17.4958 2.75 17.9672V27.1065ZM9.625 20.795C9.625 20.3236 9.625 20.0879 9.77145 19.9415C9.91789 19.795 10.1536 19.795 10.625 19.795H14.125C14.5964 19.795 14.8321 19.795 14.9786 19.9415C15.125 20.0879 15.125 20.3236 15.125 20.795V21.6229C15.125 22.0943 15.125 22.33 14.9786 22.4765C14.8321 22.6229 14.5964 22.6229 14.125 22.6229H10.625C10.1536 22.6229 9.91789 22.6229 9.77145 22.4765C9.625 22.33 9.625 22.0943 9.625 21.6229V20.795ZM9.77145 25.5972C9.625 25.7437 9.625 25.9794 9.625 26.4508V27.2786C9.625 27.75 9.625 27.9857 9.77145 28.1322C9.91789 28.2786 10.1536 28.2786 10.625 28.2786H14.125C14.5964 28.2786 14.8321 28.2786 14.9786 28.1322C15.125 27.9857 15.125 27.75 15.125 27.2786V26.4508C15.125 25.9794 15.125 25.7437 14.9786 25.5972C14.8321 25.4508 14.5964 25.4508 14.125 25.4508H10.625C10.1536 25.4508 9.91789 25.4508 9.77145 25.5972ZM17.875 20.795C17.875 20.3236 17.875 20.0879 18.0214 19.9415C18.1679 19.795 18.4036 19.795 18.875 19.795H22.375C22.8464 19.795 23.0821 19.795 23.2286 19.9415C23.375 20.0879 23.375 20.3236 23.375 20.795V21.6229C23.375 22.0943 23.375 22.33 23.2286 22.4765C23.0821 22.6229 22.8464 22.6229 22.375 22.6229H18.875C18.4036 22.6229 18.1679 22.6229 18.0214 22.4765C17.875 22.33 17.875 22.0943 17.875 21.6229V20.795ZM18.0214 25.5972C17.875 25.7437 17.875 25.9794 17.875 26.4508V27.2786C17.875 27.75 17.875 27.9857 18.0214 28.1322C18.1679 28.2786 18.4036 28.2786 18.875 28.2786H22.375C22.8464 28.2786 23.0821 28.2786 23.2286 28.1322C23.375 27.9857 23.375 27.75 23.375 27.2786V26.4508C23.375 25.9794 23.375 25.7437 23.2286 25.5972C23.0821 25.4508 22.8464 25.4508 22.375 25.4508H18.875C18.4036 25.4508 18.1679 25.4508 18.0214 25.5972Z"
-                fill="white"
-              />
-              <path
-                d="M9.625 4.24182L9.625 8.48362"
-                stroke="white"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-              <path
-                d="M23.375 4.24182L23.375 8.48362"
-                stroke="white"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-            </svg>
-            <span>Calendar</span>
-          </button>
-          <button
-            class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="router.push('/bookmarkpage')"
+            @click="$router.push({ name: 'Bookmarkpage' })"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -836,6 +556,7 @@ onMounted(() => {
           <div class="divider"></div>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
+            @click="$router.push({ name: 'UpdateDeletepage' })"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -849,10 +570,11 @@ onMounted(() => {
               />
             </svg>
 
-            <span>Update/Delete Account</span>
+            <span>Account Setting</span>
           </button>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
+            @click="logout"
           >
             <svg
               class="size-6 flex-shrink-0"
@@ -879,43 +601,9 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Right Column -->
-      <div class="w-full lg:w-3/4 lg:pl-6 mt-6 lg:mt-0 flex flex-col gap-6">
-        <div class="p-6 bg-white shadow-lg rounded-2xl">
-          <div class="absolute right-4 dropdown dropdown-end">
-            <div tabindex="0" role="button" class="group mr-5">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="size-5 flex-shrink-0 group-hover:hidden"
-                viewBox="0 0 24 24"
-                fill="dark-slate"
-              >
-                <path
-                  d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-                />
-              </svg>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="size-5 flex-shrink-0 group-hover:block hidden"
-                viewBox="0 0 24 24"
-                fill="gray"
-              >
-                <path
-                  d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-                />
-              </svg>
-            </div>
-            <ul
-              tabindex="0"
-              class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-            >
-              <li>
-                <button @click="isModalOpen = true">Download Resume</button>
-              </li>
-            </ul>
-          </div>
-          <h1 class="text-2xl font-bold mb-6">Resume Editor</h1>
-
+      <div class="w-full lg:w-3/4 lg:pl-6 flex flex-col gap-6">
+        <div class="bg-white p-4 rounded-lg">
+          <h2 class="text-2xl font-bold mb-3">Resume Editor</h2>
           <form class="space-y-6">
             <!-- Personal Info -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -924,46 +612,49 @@ onMounted(() => {
                 type="text"
                 placeholder="First Name"
                 class="input-field border rounded p-2"
-                
               />
               <input
                 v-model="form.emailAddress"
                 type="email"
                 placeholder="Email"
                 class="input-field border rounded p-2"
-                
               />
               <input
                 v-model="form.middleName"
                 type="text"
                 placeholder="Middle Name"
                 class="input-field border rounded p-2"
-                
               />
               <input
                 v-model="form.phoneNumber"
                 type="text"
                 placeholder="Mobile Number"
                 class="input-field border rounded p-2"
-                
               />
               <input
                 v-model="form.lastName"
                 type="text"
                 placeholder="Last Name"
                 class="input-field border rounded p-2"
-                
               />
-
               <input
                 v-model="form.address"
                 type="text"
                 placeholder="Address"
                 class="input-field border rounded p-2"
-                
               />
             </div>
 
+             <!-- URL -->
+            <div class="border rounded p-4 space-y-4 relative">
+              <h2 class="text-lg font-semibold">Professional Link</h2>
+              <input
+                type="url"
+                placeholder="URL"
+                class="input-field border rounded p-2 w-full"
+                v-model="resume.url"
+              />
+            </div>
             <!-- Professional Summary -->
             <div class="border rounded p-4 space-y-4 relative">
               <label class="block text-lg font-semibold mb-1"
@@ -987,20 +678,78 @@ onMounted(() => {
                 >
                 <button
                   type="button"
-                  @click="addExperience"
+                  @click="showNewExperienceForm = true"
                   class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
                 >
                   +
                 </button>
               </div>
 
-              <!-- Experience Items -->
+              <!-- New Experience Form -->
               <div
-                v-for="(exp, index) in resume.experiences"
-                :key="index"
-                class="relative border p-3 rounded"
+                v-if="showNewExperienceForm"
+                class="border p-3 rounded space-y-3 mt-3"
               >
-                <!-- Delete Button -->
+                <div>
+                  <label class="block font-medium mb-1">Job Title</label>
+                  <input
+                    v-model="newExperience.jobTitle"
+                    type="text"
+                    placeholder="Enter job title"
+                    class="input-field border rounded w-full p-2"
+                  />
+                </div>
+                <div>
+                  <label class="block font-medium mb-1">Company Name</label>
+                  <input
+                    v-model="newExperience.companyName"
+                    type="text"
+                    placeholder="Enter company name"
+                    class="input-field border rounded w-full p-2"
+                  />
+                </div>
+                <div>
+                  <label class="block font-medium mb-1">Company Address</label>
+                  <input
+                    v-model="newExperience.companyAddress"
+                    type="text"
+                    placeholder="Enter company address"
+                    class="input-field border rounded w-full p-2"
+                  />
+                </div>
+                <div>
+                  <label class="block font-medium mb-1">Start Year</label>
+                  <input
+                    v-model="newExperience.startYear"
+                    type="number"
+                    placeholder="e.g. 2020"
+                    class="input-field border rounded w-full p-2"
+                  />
+                </div>
+                <div>
+                  <label class="block font-medium mb-1">End Year</label>
+                  <input
+                    v-model="newExperience.endYear"
+                    type="number"
+                    placeholder="e.g. 2022"
+                    class="input-field border rounded w-full p-2"
+                  />
+                </div>
+                <button
+                  type="button"
+                  @click="addExperience"
+                  class="w-20 h-10 flex items-center justify-center rounded bg-customButton text-white hover:bg-dark-slate"
+                >
+                  Add +
+                </button>
+              </div>
+
+              <!-- Existing Experiences -->
+              <div
+                v-for="(exp, index) in resume.experience"
+                :key="index"
+                class="relative border p-3 rounded space-y-3"
+              >
                 <button
                   type="button"
                   @click="removeExperience(index)"
@@ -1009,13 +758,15 @@ onMounted(() => {
                   ✕
                 </button>
 
-                <!-- Experience Field -->
-                <textarea
-                  v-model="resume.experiences[index].text"
-                  rows="3"
-                  placeholder="Describe your professional experience..."
-                  class="input-field w-full"
-                ></textarea>
+                <p>
+                  <strong>{{ exp.jobTitle }}</strong>
+                </p>
+                <p>{{ exp.companyName }}</p>
+                <p>{{ exp.companyAddress }}</p>
+                <p>
+                  {{ new Date(exp.startYear).getFullYear() }} -
+                  {{ new Date(exp.endYear).getFullYear() }}
+                </p>
               </div>
             </div>
 
@@ -1025,14 +776,98 @@ onMounted(() => {
                 <label class="text-lg font-semibold">Education</label>
                 <button
                   type="button"
-                  @click="addEducation"
+                  @click="showNewEducationForm = !showNewEducationForm"
                   class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
                 >
                   +
                 </button>
               </div>
 
-              <!-- Education Items -->
+              <!-- New Education Form -->
+              <div
+                v-if="showNewEducationForm"
+                class="border p-3 rounded space-y-3 mt-3"
+              >
+                <!-- Education Level -->
+                <div>
+                  <label class="block font-medium mb-1">Education Level</label>
+                  <select
+                    v-model="newEducation.educationLevel"
+                    class="input-field border rounded w-full p-2"
+                  >
+                    <option value="" disabled>Select level</option>
+                    <option>Elementary</option>
+                    <option>High School</option>
+                    <option>Senior High School</option>
+                    <option>Bachelor's Degree</option>
+                    <option>Master's Degree</option>
+                    <option>Doctorate</option>
+                    <option>Others</option>
+                  </select>
+                </div>
+
+                <!-- Major -->
+                <div>
+                  <label class="block font-medium mb-1">Major</label>
+                  <input
+                    v-model="newEducation.major"
+                    type="text"
+                    placeholder="Enter major"
+                    class="input-field border rounded w-full p-2 disabled:bg-gray-200"
+                    :disabled="
+                      newEducation.educationLevel === 'Elementary' ||
+                      newEducation.educationLevel === 'High School' ||
+                      newEducation.educationLevel === 'Senior High School'
+                    "
+                  />
+                </div>
+
+                <!-- Institution Name -->
+                <div>
+                  <label class="block font-medium mb-1">Institution Name</label>
+                  <input
+                    v-model="newEducation.institutionName"
+                    type="text"
+                    placeholder="Enter school/university name"
+                    class="input-field border rounded w-full p-2"
+                  />
+                </div>
+
+                <!-- Institution Address -->
+                <div>
+                  <label class="block font-medium mb-1"
+                    >Institution Address</label
+                  >
+                  <input
+                    v-model="newEducation.institutionAddress"
+                    type="text"
+                    placeholder="Enter address"
+                    class="input-field border rounded w-full p-2"
+                  />
+                </div>
+
+                <!-- Graduation Year -->
+                <div>
+                  <label class="block font-medium mb-1">Graduation Year</label>
+                  <input
+                    v-model="newEducation.graduationYear"
+                    type="number"
+                    placeholder="e.g. 2025"
+                    class="input-field border rounded w-full p-2"
+                  />
+                </div>
+
+                <!-- Add Button -->
+                <button
+                  type="button"
+                  @click="addEducation"
+                  class="w-20 h-10 flex items-center justify-center rounded bg-customButton text-white hover:bg-dark-slate"
+                >
+                  Add +
+                </button>
+              </div>
+
+              <!-- Existing Education Items -->
               <div
                 v-for="(edu, index) in resume.education"
                 :key="index"
@@ -1047,58 +882,28 @@ onMounted(() => {
                   ✕
                 </button>
 
-                <!-- Educational Attainment -->
-                <div>
-                  <label class="block font-medium mb-1"
-                    >Educational Attainment</label
-                  >
-                  <select
-                    v-model="edu.attainment"
-                    class="input-field border rounded w-full p-2"
-                  >
-                    <option value="" disabled>Select level</option>
-                    <option>High School</option>
-                    <option>Bachelor's Degree</option>
-                    <option>Master's Degree</option>
-                    <option>Doctorate</option>
-                    <option>Others</option>
-                  </select>
-                </div>
-
-                <!-- University Name -->
-                <div>
-                  <label class="block font-medium mb-1">University</label>
-                  <input
-                    v-model="edu.university"
-                    type="text"
-                    placeholder="Enter university name"
-                    class="input-field border rounded w-full p-2"
-                  />
-                </div>
-
-                <!-- Year -->
-                <div>
-                  <label class="block font-medium mb-1">Year</label>
-                  <input
-                    v-model="edu.year"
-                    type="text"
-                    placeholder="e.g. 2020"
-                    class="input-field border rounded w-full p-2"
-                  />
-                </div>
+                <p>
+                  <strong>{{ edu.educationLevel }}</strong>
+                </p>
+                <p v-if="edu.major">{{ edu.major }}</p>
+                <p>{{ edu.institutionName }}</p>
+                <p>{{ edu.institutionAddress }}</p>
+                <p>{{ edu.graduationYear }}</p>
               </div>
             </div>
 
             <!-- Skills -->
             <div class="border rounded p-4 space-y-3">
               <label class="text-lg font-semibold">Skills</label>
+
               <div class="flex gap-2">
+                <!-- 👇 use newSkill, not resume.skills -->
                 <input
                   v-model="newSkill"
-                  @keyup.enter="addSkill"
                   type="text"
-                  placeholder="Type a skill and press Enter"
-                  class="input-field flex-1 border"
+                  placeholder="Type a skill"
+                  class="input-field flex-1 border rounded p-2"
+                  @keyup.enter="addSkill" 
                 />
                 <button
                   type="button"
@@ -1108,13 +913,14 @@ onMounted(() => {
                   +
                 </button>
               </div>
+
               <div class="flex flex-wrap gap-2 mt-2">
                 <span
                   v-for="(skill, index) in resume.skills"
                   :key="index"
                   class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full flex items-center gap-2"
                 >
-                  {{ skill }}
+                  {{ skill.skillName || skill }}
                   <button
                     type="button"
                     @click="removeSkill(index)"
@@ -1126,286 +932,60 @@ onMounted(() => {
               </div>
             </div>
 
-            <!-- Certificates -->
-            <div class="border rounded p-4 space-y-4 relative">
-              <!-- Header with Plus Button -->
-              <div class="flex justify-between items-center">
-                <h2 class="text-lg font-semibold">Certificates</h2>
-                <button
-                  type="button"
-                  @click="addCertificate"
-                  class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
-                >
-                  +
-                </button>
-              </div>
-
-              <!-- Certificate Items -->
-              <div
-                v-for="(cert, index) in certificates"
-                :key="index"
-                class="space-y-2 border p-3 rounded relative"
-              >
-                <!-- Delete Button -->
-                <button
-                  type="button"
-                  @click="removeCertificate(index)"
-                  class="absolute top-2 right-2 text-gray-500 hover:text-red-500"
-                >
-                  ✕
-                </button>
-
-                <!-- Certificate Fields -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input
-                    v-model="cert.title"
-                    type="text"
-                    placeholder="Certificate Title"
-                    class="input-field border rounded p-2"
-                  />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    class="file-input"
-                    @change="handleFileUpload($event, index)"
-                  />
-                </div>
-
-                <!-- Certificate Preview -->
-                <div>
-                  <div
-                    v-if="cert.image"
-                    class="h-32 w-full flex items-center justify-center border rounded"
-                  >
-                    <img
-                      :src="cert.image"
-                      alt="Certificate Preview"
-                      class="h-32 object-cover rounded-lg"
-                    />
-                  </div>
-                  <div
-                    v-else
-                    class="h-32 w-full flex items-center justify-center border rounded text-gray-400 text-sm"
-                  >
-                    Certificate Preview
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- URL -->
-            <div class="border rounded p-4 space-y-4 relative">
-              <h2 class="text-lg font-semibold">URL</h2>
-              <input
-                type="url"
-                placeholder="URL"
-                class="input-field border rounded p-2 w-full"
-                v-model="resume.url"
-              />
-            </div>
 
             <!-- Save Button -->
-            <button
-              type="button"
-              class="w-full py-3 bg-customButton text-white rounded-xl hover:bg-dark-slate transition"
-            >
-              Save Resume
-            </button>
+            <div class="flex gap-4">
+              <button
+                type="button"
+                @click="generateAndOpenPdf"
+                class="w-1/2 py-3 bg-customButton text-white rounded-xl hover:bg-dark-slate transition"
+              >
+                Preview Resume
+              </button>
+              <button
+                type="button"
+                class="w-1/2 py-3 bg-customButton text-white rounded-xl hover:bg-dark-slate transition"
+                @click="saveResume"
+              >
+                Save
+              </button>
+            </div>
           </form>
-          <!-- Modal -->
+          <!-- PDF Preview Modal -->
           <div
             v-if="isModalOpen"
-            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            class="fixed inset-0 flex items-center justify-center bg-opacity-50 z-50"
           >
             <div
-              class="bg-white w-[800px] max-h-[90vh] rounded-xl shadow-lg overflow-y-auto relative"
+              class="bg-white rounded-lg shadow-lg max-w-4xl w-full relative"
             >
-              <!-- Close button -->
+              <!-- Close Button -->
               <button
-                @click="isModalOpen = false"
-                class="absolute top-3 right-3 text-gray-600 hover:text-red-600 text-xl"
+                @click="closeModal"
+                class="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
               >
                 ✕
               </button>
-
-              <!-- Resume Preview -->
-              <div
-                ref="resumePreview"
-                style="
-                  padding: 1.5rem;
-                  color: #111111;
-                  background-color: #ffffff;
-                "
-              >
-                <!-- Name -->
-                <h1
-                  style="
-                    font-size: 1.875rem;
-                    font-weight: bold;
-
-                    margin-bottom: 0.5rem;
-                  "
-                >
-                  {{ resume.firstName }} {{ resume.middleName }}
-                  {{ resume.lastName }}
-                </h1>
-
-                <!-- Contact -->
-                <p style="color: #4b5563; margin: 0">
-                  {{ resume.email }} | {{ resume.mobile }} |
-                  {{ resume.address }} <br />
-                  <span v-if="resume.url">{{ resume.url }}</span>
-                </p>
-
-                <!-- Summary -->
-                <section v-if="resume.summary" style="margin-top: 1.5rem">
-                  <h2
-                    style="
-                      font-size: 1.25rem;
-                      font-weight: 600;
-                      color: #000000;
-                      border-bottom: 1px solid #000000;
-                      padding-bottom: 0.25rem;
-                    "
+              <div class="p-4">
+                <h2 class="text-xl font-semibold mb-4">Resume Preview</h2>
+                <!-- PDF Preview -->
+                <iframe
+                  v-if="pdfUrl"
+                  :src="pdfUrl"
+                  class="w-full h-[500px] border"
+                  frameborder="0"
+                ></iframe>
+                <!-- Download Button -->
+                <div class="mt-4 flex justify-end">
+                  <a
+                    v-if="pdfUrl"
+                    :href="pdfUrl"
+                    download="resume.pdf"
+                    class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                   >
-                    Professional Summary
-                  </h2>
-                  <p
-                    style="
-                      margin-top: 0.5rem;
-                      color: #374151;
-                      white-space: pre-line;
-                    "
-                  >
-                    {{ resume.summary }}
-                  </p>
-                </section>
-
-                <!-- Experience -->
-                <section
-                  v-if="resume.experiences.length"
-                  style="margin-top: 1.5rem"
-                >
-                  <h2
-                    style="
-                      font-size: 1.25rem;
-                      font-weight: 600;
-                      color: #000000;
-                      border-bottom: 1px solid #000000;
-                      padding-bottom: 0.25rem;
-                    "
-                  >
-                    Professional Experience
-                  </h2>
-                  <ul
-                    style="
-                      list-style-type: disc;
-                      margin-left: 1.5rem;
-                      margin-top: 0.5rem;
-                    "
-                  >
-                    <li
-                      v-for="(exp, i) in resume.experiences"
-                      :key="i"
-                      style="margin-bottom: 0.25rem; color: #000000"
-                    >
-                      {{ exp.text }}
-                    </li>
-                  </ul>
-                </section>
-
-                <!-- Education -->
-                <section
-                  v-if="resume.education.length"
-                  style="margin-top: 1.5rem"
-                >
-                  <h2
-                    style="
-                      font-size: 1.25rem;
-                      font-weight: 600;
-                      color: #000000;
-                      border-bottom: 1px solid #000000;
-                      padding-bottom: 0.25rem;
-                    "
-                  >
-                    Education
-                  </h2>
-                  <div
-                    v-for="(edu, i) in resume.education"
-                    :key="i"
-                    style="margin-top: 0.5rem"
-                  >
-                    <p
-                      v-if="edu.university"
-                      style="font-weight: 600; color: #000000; margin: 0"
-                    >
-                      {{ edu.university }}
-                    </p>
-                    <p style="color: #4b5563; margin: 0">
-                      {{ edu.attainment
-                      }}<span v-if="edu.year"> ({{ edu.year }})</span>
-                    </p>
-                  </div>
-                </section>
-
-                <!-- Skills -->
-                <section v-if="resume.skills.length" style="margin-top: 1.5rem">
-                  <h2
-                    style="
-                      font-size: 1.25rem;
-                      font-weight: 600;
-                      color: #000000;
-                      border-bottom: 1px solid #000000;
-                      padding-bottom: 0.25rem;
-                    "
-                  >
-                    Skills
-                  </h2>
-                  <div style="margin-top: 0.5rem">
-                    <span
-                      v-for="(skill, i) in resume.skills"
-                      :key="i"
-                      style="
-                        display: inline-block;
-                        margin-right: 0.5rem;
-                        margin-bottom: 0.5rem;
-                        padding: 0.25rem 0.75rem;
-                        border-radius: 9999px;
-                        font-size: 0.875rem;
-                        background-color: #dbeafe;
-                        color: #1e40af;
-                      "
-                    >
-                      {{ skill }}
-                    </span>
-                  </div>
-                </section>
-              </div>
-
-              <!-- Confirm Download -->
-              <div
-                style="
-                  padding: 1rem;
-                  border-top: 1px solid #e5e7eb;
-                  margin-top: 1rem;
-                  display: flex;
-                  justify-content: flex-end;
-                "
-              >
-                <button
-                  @click="downloadPDF"
-                  style="
-                    padding: 0.5rem 1.5rem;
-                    border-radius: 0.5rem;
-                    font-weight: 600;
-                    color: #ffffff;
-                    background-color: #2563eb;
-                    border: none;
-                    cursor: pointer;
-                  "
-                >
-                  Confirm & Download PDF
-                </button>
+                    Download PDF
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -1414,24 +994,3 @@ onMounted(() => {
     </div>
   </div>
 </template>
-<style>
-/* Force html2canvas-compatible colors */
-.bg-blue-600 {
-  background-color: #2563eb !important;
-}
-.bg-blue-700 {
-  background-color: #1d4ed8 !important;
-}
-.text-gray-600 {
-  color: #4b5563 !important;
-}
-.text-red-600 {
-  color: #dc2626 !important;
-}
-.text-white {
-  color: #ffffff !important;
-}
-.bg-white {
-  background-color: #ffffff !important;
-}
-</style>

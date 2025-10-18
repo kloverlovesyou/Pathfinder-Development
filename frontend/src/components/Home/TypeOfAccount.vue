@@ -7,16 +7,11 @@ import organizationImage from "@/assets/images/org.jpg";
   <div
     class="font-poppins min-h-screen pl-10 pr-10 pb-5 flex w-full items-center justify-center bg-gray-50"
   >
-    <div class="w-full max-w-6xl px-4">
+    <div class="w-full max-w-6xl px-4 pb-20">
       <div>
-        <div class="flex justify-center">
-          <p class="text-2xl font-semibold font-inter text-dark-slate">
-            PathFinder
-          </p>
-        </div>
         <div class="pt-10 pb-2">
           <button
-            class="btn btn-ghost btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl text-dark-slate"
+            class="btn btn-ghost text-dark-slate"
             @click="$router.push('/loginform')"
           >
             <svg
@@ -46,7 +41,7 @@ import organizationImage from "@/assets/images/org.jpg";
       <div class="flex w-full flex-col lg:flex-row gap-6">
         <div
           class="card bg-base-300 rounded-box flex-1 min-h-[200px] p-6"
-          @click="$router.push('/a_registrationform')"
+          @click="$router.push('/auth/aregistration')"
         >
           <figure><img :src="applicantImage" alt="Applicant" /></figure>
           <p
@@ -58,7 +53,7 @@ import organizationImage from "@/assets/images/org.jpg";
         <div class="divider lg:divider-horizontal font-inter">OR</div>
         <div
           class="card bg-base-300 rounded-box flex-1 min-h-[200px] p-6"
-          @click="$router.push('/o_registrationform')"
+          @click="$router.push('/auth/oregistration')"
         >
           <figure><img :src="organizationImage" alt="Organization" /></figure>
           <p
