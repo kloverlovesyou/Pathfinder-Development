@@ -459,7 +459,6 @@ function submitApplication() {
         </dialog>
 
         <!-- Career -->
-        <!-- Career -->
         <div v-else>
           <h2 class="text-xl font-bold mb-2">{{ selectedPost.position }}</h2>
           <p class="text-sm text-gray-600 mb-2">
