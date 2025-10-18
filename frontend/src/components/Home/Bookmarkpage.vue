@@ -3,35 +3,6 @@ import { useRouter } from "vue-router";
 import { ref, onMounted, onUnmounted, computed } from "vue";
 import axios from "axios";
 
-const activeTab = ref("career"); // Default to Career tab
-const screenIsLarge = ref(window.innerWidth >= 1024);
-
-function handleResize() {
-  screenIsLarge.value = window.innerWidth >= 1024;
-}
-
-onMounted(() => {
-  window.addEventListener("resize", handleResize);
-});
-onUnmounted(() => {
-  window.removeEventListener("resize", handleResize);
-});
-
-const router = useRouter();
-
-// State variables
-const userName = ref("");
-const token = ref("");
-const user = ref(null);
-const bookmarks = ref([]);
-
-// ✅ Logout function
-const logout = () => {
-  localStorage.removeItem("user");
-  localStorage.removeItem("token");
-  router.push({ name: "Loginpage" });
-};
-
 // Map bookmarks API data to a display-friendly format
 const displayedTrainings = computed(() =>
   bookmarks.value
@@ -40,7 +11,7 @@ const displayedTrainings = computed(() =>
       ...b.training,
       trainingID: b.trainingID,
     }))
-);;
+);
 
 const displayedCareers = computed(() =>
   bookmarks.value
@@ -49,61 +20,7 @@ const displayedCareers = computed(() =>
       ...b.career,
       careerID: b.careerID,
     }))
-);;
-const organizations = {
-  1: "Tech Corp",
-  2: "Future Academy",
-  3: "InnovateX",
-};
-
-// Hardcoded bookmarks
-const bookmarkedCareers = ref([
-  {
-    careerID: 1,
-    position: "Software Engineer",
-    organizationID: 1,
-    deadlineOfSubmission: "2025-12-10",
-  },
-  {
-    careerID: 2,
-    position: "Marketing Specialist",
-    organizationID: 2,
-    deadlineOfSubmission: "2025-11-01",
-  },
-]);
-
-const bookmarkedTrainings = ref([
-  {
-    trainingID: 10,
-    title: "Advanced Vue.js Workshop",
-    organizationID: 1,
-    schedule: "2025-10-22T09:00:00",
-    description: "Deep dive into Vue 3 Composition API and Pinia.",
-  },
-  {
-    trainingID: 11,
-    title: "Project Management Essentials",
-    organizationID: 3,
-    schedule: "2025-11-05T14:00:00",
-    description: "Master the fundamentals of managing agile projects.",
-  },
-  {
-    trainingID: 12,
-    title: "Effective Team Communication",
-    organizationID: 2,
-    schedule: "2025-12-01T10:00:00",
-    description: "Improve workplace collaboration and communication.",
-  },
-]);
-
-function formatDate(date) {
-  return new Date(date).toLocaleDateString("en-US", { dateStyle: "long" });
-}
-
-// (optional) You can use this for modal logic later
-function openModal(item) {
-  console.log("Clicked:", item);
-}
+);
 
 // ✅ Load user and token from localStorage + fetch bookmarks
 onMounted(async () => {
@@ -168,6 +85,148 @@ const removeBookmark = async (trainingID) => {
     alert("❌ Failed to remove bookmark.");
   }
 };
+
+const activeTab = ref("career");
+const screenIsLarge = ref(window.innerWidth >= 1024);
+function handleResize() {
+  screenIsLarge.value = window.innerWidth >= 1024;
+}
+onMounted(() => window.addEventListener("resize", handleResize));
+onUnmounted(() => window.removeEventListener("resize", handleResize));
+
+const router = useRouter();
+const userName = ref("");
+const token = ref("");
+const user = ref(null);
+const bookmarks = ref([]);
+
+const logout = () => {
+  localStorage.removeItem("user");
+  localStorage.removeItem("token");
+  router.push({ name: "Loginpage" });
+};
+
+const organizations = {
+  1: "Tech Corp",
+  2: "Future Academy",
+  3: "InnovateX",
+};
+
+const bookmarkedCareers = ref([
+  {
+    careerID: 1,
+    position: "Software Engineer",
+    organizationID: 1,
+    deadlineOfSubmission: "2025-12-10",
+    detailsAndInstructions: "Develop and maintain software systems.",
+    qualifications: "BS in Computer Science or related field.",
+    requirements: "Resume, transcript, and cover letter.",
+    applicationLetterAddress: "hr@techcorp.com",
+  },
+  {
+    careerID: 2,
+    position: "Marketing Specialist",
+    organizationID: 2,
+    deadlineOfSubmission: "2025-11-01",
+    detailsAndInstructions: "Plan and execute marketing campaigns.",
+    qualifications: "Bachelor’s in Marketing or Business.",
+    requirements: "Resume and marketing portfolio.",
+    applicationLetterAddress: "apply@futureacademy.com",
+  },
+]);
+
+const bookmarkedTrainings = ref([
+  {
+    trainingID: 10,
+    title: "Advanced Vue.js Workshop",
+    organizationID: 1,
+    schedule: "2025-10-22T09:00:00",
+    description: "Deep dive into Vue 3 Composition API and Pinia.",
+    mode: "Online",
+    location: "Zoom",
+  },
+  {
+    trainingID: 11,
+    title: "Project Management Essentials",
+    organizationID: 3,
+    schedule: "2025-11-05T14:00:00",
+    description: "Master the fundamentals of managing agile projects.",
+    mode: "In-person",
+    location: "InnovateX HQ",
+  },
+  {
+    trainingID: 12,
+    title: "Effective Team Communication",
+    organizationID: 2,
+    schedule: "2025-12-01T10:00:00",
+    description: "Improve workplace collaboration and communication.",
+    mode: "Online",
+    location: "Microsoft Teams",
+  },
+]);
+
+function formatDate(date) {
+  return new Date(date).toLocaleDateString("en-US", { dateStyle: "long" });
+}
+
+function formatDateTime(date) {
+  return new Date(date).toLocaleString("en-US", {
+    dateStyle: "long",
+    timeStyle: "short",
+  });
+}
+
+const selectedPost = ref(null);
+const selectedTraining = ref(null);
+const applyModalOpen = ref(false);
+
+function openModal(item) {
+  selectedPost.value = item;
+}
+
+function closeModal() {
+  selectedPost.value = null;
+}
+
+function openTrainingModal(training) {
+  selectedTraining.value = training;
+}
+
+function closeTrainingModal() {
+  selectedTraining.value = null;
+}
+
+function openApplyModal(post) {
+  applyModalOpen.value = true;
+}
+
+function closeApplyModal() {
+  applyModalOpen.value = false;
+}
+
+function isTraining(post) {
+  return !!post.title;
+}
+
+function bookmarkPost(post) {
+  alert(`Bookmarked: ${post.title || post.position}`);
+}
+
+function registerTraining(training) {
+  alert(`Registered for: ${training.title}`);
+}
+
+function handleFileUpload(e) {
+  const file = e.target.files[0];
+  if (file && file.type !== "application/pdf") {
+    alert("Please upload a PDF file.");
+  }
+}
+
+function submitApplication() {
+  alert("Application submitted!");
+  closeApplyModal();
+}
 </script>
 
 <template>
@@ -334,109 +393,230 @@ const removeBookmark = async (trainingID) => {
           <div
             class="bg-white p-4 rounded-lg flex flex-col w-full min-h-screen flex-1"
           >
-            <!-- Tabs (for both small and large screens) -->
-            <div class="flex gap-3 mb-4">
-              <button
-                class="px-4 py-2 rounded-md text-sm font-medium transition"
-                :class="
-                  activeTab === 'career'
-                    ? 'bg-dark-slate text-white'
-                    : 'bg-gray-200 text-gray-700'
-                "
-                @click="activeTab = 'career'"
-              >
-                Career Bookmarks
-              </button>
-              <button
-                class="px-4 py-2 rounded-md text-sm font-medium transition"
-                :class="
-                  activeTab === 'training'
-                    ? 'bg-dark-slate text-white'
-                    : 'bg-gray-200 text-gray-700'
-                "
-                @click="activeTab = 'training'"
-              >
-                Training Bookmarks
-              </button>
-            </div>
-
-            <!-- Content Area -->
-            <div class="flex-1 min-h-0">
-              <!-- Career Bookmarks -->
-              <div
-                v-show="activeTab === 'career'"
-                class="flex flex-col h-full min-h-0"
-              >
-                <div v-if="displayedCareers.length === 0" class="text-gray-500 text-sm">
-                  No bookmarked careers yet.
-                </div>
-
-                <div
-                  v-else
-                  class="space-y-3 overflow-y-auto pr-2 flex-1 min-h-0 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100"
+            <div class="font-poppins min-h-screen flex flex-col">
+              <!-- Tabs -->
+              <div class="flex justify-center bg-white shadow-sm">
+                <button
+                  :class="[
+                    'px-4 py-2 text-md font-medium',
+                    activeTab === 'career'
+                      ? 'border-b-2 border-dark-slate text-black font-semibold'
+                      : 'text-gray-500',
+                  ]"
+                  @click="activeTab = 'career'"
                 >
+                  Careers
+                </button>
+                <button
+                  :class="[
+                    'px-4 py-2 text-md font-medium',
+                    activeTab === 'training'
+                      ? 'border-b-2 border-dark-slate text-black font-semibold'
+                      : 'text-gray-500',
+                  ]"
+                  @click="activeTab = 'training'"
+                >
+                  Trainings
+                </button>
+              </div>
+
+              <!-- Career Bookmarks (from backend) -->
+              <div v-if="activeTab === 'career'" class="p-4">
+                <div v-if="displayedCareers.length" class="space-y-3">
                   <div
                     v-for="career in displayedCareers"
                     :key="career.careerID"
-                    class="p-4 bg-gray-100 rounded-lg shadow-sm hover:bg-gray-200 transition cursor-pointer flex justify-between items-start"
+                    @click="openModal(career)"
+                    class="p-4 rounded-lg cursor-pointer bg-blue-gray hover:bg-gray-300 transition"
                   >
-                    <div @click="openModal(career)">
-                      <h4 class="font-semibold text-sm">{{ career.position }}</h4>
-                      <p class="text-xs text-gray-600">
-                        {{ organizations[career.organizationID] }}
-                      </p>
-                      <p class="text-xs text-gray-500 mt-1">
-                        Deadline: {{ formatDate(career.deadlineOfSubmission) }}
-                      </p>
-                    </div>
-
-                    <button
-                      class="ml-4 text-red-500 text-xs font-semibold hover:underline"
-                      @click.stop="removeBookmark(career.careerID)"
-                    >
-                      Remove
-                    </button>
+                    <h3 class="text-base font-semibold">
+                      {{ career.position }}
+                    </h3>
+                    <p class="text-sm text-gray-600">
+                      {{
+                        organizations[career.organizationID] || "Unknown Org"
+                      }}
+                    </p>
                   </div>
                 </div>
+                <p v-else class="text-center text-gray-500 mt-6">
+                  No bookmarked careers found.
+                </p>
               </div>
-              
-              <!-- Training Bookmarks -->
-              <div
-                v-show="activeTab === 'training'"
-                class="flex flex-col h-full min-h-0"
-              >
-                <div v-if="displayedTrainings.length === 0" class="text-gray-500 text-sm">
-                  No bookmarked trainings yet.
-                </div>
 
-                <div
-                  v-else
-                  class="space-y-3 overflow-y-auto pr-2 flex-1 min-h-0 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100"
-                >
+              <!-- Training Bookmarks (from backend) -->
+              <div v-else class="p-4">
+                <div v-if="displayedTrainings.length" class="space-y-3">
                   <div
                     v-for="training in displayedTrainings"
                     :key="training.trainingID"
-                    class="p-4 bg-gray-100 rounded-lg shadow-sm hover:bg-gray-200 transition cursor-pointer flex justify-between items-start"
+                    @click="openModal(training)"
+                    class="p-4 border rounded-lg cursor-pointer bg-blue-gray hover:bg-gray-300 transition"
                   >
-                    <div @click="openModal(training)">
-                      <h4 class="font-semibold text-sm">{{ training.title }}</h4>
-                      <p class="text-xs text-gray-600">
-                        {{ organizations[training.organizationID] }}
-                      </p>
-                      <p class="text-xs text-gray-500 mt-1">
-                        Schedule: {{ formatDate(training.schedule) }}
-                      </p>
-                    </div>
-
-                    <button
-                      class="ml-4 text-red-500 text-xs font-semibold hover:underline"
-                      @click.stop="removeBookmark(training.trainingID)"
-                    >
-                      Remove
-                    </button>
+                    <h3 class="text-base font-semibold">
+                      {{ training.title }}
+                    </h3>
+                    <p class="text-sm text-gray-600">
+                      {{
+                        organizations[training.organizationID] || "Unknown Org"
+                      }}
+                    </p>
                   </div>
                 </div>
+                <p v-else class="text-center text-gray-500 mt-6">
+                  No bookmarked trainings found.
+                </p>
               </div>
+
+              <!-- ✅ Unified Modal System -->
+              <!-- Post Details Modal -->
+              <dialog v-if="selectedPost" open class="modal sm:modal-middle">
+                <div class="modal-box max-w-3xl relative font-poppins">
+                  <button
+                    class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
+                    @click="closeModal"
+                  >
+                    ✕
+                  </button>
+
+                  <!-- Training -->
+                  <div v-if="isTraining(selectedPost)">
+                    <h2 class="text-xl font-bold mb-2">
+                      {{ selectedPost.title }}
+                    </h2>
+                    <p class="text-sm text-gray-600 mb-2">
+                      Organization:
+                      {{
+                        organizations[selectedPost.organizationID] ||
+                        "Unknown Org"
+                      }}
+                    </p>
+                    <div class="my-4 flex justify-end gap-2">
+                      <button
+                        class="btn btn-outline btn-sm"
+                        @click="bookmarkPost(selectedPost)"
+                      >
+                        Bookmark
+                      </button>
+                      <button
+                        class="btn bg-customButton btn-sm text-white"
+                        @click="registerTraining(selectedPost)"
+                      >
+                        Register
+                      </button>
+                    </div>
+                    <p>
+                      <strong>Mode:</strong>
+                      {{ selectedPost.mode || "Not specified" }}
+                    </p>
+                    <p>
+                      <strong>Description:</strong>
+                      {{ selectedPost.description }}
+                    </p>
+                    <p>
+                      <strong>Schedule:</strong>
+                      {{ formatDateTime(selectedPost.schedule) }}
+                    </p>
+                    <p>
+                      <strong>Location:</strong> {{ selectedPost.location }}
+                    </p>
+                  </div>
+
+                  <!-- Career -->
+                  <div v-else>
+                    <h2 class="text-xl font-bold mb-2">
+                      {{ selectedPost.position }}
+                    </h2>
+                    <p class="text-sm text-gray-600 mb-2">
+                      Organization:
+                      {{
+                        organizations[selectedPost.organizationID] ||
+                        "Unknown Org"
+                      }}
+                    </p>
+                    <div class="my-4 flex justify-end gap-2">
+                      <button
+                        class="btn btn-outline btn-sm"
+                        @click="bookmarkPost(selectedPost)"
+                      >
+                        Bookmark
+                      </button>
+                      <button
+                        class="btn btn-sm bg-customButton text-white"
+                        @click="openApplyModal(selectedPost)"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                    <p>
+                      <strong>Details:</strong>
+                      {{ selectedPost.detailsAndInstructions }}
+                    </p>
+                    <p>
+                      <strong>Qualifications:</strong>
+                      {{ selectedPost.qualifications }}
+                    </p>
+                    <p>
+                      <strong>Requirements:</strong>
+                      {{ selectedPost.requirements }}
+                    </p>
+                    <p>
+                      <strong>Application Address:</strong>
+                      {{ selectedPost.applicationLetterAddress }}
+                    </p>
+                    <p>
+                      <strong>Deadline:</strong>
+                      {{ formatDate(selectedPost.deadlineOfSubmission) }}
+                    </p>
+                  </div>
+                </div>
+              </dialog>
+
+              <!-- Apply Modal -->
+              <dialog v-if="applyModalOpen" open class="modal sm:modal-middle">
+                <div class="modal-box max-w-lg relative font-poppins">
+                  <button
+                    class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
+                    @click="closeApplyModal"
+                  >
+                    ✕
+                  </button>
+                  <h2 class="text-xl font-bold mb-4">
+                    Apply for {{ selectedPost?.position }}
+                  </h2>
+
+                  <form @submit.prevent="submitApplication">
+                    <div class="mb-4">
+                      <label class="block text-sm font-medium mb-1"
+                        >Upload PDF Requirements</label
+                      >
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        @change="handleFileUpload"
+                        required
+                        class="file-input file-input-bordered w-full"
+                      />
+                    </div>
+
+                    <div class="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        class="btn btn-outline btn-sm"
+                        @click="closeApplyModal"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        class="btn bg-customButton hover:bg-dark-slate text-white btn-sm"
+                      >
+                        Submit Application
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </dialog>
             </div>
           </div>
         </div>
