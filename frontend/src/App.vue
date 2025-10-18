@@ -1,7 +1,5 @@
 <script setup>
 import { useRoute } from "vue-router";
-import Header from "./components/Layout/Header2.vue";
-import Footer from "./components/Layout/Footer.vue";
 
 const route = useRoute();
 
@@ -13,16 +11,11 @@ const noHeaderRoutes = [
   "/OrganizationHomePage",
   "/OrgTrainings",
   "/OrgCareers",
-  "/updateprofile"
+  "/updateprofile",
+  "/OrgCalendar",
 ];
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col justify-between">
-    <Header v-if="!noHeaderRoutes.includes(route.path)" />
-    <main class="flex-grow">
-      <router-view></router-view>
-    </main>
-    <Footer />
-  </div>
+  <router-view />
 </template>
