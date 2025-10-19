@@ -256,6 +256,7 @@
 <script>
 import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
 import axios from "axios";
+import api from "@/api/axios";
 
 export default {
   data() {
@@ -394,7 +395,7 @@ export default {
 
     const token = localStorage.getItem("token");
 
-    const response = await axios.post(
+    const response = await api.post(
       "http://127.0.0.1:8000/api/careers",
       this.newCareer,
       {
