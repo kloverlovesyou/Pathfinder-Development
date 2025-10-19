@@ -379,26 +379,41 @@ export default {
     },
 
     async saveCareer() {
-      try {
-        if (
-          !this.newCareer.position ||
-          !this.newCareer.details ||
-          !this.newCareer.qualifications ||
-          !this.newCareer.requirements ||
-          !this.newCareer.letterAddress ||
-          !this.newCareer.deadline
-        ) {
-          alert("Please fill out all fields before saving.");
-          return;
-        }
+  try {
+    if (
+      !this.newCareer.position ||
+      !this.newCareer.details ||
+      !this.newCareer.qualifications ||
+      !this.newCareer.requirements ||
+      !this.newCareer.letterAddress ||
+      !this.newCareer.deadline
+    ) {
+      alert("Please fill out all fields before saving.");
+      return;
+    }
 
-        const response = await axios.post("http://127.0.0.1:8000/api/careers", this.newCareer);
-        this.upcomingCareers.push(response.data);
-        this.closeCareerPopup();
-      } catch (error) {
-        console.error("ERROR SAVING CAREER:", error);
+    const token = localStorage.getItem("token");
+
+    const response = await axios.post(
+      "http://127.0.0.1:8000/api/careers",
+      this.newCareer,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       }
-    },
+    );
+
+    this.upcomingCareers.push(response.data);
+    this.closeCareerPopup();
+  } catch (error) {
+    console.error("ERROR SAVING CAREER:", error);
+    if (error.response?.status === 401) {
+      alert("Unauthorized: Please log in again.");
+    }
+  }
+},
 
     resetNewCareer() {
       this.newCareer = {
