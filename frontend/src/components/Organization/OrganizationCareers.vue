@@ -378,7 +378,7 @@ export default {
       this.openApplicantsModal();
     },
 
-    async saveCareer() {
+   async saveCareer() {
   try {
     if (
       !this.newCareer.position ||
@@ -388,7 +388,7 @@ export default {
       !this.newCareer.letterAddress ||
       !this.newCareer.deadline
     ) {
-      alert("Please fill out all fields before saving.");
+      alert("⚠️ Please fill out all fields before saving.");
       return;
     }
 
@@ -405,12 +405,31 @@ export default {
       }
     );
 
-    this.upcomingCareers.push(response.data);
-    this.closeCareerPopup();
+    // ✅ Backend responded successfully
+    if (response.data.message === "Career already exists") {
+      alert("⚠️ This career is already posted.");
+    } else {
+      alert("✅ Career successfully saved!");
+      this.upcomingCareers.push(response.data);
+      this.closeCareerPopup();
+      this.resetNewCareer();
+    }
   } catch (error) {
     console.error("ERROR SAVING CAREER:", error);
-    if (error.response?.status === 401) {
-      alert("Unauthorized: Please log in again.");
+
+    // 🧩 Handle specific errors
+    if (error.response) {
+      if (error.response.status === 401) {
+        alert("🔒 Unauthorized: Please log in again.");
+      } else if (error.response.status === 409) {
+        alert("⚠️ This career already exists!");
+      } else if (error.response.status === 422) {
+        alert("⚠️ Validation failed. Please check your inputs.");
+      } else {
+        alert("❌ Something went wrong. Please try again.");
+      }
+    } else {
+      alert("🚫 Unable to connect to the server.");
     }
   }
 },
