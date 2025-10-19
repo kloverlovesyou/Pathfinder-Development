@@ -173,19 +173,168 @@
         </div>
       </section>
 
+
+
       <!-- Applicants Modal -->
       <div v-if="showApplicantsModal" class="modal-overlay" @click.self="closeModal">
         <div class="modal-content">
           <button class="modal-close-btn" @click="closeModal">✕</button>
-          <h3 class="modal-title">List of Applicants</h3>
-          <div class="Applicants-grid">
-            <div v-for="person in applicantsList" :key="person.id" class="registrant-card">
-              <img :src="person.img" alt="profile" class="profile-pic" />
-              <p>{{ person.name }}</p>
+
+          <h3 class="modal-title">Applicants for {{ selectedCareer.title }}</h3>
+
+          <div class="applicants-table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>FULL NAME</th>
+                  <th>DATE SUBMITTED</th>
+                  <th>APPLICATION STATUS</th>
+                  <th>REQUIREMENTS</th>
+                  <th>INTERVIEW SCHEDULING</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="person in applicantsList" :key="person.id">
+                  <td>
+                    <p class="applicant-name">{{ person.name }}</p>
+                  </td>
+                  <td>
+                    <p class="application-date">{{ person.dateSubmitted }}</p>
+                  </td>
+
+                  <td :class="{
+                    'status-for-review': person.status === 'For Review',
+                    'status-scheduled': person.status === 'Interview Scheduled',
+                    'status-hired': person.status === 'Hired',
+                    'status-rejected': person.status === 'Rejected'
+                  }">
+                    {{ person.status }}
+                  </td>
+
+                  <!-- Requirements -->
+                  <td class="requirements-col">
+                    <div v-if="person.requirementsSubmitted">
+                      <button class="view-btn" @click="viewRequirements(person)">View</button>
+                      <span class="check-icon">✅</span>
+                    </div>
+                    <div v-else>
+                      <button class="upload-btn" @click="uploadRequirements(person)">Nakalimutan ko ilalagay</button>
+                    </div>
+                  </td>
+
+                  <!-- Interview Scheduling -->
+                  <td>
+                    <!-- For Review -->
+                    <button v-if="person.status === 'For Review'" class="schedule-btn"
+                      @click="openScheduleModal(person)">
+                      Schedule
+                    </button>
+
+                    <!-- Interview Scheduled -->
+                    <button v-else-if="person.status === 'Interview Scheduled'" class="schedule-btn view"
+                      @click="openViewScheduleModal(person)">
+                      View Schedule
+                    </button>
+
+                    <!-- Hired -->
+                    <button v-else-if="person.status === 'Hired'" class="schedule-btn hired" disabled>
+                      Hired
+                    </button>
+
+                    <!-- Rejected -->
+                    <button v-else-if="person.status === 'Rejected'" class="schedule-btn rejected" disabled>
+                      Rejected
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Schedule Modal -->
+      <div v-if="showScheduleModal" class="modal-overlay" @click.self="closeScheduleModal">
+        <div class="modal-box">
+          <button class="modal-close-btn" @click="closeScheduleModal">✕</button>
+          <h3>Schedule Interview for {{ selectedPerson?.name }}</h3>
+
+          <div class="schedule-form">
+            <!-- Date & Time -->
+            <label for="scheduleDate">Date & Time:</label>
+            <div class="date-input-wrapper">
+              <input id="scheduleDate" ref="dateInput" type="datetime-local" v-model="scheduleData.date"
+                @keydown.prevent @keypress.prevent @paste.prevent @input="$event.target.value = $event.target.value" />
+              <span class="calendar-icon" @click.prevent="openCalendar">
+                <!-- SVG icon (click target is the span) -->
+                <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M2.16669 9.41675C2.16669 7.53113 2.16669 6.58832 2.75247 6.00253C3.33826 5.41675 4.28107 5.41675 6.16669 5.41675H19.8334C21.719 5.41675 22.6618 5.41675 23.2476 6.00253C23.8334 6.58832 23.8334 7.53113 23.8334 9.41675V9.83342C23.8334 10.3048 23.8334 10.5405 23.6869 10.687C23.5405 10.8334 23.3048 10.8334 22.8334 10.8334H3.16669C2.69528 10.8334 2.45958 10.8334 2.31313 10.687C2.16669 10.5405 2.16669 10.3048 2.16669 9.83341V9.41675Z"
+                    fill="black" />
+                  <path
+                    d="M22.833 13C23.3042 13 23.5401 13.0002 23.6865 13.1465C23.833 13.2929 23.833 13.5286 23.833 14V19.833C23.833 21.7186 23.8329 22.6613 23.2471 23.2471C22.6613 23.8329 21.7186 23.833 19.833 23.833H6.16699C4.28137 23.833 3.33872 23.8329 2.75293 23.2471C2.16714 22.6613 2.16699 21.7186 2.16699 19.833V14C2.16699 13.5286 2.16703 13.2929 2.31348 13.1465C2.45994 13.0002 2.69576 13 3.16699 13H22.833Z"
+                    fill="black" />
+                  <path d="M7.58331 3.25L7.58331 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
+                  <path d="M18.4167 3.25L18.4167 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
+                </svg>
+              </span>
+            </div>
+
+
+            <!-- Interview Mode -->
+            <div class="mode-selection">
+              <label><input type="radio" value="onSite" v-model="scheduleData.mode" /> On-Site</label>
+              <label><input type="radio" value="online" v-model="scheduleData.mode" /> Online</label>
+            </div>
+
+            <!-- Conditional Fields -->
+            <div v-if="scheduleData.mode === 'onSite'">
+              <label>Location:</label>
+              <input type="text" v-model="scheduleData.detail" placeholder="Enter interview location" />
+            </div>
+
+            <div v-else-if="scheduleData.mode === 'online'">
+              <label>Interview Link:</label>
+              <input type="text" v-model="scheduleData.detail" placeholder="https://meet.google.com/..." />
+            </div>
+
+            <div class="modal-actions">
+              <button class="confirm-btn" @click="confirmSchedule">Confirm</button>
+              <button class="cancel-btn" @click="closeScheduleModal">Cancel</button>
             </div>
           </div>
         </div>
       </div>
+
+
+      <!-- View Schedule Modal -->
+      <div v-if="showViewScheduleModal" class="modal-overlay" @click.self="closeViewScheduleModal">
+        <div class="modal-box">
+          <button class="modal-close-btn" @click="closeViewScheduleModal">✕</button>
+          <h3>Interview Schedule for {{ selectedPerson?.name }}</h3>
+
+          <div class="view-schedule-info">
+            <p><strong>Date:</strong> {{ selectedPerson?.interviewDate }}</p>
+            <p><strong>Time:</strong> {{ selectedPerson?.interviewTime }}</p>
+            <p><strong>Mode:</strong> {{ selectedPerson?.mode }}</p>
+
+            <p v-if="selectedPerson?.mode === 'On-Site'">
+              <strong>Location:</strong> {{ selectedPerson?.linkOrLocation }}
+            </p>
+            <p v-else-if="selectedPerson?.mode === 'Online'">
+              <strong>Interview Link:</strong>
+              <a :href="selectedPerson?.linkOrLocation" target="_blank">
+                {{ selectedPerson?.linkOrLocation }}
+              </a>
+            </p>
+          </div>
+
+          <div class="modal-actions">
+            <button class="cancel-btn" @click="closeViewScheduleModal">Close</button>
+          </div>
+        </div>
+      </div>
+
 
       <!-- Career Popup Modal -->
       <div v-if="showCareerPopup" class="career-popup-overlay">
@@ -212,7 +361,7 @@
                 class="career-input" />
               <span class="calendar-icon">
                 <!-- use the same SVG you shared -->
-               <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M2.16669 9.4165C2.16669 7.53089 2.16669 6.58808 2.75247 6.00229C3.33826 5.4165 4.28107 5.4165 6.16669 5.4165H19.8334C21.719 5.4165 22.6618 5.4165 23.2476 6.00229C23.8334 6.58808 23.8334 7.53089 23.8334 9.4165V9.83317C23.8334 10.3046 23.8334 10.5403 23.6869 10.6867C23.5405 10.8332 23.3048 10.8332 22.8334 10.8332H3.16669C2.69528 10.8332 2.45958 10.8332 2.31313 10.687C2.16669 10.5405 2.16669 10.3048 2.16669 9.83317V9.4165Z"
                     fill="#4a4a4a" />
@@ -268,18 +417,90 @@ export default {
       showCareerDetailsModal: false,
       selectedCareer: {},
 
+      showApplicantsModal: false,
+      showViewScheduleModal: false,
+      showScheduleModal: false,
+      selectedPerson: null,
+
+      scheduleData: {
+        date: "",
+        mode: "",
+        detail: "",
+      },
+
       applicantsList: [
-        { id: 1, name: "John Doe", img: "https://i.pravatar.cc/100?img=1" },
-        { id: 2, name: "Maria Santos", img: "https://i.pravatar.cc/100?img=2" },
-        { id: 3, name: "David Cruz", img: "https://i.pravatar.cc/100?img=3" },
-        { id: 4, name: "Anna Lee", img: "https://i.pravatar.cc/100?img=4" },
-        { id: 5, name: "Mark Reyes", img: "https://i.pravatar.cc/100?img=5" },
-        { id: 6, name: "Sophia Tan", img: "https://i.pravatar.cc/100?img=6" },
-        { id: 7, name: "James Lim", img: "https://i.pravatar.cc/100?img=7" },
-        { id: 8, name: "Christine Dela Cruz", img: "https://i.pravatar.cc/100?img=8" },
-        { id: 9, name: "Robert Mendoza", img: "https://i.pravatar.cc/100?img=9" },
-        { id: 10, name: "Isabella Garcia", img: "https://i.pravatar.cc/100?img=10" },
+        {
+          id: 1,
+          name: "John Doe",
+          dateSubmitted: "September 10, 2025",
+          status: "For Review",
+          requirements: ["Resume", "Cover Letter", "Portfolio"]
+        },
+        {
+          id: 2,
+          name: "Maria Santos",
+          dateSubmitted: "September 12, 2025",
+          status: "Rejected",
+          requirements: ["Resume", "Transcript of Records"]
+        },
+        {
+          id: 3,
+          name: "David Cruz",
+          dateSubmitted: "September 14, 2025",
+          status: "Interview Scheduled",
+          requirements: ["Resume", "Character Reference"]
+        },
+        {
+          id: 4,
+          name: "Anna Lee",
+          dateSubmitted: "September 16, 2025",
+          status: "Hired",
+          requirements: ["Resume", "NBI Clearance", "Medical Certificate"]
+        },
+        {
+          id: 5,
+          name: "Mark Reyes",
+          dateSubmitted: "September 18, 2025",
+          status: "Rejected",
+          requirements: ["Resume", "Portfolio"]
+        },
+        {
+          id: 6,
+          name: "Sophia Tan",
+          dateSubmitted: "September 19, 2025",
+          status: "For Review",
+          requirements: ["Resume", "Cover Letter"]
+        },
+        {
+          id: 7,
+          name: "James Lim",
+          dateSubmitted: "September 20, 2025",
+          status: "Interview Scheduled",
+          requirements: ["Resume", "Character Reference", "Transcript of Records"]
+        },
+        {
+          id: 8,
+          name: "Christine Dela Cruz",
+          dateSubmitted: "September 21, 2025",
+          status: "Rejected",
+          requirements: ["Resume", "Portfolio"]
+        },
+        {
+          id: 9,
+          name: "Robert Mendoza",
+          dateSubmitted: "September 22, 2025",
+          status: "For Review",
+          requirements: ["Resume", "Cover Letter"]
+        },
+        {
+          id: 10,
+          name: "Isabella Garcia",
+          dateSubmitted: "September 25, 2025",
+          status: "Hired",
+          requirements: ["Resume", "NBI Clearance", "Medical Certificate"]
+        },
       ],
+
 
       showApplicantsModal: false,
       upcomingCareers: [],
@@ -349,6 +570,102 @@ export default {
     },
     closeModal() {
       this.showApplicantsModal = false;
+    },
+
+    // ✅ OPEN SCHEDULE MODAL (only when status = For Review)
+    openScheduleModal(person) {
+      if (person.status === "For Review") {
+        this.selectedPerson = person;
+        this.showScheduleModal = true;
+        this.showViewScheduleModal = false;
+      }
+    },
+    closeScheduleModal() {
+      this.showScheduleModal = false;
+      this.scheduleData = { date: "", onSite: false, online: false, link: "" };
+    },
+
+    // ✅ OPEN VIEW SCHEDULE MODAL (only when status = Interview Scheduled)
+    openViewScheduleModal(person) {
+      if (person.status === "Interview Scheduled") {
+        this.selectedPerson = person;
+        this.showViewScheduleModal = true;
+        this.showScheduleModal = false;
+      }
+    },
+    closeViewScheduleModal() {
+      this.showViewScheduleModal = false;
+    },
+    openCalendar() {
+      const input = this.$refs.dateInput;
+      if (!input) {
+        console.warn("dateInput ref not found");
+        return;
+      }
+
+      // Try the modern showPicker() first (works in some browsers)
+      try {
+        if (typeof input.showPicker === "function") {
+          input.showPicker();
+          return;
+        }
+      } catch (err) {
+        console.debug("showPicker() failed:", err);
+      }
+
+      // Next try focusing then clicking (some browsers open picker on click/focus)
+      try {
+        input.focus();
+        // Clicking the input sometimes triggers the native UI
+        input.click();
+        return;
+      } catch (err) {
+        console.debug("input.click()/focus failed:", err);
+      }
+
+      // Final fallback: open a small helper so user can still pick — alert as last resort
+      console.warn("Native picker was not opened programmatically by the browser. Consider adding a JS datepicker as a reliable fallback.");
+    },
+
+    confirmSchedule() {
+      if (!this.scheduleData.date) {
+        alert("Please select a date and time.");
+        return;
+      }
+
+      if (!this.scheduleData.mode) {
+        alert("Please select interview mode (On-Site or Online).");
+        return;
+      }
+
+      if (!this.scheduleData.detail) {
+        alert(
+          this.scheduleData.mode === "onSite"
+            ? "Please enter the interview location."
+            : "Please enter the interview link."
+        );
+        return;
+      }
+
+      const interviewDate = new Date(this.scheduleData.date);
+      this.selectedPerson.interviewDate = interviewDate.toLocaleDateString();
+      this.selectedPerson.interviewTime = interviewDate.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      this.selectedPerson.mode =
+        this.scheduleData.mode === "onSite" ? "On-Site" : "Online";
+      this.selectedPerson.linkOrLocation = this.scheduleData.detail;
+      this.selectedPerson.status = "Interview Scheduled";
+
+      this.closeScheduleModal();
+    },
+
+    viewRequirements(person) {
+      alert(`Viewing requirements for ${person.name}`);
+    },
+    uploadRequirements(person) {
+      alert(`Uploading requirements for ${person.name}`);
     },
 
     async fetchCareers() {
@@ -467,6 +784,7 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 const isSidebarOpen = ref(true);
 const organizationName = ref("");
+
 
 // Toggle sidebar
 const toggleSidebar = () => {
@@ -932,15 +1250,45 @@ const logout = () => {
 
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: 2000;
+}
+
+.modal {
+  background: white;
+  padding: 25px;
+  border-radius: 15px;
+  width: 350px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 15px;
+  gap: 10px;
+}
+
+.confirm-btn {
+  background-color: #334155;
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background-color: #334155;
+  color: #111;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 10px;
+  cursor: pointer;
 }
 
 .modal-content {
@@ -948,7 +1296,7 @@ const logout = () => {
   background: #fff;
   padding: 20px;
   border-radius: 12px;
-  width: 500px;
+  width: 1100px;
   max-height: 80vh;
   overflow-y: auto;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -1252,5 +1600,409 @@ const logout = () => {
   display: flex;
   align-items: center;
   z-index: 2;
+}
+
+/* Applicants Modal */
+.modal-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 16px;
+}
+
+.registrants-table-container {
+  /* Ensures table fits on smaller screens if needed */
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead th {
+  text-align: left;
+  padding: 12px 15px;
+  color: #777;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  font-weight: 600;
+  border-bottom: 1px solid #eee;
+}
+
+tbody tr {
+  border-bottom: 1px solid #f5f5f5;
+  /* Light separator line */
+}
+
+tbody td {
+  padding: 15px 15px;
+  color: #333;
+  font-size: 0.95rem;
+  /* Vertically aligns content in the middle */
+  vertical-align: middle;
+}
+
+/* Status Colors (like in your image) */
+.status-for-review {
+  color: #ffa600;
+  /* Green */
+  font-weight: 500;
+}
+
+.status-scheduled {
+  color: #4CAF50;
+  /* Green */
+  font-weight: 500;
+}
+
+.status-hired {
+  color: #374151;
+  /* Green */
+  font-weight: 500;
+}
+
+.status-rejected {
+  color: #d30707;
+  /* Blue */
+  font-weight: 500;
+}
+
+/* Base Schedule Button */
+.schedule-btn {
+  background-color: #334155;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.schedule-btn:hover {
+  background-color: #1e293b;
+  transform: scale(1.03);
+}
+
+.schedule-btn:disabled {
+  background-color: #cbd5e1;
+  color: #64748b;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* View Schedule Style */
+.schedule-btn.view {
+  background-color: #334155;
+}
+
+.schedule-btn.view:hover {
+  background-color: #1e293b;
+}
+
+.schedule-btn.view:hover:not(:disabled) {
+  background-color: #1e293b;
+}
+
+.dimmed {
+  background-color: #22c55e;
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.blurred {
+  filter: blur(1px) brightness(0.85);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Rejected Applicants - Blur Effect */
+.status-rejected+.interview-col .schedule-btn {
+  filter: blur(1.2px) brightness(0.85);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.interview-info {
+  margin-top: 6px;
+}
+
+.interview-date {
+  font-weight: 500;
+  color: #374151;
+}
+
+.interview-time {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+/* View Schedule Modal */
+.schedule-view p {
+  margin: 8px 0;
+  color: #111827;
+}
+
+.schedule-view a {
+  color: #6d6d6d;
+  text-decoration: none;
+}
+
+.schedule-view a:hover {
+  text-decoration: underline;
+}
+
+/* Interview Modal Form */
+.schedule-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-group label {
+  font-weight: 500;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.form-group label {
+  font-weight: 500;
+  margin-bottom: 4px;
+  display: block;
+}
+
+input[type="datetime-local"],
+input[type="text"] {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.mode-group {
+  display: flex;
+  justify-content: space-around;
+}
+
+.schedule-confirm-btn {
+  background-color: #334155;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  cursor: pointer;
+  margin-top: 10px;
+  align-self: center;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.schedule-confirm-btn:hover {
+  background-color: #1e293b;
+}
+
+/* Schedule Modal and View Schedule Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal-box {
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px 22px;
+  /* slightly reduced padding */
+  width: 100%;
+  max-width: 400px;
+  /* narrower modal */
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  position: relative;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.modal-box h3 {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+  /* tighter title spacing */
+  color: #222;
+  text-align: center;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.date-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.calendar-icon {
+  position: absolute;
+  right: 10px;
+  top: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-icon svg {
+  fill: black;
+  pointer-events: none;
+}
+
+.schedule-form label {
+  display: block;
+  font-weight: 500;
+  margin: 6px 0 3px;
+  /* tighter spacing */
+  color: #000;
+  /* ✅ labels are now black */
+}
+
+.schedule-form input[type="datetime-local"],
+.schedule-form input[type="text"] {
+  width: 100%;
+  padding: 6px 9px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+  background: #fff;
+  /* ✅ makes textboxes white */
+  color: #000;
+  /* ensures readable text */
+}
+
+.mode-selection {
+  display: flex;
+  gap: 12px;
+  /* slightly reduced */
+  margin: 6px 0;
+  /* closer to inputs */
+}
+
+.mode-selection label {
+  cursor: pointer;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.confirm-btn {
+  background: #334155;
+  color: white;
+  border: none;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background: #ddd;
+  border: none;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.confirm-btn:hover {
+  background: #1e293b;
+}
+
+.cancel-btn:hover {
+  background: #bbb;
+}
+
+.view-schedule-info p {
+  margin: 4px 0;
+  /* slightly tighter spacing */
+  font-size: 0.95rem;
+  color: #333;
+}
+
+/* Adjust modal width and spacing */
+.schedule-modal,
+.view-schedule-modal {
+  width: 360px;
+  /* narrower modal */
+  max-width: 90%;
+  background: white;
+  padding: 18px 22px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.input-with-icon {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.input-with-icon input {
+  width: 100%;
+  padding: 8px 38px 8px 10px;
+  /* space for the icon on the right */
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #fff;
+  font-size: 0.9rem;
+  color: #000;
+  box-sizing: border-box;
+  height: 38px;
+}
+
+/* ✅ perfectly center the icon */
+.input-with-icon .calendar-icon {
+  position: absolute;
+  right: 10px;
+  top: 42%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  /* allows clicking through the icon */
+}
+
+.input-with-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: #000;
+  /* solid black */
+  opacity: 1;
+  /* make sure it’s not faded */
+}
+
+@keyframes fadeIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 </style>
