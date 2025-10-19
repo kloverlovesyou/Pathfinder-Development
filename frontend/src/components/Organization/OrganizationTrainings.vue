@@ -1397,7 +1397,7 @@ tbody td {
 .modal-close-btn {
   position: absolute;
   top: 10px;
-  right: 10px;
+  right: 15px;
   background: transparent;
   border: none;
   font-size: 20px;
