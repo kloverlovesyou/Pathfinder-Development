@@ -413,6 +413,8 @@ export default {
       this.upcomingCareers.push(response.data);
       this.closeCareerPopup();
       this.resetNewCareer();
+
+       await this.fetchCareers();
     }
   } catch (error) {
     console.error("ERROR SAVING CAREER:", error);
