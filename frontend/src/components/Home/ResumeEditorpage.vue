@@ -83,9 +83,12 @@ async function loadResume() {
       resume.resumeID = data.resumeID;
     }
 
-    const { data: expData } = await axios.get("http://127.0.0.1:8000/api/experiences", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const { data: expData } = await axios.get(
+      "http://127.0.0.1:8000/api/experiences",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
     resume.experience = expData || [];
 
     await loadEducation();
@@ -166,9 +169,12 @@ async function removeEducation(index) {
     const token = localStorage.getItem("token");
     const edu = resume.education[index];
     if (edu.educationID) {
-      await axios.delete(`http://127.0.0.1:8000/api/education/${edu.educationID}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(
+        `http://127.0.0.1:8000/api/education/${edu.educationID}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
     }
     resume.education.splice(index, 1);
   } catch (error) {
@@ -235,9 +241,12 @@ async function removeExperience(index) {
     const token = localStorage.getItem("token");
     const exp = resume.experience[index];
     if (exp.experienceID) {
-      await axios.delete(`http://127.0.0.1:8000/api/experiences/${exp.experienceID}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(
+        `http://127.0.0.1:8000/api/experiences/${exp.experienceID}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
     }
     resume.experience.splice(index, 1);
   } catch (error) {
@@ -250,9 +259,12 @@ async function removeExperience(index) {
 async function loadSkills(resumeID) {
   try {
     const token = localStorage.getItem("token");
-    const { data } = await axios.get(`http://127.0.0.1:8000/api/skills/${resumeID}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const { data } = await axios.get(
+      `http://127.0.0.1:8000/api/skills/${resumeID}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
     resume.skills = data || [];
     console.log("✅ Skills Loaded:", resume.skills);
   } catch (error) {
@@ -346,7 +358,12 @@ function generatePdf() {
   // Header
   doc.setFont("times", "bold");
   doc.setFontSize(20);
-  doc.text(`${form.firstName} ${form.middleName} ${form.lastName}`, pageWidth / 2, y, { align: "center" });
+  doc.text(
+    `${form.firstName} ${form.middleName} ${form.lastName}`,
+    pageWidth / 2,
+    y,
+    { align: "center" }
+  );
   y += 8;
 
   doc.setFont("times", "regular");
@@ -365,7 +382,8 @@ function generatePdf() {
   if (resume.experience.length) {
     y = sectionHeader("Professional Experience", margin, y, pageWidth, margin);
     const sortedExperiences = [...resume.experience].sort(
-      (a, b) => new Date(b.endYear).getFullYear() - new Date(a.endYear).getFullYear()
+      (a, b) =>
+        new Date(b.endYear).getFullYear() - new Date(a.endYear).getFullYear()
     );
     sortedExperiences.forEach((exp) => {
       const start = getYearOnly(exp.startYear);
@@ -399,7 +417,12 @@ function generatePdf() {
   // Skills
   if (resume.skills.length) {
     y = sectionHeader("Skills", margin, y, pageWidth, margin);
-    y = addWrappedText(resume.skills.map((s) => s.skillName || s).join(" • "), margin, y, pageWidth - 2 * margin);
+    y = addWrappedText(
+      resume.skills.map((s) => s.skillName || s).join(" • "),
+      margin,
+      y,
+      pageWidth - 2 * margin
+    );
   }
 
   const pdfBlob = doc.output("blob");
@@ -645,7 +668,7 @@ const logout = () => {
               />
             </div>
 
-             <!-- URL -->
+            <!-- URL -->
             <div class="border rounded p-4 space-y-4 relative">
               <h2 class="text-lg font-semibold">Professional Link</h2>
               <input
@@ -816,8 +839,7 @@ const logout = () => {
                     class="input-field border rounded w-full p-2 disabled:bg-gray-200"
                     :disabled="
                       newEducation.educationLevel === 'Elementary' ||
-                      newEducation.educationLevel === 'High School' ||
-                      newEducation.educationLevel === 'Senior High School'
+                      newEducation.educationLevel === 'High School'
                     "
                   />
                 </div>
@@ -903,7 +925,7 @@ const logout = () => {
                   type="text"
                   placeholder="Type a skill"
                   class="input-field flex-1 border rounded p-2"
-                  @keyup.enter="addSkill" 
+                  @keyup.enter="addSkill"
                 />
                 <button
                   type="button"
@@ -931,7 +953,6 @@ const logout = () => {
                 </span>
               </div>
             </div>
-
 
             <!-- Save Button -->
             <div class="flex gap-4">
