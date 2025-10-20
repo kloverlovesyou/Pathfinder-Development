@@ -1,8 +1,26 @@
 <script setup>
 import { ref, onMounted, nextTick } from "vue";
 import "cally";
-const isSidebarOpen = ref(false);
 
+const appliedPosts = ref({});
+const isSidebarOpen = ref(false);
+const bookmarkedPosts = ref({});
+const registeredPosts = ref({});
+
+function cancelApplication(post) {
+  const id = post.careerID;
+  appliedPosts.value[id] = false;
+}
+
+function toggleBookmark(post) {
+  const id = post.trainingID || post.careerID;
+  bookmarkedPosts.value[id] = !bookmarkedPosts.value[id];
+}
+
+function toggleRegister(post) {
+  const id = post.trainingID || post.careerID;
+  registeredPosts.value[id] = !registeredPosts.value[id];
+}
 const selectedTraining = ref(null);
 
 function openTrainingModal(training) {
@@ -216,15 +234,22 @@ function submitApplication() {
     return;
   }
 
+  // ✅ Safety check: make sure a post is selected
+  if (!selectedPost.value) return;
+
+  // Log info (for debugging)
   console.log("Submitting application for:", selectedPost.value);
   console.log("Uploaded file:", uploadedFile.value);
 
-  // TODO: send file + post info to backend with FormData
-  // Example:
+  // (Optional) Here’s where backend logic would go later
   // const formData = new FormData();
   // formData.append("file", uploadedFile.value);
   // formData.append("careerID", selectedPost.value.careerID);
   // await axios.post("/api/apply", formData);
+
+  // ✅ Mark this specific post as "applied"
+  const id = selectedPost.value.careerID;
+  appliedPosts.value[id] = true;
 
   alert("Application submitted successfully!");
   closeApplyModal();
@@ -375,6 +400,7 @@ function submitApplication() {
     <!-- Post Details Modal -->
     <dialog v-if="selectedPost" open class="modal sm:modal-middle">
       <div class="modal-box max-w-3xl relative font-poppins">
+        <!-- Close button -->
         <button
           class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
           @click="closeModal"
@@ -382,30 +408,67 @@ function submitApplication() {
           ✕
         </button>
 
-        <!-- Training -->
+        <!-- ✅ Training -->
         <div v-if="isTraining(selectedPost)">
           <h2 class="text-xl font-bold mb-2">{{ selectedPost.title }}</h2>
           <p class="text-sm text-gray-600 mb-2">
             Organization: {{ organizations[selectedPost.organizationID] }}
           </p>
+
           <div class="my-4 flex justify-end gap-2">
+            <!-- Bookmark -->
             <button
               class="btn btn-outline btn-sm"
-              @click="bookmarkPost(selectedPost)"
+              @click="toggleBookmark(selectedPost)"
             >
-              Bookmark
+              {{
+                bookmarkedPosts[
+                  selectedPost.trainingID || selectedPost.careerID
+                ]
+                  ? "Bookmarked"
+                  : "Bookmark"
+              }}
             </button>
+
+            <!-- Register (for training only) -->
             <button
-              class="btn bg-customButton btn-sm text-white"
-              @click="registerTraining(selectedPost)"
+              v-if="isTraining(selectedPost)"
+              class="btn btn-sm text-white"
+              :class="
+                registeredPosts[selectedPost.trainingID]
+                  ? 'bg-gray-500'
+                  : 'bg-customButton'
+              "
+              @click="toggleRegister(selectedPost)"
             >
-              Register
+              {{
+                registeredPosts[selectedPost.trainingID]
+                  ? "Unregister"
+                  : "Register"
+              }}
+            </button>
+
+            <!-- Apply (for career posts only) -->
+            <button
+              v-if="!appliedPosts[selectedPost.careerID]"
+              class="btn btn-sm bg-customButton text-white"
+              @click="openApplyModal(selectedPost)"
+            >
+              Apply
+            </button>
+
+            <button
+              v-else
+              class="btn btn-sm bg-gray-500 text-white"
+              @click="cancelApplication(selectedPost)"
+            >
+              Cancel Application
             </button>
           </div>
+
           <p>
             <strong>Mode:</strong> {{ selectedPost.mode || "Not specified" }}
           </p>
-
           <p><strong>Description:</strong> {{ selectedPost.description }}</p>
           <p>
             <strong>Schedule:</strong>
@@ -413,52 +476,8 @@ function submitApplication() {
           </p>
           <p><strong>Location:</strong> {{ selectedPost.location }}</p>
         </div>
-        <!-- Training Modal (Opened from inside a Career Post) -->
-        <dialog v-if="selectedTraining" open class="modal sm:modal-middle">
-          <div class="modal-box max-w-3xl relative font-poppins">
-            <button
-              class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
-              @click="closeTrainingModal"
-            >
-              ✕
-            </button>
 
-            <h2 class="text-xl font-bold mb-2">{{ selectedTraining.title }}</h2>
-            <p class="text-sm text-gray-600 mb-2">
-              Organization: {{ organizations[selectedTraining.organizationID] }}
-            </p>
-
-            <div class="my-4 flex justify-end gap-2">
-              <button
-                class="btn btn-outline btn-sm"
-                @click="bookmarkPost(selectedTraining)"
-              >
-                Bookmark
-              </button>
-              <button
-                class="btn bg-customButton btn-sm text-white"
-                @click="registerTraining(selectedTraining)"
-              >
-                Register
-              </button>
-            </div>
-
-            <p>
-              <strong>Mode:</strong>
-              {{ selectedTraining.mode || "Not specified" }}
-            </p>
-            <p>
-              <strong>Description:</strong> {{ selectedTraining.description }}
-            </p>
-            <p>
-              <strong>Schedule:</strong>
-              {{ formatDateTime(selectedTraining.schedule) }}
-            </p>
-            <p><strong>Location:</strong> {{ selectedTraining.location }}</p>
-          </div>
-        </dialog>
-
-        <!-- Career -->
+        <!-- ✅ Career -->
         <div v-else>
           <h2 class="text-xl font-bold mb-2">{{ selectedPost.position }}</h2>
           <p class="text-sm text-gray-600 mb-2">
@@ -467,17 +486,34 @@ function submitApplication() {
 
           <!-- Buttons -->
           <div class="my-4 flex justify-end gap-2">
+            <!-- Bookmark -->
             <button
               class="btn btn-outline btn-sm"
-              @click="bookmarkPost(selectedPost)"
+              @click="toggleBookmark(selectedPost)"
             >
-              Bookmark
+              {{
+                bookmarkedPosts[
+                  selectedPost.trainingID || selectedPost.careerID
+                ]
+                  ? "Bookmarked"
+                  : "Bookmark"
+              }}
             </button>
+            <!-- Apply / Cancel (for career posts only) -->
             <button
+              v-if="!appliedPosts[selectedPost.careerID]"
               class="btn btn-sm bg-customButton text-white"
               @click="openApplyModal(selectedPost)"
             >
               Apply
+            </button>
+
+            <button
+              v-else
+              class="btn btn-sm bg-gray-500 text-white"
+              @click="cancelApplication(selectedPost)"
+            >
+              Cancel Application
             </button>
           </div>
 
@@ -498,7 +534,7 @@ function submitApplication() {
             {{ formatDate(selectedPost.deadlineOfSubmission) }}
           </p>
 
-          <!-- Recommended Trainings Section -->
+          <!-- ✅ Recommended Trainings (career only) -->
           <div class="mt-6">
             <h3 class="text-base font-semibold mb-3">Recommended Trainings</h3>
 
@@ -566,7 +602,7 @@ function submitApplication() {
               type="submit"
               class="btn bg-customButton hover:bg-dark-slate text-white btn-sm"
             >
-              Submit Application
+              Submit
             </button>
           </div>
         </form>
