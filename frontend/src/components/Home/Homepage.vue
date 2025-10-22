@@ -241,13 +241,6 @@ function submitApplication() {
   console.log("Submitting application for:", selectedPost.value);
   console.log("Uploaded file:", uploadedFile.value);
 
-  // (Optional) Here’s where backend logic would go later
-  // const formData = new FormData();
-  // formData.append("file", uploadedFile.value);
-  // formData.append("careerID", selectedPost.value.careerID);
-  // await axios.post("/api/apply", formData);
-
-  // ✅ Mark this specific post as "applied"
   const id = selectedPost.value.careerID;
   appliedPosts.value[id] = true;
 

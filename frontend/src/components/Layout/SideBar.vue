@@ -4,7 +4,7 @@
     <div
       ref="sidebar"
       :class="[
-        'h-screen bg-dark-slate text-white transition-all duration-300 flex flex-col pl-1',
+        'h-screen bg-dark-slate text-white transition-all duration-300 flex flex-col',
         isExpanded ? 'w-75 px-4' : 'w-16 items-center',
       ]"
     >
