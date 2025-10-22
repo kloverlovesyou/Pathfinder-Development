@@ -60,22 +60,22 @@ const loadBookmarks = async () => {
     ]);
 
     console.log("✅ Trainings data from API:", trainingsData.data);
-console.log("✅ Careers data from API:", careersData.data);
+     console.log("✅ Careers data from API:", careersData.data);
     bookmarks.value = [
       ...trainingRes.data.map((id) => ({
         trainingID: id,
         training: trainingsData.data.find((t) => t.trainingID === id) || null,
       })),
-      ...careerRes.data.map((id) => ({
-        careerID: id,
-        career: careersData.data.find((c) => c.careerID === id) || null,
+      ...careerRes.data.map((b) => ({
+        careerID: b.careerID,
+        career: careersData.data.find((c) => c.careerID === b.careerID) || null,
       })),
     ];
 
     // ✅ ADD THIS HERE
-    console.log("✅ Bookmarks loaded:", bookmarks.value);
-    console.log("📚 Trainings fetched:", trainingsData.data);
-    console.log("💼 Careers fetched:", careersData.data);
+   console.log("✅ Career bookmarks:", careerRes.data);
+console.log("💼 All careers:", careersData.data);
+console.log("🔹 Mapped careers:", bookmarks.value.filter(b => b.career));
 
   } catch (error) {
     console.error("❌ Failed to load bookmarks:", error.response?.data || error);
@@ -352,9 +352,7 @@ onMounted(() => {
                       {{ career.position }}
                     </h3>
                     <p class="text-sm text-gray-600">
-                      {{
-                        career.organization?.name || "Unknown Org"
-                      }}
+                      {{ career.organization?.name || "Unknown Org" }}
                     </p>
                   </div>
                 </div>
