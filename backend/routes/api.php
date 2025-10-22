@@ -16,6 +16,7 @@ use App\Http\Controllers\CareerController;
 use App\Http\Controllers\TrainingBookmarkController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\CareerBookmarkController;
+use App\Http\Controllers\SearchController;
 
 //no auth required
 Route::get('/trainings', [TrainingController::class, 'index']);
@@ -118,5 +119,5 @@ Route::middleware('auth.custom')->group(function () {
     Route::delete('/bookmarks/{trainingID}', [TrainingBookmarkController::class, 'destroy']);
 });
 
-
+Route::get('/search', [SearchController::class, 'search']);
 
