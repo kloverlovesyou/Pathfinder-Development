@@ -72,6 +72,15 @@ const loadBookmarks = async () => {
   }
 };
 
+async function fetchOrganizations() {
+  try {
+    const response = await axios.get("http://127.0.0.1:8000/api/organization");
+    organizations.value = response.data;
+    console.log("✅ Loaded organizations:", organizations.value);
+  } catch (error) {
+    console.error("❌ Error fetching organizations:", error);
+  }
+};
 // ✅ Remove a bookmark
 const removeBookmark = async (trainingID) => {
   try {
@@ -135,35 +144,6 @@ const bookmarkedCareers = ref([
   },
 ]);
 
-const bookmarkedTrainings = ref([
-  {
-    trainingID: 10,
-    title: "Advanced Vue.js Workshop",
-    organizationID: 1,
-    schedule: "2025-10-22T09:00:00",
-    description: "Deep dive into Vue 3 Composition API and Pinia.",
-    mode: "Online",
-    location: "Zoom",
-  },
-  {
-    trainingID: 11,
-    title: "Project Management Essentials",
-    organizationID: 3,
-    schedule: "2025-11-05T14:00:00",
-    description: "Master the fundamentals of managing agile projects.",
-    mode: "In-person",
-    location: "InnovateX HQ",
-  },
-  {
-    trainingID: 12,
-    title: "Effective Team Communication",
-    organizationID: 2,
-    schedule: "2025-12-01T10:00:00",
-    description: "Improve workplace collaboration and communication.",
-    mode: "Online",
-    location: "Microsoft Teams",
-  },
-]);
 
 function formatDate(date) {
   return new Date(date).toLocaleDateString("en-US", { dateStyle: "long" });

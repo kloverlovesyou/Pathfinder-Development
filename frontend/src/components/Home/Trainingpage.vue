@@ -61,6 +61,16 @@ async function fetchBookmarks() {
   }
 }
 
+async function fetchOrganizations() {
+  try {
+    const res = await axios.get("http://127.0.0.1:8000/api/organization");
+    organizations.value = res.data;
+    console.log("✅ Organizations loaded:", organizations.value);
+  } catch (error) {
+    console.error("❌ Error fetching organizations:", error);
+  }
+}
+
 // Toggle bookmark
 async function toggleBookmark(trainingId) {
   const token = localStorage.getItem("token");
@@ -180,9 +190,11 @@ async function fetchMyRegistrations() {
 // 🚀 Lifecycle Hooks
 // ============================
 onMounted(async () => {
+  await fetchOrganizations();
   await fetchTrainings();
   await fetchMyRegistrations();
   await fetchBookmarks(); // ✅ Fetch user bookmarks from backend
+
 });
 
 onActivated(() => {
@@ -286,7 +298,7 @@ function formatDate(d) {
       <!-- Training Cards -->
       <div class="space-y-4">
         <div
-          v-for="training in trainings"
+          v-for="training in trainingsWithOrg"
           :key="training.trainingID"
           class="p-4 bg-blue-gray rounded-lg relative hover:bg-gray-300 transition cursor-pointer"
           @click="openTrainingModal(training)"
@@ -294,7 +306,7 @@ function formatDate(d) {
           <!-- Card content -->
           <h3 class="font-semibold text-lg">{{ training.title }}</h3>
           <p class="text-gray-700 font-medium">
-            {{ training.organization.name }}
+            {{ training.organizationName }}
           </p>
         </div>
       </div>
