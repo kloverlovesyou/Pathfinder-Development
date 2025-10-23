@@ -312,19 +312,16 @@ const modalQR = reactive({
 function startModalQRCountdown(training) {
   if (!training.attendance_key || !training.attendance_expires_at) return;
 
-  // QR code URL
-  qrCodeValue.value = `http://127.0.0.1:8000/api/attendance/checkin?trainingID=${training.trainingID}&key=${training.attendance_key}`;
+  qrCodeValue.value = training.attendance_key; // just use the key
+  qrCountdown.value = "";
 
-  // Convert server date to Philippine Time
-  const expiresAt = new Date(training.attendance_expires_at);
-  const phTime = new Date(expiresAt.getTime() + PH_TIME_OFFSET * 60 * 1000);
+  const expiresAt = new Date(training.attendance_expires_at); // use server time directly
 
-  // Clear previous interval
   if (qrInterval) clearInterval(qrInterval);
 
   const updateCountdown = () => {
     const now = new Date();
-    const diff = phTime - now;
+    const diff = expiresAt - now;
 
     if (diff <= 0) {
       qrCountdown.value = "00:00";
@@ -609,18 +606,7 @@ function formatDate(d) {
           Organization: {{ selectedTraining.organizationName }}
         </p>
 
-        <!-- QR Code for registered trainings -->
-         <div v-if="myRegistrations.has(selectedTraining.trainingID)">
-              <div v-if="qrCodeValue">
-                <qrcode-vue :value="qrCodeValue" :size="150" class="my-4" />
-                <p class="text-sm text-gray-600 mt-1">
-                  Expires in: {{ qrCountdown }}
-                </p>
-              </div>
-              <div v-else>
-                <p class="text-sm text-gray-500 mt-4">QR code not yet generated or expired.</p>
-              </div>
-            </div>
+
         <!-- Action Buttons -->
         <div class="my-4 flex justify-end gap-2">
           <!-- Bookmark -->
@@ -663,7 +649,21 @@ function formatDate(d) {
           {{ formatDateTime(selectedTraining.schedule) }}
         </p>
         <p><strong>Location:</strong> {{ selectedTraining.location }}</p>
+
+                <!-- QR Code for registered trainings -->
+        <div v-if="myRegistrations.has(selectedTraining.trainingID)">
+          <div v-if="selectedTraining.attendance_key">
+            <qrcode-vue :value="selectedTraining.attendance_key" :size="150" class="my-4" />
+            <p class="text-sm text-gray-600 mt-1">
+              Expires in: {{ qrCountdowns[selectedTraining.trainingID] || formatDateTime(selectedTraining.attendance_expires_at) }}
+            </p>
+          </div>
+          <div v-else>
+            <p class="text-sm text-gray-500 mt-4">QR code not yet generated or expired.</p>
+          </div>
+        </div>
       </div>
+      
     </dialog>
 
     <!-- Toast Notifications -->
