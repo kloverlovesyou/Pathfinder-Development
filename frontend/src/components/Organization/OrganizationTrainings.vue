@@ -188,54 +188,54 @@
         
       </section>
 
-<!-- Registrants Modal -->
-<div v-if="showRegistrantsModal" class="modal-overlay" @click.self="closeModal">
-  <div class="modal-content">
-    <button class="modal-close-btn" @click="closeModal">✕</button>
-    <h3 class="modal-title">Registrants for {{ selectedTraining.title }}</h3>
+          <!-- Registrants Modal -->
+          <div v-if="showRegistrantsModal" class="modal-overlay" @click.self="closeModal">
+            <div class="modal-content">
+              <button class="modal-close-btn" @click="closeModal">✕</button>
+              <h3 class="modal-title">Registrants for {{ selectedTraining.title }}</h3>
 
-    <div class="registrants-table-container">
-      <table>
-        <thead>
-          <tr>
-            <th>FULL NAME</th>
-            <th>REGISTRATION DATE</th>
-            <th>STATUS</th>
-            <th class="cert-col-header">CERTIFICATE</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="person in registrantsList" :key="person.id">
-            <td>
-              <p class="registrant-name">{{ person.name }}</p>
-            </td>
-            <td>
-               <p class="registration-date">{{ person.dateRegistered }}</p>
-            </td>
-            <td :class="{
-             'status-attended': person.status === 'Attended',
-             'status-registered': person.status === 'Registered',
-             'status-did-not-attend': person.status === 'Did not Attend'
-                  }">
-             {{ person.status }}
-           </td>
+              <div class="registrants-table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>FULL NAME</th>
+                      <th>REGISTRATION DATE</th>
+                      <th>STATUS</th>
+                      <th class="cert-col-header">CERTIFICATE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="person in registrantsList" :key="person.id">
+                      <td>
+                        <p class="registrant-name">{{ person.name }}</p>
+                      </td>
+                      <td>
+                        <p class="registration-date">{{ person.dateRegistered }}</p>
+                      </td>
+                      <td :class="{
+                      'status-attended': person.status === 'Attended',
+                      'status-registered': person.status === 'Registered',
+                      'status-did-not-attend': person.status === 'Did not Attend'
+                            }">
+                      {{ person.status }}
+                    </td>
 
-            <td>
-              <button
-                class="action-btn"
-                :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
-                :disabled="person.hasCertificate"
-                @click="openCertUploadModal(person)"
-              >
-                 {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
+                      <td>
+                        <button
+                          class="action-btn"
+                          :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
+                          :disabled="person.hasCertificate"
+                          @click="openCertUploadModal(person)"
+                        >
+                          {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
 
       <!-- Training Details Modal -->
       <div v-if="showTrainingDetailsModal" class="modal-overlay" @click.self="closeTrainingDetails">
@@ -267,10 +267,18 @@
           </p>
 
           <div class="training-actions">
-            <button class="btn-view-registrants" @click="handleViewRegistrants">
+            <button class="btn-view-registrants" @click="handleViewRegistrants(selectedTraining)">
               View Registrants
             </button>
           </div>
+              <!-- ✅ Show QR only if training is live/upcoming within allowed time -->
+            <div 
+              v-if="qrCodeValue && activeTrainingId === selectedTraining.trainingID && isTrainingActive(selectedTraining)" 
+              class="qr-container"
+                >
+              <h3>QR Code (Expires at: {{ qrExpiresAt }})</h3>
+              <qrcode-vue :value="qrCodeValue" :size="200" />
+            </div>            
         </div>
       </div>
 
@@ -441,13 +449,21 @@
 <script>
 import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
 import axios from "axios";
+import QrcodeVue from "qrcode.vue";
+
+
 
 export default {
+  components: { QrcodeVue }, // ✅ register component
   data() {
     return {
       dictLogo,
       showAllUpcoming: false,
       showAllCompleted: false,
+      qrCodeValue: null,
+      qrExpiresAt: null,
+      activeTrainingId: null, // which training shows the QR
+      qrExpireTimeout: null, // to clear old QR timers
 
       /* ==========================
          ✅ Dropdown Menu States
@@ -486,6 +502,10 @@ export default {
         location: "",
         trainingLink: "",
       },
+
+      QrcodeVue:"",
+      qrExpiresAt: "",
+       activeTrainingId: null // which training shows the QR
     };
   },
 
@@ -493,6 +513,14 @@ export default {
     toggleSidebar() {
       this.isSidebarOpen = !this.isSidebarOpen;
     },
+
+      handleViewRegistrants(training) {
+    if (!training) {
+      console.error("❌ handleViewRegistrants called without training");
+      return;
+    }
+    this.openRegistrantsModal(training);
+  },
 
     /* ==========================
        ✅ Dropdown Menu Logic
@@ -513,12 +541,34 @@ export default {
       this.openUpcomingMenu = null;
       this.openCompletedMenu = null;
     },
+    
+       scheduleQR(training) {
+          // If QR already active for this training, do nothing
+          if (this.activeTrainingId === training.trainingID && this.qrCodeValue) return;
+
+          const now = new Date();
+          const trainingTime = new Date(training.schedule);
+          const msUntilStart = trainingTime - now;
+
+          if (msUntilStart <= 0) {
+            // Already started or past, generate immediately
+            this.generateQR(training);
+          } else {
+            setTimeout(() => this.generateQR(training), msUntilStart);
+            console.log(`QR for "${training.title}" will generate in ${msUntilStart / 1000}s`);
+          }
+        },
+
 
     handleOutsideClick(e) {
       if (!e.target.closest(".menu")) {
         this.closeAllMenus();
       }
     },
+
+
+         // ✅ Generate QR and call backend
+         
 
           /* ==========================
         ✅ Registrants Modal
@@ -635,13 +685,18 @@ export default {
        ✅ Trainings Fetch
     ========================== */
     async fetchTrainings() {
-      try {
-        const response = await axios.get("http://127.0.0.1:8000/api/trainings");
-        this.upcomingtrainings = response.data;
-      } catch (error) {
-        console.error("ERROR FETCHING TRAININGS: ", error);
-      }
+      const response = await axios.get("http://127.0.0.1:8000/api/trainings");
+      const newTrainings = response.data;
+
+      newTrainings.forEach(training => {
+        // Only schedule if this training isn’t in upcomingtrainings yet
+        if (!this.upcomingtrainings.some(t => t.trainingID === training.trainingID)) {
+          this.upcomingtrainings.push(training);
+          this.scheduleQR(training);
+        }
+      });
     },
+    
 
     /* ==========================
        ✅ Training Popup Methods
@@ -750,8 +805,56 @@ export default {
         return schedule;
       }
     },
+
+     /* ✅ ADD THIS FUNCTION HERE */
+    async generateQR(training) {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.post(
+          "http://127.0.0.1:8000/api/trainings/generate-qr",
+          { trainingID: training.trainingID },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        // Assign QR data
+        this.qrCodeValue = `http://127.0.0.1:8000/api/attendance/checkin?trainingID=${training.trainingID}&key=${response.data.key}`;
+        this.qrExpiresAt = new Date(response.data.expires_at); // make it a Date object
+        this.activeTrainingId = training.trainingID;
+
+        console.log(`✅ QR Generated for "${training.title}", expires at ${this.qrExpiresAt}`);
+
+        // Clear previous timer if any
+        if (this.qrExpireTimeout) clearTimeout(this.qrExpireTimeout);
+
+        // Calculate remaining time until expiration
+        const now = new Date();
+        const msUntilExpire = this.qrExpiresAt - now;
+
+        if (msUntilExpire > 0) {
+          this.qrExpireTimeout = setTimeout(() => {
+            this.qrCodeValue = null;
+            this.qrExpiresAt = null;
+            this.activeTrainingId = null;
+            console.log(`QR for "${training.title}" expired.`);
+          }, msUntilExpire);
+        } else {
+          // Already expired
+          this.qrCodeValue = null;
+          this.qrExpiresAt = null;
+          this.activeTrainingId = null;
+          console.log(`QR for "${training.title}" already expired.`);
+        }
+
+      } catch (error) {
+        console.error("QR GENERATION FAILED:", error);
+        alert("Failed to generate QR");
+      }
+    },
+
+    
   },
 
+  
   mounted() {
     this.fetchTrainings();
     document.addEventListener("click", this.handleOutsideClick);
@@ -791,10 +894,12 @@ export default {
 
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted , computed } from "vue";
 import { useRouter } from "vue-router";
 const isSidebarOpen = ref(true);
 const organizationName = ref("");
+const now = ref(new Date());
+
 
 // Toggle sidebar
 const toggleSidebar = () => {
@@ -814,6 +919,15 @@ const navigateTo = (route) => {
   router.push(route);
 }
 
+
+function isTrainingActive(training) {
+  const trainingDate = new Date(training.schedule);
+  return now.value <= trainingDate;
+}
+
+setInterval(() => {
+  now.value = new Date();
+}, 60000); // every minute
 // Get org name from localStorage on mount
 onMounted(() => {
   const storedUser = localStorage.getItem("user");
@@ -1389,7 +1503,7 @@ tbody td {
 .modal-close-btn {
   position: absolute;
   top: 10px;
-  right: 10px;
+  right: 15px;
   background: transparent;
   border: none;
   font-size: 20px;

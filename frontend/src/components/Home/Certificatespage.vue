@@ -368,9 +368,14 @@ function showToast(message, type = "success", duration = 3000) {
                 type="file"
                 accept="image/*"
                 class="file-input"
+                :disabled="!cert.title.trim()"
                 @change="handleFileUpload($event, index)"
               />
             </div>
+
+            <p v-if="!cert.title.trim()" class="text-red-500 text-sm">
+            ⚠️ Please enter a title before uploading a file.
+            </p>
 
             <div v-if="cert.image" class="h-32 w-full flex items-center justify-center border rounded">
               <img :src="cert.image" alt="Preview" class="h-32 object-cover rounded-lg" />

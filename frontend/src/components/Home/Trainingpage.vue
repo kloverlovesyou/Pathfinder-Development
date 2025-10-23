@@ -1,6 +1,18 @@
 <script setup>
-import { ref, onMounted, computed, onActivated } from "vue";
+import { ref, onMounted, computed, onActivated, reactive } from "vue";
 import axios from "axios";
+import QrcodeVue from "qrcode.vue";
+const qrCodeValue = ref(null);
+const qrExpiresAt = ref(null);
+const qrActiveTrainingId = ref(null);
+const qrCountdowns = reactive({});
+let qrCountdownInterval = null;
+let qrInterval = null;
+const qrCountdown = ref("00:00");
+
+
+// Date of PH
+const PH_TIME_OFFSET = 8 * 60; // +8 hours in minutes
 
 // Organizations
 const organizations = ref([]);
@@ -33,8 +45,16 @@ const trainingsWithOrg = computed(() =>
 // 📌 Modal Controls
 // ============================
 function openTrainingModal(training) {
+  console.log("Opening training modal:", training);
+  console.log("Attendance key:", training.attendance_key);
+  console.log("Expires at:", training.attendance_expires_at);
+  
   selectedTraining.value = training;
   isModalOpen.value = true;
+
+  if (myRegistrations.has(training.trainingID)) {
+    startModalQRCountdown(training);
+  }
 }
 function closeModal() {
   isModalOpen.value = false;
@@ -58,6 +78,16 @@ async function fetchBookmarks() {
     bookmarkedTrainings.value = data;
   } catch (error) {
     console.error("Error fetching bookmarks:", error);
+  }
+}
+
+async function fetchOrganizations() {
+  try {
+    const res = await axios.get("http://127.0.0.1:8000/api/organization");
+    organizations.value = res.data;
+    console.log("✅ Organizations loaded:", organizations.value);
+  } catch (error) {
+    console.error("❌ Error fetching organizations:", error);
   }
 }
 
@@ -169,20 +199,156 @@ async function fetchMyRegistrations() {
   try {
     const token = localStorage.getItem("token");
     if (!token) return;
+
     const res = await axios.get("http://127.0.0.1:8000/api/registrations", {
       headers: { Authorization: `Bearer ${token}` },
     });
-    myRegistrations.value = new Set(res.data.map((r) => r.trainingID));
+
+    myRegistrations.value = new Set(res.data.map(r => r.trainingID));
+
+    // If any QR exists for the applicant, start countdown
+    const activeQRTraining = res.data.find(r => r.attendance_key && r.attendance_expires_at);
+    if (activeQRTraining) {
+      startQRCountdown(activeQRTraining);
+    }
+
   } catch (_) {}
+}
+
+// fetchQRCode
+
+const registeredTrainingsWithQR = computed(() => {
+  return trainingsWithOrg.value
+    .filter(t => myRegistrations.value.has(t.trainingID))
+    .map(t => {
+      const isActiveQR = qrActiveTrainingId.value === t.trainingID;
+      return {
+        ...t,
+        qrKey: t.attendance_key,
+        qrExpires: t.attendance_expires_at,
+        isActiveQR,
+        qrCountdown: isActiveQR ? qrCountdown.value : null
+      };
+    });
+});
+
+//QR Countdown
+function startQRCountdown(training) {
+  // Stop previous interval
+  if (qrCountdownInterval) clearInterval(qrCountdownInterval);
+
+  qrCodeValue.value = `http://127.0.0.1:8000/api/attendance/checkin?trainingID=${training.trainingID}&key=${training.attendance_key}`;
+  qrExpiresAt.value = new Date(training.attendance_expires_at);
+  qrActiveTrainingId.value = training.trainingID;
+
+  const updateCountdown = () => {
+    const now = new Date();
+    const diff = qrExpiresAt.value - now;
+
+    if (diff <= 0) {
+      qrCodeValue.value = null;
+      qrExpiresAt.value = null;
+      qrActiveTrainingId.value = null;
+      qrCountdown.value = "00:00";
+      clearInterval(qrCountdownInterval);
+    } else {
+      const minutes = Math.floor(diff / 60000).toString().padStart(2, "0");
+      const seconds = Math.floor((diff % 60000) / 1000).toString().padStart(2, "0");
+      qrCountdown.value = `${minutes}:${seconds}`;
+    }
+  };
+
+  updateCountdown();
+  qrCountdownInterval = setInterval(updateCountdown, 1000);
+}
+
+//start all countdowns for existing QR codes
+function startAllQRCountdowns() {
+  // Clear existing intervals
+  Object.values(qrIntervals).forEach(clearInterval);
+  qrIntervals = {};
+
+  function startAllQRCountdowns() {
+  // Clear any previous intervals
+  Object.values(qrIntervals).forEach(clearInterval);
+  qrIntervals = {};
+
+  trainingsWithOrg.value.forEach(training => {
+    if (myRegistrations.value.has(training.trainingID) && training.attendance_expires_at) {
+      const trainingId = training.trainingID;
+
+      const updateCountdown = () => {
+        const now = new Date();
+        const expires = new Date(training.attendance_expires_at);
+        const diff = expires - now;
+
+        if (diff <= 0) {
+          qrCountdowns[trainingId] = "00:00";
+          clearInterval(qrIntervals[trainingId]);
+        } else {
+          const minutes = Math.floor(diff / 60000).toString().padStart(2, "0");
+          const seconds = Math.floor((diff % 60000) / 1000).toString().padStart(2, "0");
+          qrCountdowns[trainingId] = `${minutes}:${seconds}`;
+        }
+      };
+
+      // Initialize the key so template reacts immediately
+      qrCountdowns[trainingId] = "loading...";
+
+      updateCountdown(); // initial call
+      qrIntervals[trainingId] = setInterval(updateCountdown, 1000);
+    }
+  });
+}
+
+const modalQR = reactive({
+  value: null,
+  expiresAt: null,
+  countdown: "00:00",
+  interval: null,
+});
+
+//ModalQrCountdown
+function startModalQRCountdown(training) {
+  if (!training.attendance_key || !training.attendance_expires_at) return;
+
+  qrCodeValue.value = training.attendance_key; // just use the key
+  qrCountdown.value = "";
+
+  const expiresAt = new Date(training.attendance_expires_at); // use server time directly
+
+  if (qrInterval) clearInterval(qrInterval);
+
+  const updateCountdown = () => {
+    const now = new Date();
+    const diff = expiresAt - now;
+
+    if (diff <= 0) {
+      qrCountdown.value = "00:00";
+      qrCodeValue.value = null;
+      clearInterval(qrInterval);
+    } else {
+      const minutes = Math.floor(diff / 60000).toString().padStart(2, "0");
+      const seconds = Math.floor((diff % 60000) / 1000).toString().padStart(2, "0");
+      qrCountdown.value = `${minutes}:${seconds}`;
+    }
+  };
+
+  updateCountdown();
+  qrInterval = setInterval(updateCountdown, 1000);
+}
 }
 
 // ============================
 // 🚀 Lifecycle Hooks
 // ============================
 onMounted(async () => {
+  await fetchOrganizations();
   await fetchTrainings();
   await fetchMyRegistrations();
   await fetchBookmarks(); // ✅ Fetch user bookmarks from backend
+  startAllQRCountdowns();
+  setInterval(fetchTrainings, 30000);
 });
 
 onActivated(() => {
@@ -260,7 +426,11 @@ onMounted(async () => {
 
 function formatDateTime(dt) {
   if (!dt) return "";
-  return new Date(dt).toLocaleString("en-US", {
+  const date = new Date(dt);
+  // Convert to Philippine Time
+  const phDate = new Date(date.getTime() + PH_TIME_OFFSET * 60 * 1000);
+
+  return phDate.toLocaleString("en-PH", {
     dateStyle: "long",
     timeStyle: "short",
   });
@@ -284,20 +454,33 @@ function formatDate(d) {
         </h2>
       </div>
       <!-- Training Cards -->
-      <div class="space-y-4">
-        <div
-          v-for="training in trainings"
-          :key="training.trainingID"
-          class="p-4 bg-blue-gray rounded-lg relative hover:bg-gray-300 transition cursor-pointer"
-          @click="openTrainingModal(training)"
-        >
-          <!-- Card content -->
-          <h3 class="font-semibold text-lg">{{ training.title }}</h3>
-          <p class="text-gray-700 font-medium">
-            {{ training.organization.name }}
-          </p>
-        </div>
-      </div>
+        <div class="space-y-4">
+            <div
+              v-for="training in trainingsWithOrg"
+              :key="training.trainingID"
+              class="p-4 bg-blue-gray rounded-lg relative hover:bg-gray-300 transition cursor-pointer"
+              @click="openTrainingModal(training)"
+            >
+              <!-- Card content -->
+              <h3 class="font-semibold text-lg">{{ training.title }}</h3>
+              <p class="text-gray-700 font-medium">
+                {{ training.organizationName }}
+              </p>
+
+              <!-- QR code: only if user registered -->
+              <div v-if="myRegistrations.has(training.trainingID)" class="mt-4">
+                <div v-if="training.attendance_key">
+                  <qrcode-vue :value="training.attendance_key" :size="120" />
+                  <p class="text-sm text-gray-600 mt-1">
+                    Expires in: {{ qrCountdowns[training.trainingID] || formatDateTime(training.attendance_expires_at) }}
+                  </p>
+                </div>
+                <div v-else>
+                  <p class="text-sm text-gray-500">QR code not yet generated or expired.</p>
+                </div>
+              </div>
+            </div>
+          </div>
     </div>
 
     <!-- OVERLAY -->
@@ -423,6 +606,7 @@ function formatDate(d) {
           Organization: {{ selectedTraining.organizationName }}
         </p>
 
+
         <!-- Action Buttons -->
         <div class="my-4 flex justify-end gap-2">
           <!-- Bookmark -->
@@ -465,7 +649,21 @@ function formatDate(d) {
           {{ formatDateTime(selectedTraining.schedule) }}
         </p>
         <p><strong>Location:</strong> {{ selectedTraining.location }}</p>
+
+                <!-- QR Code for registered trainings -->
+        <div v-if="myRegistrations.has(selectedTraining.trainingID)">
+          <div v-if="selectedTraining.attendance_key">
+            <qrcode-vue :value="selectedTraining.attendance_key" :size="150" class="my-4" />
+            <p class="text-sm text-gray-600 mt-1">
+              Expires in: {{ qrCountdowns[selectedTraining.trainingID] || formatDateTime(selectedTraining.attendance_expires_at) }}
+            </p>
+          </div>
+          <div v-else>
+            <p class="text-sm text-gray-500 mt-4">QR code not yet generated or expired.</p>
+          </div>
+        </div>
       </div>
+      
     </dialog>
 
     <!-- Toast Notifications -->
