@@ -542,7 +542,10 @@ export default {
       this.openCompletedMenu = null;
     },
     
-        scheduleQR(training) {
+       scheduleQR(training) {
+          // If QR already active for this training, do nothing
+          if (this.activeTrainingId === training.trainingID && this.qrCodeValue) return;
+
           const now = new Date();
           const trainingTime = new Date(training.schedule);
           const msUntilStart = trainingTime - now;
@@ -554,7 +557,7 @@ export default {
             setTimeout(() => this.generateQR(training), msUntilStart);
             console.log(`QR for "${training.title}" will generate in ${msUntilStart / 1000}s`);
           }
-  },
+        },
 
 
     handleOutsideClick(e) {
@@ -682,21 +685,16 @@ export default {
        ✅ Trainings Fetch
     ========================== */
     async fetchTrainings() {
-      try {
-        const response = await axios.get("http://127.0.0.1:8000/api/trainings");
-        this.upcomingtrainings = response.data;
+      const response = await axios.get("http://127.0.0.1:8000/api/trainings");
+      const newTrainings = response.data;
 
-        // Schedule QR generation for upcoming trainings
-        this.upcomingtrainings.forEach(training => {
-          const trainingTime = new Date(training.schedule);
-          if (trainingTime >= new Date()) {
-            this.scheduleQR(training);
-          }
-        });
-
-      } catch (error) {
-        console.error("ERROR FETCHING TRAININGS: ", error);
-      }
+      newTrainings.forEach(training => {
+        // Only schedule if this training isn’t in upcomingtrainings yet
+        if (!this.upcomingtrainings.some(t => t.trainingID === training.trainingID)) {
+          this.upcomingtrainings.push(training);
+          this.scheduleQR(training);
+        }
+      });
     },
     
 
