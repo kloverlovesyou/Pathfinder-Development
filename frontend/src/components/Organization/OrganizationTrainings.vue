@@ -809,37 +809,49 @@ export default {
     },
 
      /* ✅ ADD THIS FUNCTION HERE */
-     async generateQR(training) {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        "http://127.0.0.1:8000/api/trainings/generate-qr",
-        { trainingID: training.trainingID },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+    async generateQR(training) {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.post(
+          "http://127.0.0.1:8000/api/trainings/generate-qr",
+          { trainingID: training.trainingID },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-      // Assign QR data
-      this.qrCodeValue = `http://127.0.0.1:8000/api/attendance/checkin?trainingID=${training.trainingID}&key=${response.data.key}`;
-      this.qrExpiresAt = response.data.expires_at;
-      this.activeTrainingId = training.trainingID;
+        // Assign QR data
+        this.qrCodeValue = `http://127.0.0.1:8000/api/attendance/checkin?trainingID=${training.trainingID}&key=${response.data.key}`;
+        this.qrExpiresAt = new Date(response.data.expires_at); // make it a Date object
+        this.activeTrainingId = training.trainingID;
 
-      console.log(`✅ QR Generated for "${training.title}"`);
+        console.log(`✅ QR Generated for "${training.title}", expires at ${this.qrExpiresAt}`);
 
-      // Clear previous timer if any
-      if (this.qrExpireTimeout) clearTimeout(this.qrExpireTimeout);
+        // Clear previous timer if any
+        if (this.qrExpireTimeout) clearTimeout(this.qrExpireTimeout);
 
-      // Hide QR only after 30 minutes
-      this.qrExpireTimeout = setTimeout(() => {
-        this.qrCodeValue = null;
-        this.qrExpiresAt = null;
-        this.activeTrainingId = null;
-        console.log(`QR for "${training.title}" expired.`);
-      }, 30 * 60 * 1000); // 30 minutes
-    } catch (error) {
-      console.error("QR GENERATION FAILED:", error);
-      alert("Failed to generate QR");
-    }
-  },
+        // Calculate remaining time until expiration
+        const now = new Date();
+        const msUntilExpire = this.qrExpiresAt - now;
+
+        if (msUntilExpire > 0) {
+          this.qrExpireTimeout = setTimeout(() => {
+            this.qrCodeValue = null;
+            this.qrExpiresAt = null;
+            this.activeTrainingId = null;
+            console.log(`QR for "${training.title}" expired.`);
+          }, msUntilExpire);
+        } else {
+          // Already expired
+          this.qrCodeValue = null;
+          this.qrExpiresAt = null;
+          this.activeTrainingId = null;
+          console.log(`QR for "${training.title}" already expired.`);
+        }
+
+      } catch (error) {
+        console.error("QR GENERATION FAILED:", error);
+        alert("Failed to generate QR");
+      }
+    },
 
     
   },
