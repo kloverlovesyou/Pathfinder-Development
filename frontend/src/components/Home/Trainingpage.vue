@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, computed, onActivated } from "vue";
 import axios from "axios";
+import QrcodeVue from "qrcode.vue";
 
 // Organizations
 const organizations = ref([]);
@@ -186,6 +187,17 @@ async function fetchMyRegistrations() {
   } catch (_) {}
 }
 
+// fetchQRCode
+
+const registeredTrainingsWithQR = computed(() => {
+  return trainingsWithOrg.value
+    .filter(t => myRegistrations.value.has(t.trainingID))
+    .map(t => ({
+      ...t,
+      qrKey: t.attendance_key,
+      qrExpires: t.attendance_expires_at
+    }));
+});
 // ============================
 // 🚀 Lifecycle Hooks
 // ============================
@@ -195,6 +207,7 @@ onMounted(async () => {
   await fetchMyRegistrations();
   await fetchBookmarks(); // ✅ Fetch user bookmarks from backend
 
+  setInterval(fetchTrainings, 30000);
 });
 
 onActivated(() => {
@@ -297,19 +310,32 @@ function formatDate(d) {
       </div>
       <!-- Training Cards -->
       <div class="space-y-4">
-        <div
-          v-for="training in trainingsWithOrg"
-          :key="training.trainingID"
-          class="p-4 bg-blue-gray rounded-lg relative hover:bg-gray-300 transition cursor-pointer"
-          @click="openTrainingModal(training)"
-        >
-          <!-- Card content -->
-          <h3 class="font-semibold text-lg">{{ training.title }}</h3>
-          <p class="text-gray-700 font-medium">
-            {{ training.organizationName }}
-          </p>
+          <div
+            v-for="training in trainingsWithOrg"
+            :key="training.trainingID"
+            class="p-4 bg-blue-gray rounded-lg relative hover:bg-gray-300 transition cursor-pointer"
+            @click="openTrainingModal(training)"
+          >
+            <!-- Card content -->
+            <h3 class="font-semibold text-lg">{{ training.title }}</h3>
+            <p class="text-gray-700 font-medium">
+              {{ training.organizationName }}
+            </p>
+
+            <!-- QR code: only if user registered -->
+            <div v-if="myRegistrations.has(training.trainingID)" class="mt-4">
+              <div v-if="training.attendance_key">
+                <qrcode-vue :value="training.attendance_key" :size="120" />
+                <p class="text-sm text-gray-600 mt-1">
+                  Expires at: {{ formatDateTime(training.attendance_expires_at) }}
+                </p>
+              </div>
+              <div v-else>
+                <p class="text-sm text-gray-500">QR code not yet generated or expired.</p>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
     </div>
 
     <!-- OVERLAY -->
