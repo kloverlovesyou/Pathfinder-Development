@@ -41,22 +41,22 @@ class Kernel extends HttpKernel
     ];
 
     // ✅ Auto-generate QR key 1 minute before or right at schedule
-    protected function schedule(Schedule $schedule)
+        protected function schedule(Schedule $schedule)
     {
         $schedule->call(function () {
             $now = now();
 
             $trainings = Training::where('schedule', '<=', $now)
-                ->whereNull('attendance_key') // Only trainings without QR
+                ->whereNull('attendance_key')
                 ->get();
 
             foreach ($trainings as $training) {
                 $training->attendance_key = Str::random(16);
-                $training->attendance_expires_at = now()->addMinutes(30); // QR valid for 30 minutes
+                $training->attendance_expires_at = now()->addMinutes(30);
                 $training->save();
             }
 
-            // Optional: Remove expired QR keys
+            // Optional: remove expired keys
             $expiredTrainings = Training::whereNotNull('attendance_expires_at')
                 ->where('attendance_expires_at', '<', $now)
                 ->get();
@@ -66,6 +66,6 @@ class Kernel extends HttpKernel
                 $training->attendance_expires_at = null;
                 $training->save();
             }
-
-        })->everyMinute(); // Runs every minute
+        })->everyMinute();
     }
+}
