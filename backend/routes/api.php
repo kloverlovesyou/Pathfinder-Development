@@ -120,4 +120,8 @@ Route::middleware('auth.custom')->group(function () {
 });
 
 Route::get('/search', [SearchController::class, 'search']);
+Route::get('/training/{id}', [SearchController::class, 'getTraining']);
+Route::get('/career/{id}', [SearchController::class, 'getCareer']);
+Route::get('/organization/{id}', [SearchController::class, 'getOrganization']);
+
 
