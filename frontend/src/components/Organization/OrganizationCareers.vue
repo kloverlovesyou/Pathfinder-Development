@@ -25,7 +25,7 @@
           <div v-if="isSidebarOpen" class="profile-section">
             <h3 class="org-name">{{ organizationName }}</h3>
             <div class="profile-actions">
-              <div class="action"@click="navigateTo({ name: 'OrgProfile' })">
+              <div class="action" @click="navigateTo({ name: 'OrgProfile' })">
                 <!-- Update Profile Icon -->
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
@@ -131,14 +131,14 @@
             </div>
 
             <!-- 3-dot menu -->
-            <div class="menu" :key="career.careerID">
-                <div class="menu-icon" @click.stop="toggleUpcomingMenu(career.careerID)">⋮</div>
-                <div v-if="openUpcomingMenu === career.careerID" class="dropdown-menu">
-                  <ul>
-                    <li @click.stop="openApplicantsModal">Applicants</li>
-                  </ul>
-                </div>
+            <div class="menu" :key="career.CareerID">
+              <div class="menu-icon" @click.stop="toggleUpcomingMenu(career.careerID)">⋮</div>
+              <div v-if="openUpcomingMenu === career.careerID" class="dropdown-menu">
+                <ul>
+                  <li @click.stop="openApplicantsModal">Applicants</li>
+                </ul>
               </div>
+            </div>
           </div>
         </div>
       </section>
@@ -173,19 +173,168 @@
         </div>
       </section>
 
+
+
       <!-- Applicants Modal -->
       <div v-if="showApplicantsModal" class="modal-overlay" @click.self="closeModal">
         <div class="modal-content">
           <button class="modal-close-btn" @click="closeModal">✕</button>
-          <h3 class="modal-title">List of Applicants</h3>
-          <div class="Applicants-grid">
-            <div v-for="person in applicantsList" :key="person.id" class="registrant-card">
-              <img :src="person.img" alt="profile" class="profile-pic" />
-              <p>{{ person.name }}</p>
+
+          <h3 class="modal-title">Applicants for {{ selectedCareer.title }}</h3>
+
+          <div class="applicants-table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>FULL NAME</th>
+                  <th>DATE SUBMITTED</th>
+                  <th>APPLICATION STATUS</th>
+                  <th>REQUIREMENTS</th>
+                  <th>INTERVIEW SCHEDULING</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="person in applicantsList" :key="person.id">
+                  <td>
+                    <p class="applicant-name">{{ person.name }}</p>
+                  </td>
+                  <td>
+                    <p class="application-date">{{ person.dateSubmitted }}</p>
+                  </td>
+
+                  <td :class="{
+                    'status-for-review': person.status === 'For Review',
+                    'status-scheduled': person.status === 'Interview Scheduled',
+                    'status-hired': person.status === 'Hired',
+                    'status-rejected': person.status === 'Rejected'
+                  }">
+                    {{ person.status }}
+                  </td>
+
+                  <!-- Requirements -->
+                  <td class="requirements-col">
+                    <div v-if="person.requirementsSubmitted">
+                      <button class="view-btn" @click="viewRequirements(person)">View</button>
+                      <span class="check-icon">✅</span>
+                    </div>
+                    <div v-else>
+                      <button class="upload-btn" @click="uploadRequirements(person)">Nakalimutan ko ilalagay</button>
+                    </div>
+                  </td>
+
+                  <!-- Interview Scheduling -->
+                  <td>
+                    <!-- For Review -->
+                    <button v-if="person.status === 'For Review'" class="schedule-btn"
+                      @click="openScheduleModal(person)">
+                      Schedule
+                    </button>
+
+                    <!-- Interview Scheduled -->
+                    <button v-else-if="person.status === 'Interview Scheduled'" class="schedule-btn view"
+                      @click="openViewScheduleModal(person)">
+                      View Schedule
+                    </button>
+
+                    <!-- Hired -->
+                    <button v-else-if="person.status === 'Hired'" class="schedule-btn hired" disabled>
+                      Hired
+                    </button>
+
+                    <!-- Rejected -->
+                    <button v-else-if="person.status === 'Rejected'" class="schedule-btn rejected" disabled>
+                      Rejected
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Schedule Modal -->
+      <div v-if="showScheduleModal" class="modal-overlay" @click.self="closeScheduleModal">
+        <div class="modal-box">
+          <button class="modal-close-btn" @click="closeScheduleModal">✕</button>
+          <h3>Schedule Interview for {{ selectedPerson?.name }}</h3>
+
+          <div class="schedule-form">
+            <!-- Date & Time -->
+            <label for="scheduleDate">Date & Time:</label>
+            <div class="date-input-wrapper">
+              <input id="scheduleDate" ref="dateInput" type="datetime-local" v-model="scheduleData.date"
+                @keydown.prevent @keypress.prevent @paste.prevent @input="$event.target.value = $event.target.value" />
+              <span class="calendar-icon" @click.prevent="openCalendar">
+                <!-- SVG icon (click target is the span) -->
+                <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M2.16669 9.41675C2.16669 7.53113 2.16669 6.58832 2.75247 6.00253C3.33826 5.41675 4.28107 5.41675 6.16669 5.41675H19.8334C21.719 5.41675 22.6618 5.41675 23.2476 6.00253C23.8334 6.58832 23.8334 7.53113 23.8334 9.41675V9.83342C23.8334 10.3048 23.8334 10.5405 23.6869 10.687C23.5405 10.8334 23.3048 10.8334 22.8334 10.8334H3.16669C2.69528 10.8334 2.45958 10.8334 2.31313 10.687C2.16669 10.5405 2.16669 10.3048 2.16669 9.83341V9.41675Z"
+                    fill="black" />
+                  <path
+                    d="M22.833 13C23.3042 13 23.5401 13.0002 23.6865 13.1465C23.833 13.2929 23.833 13.5286 23.833 14V19.833C23.833 21.7186 23.8329 22.6613 23.2471 23.2471C22.6613 23.8329 21.7186 23.833 19.833 23.833H6.16699C4.28137 23.833 3.33872 23.8329 2.75293 23.2471C2.16714 22.6613 2.16699 21.7186 2.16699 19.833V14C2.16699 13.5286 2.16703 13.2929 2.31348 13.1465C2.45994 13.0002 2.69576 13 3.16699 13H22.833Z"
+                    fill="black" />
+                  <path d="M7.58331 3.25L7.58331 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
+                  <path d="M18.4167 3.25L18.4167 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
+                </svg>
+              </span>
+            </div>
+
+
+            <!-- Interview Mode -->
+            <div class="mode-selection">
+              <label><input type="radio" value="onSite" v-model="scheduleData.mode" /> On-Site</label>
+              <label><input type="radio" value="online" v-model="scheduleData.mode" /> Online</label>
+            </div>
+
+            <!-- Conditional Fields -->
+            <div v-if="scheduleData.mode === 'onSite'">
+              <label>Location:</label>
+              <input type="text" v-model="scheduleData.detail" placeholder="Enter interview location" />
+            </div>
+
+            <div v-else-if="scheduleData.mode === 'online'">
+              <label>Interview Link:</label>
+              <input type="text" v-model="scheduleData.detail" placeholder="https://meet.google.com/..." />
+            </div>
+
+            <div class="modal-actions">
+              <button class="confirm-btn" @click="confirmSchedule">Confirm</button>
+              <button class="cancel-btn" @click="closeScheduleModal">Cancel</button>
             </div>
           </div>
         </div>
       </div>
+
+
+      <!-- View Schedule Modal -->
+      <div v-if="showViewScheduleModal" class="modal-overlay" @click.self="closeViewScheduleModal">
+        <div class="modal-box">
+          <button class="modal-close-btn" @click="closeViewScheduleModal">✕</button>
+          <h3>Interview Schedule for {{ selectedPerson?.name }}</h3>
+
+          <div class="view-schedule-info">
+            <p><strong>Date:</strong> {{ selectedPerson?.interviewDate }}</p>
+            <p><strong>Time:</strong> {{ selectedPerson?.interviewTime }}</p>
+            <p><strong>Mode:</strong> {{ selectedPerson?.mode }}</p>
+
+            <p v-if="selectedPerson?.mode === 'On-Site'">
+              <strong>Location:</strong> {{ selectedPerson?.linkOrLocation }}
+            </p>
+            <p v-else-if="selectedPerson?.mode === 'Online'">
+              <strong>Interview Link:</strong>
+              <a :href="selectedPerson?.linkOrLocation" target="_blank">
+                {{ selectedPerson?.linkOrLocation }}
+              </a>
+            </p>
+          </div>
+
+          <div class="modal-actions">
+            <button class="cancel-btn" @click="closeViewScheduleModal">Close</button>
+          </div>
+        </div>
+      </div>
+
 
       <!-- Career Popup Modal -->
       <div v-if="showCareerPopup" class="career-popup-overlay">
@@ -199,17 +348,34 @@
           <h2 class="career-popup-title">Post Career</h2>
 
           <!-- Form -->
-          <form @submit.prevent="saveCareer" class="Caeer-popup-form">
+          <form @submit.prevent="saveCareer" class="Career-popup-form">
             <input v-model="newCareer.position" type="text" placeholder="Position" class="career-input" />
             <input v-model="newCareer.details" type="text" placeholder="Details and Instruction" class="career-input" />
             <textarea v-model="newCareer.qualifications" placeholder="Qualifications" class="career-input"></textarea>
             <textarea v-model="newCareer.requirements" placeholder="Requirements" class="career-input"></textarea>
             <input v-model="newCareer.letterAddress" type="text" placeholder="Application Letter Address"
               class="career-input" />
-            <input v-model="newCareer.deadline" type="text" placeholder="Deadline of Submission" class="career-input" />
+            <!-- Deadline input with calendar icon (career) -->
+            <div class="deadline-input-wrapper">
+              <input type="date" v-model="newCareer.deadline" placeholder="Deadline of Submission"
+                class="career-input" />
+              <span class="calendar-icon">
+                <!-- use the same SVG you shared -->
+                <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M2.16669 9.4165C2.16669 7.53089 2.16669 6.58808 2.75247 6.00229C3.33826 5.4165 4.28107 5.4165 6.16669 5.4165H19.8334C21.719 5.4165 22.6618 5.4165 23.2476 6.00229C23.8334 6.58808 23.8334 7.53089 23.8334 9.4165V9.83317C23.8334 10.3046 23.8334 10.5403 23.6869 10.6867C23.5405 10.8332 23.3048 10.8332 22.8334 10.8332H3.16669C2.69528 10.8332 2.45958 10.8332 2.31313 10.687C2.16669 10.5405 2.16669 10.3048 2.16669 9.83317V9.4165Z"
+                    fill="#4a4a4a" />
+                  <path
+                    d="M22.833 13C23.3042 13 23.5401 13.0002 23.6865 13.1465C23.833 13.2929 23.833 13.5286 23.833 14V19.833C23.833 21.7186 23.8329 22.6613 23.2471 23.2471C22.6613 23.8329 21.7186 23.833 19.833 23.833H6.16699C4.28137 23.833 3.33872 23.8329 2.75293 23.2471C2.16714 22.6613 2.16699 21.7186 2.16699 19.833V14C2.16699 13.5286 2.16703 13.2929 2.31348 13.1465C2.45994 13.0002 2.69576 13 3.16699 13H22.833ZM8.58301 19.5C8.11182 19.5 7.87591 19.5001 7.72949 19.6465C7.58321 19.7929 7.58301 20.0288 7.58301 20.5V20.667C7.58301 21.1382 7.58308 21.3741 7.72949 21.5205C7.87591 21.6669 8.11182 21.667 8.58301 21.667H10.917C11.3882 21.667 11.6241 21.6669 11.7705 21.5205C11.9169 21.3741 11.917 21.1382 11.917 20.667V20.5C11.917 20.0288 11.9168 19.7929 11.7705 19.6465C11.6241 19.5001 11.3882 19.5 10.917 19.5H8.58301ZM15.083 19.5C14.6118 19.5 14.3759 19.5001 14.2295 19.6465C14.0832 19.7929 14.083 20.0288 14.083 20.5V20.667C14.083 21.1382 14.0831 21.3741 14.2295 21.5205C14.3759 21.6669 14.6118 21.667 15.083 21.667H17.417C17.8882 21.667 18.1241 21.6669 18.2705 21.5205C18.4169 21.3741 18.417 21.1382 18.417 20.667V20.5C18.417 20.0288 18.4168 19.7929 18.2705 19.6465C18.1241 19.5001 17.8882 19.5 17.417 19.5H15.083ZM8.58301 15.167C8.11182 15.167 7.87591 15.1671 7.72949 15.3135C7.58337 15.4599 7.58301 15.6959 7.58301 16.167V16.333C7.58301 16.8041 7.58337 17.0401 7.72949 17.1865C7.87591 17.3329 8.11182 17.333 8.58301 17.333H10.917C11.3882 17.333 11.6241 17.3329 11.7705 17.1865C11.9166 17.0401 11.917 16.8041 11.917 16.333V16.167C11.917 15.6959 11.9166 15.4599 11.7705 15.3135C11.6241 15.1671 11.3882 15.167 10.917 15.167H8.58301ZM15.083 15.167C14.6118 15.167 14.3759 15.1671 14.2295 15.3135C14.0834 15.4599 14.083 15.6959 14.083 16.167V16.333C14.083 16.8041 14.0834 17.0401 14.2295 17.1865C14.3759 17.3329 14.6118 17.333 15.083 17.333H17.417C17.8882 17.333 18.1241 17.3329 18.2705 17.1865C18.4166 17.0401 18.417 16.8041 18.417 16.333V16.167C18.417 15.6959 18.4166 15.4599 18.2705 15.3135C18.1241 15.1671 17.8882 15.167 17.417 15.167H15.083Z"
+                    fill="#4a4a4a" />
+                  <path d="M7.58331 3.25L7.58331 6.5" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round" />
+                  <path d="M18.4167 3.25L18.4167 6.5" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round" />
+                </svg>
+              </span>
+            </div>
 
             <!-- Save -->
-            <button type="submit" class="career-save-btn">Save</button>
+            <button type="submit" class="career-save-btn">Post</button>
           </form>
         </div>
       </div>
@@ -239,6 +405,7 @@
 <script>
 import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
 import axios from "axios";
+import api from "@/api/axios";
 
 export default {
   data() {
@@ -250,18 +417,90 @@ export default {
       showCareerDetailsModal: false,
       selectedCareer: {},
 
+      showApplicantsModal: false,
+      showViewScheduleModal: false,
+      showScheduleModal: false,
+      selectedPerson: null,
+
+      scheduleData: {
+        date: "",
+        mode: "",
+        detail: "",
+      },
+
       applicantsList: [
-        { id: 1, name: "John Doe", img: "https://i.pravatar.cc/100?img=1" },
-        { id: 2, name: "Maria Santos", img: "https://i.pravatar.cc/100?img=2" },
-        { id: 3, name: "David Cruz", img: "https://i.pravatar.cc/100?img=3" },
-        { id: 4, name: "Anna Lee", img: "https://i.pravatar.cc/100?img=4" },
-        { id: 5, name: "Mark Reyes", img: "https://i.pravatar.cc/100?img=5" },
-        { id: 6, name: "Sophia Tan", img: "https://i.pravatar.cc/100?img=6" },
-        { id: 7, name: "James Lim", img: "https://i.pravatar.cc/100?img=7" },
-        { id: 8, name: "Christine Dela Cruz", img: "https://i.pravatar.cc/100?img=8" },
-        { id: 9, name: "Robert Mendoza", img: "https://i.pravatar.cc/100?img=9" },
-        { id: 10, name: "Isabella Garcia", img: "https://i.pravatar.cc/100?img=10" },
+        {
+          id: 1,
+          name: "John Doe",
+          dateSubmitted: "September 10, 2025",
+          status: "For Review",
+          requirements: ["Resume", "Cover Letter", "Portfolio"]
+        },
+        {
+          id: 2,
+          name: "Maria Santos",
+          dateSubmitted: "September 12, 2025",
+          status: "Rejected",
+          requirements: ["Resume", "Transcript of Records"]
+        },
+        {
+          id: 3,
+          name: "David Cruz",
+          dateSubmitted: "September 14, 2025",
+          status: "Interview Scheduled",
+          requirements: ["Resume", "Character Reference"]
+        },
+        {
+          id: 4,
+          name: "Anna Lee",
+          dateSubmitted: "September 16, 2025",
+          status: "Hired",
+          requirements: ["Resume", "NBI Clearance", "Medical Certificate"]
+        },
+        {
+          id: 5,
+          name: "Mark Reyes",
+          dateSubmitted: "September 18, 2025",
+          status: "Rejected",
+          requirements: ["Resume", "Portfolio"]
+        },
+        {
+          id: 6,
+          name: "Sophia Tan",
+          dateSubmitted: "September 19, 2025",
+          status: "For Review",
+          requirements: ["Resume", "Cover Letter"]
+        },
+        {
+          id: 7,
+          name: "James Lim",
+          dateSubmitted: "September 20, 2025",
+          status: "Interview Scheduled",
+          requirements: ["Resume", "Character Reference", "Transcript of Records"]
+        },
+        {
+          id: 8,
+          name: "Christine Dela Cruz",
+          dateSubmitted: "September 21, 2025",
+          status: "Rejected",
+          requirements: ["Resume", "Portfolio"]
+        },
+        {
+          id: 9,
+          name: "Robert Mendoza",
+          dateSubmitted: "September 22, 2025",
+          status: "For Review",
+          requirements: ["Resume", "Cover Letter"]
+        },
+        {
+          id: 10,
+          name: "Isabella Garcia",
+          dateSubmitted: "September 25, 2025",
+          status: "Hired",
+          requirements: ["Resume", "NBI Clearance", "Medical Certificate"]
+        },
       ],
+
 
       showApplicantsModal: false,
       upcomingCareers: [],
@@ -333,6 +572,102 @@ export default {
       this.showApplicantsModal = false;
     },
 
+    // ✅ OPEN SCHEDULE MODAL (only when status = For Review)
+    openScheduleModal(person) {
+      if (person.status === "For Review") {
+        this.selectedPerson = person;
+        this.showScheduleModal = true;
+        this.showViewScheduleModal = false;
+      }
+    },
+    closeScheduleModal() {
+      this.showScheduleModal = false;
+      this.scheduleData = { date: "", onSite: false, online: false, link: "" };
+    },
+
+    // ✅ OPEN VIEW SCHEDULE MODAL (only when status = Interview Scheduled)
+    openViewScheduleModal(person) {
+      if (person.status === "Interview Scheduled") {
+        this.selectedPerson = person;
+        this.showViewScheduleModal = true;
+        this.showScheduleModal = false;
+      }
+    },
+    closeViewScheduleModal() {
+      this.showViewScheduleModal = false;
+    },
+    openCalendar() {
+      const input = this.$refs.dateInput;
+      if (!input) {
+        console.warn("dateInput ref not found");
+        return;
+      }
+
+      // Try the modern showPicker() first (works in some browsers)
+      try {
+        if (typeof input.showPicker === "function") {
+          input.showPicker();
+          return;
+        }
+      } catch (err) {
+        console.debug("showPicker() failed:", err);
+      }
+
+      // Next try focusing then clicking (some browsers open picker on click/focus)
+      try {
+        input.focus();
+        // Clicking the input sometimes triggers the native UI
+        input.click();
+        return;
+      } catch (err) {
+        console.debug("input.click()/focus failed:", err);
+      }
+
+      // Final fallback: open a small helper so user can still pick — alert as last resort
+      console.warn("Native picker was not opened programmatically by the browser. Consider adding a JS datepicker as a reliable fallback.");
+    },
+
+    confirmSchedule() {
+      if (!this.scheduleData.date) {
+        alert("Please select a date and time.");
+        return;
+      }
+
+      if (!this.scheduleData.mode) {
+        alert("Please select interview mode (On-Site or Online).");
+        return;
+      }
+
+      if (!this.scheduleData.detail) {
+        alert(
+          this.scheduleData.mode === "onSite"
+            ? "Please enter the interview location."
+            : "Please enter the interview link."
+        );
+        return;
+      }
+
+      const interviewDate = new Date(this.scheduleData.date);
+      this.selectedPerson.interviewDate = interviewDate.toLocaleDateString();
+      this.selectedPerson.interviewTime = interviewDate.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      this.selectedPerson.mode =
+        this.scheduleData.mode === "onSite" ? "On-Site" : "Online";
+      this.selectedPerson.linkOrLocation = this.scheduleData.detail;
+      this.selectedPerson.status = "Interview Scheduled";
+
+      this.closeScheduleModal();
+    },
+
+    viewRequirements(person) {
+      alert(`Viewing requirements for ${person.name}`);
+    },
+    uploadRequirements(person) {
+      alert(`Uploading requirements for ${person.name}`);
+    },
+
     async fetchCareers() {
       try {
         const response = await axios.get("http://127.0.0.1:8000/api/careers");
@@ -361,27 +696,63 @@ export default {
       this.openApplicantsModal();
     },
 
-    async saveCareer() {
-      try {
-        if (
-          !this.newCareer.position ||
-          !this.newCareer.details ||
-          !this.newCareer.qualifications ||
-          !this.newCareer.requirements ||
-          !this.newCareer.letterAddress ||
-          !this.newCareer.deadline
-        ) {
-          alert("Please fill out all fields before saving.");
-          return;
-        }
+   async saveCareer() {
+  try {
+    if (
+      !this.newCareer.position ||
+      !this.newCareer.details ||
+      !this.newCareer.qualifications ||
+      !this.newCareer.requirements ||
+      !this.newCareer.letterAddress ||
+      !this.newCareer.deadline
+    ) {
+      alert("⚠️ Please fill out all fields before saving.");
+      return;
+    }
 
-        const response = await axios.post("http://127.0.0.1:8000/api/careers", this.newCareer);
-        this.upcomingCareers.push(response.data);
-        this.closeCareerPopup();
-      } catch (error) {
-        console.error("ERROR SAVING CAREER:", error);
+    const token = localStorage.getItem("token");
+
+    const response = await api.post(
+      "http://127.0.0.1:8000/api/careers",
+      this.newCareer,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       }
-    },
+    );
+
+    // ✅ Backend responded successfully
+    if (response.data.message === "Career already exists") {
+      alert("⚠️ This career is already posted.");
+    } else {
+      alert("✅ Career successfully saved!");
+      this.upcomingCareers.push(response.data);
+      this.closeCareerPopup();
+      this.resetNewCareer();
+
+       await this.fetchCareers();
+    }
+  } catch (error) {
+    console.error("ERROR SAVING CAREER:", error);
+
+    // 🧩 Handle specific errors
+    if (error.response) {
+      if (error.response.status === 401) {
+        alert("🔒 Unauthorized: Please log in again.");
+      } else if (error.response.status === 409) {
+        alert("⚠️ This career already exists!");
+      } else if (error.response.status === 422) {
+        alert("⚠️ Validation failed. Please check your inputs.");
+      } else {
+        alert("❌ Something went wrong. Please try again.");
+      }
+    } else {
+      alert("🚫 Unable to connect to the server.");
+    }
+  }
+},
 
     resetNewCareer() {
       this.newCareer = {
@@ -413,6 +784,7 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 const isSidebarOpen = ref(true);
 const organizationName = ref("");
+
 
 // Toggle sidebar
 const toggleSidebar = () => {
@@ -878,15 +1250,45 @@ const logout = () => {
 
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: 2000;
+}
+
+.modal {
+  background: white;
+  padding: 25px;
+  border-radius: 15px;
+  width: 350px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 15px;
+  gap: 10px;
+}
+
+.confirm-btn {
+  background-color: #334155;
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background-color: #334155;
+  color: #111;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 10px;
+  cursor: pointer;
 }
 
 .modal-content {
@@ -894,7 +1296,7 @@ const logout = () => {
   background: #fff;
   padding: 20px;
   border-radius: 12px;
-  width: 500px;
+  width: 1100px;
   max-height: 80vh;
   overflow-y: auto;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -903,7 +1305,7 @@ const logout = () => {
 .modal-close-btn {
   position: absolute;
   top: 10px;
-  right: 10px;
+  right: 15px;
   background: transparent;
   border: none;
   font-size: 20px;
@@ -963,6 +1365,16 @@ const logout = () => {
   /* clear black text */
 }
 
+/* Counter Badge */
+.count-badge {
+  background-color: #374151;
+  color: white;
+  font-weight: bold;
+  padding: 0.15rem 0.9rem;
+  border-radius: 9999px;
+  font-size: 0.9rem;
+}
+
 /* Post Career CSS */
 .career-popup-overlay {
   position: fixed;
@@ -978,7 +1390,7 @@ const logout = () => {
   background: #f9fafb;
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-  width: 400px;
+  width: 600px;
   padding: 24px;
   position: relative;
 }
@@ -1032,75 +1444,6 @@ const logout = () => {
 
 .career-save-btn:hover {
   background: #1f2937;
-}
-
-/* Post Training CSS */
-.career-radio-group {
-  display: flex;
-  gap: 20px;
-  font-size: 14px;
-  color: #374151;
-}
-
-.career-save-btn {
-  background: #374151;
-  color: white;
-  font-size: 14px;
-  font-weight: 500;
-  padding: 10px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-}
-
-.career-save-btn:hover {
-  background: #1f2937;
-}
-
-/* Schedule input styles */
-.schedule-input-wrapper {
-  position: relative;
-}
-
-.schedule-input-wrapper input[type="date"] {
-  width: 100%;
-  padding: 10px 40px 10px 10px;
-  /* space for icon */
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  background: #fff;
-  color: #000;
-  /* input text black */
-  font-size: 14px;
-}
-
-/* Hide default date picker icon (browser) */
-.schedule-input-wrapper input[type="date"]::-webkit-calendar-picker-indicator {
-  opacity: 0;
-  position: absolute;
-  right: 0;
-  width: 100%;
-  height: 100%;
-  cursor: pointer;
-}
-
-/* Position calendar SVG */
-.schedule-input-wrapper .calendar-icon {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-
-/* Counter Badge */
-.count-badge {
-  background-color: #374151;
-  color: white;
-  font-weight: bold;
-  padding: 0.15rem 0.9rem;
-  border-radius: 9999px;
-  font-size: 0.9rem;
 }
 
 /* Posting Botton */
@@ -1219,5 +1562,447 @@ const logout = () => {
 .hamburger.shifted {
   transform: translateX(140px);
   /* Adjust this to your sidebar width */
+}
+
+/* Calendar for Deadline of Submission */
+.deadline-input-wrapper {
+  position: relative;
+}
+
+.deadline-input-wrapper input[type="date"] {
+  width: 100%;
+  padding: 10px 40px 10px 10px;
+  /* space for icon */
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  color: #000;
+  font-size: 14px;
+}
+
+/* Hide default calendar icon (browser default) */
+.deadline-input-wrapper input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+/* Calendar icon position */
+:deep(.deadline-input-wrapper .calendar-icon) {
+  position: absolute;
+  right: 12px;
+  top: 37%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  z-index: 2;
+}
+
+/* Applicants Modal */
+.modal-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 16px;
+}
+
+.registrants-table-container {
+  /* Ensures table fits on smaller screens if needed */
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead th {
+  text-align: left;
+  padding: 12px 15px;
+  color: #777;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  font-weight: 600;
+  border-bottom: 1px solid #eee;
+}
+
+tbody tr {
+  border-bottom: 1px solid #f5f5f5;
+  /* Light separator line */
+}
+
+tbody td {
+  padding: 15px 15px;
+  color: #333;
+  font-size: 0.95rem;
+  /* Vertically aligns content in the middle */
+  vertical-align: middle;
+}
+
+/* Status Colors (like in your image) */
+.status-for-review {
+  color: #ffa600;
+  /* Green */
+  font-weight: 500;
+}
+
+.status-scheduled {
+  color: #4CAF50;
+  /* Green */
+  font-weight: 500;
+}
+
+.status-hired {
+  color: #374151;
+  /* Green */
+  font-weight: 500;
+}
+
+.status-rejected {
+  color: #d30707;
+  /* Blue */
+  font-weight: 500;
+}
+
+/* Base Schedule Button */
+.schedule-btn {
+  background-color: #334155;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.schedule-btn:hover {
+  background-color: #1e293b;
+  transform: scale(1.03);
+}
+
+.schedule-btn:disabled {
+  background-color: #cbd5e1;
+  color: #64748b;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* View Schedule Style */
+.schedule-btn.view {
+  background-color: #334155;
+}
+
+.schedule-btn.view:hover {
+  background-color: #1e293b;
+}
+
+.schedule-btn.view:hover:not(:disabled) {
+  background-color: #1e293b;
+}
+
+.dimmed {
+  background-color: #22c55e;
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.blurred {
+  filter: blur(1px) brightness(0.85);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Rejected Applicants - Blur Effect */
+.status-rejected+.interview-col .schedule-btn {
+  filter: blur(1.2px) brightness(0.85);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.interview-info {
+  margin-top: 6px;
+}
+
+.interview-date {
+  font-weight: 500;
+  color: #374151;
+}
+
+.interview-time {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+/* View Schedule Modal */
+.schedule-view p {
+  margin: 8px 0;
+  color: #111827;
+}
+
+.schedule-view a {
+  color: #6d6d6d;
+  text-decoration: none;
+}
+
+.schedule-view a:hover {
+  text-decoration: underline;
+}
+
+/* Interview Modal Form */
+.schedule-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-group label {
+  font-weight: 500;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.form-group label {
+  font-weight: 500;
+  margin-bottom: 4px;
+  display: block;
+}
+
+input[type="datetime-local"],
+input[type="text"] {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.mode-group {
+  display: flex;
+  justify-content: space-around;
+}
+
+.schedule-confirm-btn {
+  background-color: #334155;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  cursor: pointer;
+  margin-top: 10px;
+  align-self: center;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.schedule-confirm-btn:hover {
+  background-color: #1e293b;
+}
+
+/* Schedule Modal and View Schedule Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal-box {
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px 22px;
+  /* slightly reduced padding */
+  width: 100%;
+  max-width: 400px;
+  /* narrower modal */
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  position: relative;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.modal-box h3 {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+  /* tighter title spacing */
+  color: #222;
+  text-align: center;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.date-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.calendar-icon {
+  position: absolute;
+  right: 10px;
+  top: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-icon svg {
+  fill: black;
+  pointer-events: none;
+}
+
+.schedule-form label {
+  display: block;
+  font-weight: 500;
+  margin: 6px 0 3px;
+  /* tighter spacing */
+  color: #000;
+  /* ✅ labels are now black */
+}
+
+.schedule-form input[type="datetime-local"],
+.schedule-form input[type="text"] {
+  width: 100%;
+  padding: 6px 9px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+  background: #fff;
+  /* ✅ makes textboxes white */
+  color: #000;
+  /* ensures readable text */
+}
+
+.mode-selection {
+  display: flex;
+  gap: 12px;
+  /* slightly reduced */
+  margin: 6px 0;
+  /* closer to inputs */
+}
+
+.mode-selection label {
+  cursor: pointer;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.confirm-btn {
+  background: #334155;
+  color: white;
+  border: none;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background: #ddd;
+  border: none;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.confirm-btn:hover {
+  background: #1e293b;
+}
+
+.cancel-btn:hover {
+  background: #bbb;
+}
+
+.view-schedule-info p {
+  margin: 4px 0;
+  /* slightly tighter spacing */
+  font-size: 0.95rem;
+  color: #333;
+}
+
+/* Adjust modal width and spacing */
+.schedule-modal,
+.view-schedule-modal {
+  width: 360px;
+  /* narrower modal */
+  max-width: 90%;
+  background: white;
+  padding: 18px 22px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.input-with-icon {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.input-with-icon input {
+  width: 100%;
+  padding: 8px 38px 8px 10px;
+  /* space for the icon on the right */
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #fff;
+  font-size: 0.9rem;
+  color: #000;
+  box-sizing: border-box;
+  height: 38px;
+}
+
+/* ✅ perfectly center the icon */
+.input-with-icon .calendar-icon {
+  position: absolute;
+  right: 10px;
+  top: 42%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  /* allows clicking through the icon */
+}
+
+.input-with-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: #000;
+  /* solid black */
+  opacity: 1;
+  /* make sure it’s not faded */
+}
+
+@keyframes fadeIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 </style>

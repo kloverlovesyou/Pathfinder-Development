@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, nextTick } from "vue";
 import axios from "axios";
 
 const organizations = ref([]);
@@ -16,6 +16,7 @@ function addToast(message, type = "info") {
   }, 3000);
 }
 
+// ✅ Fetch user's applications
 async function fetchMyApplications() {
   try {
     const token = localStorage.getItem("token");
@@ -27,16 +28,73 @@ async function fetchMyApplications() {
   } catch (_) {}
 }
 
-onMounted(async () => {
-  try {
-    const response = await axios.get("http://127.0.0.1:8000/api/careers");
-    careers.value = response.data;
-  } catch (error) {
-    console.error("Error fetching careers:", error);
-  }
-  await fetchMyApplications();
-});
+// ✅ Fetch user's bookmarked careers
+const bookmarkedCareers = ref(new Set());
 
+async function fetchCareerBookmarks() {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    const res = await axios.get("http://127.0.0.1:8000/api/career-bookmarks", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    bookmarkedCareers.value = new Set(res.data.map((b) => b.careerID));
+  } catch (error) {
+    console.error("Error fetching career bookmarks:", error);
+  }
+}
+
+// ✅ Check if career is bookmarked
+function isCareerBookmarked(careerId) {
+  return bookmarkedCareers.value.has(careerId);
+}
+
+// ✅ Toggle bookmark with backend sync
+async function toggleCareerBookmark(careerId) {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    addToast("PLEASE LOG IN FIRST", "accent");
+    return;
+  }
+
+  try {
+    if (bookmarkedCareers.value.has(careerId)) {
+      // Remove bookmark
+      await axios.delete(
+        `http://127.0.0.1:8000/api/career-bookmarks/${careerId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      bookmarkedCareers.value.delete(careerId);
+      addToast("Bookmark removed", "success");
+    } else {
+      // Add bookmark
+      await axios.post(
+        "http://127.0.0.1:8000/api/career-bookmarks",
+        { careerID: careerId }, // <-- matches your backend
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      bookmarkedCareers.value.add(careerId);
+      addToast("Bookmark added", "success");
+    }
+  } catch (error) {
+    if (error.response?.status === 409) {
+      addToast("Already bookmarked", "accent");
+    } else if (error.response?.status === 422) {
+      addToast("careerID is required", "accent");
+    } else if (error.response?.status === 401) {
+      addToast("Unauthorized. Please log in again", "accent");
+    } else {
+      addToast("Error toggling career bookmark", "accent");
+      console.error("Error toggling career bookmark:", error);
+    }
+  }
+}
+
+// ✅ Fetch careers
 onMounted(async () => {
   try {
     const response = await axios.get("http://127.0.0.1:8000/api/careers");
@@ -44,6 +102,9 @@ onMounted(async () => {
   } catch (error) {
     console.error("Error fetching careers:", error);
   }
+
+  await fetchMyApplications();
+  await fetchCareerBookmarks(); // <-- Fetch bookmarks after login
 });
 
 // Merge careers with organization name
@@ -110,10 +171,8 @@ async function submitApplication() {
     });
 
     addToast("APPLICATION SUBMITTED SUCCESSFULLY", "success");
-    // Mark as applied in UI
     const id = selectedCareer.value.careerID ?? selectedCareer.value.id;
     myApplications.value.add(id);
-
     closeUploadModal();
     closeModal();
   } catch (error) {
@@ -129,46 +188,24 @@ async function submitApplication() {
   }
 }
 
-// Track bookmarked careers (store IDs)
-const bookmarkedCareers = ref(new Set());
-
-// Check if a career is bookmarked
-function isCareerBookmarked(careerId) {
-  return bookmarkedCareers.value.has(careerId);
-}
-
-// Toggle bookmark
-function toggleCareerBookmark(careerId) {
-  if (bookmarkedCareers.value.has(careerId)) {
-    bookmarkedCareers.value.delete(careerId);
-  } else {
-    bookmarkedCareers.value.add(careerId);
-  }
-}
-
-// Calendar + events
+// --- Calendar + Events ---
 const events = ref({});
 const selectedDate = ref("");
 const dayEvents = ref([]);
 const calendarRef = ref(null);
-
-// Modal
 const selectedPost = ref(null);
 
-// Build events map
 function buildEvents() {
   events.value = {};
   posts.value.forEach((post) => {
     const date = post.trainingID
       ? post.schedule.split("T")[0]
       : post.deadlineOfSubmission;
-
     if (!events.value[date]) events.value[date] = [];
     events.value[date].push(post);
   });
 }
 
-// Show events on calendar click
 function showEvents(dateStr) {
   selectedDate.value = dateStr;
   dayEvents.value = events.value[dateStr] || [];
@@ -177,16 +214,13 @@ function showEvents(dateStr) {
 onMounted(async () => {
   await nextTick();
   buildEvents();
-
   const calendar = calendarRef.value;
-  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  const today = new Date().toISOString().split("T")[0];
 
-  // Highlight event days and today
   calendar.addEventListener("render", () => {
     calendar.querySelectorAll("[data-date]").forEach((el) => {
       const dateStr = el.getAttribute("data-date");
       el.classList.remove("event-day", "today");
-
       if (events.value[dateStr]) el.classList.add("event-day");
       if (dateStr === today) el.classList.add("today");
     });
@@ -195,7 +229,6 @@ onMounted(async () => {
   calendar.addEventListener("change", (e) => {
     const pickedDate = e.target.value;
     showEvents(pickedDate);
-
     calendar
       .querySelectorAll("[data-date]")
       .forEach((el) => el.classList.remove("selected-day"));
@@ -203,11 +236,8 @@ onMounted(async () => {
     if (selectedEl) selectedEl.classList.add("selected-day");
   });
 
-  // ✅ Auto-select today's date to show events
-  calendar.value = today; // Set the <calendar-date> selected value
-  showEvents(today); // Load today's events into the panel
-
-  // Manually trigger "change" event to simulate user selecting today
+  calendar.value = today;
+  showEvents(today);
   const event = new Event("change", { bubbles: true });
   calendar.dispatchEvent(event);
 });
@@ -219,6 +249,7 @@ function formatDateTime(dt) {
     timeStyle: "short",
   });
 }
+
 function formatDate(d) {
   if (!d) return "";
   return new Date(d).toLocaleDateString("en-US", {
@@ -383,10 +414,10 @@ function formatDate(d) {
           <!-- Bookmark -->
           <button
             class="btn btn-outline btn-sm"
-            @click="toggleCareerBookmark(selectedCareer.careerID)"
+            @click="toggleCareerBookmark(selectedCareer.careerID ?? selectedCareer.id)"
           >
             {{
-              isCareerBookmarked(selectedCareer.careerID)
+              isCareerBookmarked(selectedCareer.careerID ?? selectedCareer.id)
                 ? "Bookmarked"
                 : "Bookmark"
             }}
