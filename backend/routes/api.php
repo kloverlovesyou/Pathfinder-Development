@@ -62,6 +62,31 @@ Route::middleware('auth.custom')->group(function () {
     Route::get('/career-bookmarks', [CareerBookmarkController::class, 'index']);
     Route::post('/career-bookmarks', [CareerBookmarkController::class, 'store']);
     Route::delete('/career-bookmarks/{careerID}', [CareerBookmarkController::class, 'destroy']);
+
+     // ✅ Attendance QR Code Check-in Route
+    Route::get('/attendance/checkin', function (Request $request) {
+        $user = auth()->user();
+        $training = Training::find($request->trainingID);
+
+        if (!$training || $training->attendance_key !== $request->key) {
+            return response()->json(['message' => 'Invalid QR Code'], 400);
+        }
+
+        if (now()->greaterThan($training->attendance_expires_at)) {
+            return response()->json(['message' => 'QR Code Expired'], 400);
+        }
+
+        Attendance::firstOrCreate([
+            'user_id' => $user->id,
+            'trainingID' => $training->trainingID,
+        ], [
+            'time_in' => now(),
+            'status' => 'present',
+        ]);
+
+        return response()->json(['message' => 'Attendance Recorded ✅'], 200);
+    });
+
 });
 
 

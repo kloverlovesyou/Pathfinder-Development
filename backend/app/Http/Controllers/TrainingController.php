@@ -3,12 +3,34 @@
 namespace App\Http\Controllers;
 
 use App\Models\Training;
+use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 class TrainingController extends Controller
 {
+
+    public function generateQr($id)
+    {
+        $training = Training::findOrFail($id);
+
+        // Generate new 16-char key, expiring in 5 minutes
+        $key = Str::random(16);
+
+        $training->update([
+            'attendance_key' => $key,
+            'attendance_expires_at' => now()->addMinutes(5),
+        ]);
+
+        $url = url("/api/attendance/checkin?trainingID={$id}&key={$key}");
+
+        return response()->json([
+            'qr' => base64_encode(QrCode::format('png')->size(300)->generate($url)),
+            'expires_at' => $training->attendance_expires_at
+        ]);
+    }
+
     public function index()
     {
         //fetch all trainings
