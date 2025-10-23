@@ -2,34 +2,22 @@
 
 namespace App\Http;
 
+use Illuminate\Console\Scheduling\Schedule; // ✅ needed
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
+use Illuminate\Support\Str; // ✅ important
+use App\Models\Training;
 
 class Kernel extends HttpKernel
 {
-    /**
-     * The application's global HTTP middleware stack.
-     *
-     * These middleware are run during every request to your application.
-     *
-     * @var array<int, class-string|string>
-     */
     protected $middleware = [
-        // \App\Http\Middleware\TrustHosts::class,
         \App\Http\Middleware\TrustProxies::class,
         \Illuminate\Http\Middleware\HandleCors::class,
         \App\Http\Middleware\PreventRequestsDuringMaintenance::class,
         \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
         \App\Http\Middleware\TrimStrings::class,
         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
-        
-
     ];
 
-    /**
-     * The application's route middleware groups.
-     *
-     * @var array<string, array<int, class-string|string>>
-     */
     protected $middlewareGroups = [
         'web' => [
             \App\Http\Middleware\EncryptCookies::class,
@@ -41,32 +29,43 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
-            // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
     ];
 
-    /**
-     * The application's middleware aliases.
-     *
-     * Aliases may be used instead of class names to conveniently assign middleware to routes and groups.
-     *
-     * @var array<string, class-string|string>
-     */
     protected $middlewareAliases = [
         'auth' => \App\Http\Middleware\Authenticate::class,
-        'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
-        'auth.session' => \Illuminate\Session\Middleware\AuthenticateSession::class,
-        'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
-        'can' => \Illuminate\Auth\Middleware\Authorize::class,
-        'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
-        'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
-        'precognitive' => \Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests::class,
-        'signed' => \App\Http\Middleware\ValidateSignature::class,
-        'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
-        'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
-        'auth.custom' => \App\Http\Middleware\AuthCustom::class, // custom auth middleware
+        'auth.custom' => \App\Http\Middleware\AuthCustom::class,
         'apitoken' => \App\Http\Middleware\ApiTokenAuth::class,
     ];
-}
+
+    // ✅ Auto-generate QR key 1 minute before or right at schedule
+    protected function schedule(Schedule $schedule)
+    {
+        $schedule->call(function () {
+            $now = now();
+
+            $trainings = Training::where('schedule', '<=', $now)
+                ->whereNull('attendance_key') // Only trainings without QR
+                ->get();
+
+            foreach ($trainings as $training) {
+                $training->attendance_key = Str::random(16);
+                $training->attendance_expires_at = now()->addMinutes(30); // QR valid for 30 minutes
+                $training->save();
+            }
+
+            // Optional: Remove expired QR keys
+            $expiredTrainings = Training::whereNotNull('attendance_expires_at')
+                ->where('attendance_expires_at', '<', $now)
+                ->get();
+
+            foreach ($expiredTrainings as $training) {
+                $training->attendance_key = null;
+                $training->attendance_expires_at = null;
+                $training->save();
+            }
+
+        })->everyMinute(); // Runs every minute
+    }
