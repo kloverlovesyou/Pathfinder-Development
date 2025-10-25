@@ -76,6 +76,8 @@ Route::middleware('auth.custom')->group(function () {
     Route::get('/certificates/{applicantID}', [CertificateController::class, 'index']);
     Route::post('/certificates', [CertificateController::class, 'store']);
     Route::delete('/certificates/{id}', [CertificateController::class, 'destroy']);
+    Route::patch('/certificates/{id}/toggle', [CertificateController::class, 'toggleSelection']); // ✅ toggle select
+    Route::get('/certificates/{applicantID}/selected', [CertificateController::class, 'selectedCertificates']); // ✅ get selected only
 
     // Experience
     Route::get('/experiences', [ProfessionalExperienceController::class, 'show']);
@@ -127,3 +129,5 @@ Route::get('/user', function (Request $request) {
     if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
     return $user;
 });
+
+
