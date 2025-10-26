@@ -37,7 +37,8 @@ class Certification extends Model
 		'certificationName',
 		'certificate',
 		'resumeID',
-		'applicantID'
+		'applicantID',
+		'IsSelected',
 	];
 
 	public function resume()

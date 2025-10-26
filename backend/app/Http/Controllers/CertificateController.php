@@ -8,20 +8,25 @@ use Illuminate\Support\Facades\Storage;
 
 class CertificateController extends Controller
 {
-    // Show all certificates for an applicant
-    public function index($applicantID)
-    {
-        $certificates = Certification::where('applicantID', $applicantID)->get();
+  
+public function index($applicantID)
+{
+    $certificates = Certification::where('applicantID', $applicantID)->get();
 
-        // Convert binary data to base64
-        foreach ($certificates as $cert) {
-            if ($cert->certificate) {
-                $cert->certificate = 'data:image/png;base64,' . base64_encode($cert->certificate);
-            }
-        }
+    $certificates = $certificates->map(function ($cert) {
+        return [
+            'certificationID' => $cert->certificationID,
+            'certificationName' => $cert->certificationName,
+            'certificate' => $cert->certificate
+                ? 'data:image/png;base64,' . base64_encode($cert->certificate)
+                : null,
+            'applicantID' => $cert->applicantID,
+            'IsSelected' => (int) $cert->IsSelected, // ✅ force integer
+        ];
+    });
 
-        return response()->json($certificates);
-    }
+    return response()->json($certificates);
+}
 
     // Upload a new certificate
     public function store(Request $request)
@@ -38,7 +43,9 @@ class CertificateController extends Controller
         $cert = Certification::create([
             'certificationName' => $request->certificationName,
             'certificate' => $binaryData,
-            'applicantID' => $request->applicantID
+            'applicantID' => $request->applicantID,
+            'IsSelected' => 1,
+            
         ]);
 
         $safeCert = $cert->toArray();
@@ -64,5 +71,47 @@ class CertificateController extends Controller
 
             return response()->json(['message' => 'Certificate deleted successfully']);
         }
+
+public function toggleSelection($id)
+{
+    $cert = Certification::find($id);
+
+    if (!$cert) {
+        return response()->json(['message' => 'Certificate not found'], 404);
+    }
+
+    // ✅ Flip the IsSelected value properly (handle null or string values)
+    $cert->IsSelected = $cert->IsSelected ? 0 : 1;
+    $cert->save();
+
+    return response()->json([
+        'message' => $cert->IsSelected
+            ? 'Certificate added to resume'
+            : 'Certificate removed from resume',
+        'IsSelected' => (int) $cert->IsSelected, // ✅ always return as integer
+        'certificationID' => $cert->certificationID,
+    ]);
+}
+
+
+
+// ✅ Get selected certificates for resume
+public function selectedCertificates($applicantID)
+{
+    $certificates = Certification::where('applicantID', $applicantID)
+        ->where('IsSelected', 1)
+        ->get();
+
+    // Convert to base64 for display
+    foreach ($certificates as $cert) {
+        if ($cert->certificate) {
+            $cert->certificate = 'data:image/png;base64,' . base64_encode($cert->certificate);
+        }
+    }
+
+    return response()->json($certificates);
+}
+
+
 
 }
