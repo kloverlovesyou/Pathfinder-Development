@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
 use App\Http\Controllers\{
     ApplicantController,
     OrganizationController,
@@ -16,7 +17,8 @@ use App\Http\Controllers\{
     CareerController,
     TrainingBookmarkController,
     CertificateController,
-    CareerBookmarkController
+    CareerBookmarkController,
+    SearchController
 };
 
 // ----------------------
@@ -74,6 +76,8 @@ Route::middleware('auth.custom')->group(function () {
     Route::get('/certificates/{applicantID}', [CertificateController::class, 'index']);
     Route::post('/certificates', [CertificateController::class, 'store']);
     Route::delete('/certificates/{id}', [CertificateController::class, 'destroy']);
+    Route::patch('/certificates/{id}/toggle', [CertificateController::class, 'toggleSelection']); // ✅ toggle select
+    Route::get('/certificates/{applicantID}/selected', [CertificateController::class, 'selectedCertificates']); // ✅ get selected only
 
     // Experience
     Route::get('/experiences', [ProfessionalExperienceController::class, 'show']);
@@ -106,6 +110,18 @@ Route::delete('/skills/{id}', [SkillController::class, 'destroy']);
 
 Route::delete('/user', [ApplicantController::class, 'destroy']);
 
+Route::middleware('auth.custom')->group(function () {
+    Route::get('/bookmarks', [TrainingBookmarkController::class, 'index']);
+    Route::post('/bookmarks', [TrainingBookmarkController::class, 'store']);
+    Route::delete('/bookmarks/{trainingID}', [TrainingBookmarkController::class, 'destroy']);
+});
+
+Route::get('/search', [SearchController::class, 'search']);
+Route::get('/training/{id}', [SearchController::class, 'getTraining']);
+Route::get('/career/{id}', [SearchController::class, 'getCareer']);
+Route::get('/organization/{id}', [SearchController::class, 'getOrganization']);
+
+
 // Optional: Get authenticated user by token
 Route::get('/user', function (Request $request) {
     $token = $request->bearerToken();
@@ -113,3 +129,5 @@ Route::get('/user', function (Request $request) {
     if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
     return $user;
 });
+
+

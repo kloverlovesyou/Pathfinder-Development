@@ -319,7 +319,10 @@ function sectionHeader(doc, title, x, y, pageWidth, margin) {
   doc.line(margin, y + 2, pageWidth - margin, y + 2);
 }
 
-function generatePdf() {
+async function generatePdf() {
+  const selectedCerts = await fetchSelectedCertificates();
+  resume.certificates = selectedCerts; // Attach to resume
+
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -390,7 +393,7 @@ function generatePdf() {
       const end = exp.endYear ? getYearOnly(exp.endYear) : "Present";
       doc.setFont("times", "bold");
       doc.text(exp.jobTitle || "", margin, y);
-      doc.setFont("times", "regular");
+      doc.setFont("times", "bold");
       doc.text(`${start} – ${end}`, pageWidth - margin, y, { align: "right" });
       y += 6;
       doc.setFont("times", "italic");
@@ -423,6 +426,26 @@ function generatePdf() {
       y,
       pageWidth - 2 * margin
     );
+  }
+
+  // Certificates
+  if (resume.certificates && resume.certificates.length) {
+    y = sectionHeader("Certificates", margin, y, pageWidth, margin);
+    doc.setFont("times", "regular");
+    doc.setFontSize(11);
+
+    resume.certificates.forEach((cert) => {
+      if (y > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+      }
+
+      // ✅ Add bullet point before certificate name
+      const bullet = "•";
+      const certName = cert.certificationName || cert.title || "";
+      doc.text(`${bullet} ${certName}`, margin, y);
+      y += 6;
+    });
   }
 
   const pdfBlob = doc.output("blob");
@@ -458,6 +481,35 @@ const logout = () => {
   localStorage.removeItem("token");
   router.push({ name: "Login" });
 };
+
+const selectedCertificates = ref([]);
+
+async function fetchSelectedCertificates() {
+  const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user"));
+  if (!token || !user?.applicantID) return [];
+
+  try {
+    const response = await axios.get(
+      `http://127.0.0.1:8000/api/certificates/${user.applicantID}/selected`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    // ✅ Update reactive state for the resume page
+    selectedCertificates.value = response.data.filter(
+      (cert) => cert.IsSelected === 1
+    );
+
+    // ✅ Also return it for PDF preview
+    return selectedCertificates.value;
+  } catch (error) {
+    console.error("❌ Error fetching selected certificates:", error);
+    selectedCertificates.value = [];
+    return [];
+  }
+}
+
+onMounted(fetchSelectedCertificates);
 </script>
 
 <template>
@@ -952,6 +1004,26 @@ const logout = () => {
                   </button>
                 </span>
               </div>
+            </div>
+
+            <div class="border rounded p-4 space-y-3">
+              <h3 class="text-lg font-semibold">Certificates</h3>
+
+              <ul v-if="selectedCertificates.length">
+                <li
+                  v-for="cert in selectedCertificates"
+                  :key="cert.certificationID"
+                  class="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-lg hover:bg-gray-100 transition"
+                >
+                  <span class="text-gray-800">{{
+                    cert.certificationName
+                  }}</span>
+                </li>
+              </ul>
+
+              <p v-else class="text-gray-500 text-sm">
+                No certificates selected for your resume.
+              </p>
             </div>
 
             <!-- Save Button -->
