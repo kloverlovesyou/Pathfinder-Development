@@ -234,21 +234,24 @@ const registeredTrainingsWithQR = computed(() => {
 
 //QR Countdown
 function startQRCountdown(training) {
-  // Stop previous interval
+  // Stop any running countdown interval
   if (qrCountdownInterval) clearInterval(qrCountdownInterval);
 
-  qrCodeValue.value = `http://127.0.0.1:8000/api/attendance/checkin?trainingID=${training.trainingID}&key=${training.attendance_key}`;
+  // Set QR code value with training ID and attendance key
+  qrCodeValue.value = `http://192.168.1.247:8000/attendance/submit?trainingID=${training.trainingID}&key=${training.attendance_key}`;
   qrExpiresAt.value = new Date(training.attendance_expires_at);
   qrActiveTrainingId.value = training.trainingID;
 
+  // Countdown updater
   const updateCountdown = () => {
     const now = new Date();
     const diff = qrExpiresAt.value - now;
 
     if (diff <= 0) {
-      qrCodeValue.value = null;
-      qrExpiresAt.value = null;
+      // ✅ Stop, don't regenerate QR
+      qrCodeValue.value = "expired";   // Or set to "expired" if you want to show message
       qrActiveTrainingId.value = null;
+      qrExpiresAt.value = null;
       qrCountdown.value = "00:00";
       clearInterval(qrCountdownInterval);
     } else {
@@ -258,6 +261,7 @@ function startQRCountdown(training) {
     }
   };
 
+  // Start immediately then repeat every second
   updateCountdown();
   qrCountdownInterval = setInterval(updateCountdown, 1000);
 }
