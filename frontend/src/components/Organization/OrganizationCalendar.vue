@@ -122,7 +122,7 @@
           <div v-for="(date, index) in calendarDays" :key="index" class="day-cell" :class="{
             today: isToday(date),
             event: hasEvent(date)
-          }" :style="{ backgroundColor: getEventColor(date) }">
+          }" :style="{ backgroundColor: getEventColor(date) }" @click="openDayModal(date)">
             <span v-if="date" class="date-number">{{ date.getDate() }}</span>
             <div v-if="date && getEventTitles(date).length" class="events-list">
               <div v-for="(title, i) in getEventTitles(date)" :key="i" class="event-title">
@@ -132,12 +132,50 @@
           </div>
         </div>
       </section>
+
+      <!-- Calendar Day Details Modal -->
+      <div v-if="showModal" class="calendar-modal-overlay" @click.self="closeModal">
+        <div class="calendar-modal-content">
+          <!-- Header Row: Title + 3-dot menu -->
+          <div class="calendar-modal-header">
+            <h3>{{ formattedSelectedDate }}</h3>
+
+            <!-- 3-Dot Dropdown Menu -->
+            <div class="calendar-modal-menu">
+              <button class="calendar-modal-menu-btn" @click.stop="toggleMenu">
+                ⋮
+              </button>
+
+              <div v-if="showMenu" class="calendar-modal-dropdown">
+                <button @click="editEvent" class="dropdown-item">Edit</button>
+                <button @click="deleteEvent" class="dropdown-item delete">Delete</button>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="selectedEvents.length">
+            <h4>Events:</h4>
+            <ul>
+              <li v-for="(event, i) in selectedEvents" :key="i">
+                <strong>{{ event.type }}</strong>: {{ event.title }}
+              </li>
+            </ul>
+          </div>
+
+          <div v-else>
+            <p>No events scheduled for this day.</p>
+          </div>
+
+          <button @click="closeModal" class="calendar-modal-close-btn">Close</button>
+        </div>
+      </div>
     </main>
   </div>
 </template>
 
 <script>
 import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
+import axios from "axios";
 
 export default {
   name: "OrganizationCalendar",
@@ -147,33 +185,17 @@ export default {
       currentDate: new Date(),
       dayNames: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
 
+      // 👇 added for modal functionality
+      showModal: false,
+      selectedDate: null,
+      selectedEvents: [],
+      showMenu: false,
+
       // Hardcoded upcoming trainings
-      trainings: [
-        { title: "Cybersecurity Fundamentals", date: "2025-10-12" },
-        { title: "Web Development Bootcamp", date: "2025-10-18" },
-        { title: "Data Privacy Awareness Seminar", date: "2025-10-25" },
-        { title: "Python for Beginners Workshop", date: "2025-11-02" },
-        { title: "Digital Transformation Strategies", date: "2025-11-10" },
-        { title: "Cloud Computing Essentials", date: "2025-11-15" },
-        { title: "Advanced Networking Configuration", date: "2025-11-20" },
-        { title: "Leadership and Communication Skills", date: "2025-11-22" },
-        { title: "AI Tools for Productivity", date: "2025-11-28" },
-        { title: "Disaster Recovery and Risk Management", date: "2025-12-03" }
-      ],
+      trainings: [],
 
       // Hardcoded on-going careers
-      careers: [
-        { title: "DICT Frontend Development Intern", date: "2025-10-10" },
-        { title: "Network Engineer Trainee", date: "2025-10-15" },
-        { title: "Cybersecurity Analyst Intern", date: "2025-10-20" },
-        { title: "UI/UX Design Associate Program", date: "2025-10-22" },
-        { title: "Software QA Tester Trainee", date: "2025-10-25" },
-        { title: "Technical Support Specialist Program", date: "2025-10-30" },
-        { title: "Database Administration Internship", date: "2025-11-05" },
-        { title: "AI Research Assistant Program", date: "2025-11-08" },
-        { title: "Mobile App Development Internship", date: "2025-11-12" },
-        { title: "Project Management Apprentice", date: "2025-11-20" }
-      ]
+      careers: []
     }
   },
   computed: {
@@ -196,9 +218,65 @@ export default {
       for (let d = 1; d <= daysInMonth; d++) days.push(new Date(year, month, d));
 
       return days;
+    },
+
+    // 👇 ADD THIS NEW COMPUTED
+    formattedSelectedDate() {
+      if (!this.selectedDate) return "";
+      return this.selectedDate.toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      });
     }
   },
   methods: {
+    async fetchTrainings() {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const res = await axios.get("http://127.0.0.1:8000/api/trainings", {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      });
+
+      this.trainings = res.data.map(t => ({
+        id: t.trainingID,
+        title: t.title,
+        description: t.description,
+        date: t.schedule.split(" ")[0], 
+        mode: t.mode,
+        location: t.location,
+        link: t.trainingLink,
+        organizationID: t.organization.organizationID,
+      }));
+    },
+
+    async fetchCareers() {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const res = await axios.get("http://127.0.0.1:8000/api/careers", {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      });
+
+      this.careers = res.data.map(c => ({
+        id: c.careerID,
+        title: c.position,
+        details: c.detailsAndInstruction,
+        qualifications: c.qualifications,
+        requirements: c.requirements,
+        letterAddress: c.applicationLetterAddress,
+        date: c.deadlineOfSubmission.split(" ")[0], 
+        organizationID: c.organization.organizationID,
+      }));
+    },
+    formatDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    },
     prevMonth() {
       this.currentDate.setMonth(this.currentDate.getMonth() - 1);
       this.currentDate = new Date(this.currentDate);
@@ -246,10 +324,64 @@ export default {
       const month = String(date.getMonth() + 1).padStart(2, "0");
       const day = String(date.getDate()).padStart(2, "0");
       return `${year}-${month}-${day}`;
+    },
+
+    // 👇 ADD THESE NEW METHODS
+    openDayModal(date) {
+      if (!date) return;
+      this.selectedDate = date;
+
+      const formatted = this.formatDate(date);
+      const trainings = this.trainings
+        .filter(t => t.date === formatted)
+        .map(t => ({ type: "Training", title: t.title }));
+
+      const careers = this.careers
+        .filter(c => c.date === formatted)
+        .map(c => ({ type: "Career", title: c.title }));
+
+      this.selectedEvents = [...trainings, ...careers];
+      this.showModal = true;
+    },
+    closeModal() {
+      this.showModal = false;
+      this.selectedDate = null;
+      this.selectedEvents = [];
+    },
+    toggleMenu() {
+      this.showMenu = !this.showMenu;
+    },
+    closeMenu() {
+      this.showMenu = false;
+    },
+
+    editEvent() {
+      alert("Edit function triggered!");
+      this.closeMenu();
+    },
+    deleteEvent() {
+      const confirmDelete = confirm("Are you sure you want to delete this event?");
+      if (confirmDelete) {
+        alert("Delete function triggered!");
+        // Here you can add your logic to remove the event from `trainings` or `careers`
+      }
+      this.closeMenu();
+    },
+
+    closeModal() {
+      this.showModal = false;
+      this.selectedDate = null;
+      this.selectedEvents = [];
+      this.showMenu = false; // 👈 close menu when modal closes
     }
-  }
+  },
+  mounted() {
+    this.fetchTrainings();
+    this.fetchCareers();
+  },
 };
 </script>
+
 
 <script setup>
 import { ref, onMounted, computed } from "vue";
@@ -695,5 +827,160 @@ const isToday = (date) => {
 .hamburger.shifted {
   transform: translateX(140px);
   /* Adjust this to your sidebar width */
+}
+
+/* === Calendar Modal Styles === */
+.calendar-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.calendar-modal-content {
+  background: #ffffff;
+  padding: 24px 28px;
+  border-radius: 14px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.25);
+  text-align: center;
+  animation: zoomIn 0.25s ease;
+}
+
+.calendar-modal-content h3 {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+  color: #1e293b;
+  /* slate-800 */
+}
+
+.calendar-modal-content h4 {
+  margin-top: 15px;
+  font-weight: 600;
+  color: #44576D;
+  /* blue-600 */
+}
+
+.calendar-modal-content ul {
+  text-align: left;
+  margin: 10px 0 15px;
+  padding-left: 10px;
+}
+
+.calendar-modal-content li {
+  background: #f8fafc;
+  padding: 6px 8px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-size: 0.95rem;
+}
+
+.calendar-modal-close-btn {
+  background: #44576D;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.calendar-modal-close-btn:hover {
+  background: #374151;
+}
+
+/* === Animations === */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes zoomIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0.6;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* === Calendar Modal Header + 3-dot menu === */
+.calendar-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.calendar-modal-menu {
+  position: relative;
+  margin-top: -25px;
+}
+
+.calendar-modal-menu-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #1e293b;
+  padding: 4px;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+
+.calendar-modal-menu-btn:hover {
+  background: #f1f5f9;
+}
+
+.calendar-modal-dropdown {
+  position: absolute;
+  top: 28px;
+  right: 0;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  width: 120px;
+  z-index: 10;
+  overflow: hidden;
+  animation: fadeIn 0.15s ease-in-out;
+}
+
+.calendar-modal-dropdown .dropdown-item {
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  font-size: 0.95rem;
+  cursor: pointer;
+  color: #1e293b;
+  transition: background 0.2s ease;
+}
+
+.calendar-modal-dropdown .dropdown-item:hover {
+  background: #f1f5f9;
+}
+
+.calendar-modal-dropdown .dropdown-item.delete {
+  color: #dc2626;
+  /* red */
 }
 </style>
