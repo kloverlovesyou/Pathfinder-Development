@@ -12,6 +12,7 @@ const bookmarks = ref([]);
 const organizations = ref([]);
 const activeTab = ref("career");
 const screenIsLarge = ref(window.innerWidth >= 1024);
+const myRegistrations = ref(new Set());
 
 // ✅ Modal States
 const selectedPost = ref(null);
@@ -120,6 +121,23 @@ const isBookmarked = (post) => {
   }
 };
 
+
+const loadRegistrations = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const { data } = await axios.get("http://127.0.0.1:8000/api/my-registrations", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    // Assuming data is an array of training IDs
+    myRegistrations.value = new Set(data.map(id => Number(id)));
+  } catch (error) {
+    console.error("❌ Failed to load registrations:", error.response?.data || error);
+  }
+};
+
 // ✅ Modal Handlers
 const openModal = (item) => {
   selectedPost.value = item;
@@ -183,21 +201,37 @@ const bookmarkPost = async (post) => {
   }
 };
 
-const registerTraining = (training) => {
-  console.log("Register clicked for:", training);
-};
-const handleFileUpload = (e) => {
-  uploadedFile.value = e.target.files[0];
-};
-const submitApplication = () => {
-  console.log("Submitting application for:", selectedPost.value);
-  closeApplyModal();
-};
 
-// ✅ Logout
-const logout = () => {
-  localStorage.removeItem("token");
-  router.push("/login");
+const registerTraining = async (training) => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return console.warn("⚠️ No token found");
+
+    if (myRegistrations.value.has(training.trainingID)) {
+      // Unregister
+      await axios.delete(`http://127.0.0.1:8000/api/registrations/${training.trainingID}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      myRegistrations.value.delete(training.trainingID);
+
+      // ✅ Force reactivity
+      myRegistrations.value = new Set([...myRegistrations.value]);
+
+    } else {
+      // Register
+      await axios.post(
+        "http://127.0.0.1:8000/api/registrations",
+        { trainingID: training.trainingID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      myRegistrations.value.add(training.trainingID);
+
+      // ✅ Force reactivity
+      myRegistrations.value = new Set([...myRegistrations.value]);
+    }
+  } catch (error) {
+    console.error("❌ Failed to toggle registration:", error.response?.data || error);
+  }
 };
 
 // ✅ Lifecycle
@@ -488,7 +522,7 @@ onMounted(() => {
                         class="btn bg-customButton btn-sm text-white"
                         @click="registerTraining(selectedPost)"
                       >
-                        Register
+                        {{ myRegistrations.has(selectedPost.trainingID) ? "Unregister" : "Register" }}
                       </button>
                     </div>
                     <p>
