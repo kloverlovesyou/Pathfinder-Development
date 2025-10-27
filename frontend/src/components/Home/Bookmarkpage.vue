@@ -145,6 +145,18 @@ const logout = () => {
 onMounted(() => {
   fetchOrganizations();
   loadBookmarks();
+
+    const savedUser = localStorage.getItem("user");
+  if (savedUser) {
+    try {
+      const user = JSON.parse(savedUser);
+      userName.value = `${user.firstName} ${user.lastName}`;
+    } catch {
+      userName.value = "Guest";
+    }
+  } else {
+    userName.value = "Guest";
+  }
 });
 </script>
 

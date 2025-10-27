@@ -142,35 +142,68 @@ function isTrainingBookmarked(trainingId) {
 // ============================
 // 📝 Registration Function
 // ============================
-async function registerForTraining(training) {
+
+
+async function toggleRegistration(training) {
   if (!training) return;
 
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      addToast("PLEASE LOG IN FIRST", "accent");
-      return;
+  const token = localStorage.getItem("token");
+  if (!token) {
+    addToast("PLEASE LOG IN FIRST", "accent");
+    return;
+  }
+
+  // ✅ If already registered → UNREGISTER
+  if (myRegistrations.value.has(training.trainingID)) {
+    try {
+      // Find registration ID of this user for this training
+      const res = await axios.get("http://127.0.0.1:8000/api/registrations", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const registration = res.data.find(
+        (r) => r.trainingID === training.trainingID
+      );
+
+      if (!registration) {
+        addToast("Registration not found", "error");
+        return;
+      }
+
+      // Delete registration on backend
+      await axios.delete(
+        `http://127.0.0.1:8000/api/registrations/${registration.registrationID}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      myRegistrations.value.delete(training.trainingID);
+      addToast("You have been unregistered", "info");
+    } catch (error) {
+      console.error(error);
+      addToast("Failed to unregister", "error");
     }
+  }
 
-    await axios.post(
-      "http://127.0.0.1:8000/api/registrations",
-      { trainingID: training.trainingID },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+  // ✅ If not registered → REGISTER
+  else {
+    try {
+      await axios.post(
+        "http://127.0.0.1:8000/api/registrations",
+        { trainingID: training.trainingID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-    addToast("REGISTRATION SUCCESSFUL!!!", "success");
-    myRegistrations.value.add(training.trainingID);
-  } catch (error) {
-    if (error.response?.status === 409) {
-      addToast("YOU ARE ALREADY REGISTERED", "accent");
-    } else if (error.response?.status === 401) {
-      addToast("UNAUTHORIZED PLEASE LOG IN AGAIN", "accent");
-    } else {
-      addToast("FAILED TO REGISTER", "accent");
+      myRegistrations.value.add(training.trainingID);
+      addToast("Registered successfully!", "success");
+    } catch (error) {
+      if (error.response?.status === 409) {
+        addToast("Already registered", "accent");
+      } else {
+        addToast("Failed to register", "error");
+      }
     }
   }
 }
-
 // ============================
 // 🔔 Toast Function
 // ============================
@@ -626,21 +659,22 @@ function formatDate(d) {
           </button>
 
           <!-- Register / Unregister -->
-          <button
-            class="btn btn-sm text-white"
-            :class="
-              myRegistrations.has(selectedTraining.trainingID)
-                ? 'bg-gray-500'
-                : 'bg-customButton'
-            "
-            @click="registerForTraining(selectedTraining)"
-          >
-            {{
-              myRegistrations.has(selectedTraining.trainingID)
-                ? "Unregister"
-                : "Register"
-            }}
-          </button>
+          <!-- Register / Unregister -->
+            <button
+              class="btn btn-sm text-white"
+              :class="
+                myRegistrations.has(selectedTraining.trainingID)
+                  ? 'bg-gray-500'
+                  : 'bg-customButton'
+              "
+              @click="toggleRegistration(selectedTraining)"
+            >
+              {{
+                myRegistrations.has(selectedTraining.trainingID)
+                  ? 'Unregister'
+                  : 'Register'
+              }}
+            </button>
         </div>
 
         <!-- Training Details -->
