@@ -105,6 +105,20 @@ const displayedCareers = computed(() =>
     })
 );
 
+// ✅ Check if a post is already bookmarked
+const isBookmarked = (post) => {
+  if (isTraining(post)) {
+    // For trainings
+    return bookmarks.value.some(
+      (b) => b.trainingID === post.trainingID
+    );
+  } else {
+    // For careers
+    return bookmarks.value.some(
+      (b) => b.careerID === post.careerID
+    );
+  }
+};
 
 // ✅ Modal Handlers
 const openModal = (item) => {
@@ -132,9 +146,43 @@ const formatDate = (d) =>
   new Date(d).toLocaleDateString("en-PH", { dateStyle: "medium" });
 
 // ✅ Example placeholder functions
-const bookmarkPost = (post) => {
-  console.log("Bookmark clicked for:", post);
+const bookmarkPost = async (post) => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return console.warn("⚠️ No token found");
+
+    if (isBookmarked(post)) {
+      // Remove bookmark
+      if (isTraining(post)) {
+        await axios.delete(`http://127.0.0.1:8000/api/bookmarks/${post.trainingID}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        bookmarks.value = bookmarks.value.filter(b => b.trainingID !== post.trainingID);
+      } else {
+        await axios.delete(`http://127.0.0.1:8000/api/career-bookmarks/${post.careerID}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        bookmarks.value = bookmarks.value.filter(b => b.careerID !== post.careerID);
+      }
+    } else {
+      // Add bookmark
+      if (isTraining(post)) {
+        await axios.post("http://127.0.0.1:8000/api/bookmarks", { trainingID: post.trainingID }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        bookmarks.value.push({ trainingID: post.trainingID, training: post });
+      } else {
+        await axios.post("http://127.0.0.1:8000/api/career-bookmarks", { careerID: post.careerID }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        bookmarks.value.push({ careerID: post.careerID, career: post });
+      }
+    }
+  } catch (error) {
+    console.error("❌ Failed to toggle bookmark:", error.response?.data || error);
+  }
 };
+
 const registerTraining = (training) => {
   console.log("Register clicked for:", training);
 };
@@ -434,7 +482,7 @@ onMounted(() => {
                         class="btn btn-outline btn-sm"
                         @click="bookmarkPost(selectedPost)"
                       >
-                        Bookmark
+                       {{ isBookmarked(selectedPost) ? "Bookmarked" : "Bookmark" }}
                       </button>
                       <button
                         class="btn bg-customButton btn-sm text-white"
@@ -476,7 +524,7 @@ onMounted(() => {
                         class="btn btn-outline btn-sm"
                         @click="bookmarkPost(selectedPost)"
                       >
-                        Bookmark
+                        {{ isBookmarked(selectedPost) ? "Bookmarked" : "Bookmark" }}
                       </button>
                       <button
                         class="btn btn-sm bg-customButton text-white"
