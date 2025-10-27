@@ -61,16 +61,17 @@ const loadBookmarks = async () => {
 
     console.log("✅ Trainings data from API:", trainingsData.data);
      console.log("✅ Careers data from API:", careersData.data);
-    bookmarks.value = [
-      ...trainingRes.data.map((id) => ({
-        trainingID: id,
-        training: trainingsData.data.find((t) => t.trainingID === id) || null,
-      })),
-      ...careerRes.data.map((b) => ({
-        careerID: b.careerID,
-        career: careersData.data.find((c) => c.careerID === b.careerID) || null,
-      })),
-    ];
+bookmarks.value = [
+  ...trainingRes.data.map((id) => ({
+    trainingID: id,
+    training: trainingsData.data.find((t) => Number(t.trainingID) === Number(id)) || null,
+  })),
+  ...careerRes.data.map((b) => ({
+    careerID: b.careerID,
+    career: careersData.data.find((c) => Number(c.id) === Number(b.careerID)) || null,
+  })),
+];
+
 
     // ✅ ADD THIS HERE
    console.log("✅ Career bookmarks:", careerRes.data);
@@ -92,8 +93,18 @@ const displayedTrainings = computed(() =>
 const displayedCareers = computed(() =>
   bookmarks.value
     .filter((b) => b.career)
-    .map((b) => ({ ...b.career, careerID: b.careerID }))
+    .map((b) => {
+      const careerOrg = organizations.value.find(
+        (org) => org.organizationID === b.career.organization_id
+      );
+      return {
+        ...b.career,
+        careerID: b.careerID,
+        organization: careerOrg || null,
+      };
+    })
 );
+
 
 // ✅ Modal Handlers
 const openModal = (item) => {
@@ -364,7 +375,7 @@ onMounted(() => {
                       {{ career.position }}
                     </h3>
                     <p class="text-sm text-gray-600">
-                      {{ career.organization?.name || "Unknown Org" }}
+                      {{ career.organizationName|| "Unknown Org" }}
                     </p>
                   </div>
                 </div>
@@ -457,7 +468,7 @@ onMounted(() => {
                     <p class="text-sm text-gray-600 mb-2">
                       Organization:
                       {{
-                         selectedPost.organization?.name || "Unknown Org"
+                         selectedPost.organizationName || "Unknown Org"
                       }}
                     </p>
                     <div class="my-4 flex justify-end gap-2">
