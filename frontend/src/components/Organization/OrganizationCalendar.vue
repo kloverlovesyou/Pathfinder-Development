@@ -127,21 +127,20 @@
                   <span v-if="date" class="date-number">{{ date.getDate() }}</span>
 
                   <div v-if="date && getEventsByDate(date).length" class="events-list">
-                    <div v-for="(ev, i) in getEventsByDate(date)" :key="i" class="event-title"
-                      @click.stop="openEventDetails(ev)">
-                      {{ ev.title }}
+                    <div v-for="(title, i) in getEventTitles(date)" :key="i" class="event-title">
+                      {{ title }}
                     </div>
                   </div>
                 </div>
               </div>
               <div class="calendar-legend">
-            <div class="legend-item">
-              <span class="legend-color training"></span> Training
-            </div>
-            <div class="legend-item">
-              <span class="legend-color career"></span> Career
-            </div>
-          </div>
+                <div class="legend-item">
+                  <span class="legend-color training"></span> Training
+                </div>
+                <div class="legend-item">
+                  <span class="legend-color career"></span> Career
+                </div>
+              </div>
             </div>
 
 
@@ -331,6 +330,17 @@ export default {
     },
     openEventDetails(event) {
       this.selectedEvent = event;
+    },
+
+    openDayModal(date) {
+      if (!date) return;
+
+      // Find event(s) for this date
+      const allEvents = [...this.trainings, ...this.careers];
+      const event = allEvents.find(e => e.date === this.formatDate(date)); // adjust to your date format
+
+      // Show details in sidebar
+      this.selectedEvent = event || null;
     },
 
     toggleMenu() {
