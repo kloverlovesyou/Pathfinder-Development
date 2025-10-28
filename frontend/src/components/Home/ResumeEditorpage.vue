@@ -9,6 +9,8 @@ const pdfUrl = ref(null);
 const newSkill = ref("");
 const router = useRouter();
 const userName = ref("");
+const upcomingCount = ref(0);
+const completedCount = ref(0);
 
 // --- Forms ---
 const showNewExperienceForm = ref(false);
@@ -48,6 +50,32 @@ const form = reactive({
   address: "",
 });
 
+// Fetch TrainingCounter
+async function fetchTrainingCounters() {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const response = await axios.get("http://127.0.0.1:8000/api/registrations", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const trainings = response.data || [];
+
+    upcomingCount.value = trainings.filter(
+      (r) =>
+        r.registrationStatus?.toLowerCase() === "upcoming" ||
+        r.registrationStatus?.toLowerCase() === "registered"
+    ).length;
+
+    completedCount.value = trainings.filter(
+      (r) => r.registrationStatus?.toLowerCase() === "completed"
+    ).length;
+  } catch (error) {
+    console.error("❌ Error fetching training counters:", error);
+  }
+}
+
 // --- Save Resume ---
 async function saveResume() {
   try {
@@ -83,9 +111,12 @@ async function loadResume() {
       resume.resumeID = data.resumeID;
     }
 
-    const { data: expData } = await axios.get("http://127.0.0.1:8000/api/experiences", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const { data: expData } = await axios.get(
+      "http://127.0.0.1:8000/api/experiences",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
     resume.experience = expData || [];
 
     await loadEducation();
@@ -166,9 +197,12 @@ async function removeEducation(index) {
     const token = localStorage.getItem("token");
     const edu = resume.education[index];
     if (edu.educationID) {
-      await axios.delete(`http://127.0.0.1:8000/api/education/${edu.educationID}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(
+        `http://127.0.0.1:8000/api/education/${edu.educationID}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
     }
     resume.education.splice(index, 1);
   } catch (error) {
@@ -235,9 +269,12 @@ async function removeExperience(index) {
     const token = localStorage.getItem("token");
     const exp = resume.experience[index];
     if (exp.experienceID) {
-      await axios.delete(`http://127.0.0.1:8000/api/experiences/${exp.experienceID}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(
+        `http://127.0.0.1:8000/api/experiences/${exp.experienceID}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
     }
     resume.experience.splice(index, 1);
   } catch (error) {
@@ -250,9 +287,12 @@ async function removeExperience(index) {
 async function loadSkills(resumeID) {
   try {
     const token = localStorage.getItem("token");
-    const { data } = await axios.get(`http://127.0.0.1:8000/api/skills/${resumeID}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const { data } = await axios.get(
+      `http://127.0.0.1:8000/api/skills/${resumeID}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
     resume.skills = data || [];
     console.log("✅ Skills Loaded:", resume.skills);
   } catch (error) {
@@ -307,7 +347,10 @@ function sectionHeader(doc, title, x, y, pageWidth, margin) {
   doc.line(margin, y + 2, pageWidth - margin, y + 2);
 }
 
-function generatePdf() {
+async function generatePdf() {
+  const selectedCerts = await fetchSelectedCertificates();
+  resume.certificates = selectedCerts; // Attach to resume
+
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -346,7 +389,12 @@ function generatePdf() {
   // Header
   doc.setFont("times", "bold");
   doc.setFontSize(20);
-  doc.text(`${form.firstName} ${form.middleName} ${form.lastName}`, pageWidth / 2, y, { align: "center" });
+  doc.text(
+    `${form.firstName} ${form.middleName} ${form.lastName}`,
+    pageWidth / 2,
+    y,
+    { align: "center" }
+  );
   y += 8;
 
   doc.setFont("times", "regular");
@@ -365,14 +413,15 @@ function generatePdf() {
   if (resume.experience.length) {
     y = sectionHeader("Professional Experience", margin, y, pageWidth, margin);
     const sortedExperiences = [...resume.experience].sort(
-      (a, b) => new Date(b.endYear).getFullYear() - new Date(a.endYear).getFullYear()
+      (a, b) =>
+        new Date(b.endYear).getFullYear() - new Date(a.endYear).getFullYear()
     );
     sortedExperiences.forEach((exp) => {
       const start = getYearOnly(exp.startYear);
       const end = exp.endYear ? getYearOnly(exp.endYear) : "Present";
       doc.setFont("times", "bold");
       doc.text(exp.jobTitle || "", margin, y);
-      doc.setFont("times", "regular");
+      doc.setFont("times", "bold");
       doc.text(`${start} – ${end}`, pageWidth - margin, y, { align: "right" });
       y += 6;
       doc.setFont("times", "italic");
@@ -399,7 +448,32 @@ function generatePdf() {
   // Skills
   if (resume.skills.length) {
     y = sectionHeader("Skills", margin, y, pageWidth, margin);
-    y = addWrappedText(resume.skills.map((s) => s.skillName || s).join(" • "), margin, y, pageWidth - 2 * margin);
+    y = addWrappedText(
+      resume.skills.map((s) => s.skillName || s).join(" • "),
+      margin,
+      y,
+      pageWidth - 2 * margin
+    );
+  }
+
+  // Certificates
+  if (resume.certificates && resume.certificates.length) {
+    y = sectionHeader("Certificates", margin, y, pageWidth, margin);
+    doc.setFont("times", "regular");
+    doc.setFontSize(11);
+
+    resume.certificates.forEach((cert) => {
+      if (y > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+      }
+
+      // ✅ Add bullet point before certificate name
+      const bullet = "•";
+      const certName = cert.certificationName || cert.title || "";
+      doc.text(`${bullet} ${certName}`, margin, y);
+      y += 6;
+    });
   }
 
   const pdfBlob = doc.output("blob");
@@ -428,6 +502,7 @@ onMounted(async () => {
     }
   }
   await loadResume();
+  await fetchTrainingCounters();
 });
 
 const logout = () => {
@@ -435,6 +510,35 @@ const logout = () => {
   localStorage.removeItem("token");
   router.push({ name: "Login" });
 };
+
+const selectedCertificates = ref([]);
+
+async function fetchSelectedCertificates() {
+  const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user"));
+  if (!token || !user?.applicantID) return [];
+
+  try {
+    const response = await axios.get(
+      `http://127.0.0.1:8000/api/certificates/${user.applicantID}/selected`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    // ✅ Update reactive state for the resume page
+    selectedCertificates.value = response.data.filter(
+      (cert) => cert.IsSelected === 1
+    );
+
+    // ✅ Also return it for PDF preview
+    return selectedCertificates.value;
+  } catch (error) {
+    console.error("❌ Error fetching selected certificates:", error);
+    selectedCertificates.value = [];
+    return [];
+  }
+}
+
+onMounted(fetchSelectedCertificates);
 </script>
 
 <template>
@@ -472,7 +576,7 @@ const logout = () => {
             <span
               class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
             >
-              0
+              {{ upcomingCount }}
             </span>
           </div>
 
@@ -487,7 +591,7 @@ const logout = () => {
             <span
               class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
             >
-              0
+              {{ completedCount }}
             </span>
           </div>
         </div>
@@ -645,7 +749,7 @@ const logout = () => {
               />
             </div>
 
-             <!-- URL -->
+            <!-- URL -->
             <div class="border rounded p-4 space-y-4 relative">
               <h2 class="text-lg font-semibold">Professional Link</h2>
               <input
@@ -816,8 +920,7 @@ const logout = () => {
                     class="input-field border rounded w-full p-2 disabled:bg-gray-200"
                     :disabled="
                       newEducation.educationLevel === 'Elementary' ||
-                      newEducation.educationLevel === 'High School' ||
-                      newEducation.educationLevel === 'Senior High School'
+                      newEducation.educationLevel === 'High School'
                     "
                   />
                 </div>
@@ -903,7 +1006,7 @@ const logout = () => {
                   type="text"
                   placeholder="Type a skill"
                   class="input-field flex-1 border rounded p-2"
-                  @keyup.enter="addSkill" 
+                  @keyup.enter="addSkill"
                 />
                 <button
                   type="button"
@@ -932,6 +1035,25 @@ const logout = () => {
               </div>
             </div>
 
+            <div class="border rounded p-4 space-y-3">
+              <h3 class="text-lg font-semibold">Certificates</h3>
+
+              <ul v-if="selectedCertificates.length">
+                <li
+                  v-for="cert in selectedCertificates"
+                  :key="cert.certificationID"
+                  class="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-lg hover:bg-gray-100 transition"
+                >
+                  <span class="text-gray-800">{{
+                    cert.certificationName
+                  }}</span>
+                </li>
+              </ul>
+
+              <p v-else class="text-gray-500 text-sm">
+                No certificates selected for your resume.
+              </p>
+            </div>
 
             <!-- Save Button -->
             <div class="flex gap-4">

@@ -372,48 +372,8 @@
           </div>
         </div>
 
-        <div class="w-full">
-          <!-- Input Field -->
-          <div>
-            <input
-              v-model="newSkill"
-              @keydown.enter.prevent="addSkill"
-              class="input w-full bg-gray-100 focus:outline-none focus:border-transparent"
-              type="text"
-              placeholder="Type skills here (e.g., Java, Python, Communication)"
-            />
-          </div>
-
-          <!-- Skill Bubbles -->
-          <div
-            class="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2 p-3 rounded-lg mb-4 mt-2"
-          >
-            <div
-              v-for="(skill, index) in skills"
-              :key="index"
-              class="flex items-center justify-between bg-customButton text-white px-3 py-1 text-sm rounded-full overflow-hidden"
-            >
-              <span class="truncate">{{ skill }}</span>
-              <button
-                @click="removeSkill(index)"
-                class="ml-2 text-white hover:text-gray-200 font-bold"
-              >
-                ×
-              </button>
-            </div>
-
-            <!-- Shown if no skills left -->
-            <p
-              v-if="!skills.length"
-              class="text-gray-400 italic text-sm col-span-full"
-            >
-              No skills added yet.
-            </p>
-          </div>
-        </div>
-
-        <div>
-          <label class="flex items-center space-x-2 cursor-pointer mb-2">
+        <div class="mt-8 mb-4">
+          <label class="flex items-center space-x-2 cursor-pointer">
             <input
               type="checkbox"
               class="checkbox validator"
@@ -471,7 +431,6 @@
           <button
             type="submit"
             class="btn w-2/4 bg-customButton hover:bg-dark-slate text-white"
-            @click="showSkillsModal = true"
           >
             Register
           </button>
@@ -507,9 +466,6 @@ import { ref, computed } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
 
-// Example skills array (can come from API or props)
-const skills = ref(["JavaScript", "Vue.js", "Python", "Communication"]);
-
 function addCustomJob() {
   const trimmed = search.value.trim();
   if (trimmed && !selectedJobs.value.includes(trimmed)) {
@@ -522,19 +478,6 @@ function addCustomJob() {
 
 // Input model
 const newSkill = ref("");
-
-// Add skill on Enter
-const addSkill = () => {
-  const skill = newSkill.value.trim();
-  if (skill && !skills.value.includes(skill)) {
-    skills.value.push(skill);
-  }
-  newSkill.value = "";
-};
-
-const removeSkill = (index) => {
-  skills.value.splice(index, 1);
-};
 
 const router = useRouter();
 const form = ref({
@@ -552,7 +495,6 @@ const form = ref({
 const termsAccepted = ref(false);
 const showTermsModal = ref(false); // terms modal
 const showSuccessModal = ref(false); // ✅ success modal
-const showSkillsModal = ref(false); // skills modal
 
 const handleSubmit = async () => {
   if (!termsAccepted.value) {

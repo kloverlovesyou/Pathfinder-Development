@@ -3,230 +3,322 @@ import { useRouter } from "vue-router";
 import { ref, onMounted, onUnmounted, computed } from "vue";
 import axios from "axios";
 
-// Map bookmarks API data to a display-friendly format
-const displayedTrainings = computed(() =>
-  bookmarks.value
-    .filter((b) => b.training && b.training.title) // only valid trainings
-    .map((b) => ({
-      ...b.training,
-      trainingID: b.trainingID,
-    }))
-);
+const router = useRouter();
 
-const displayedCareers = computed(() =>
-  bookmarks.value
-    .filter((b) => b.career) // only valid careers
-    .map((b) => ({
-      ...b.career,
-      careerID: b.careerID,
-    }))
-);
-
-// ✅ Load user and token from localStorage + fetch bookmarks
-onMounted(async () => {
-  const savedUser = localStorage.getItem("user");
-  const savedToken = localStorage.getItem("token");
-
-  if (savedUser) {
-    user.value = JSON.parse(savedUser);
-    const { firstName, lastName } = user.value;
-    userName.value =
-      firstName && lastName ? `${firstName} ${lastName}` : "Guest";
-  } else {
-    userName.value = "Guest";
-  }
-
-  if (savedToken) {
-    token.value = savedToken;
-    axios.defaults.headers.common["Authorization"] = `Bearer ${savedToken}`;
-    axios.defaults.headers.common["Accept"] = "application/json";
-    await loadBookmarks(); // ✅ Load data after setting header
-  }
-});
-
-// ✅ Fetch bookmarks (Option A: use nested training data)
-const loadBookmarks = async () => {
-  try {
-    const { data } = await axios.get("http://127.0.0.1:8000/api/bookmarks");
-
-    // If API returns [1,2,3], transform it properly
-    bookmarks.value = data.map((id) => ({
-      trainingID: id,
-      training: {
-        title: "Loading...",
-        schedule: "Fetching...",
-      },
-    }));
-
-    // Optionally fetch training details for each ID
-    for (let i = 0; i < bookmarks.value.length; i++) {
-      const id = bookmarks.value[i].trainingID;
-      const res = await axios.get(`http://127.0.0.1:8000/api/trainings`);
-      const t = res.data.find((t) => t.trainingID === id);
-      if (t) bookmarks.value[i].training = t;
-    }
-
-    console.log("Bookmarks loaded:", bookmarks.value);
-  } catch (error) {
-    console.error("Failed to load bookmarks:", error.response?.data || error);
-  }
-};
-
-// ✅ Remove a bookmark
-const removeBookmark = async (trainingID) => {
-  try {
-    await axios.delete(`http://127.0.0.1:8000/api/bookmarks/${trainingID}`);
-    bookmarks.value = bookmarks.value.filter(
-      (b) => b.trainingID !== trainingID
-    );
-    alert("✅ Bookmark removed successfully!");
-  } catch (error) {
-    console.error("Error removing bookmark:", error.response?.data || error);
-    alert("❌ Failed to remove bookmark.");
-  }
-};
-
+// ✅ Core reactive states
+const user = ref(null);
+const userName = ref("");
+const bookmarks = ref([]);
+const organizations = ref([]);
 const activeTab = ref("career");
 const screenIsLarge = ref(window.innerWidth >= 1024);
+const myRegistrations = ref(new Set());
+const toasts = ref([]);
+const upcomingCount = ref(0);
+const completedCount = ref(0);
+
+function addToast(message, type = "info") {
+  toasts.value.push({ message, type });
+  setTimeout(() => {
+    toasts.value.shift();
+  }, 3000);
+}
+
+// ✅ Modal States
+const selectedPost = ref(null);
+const applyModalOpen = ref(false);
+const uploadedFile = ref(null);
+
+// ✅ Handle Resize
 function handleResize() {
   screenIsLarge.value = window.innerWidth >= 1024;
 }
 onMounted(() => window.addEventListener("resize", handleResize));
 onUnmounted(() => window.removeEventListener("resize", handleResize));
 
-const router = useRouter();
-const userName = ref("");
-const token = ref("");
-const user = ref(null);
-const bookmarks = ref([]);
-
-const logout = () => {
-  localStorage.removeItem("user");
-  localStorage.removeItem("token");
-  router.push({ name: "Loginpage" });
+// ✅ Fetch Organizations
+const fetchOrganizations = async () => {
+  try {
+    const { data } = await axios.get("http://127.0.0.1:8000/api/organization");
+    organizations.value = data.map(o => ({
+      ...o,
+      organizationID: Number(o.organizationID)
+    }));
+    console.log("✅ Organizations:", organizations.value);
+    console.log("✅ Organizations:", data); 
+  } catch (error) {
+    console.error("❌ Failed to fetch organizations:", error);
+  }
 };
 
-const organizations = {
-  1: "Tech Corp",
-  2: "Future Academy",
-  3: "InnovateX",
+// ✅ Load Bookmarks
+const loadBookmarks = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return console.warn("⚠️ No token found");
+
+    const [trainingRes, careerRes] = await Promise.all([
+      axios.get("http://127.0.0.1:8000/api/bookmarks", {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      axios.get("http://127.0.0.1:8000/api/career-bookmarks", {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    ]);
+
+    const [trainingsData, careersData] = await Promise.all([
+      axios.get("http://127.0.0.1:8000/api/trainings"),
+      axios.get("http://127.0.0.1:8000/api/careers"),
+    ]);
+
+    console.log("✅ Trainings data from API:", trainingsData.data);
+     console.log("✅ Careers data from API:", careersData.data);
+bookmarks.value = [
+  ...trainingRes.data.map((id) => ({
+    trainingID: id,
+    training: trainingsData.data.find((t) => Number(t.trainingID) === Number(id)) || null,
+  })),
+  ...careerRes.data.map((b) => ({
+    careerID: b.careerID,
+    career: careersData.data.find((c) => Number(c.id) === Number(b.careerID)) || null,
+  })),
+];
+
+
+    // ✅ ADD THIS HERE
+   console.log("✅ Career bookmarks:", careerRes.data);
+console.log("💼 All careers:", careersData.data);
+console.log("🔹 Mapped careers:", bookmarks.value.filter(b => b.career));
+
+  } catch (error) {
+    console.error("❌ Failed to load bookmarks:", error.response?.data || error);
+  }
 };
 
-const bookmarkedCareers = ref([
-  {
-    careerID: 1,
-    position: "Software Engineer",
-    organizationID: 1,
-    deadlineOfSubmission: "2025-12-10",
-    detailsAndInstructions: "Develop and maintain software systems.",
-    qualifications: "BS in Computer Science or related field.",
-    requirements: "Resume, transcript, and cover letter.",
-    applicationLetterAddress: "hr@techcorp.com",
-  },
-  {
-    careerID: 2,
-    position: "Marketing Specialist",
-    organizationID: 2,
-    deadlineOfSubmission: "2025-11-01",
-    detailsAndInstructions: "Plan and execute marketing campaigns.",
-    qualifications: "Bachelor’s in Marketing or Business.",
-    requirements: "Resume and marketing portfolio.",
-    applicationLetterAddress: "apply@futureacademy.com",
-  },
-]);
+// ✅ Computed Tabs
+const displayedTrainings = computed(() =>
+  bookmarks.value
+    .filter((b) => b.training)
+    .map((b) => ({ ...b.training, trainingID: b.trainingID }))
+);
 
-const bookmarkedTrainings = ref([
-  {
-    trainingID: 10,
-    title: "Advanced Vue.js Workshop",
-    organizationID: 1,
-    schedule: "2025-10-22T09:00:00",
-    description: "Deep dive into Vue 3 Composition API and Pinia.",
-    mode: "Online",
-    location: "Zoom",
-  },
-  {
-    trainingID: 11,
-    title: "Project Management Essentials",
-    organizationID: 3,
-    schedule: "2025-11-05T14:00:00",
-    description: "Master the fundamentals of managing agile projects.",
-    mode: "In-person",
-    location: "InnovateX HQ",
-  },
-  {
-    trainingID: 12,
-    title: "Effective Team Communication",
-    organizationID: 2,
-    schedule: "2025-12-01T10:00:00",
-    description: "Improve workplace collaboration and communication.",
-    mode: "Online",
-    location: "Microsoft Teams",
-  },
-]);
+const displayedCareers = computed(() =>
+  bookmarks.value
+    .filter((b) => b.career)
+    .map((b) => {
+      const careerOrg = organizations.value.find(
+        (org) => org.organizationID === b.career.organization_id
+      );
+      return {
+        ...b.career,
+        careerID: b.careerID,
+        organization: careerOrg || null,
+      };
+    })
+);
 
-function formatDate(date) {
-  return new Date(date).toLocaleDateString("en-US", { dateStyle: "long" });
-}
+// ✅ Check if a post is already bookmarked
+const isBookmarked = (post) => {
+  if (isTraining(post)) {
+    // For trainings
+    return bookmarks.value.some(
+      (b) => b.trainingID === post.trainingID
+    );
+  } else {
+    // For careers
+    return bookmarks.value.some(
+      (b) => b.careerID === post.careerID
+    );
+  }
+};
 
-function formatDateTime(date) {
-  return new Date(date).toLocaleString("en-US", {
-    dateStyle: "long",
-    timeStyle: "short",
-  });
-}
+// Fetch TrainingCounter
+async function fetchTrainingCounters() {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return;
 
-const selectedPost = ref(null);
-const selectedTraining = ref(null);
-const applyModalOpen = ref(false);
+    const response = await axios.get("http://127.0.0.1:8000/api/registrations", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-function openModal(item) {
-  selectedPost.value = item;
-}
+    const trainings = response.data || [];
 
-function closeModal() {
-  selectedPost.value = null;
-}
+    upcomingCount.value = trainings.filter(
+      (r) =>
+        r.registrationStatus?.toLowerCase() === "upcoming" ||
+        r.registrationStatus?.toLowerCase() === "registered"
+    ).length;
 
-function openTrainingModal(training) {
-  selectedTraining.value = training;
-}
-
-function closeTrainingModal() {
-  selectedTraining.value = null;
-}
-
-function openApplyModal(post) {
-  applyModalOpen.value = true;
-}
-
-function closeApplyModal() {
-  applyModalOpen.value = false;
-}
-
-function isTraining(post) {
-  return !!post.title;
-}
-
-function bookmarkPost(post) {
-  alert(`Bookmarked: ${post.title || post.position}`);
-}
-
-function registerTraining(training) {
-  alert(`Registered for: ${training.title}`);
-}
-
-function handleFileUpload(e) {
-  const file = e.target.files[0];
-  if (file && file.type !== "application/pdf") {
-    alert("Please upload a PDF file.");
+    completedCount.value = trainings.filter(
+      (r) => r.registrationStatus?.toLowerCase() === "completed"
+    ).length;
+  } catch (error) {
+    console.error("❌ Error fetching training counters:", error);
   }
 }
 
-function submitApplication() {
-  alert("Application submitted!");
-  closeApplyModal();
-}
+
+const loadRegistrations = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const { data } = await axios.get("http://127.0.0.1:8000/api/my-registrations", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    // Assuming data is an array of training IDs
+    myRegistrations.value = new Set(data.map(id => Number(id)));
+  } catch (error) {
+    console.error("❌ Failed to load registrations:", error.response?.data || error);
+  }
+};
+
+// ✅ Modal Handlers
+const openModal = (item) => {
+  selectedPost.value = item;
+};
+const closeModal = () => {
+  selectedPost.value = null;
+};
+const openApplyModal = (item) => {
+  selectedPost.value = item;
+  applyModalOpen.value = true;
+};
+const closeApplyModal = () => {
+  applyModalOpen.value = false;
+};
+
+// ✅ Helpers
+const isTraining = (item) => !!item.title;
+const formatDateTime = (dt) =>
+  new Date(dt).toLocaleString("en-PH", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+const formatDate = (d) =>
+  new Date(d).toLocaleDateString("en-PH", { dateStyle: "medium" });
+
+// ✅ Example placeholder functions
+const bookmarkPost = async (post) => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return console.warn("⚠️ No token found");
+
+    if (isBookmarked(post)) {
+      // Remove bookmark
+      if (isTraining(post)) {
+        await axios.delete(`http://127.0.0.1:8000/api/bookmarks/${post.trainingID}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        bookmarks.value = bookmarks.value.filter(b => b.trainingID !== post.trainingID);
+      } else {
+        await axios.delete(`http://127.0.0.1:8000/api/career-bookmarks/${post.careerID}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        bookmarks.value = bookmarks.value.filter(b => b.careerID !== post.careerID);
+      }
+    } else {
+      // Add bookmark
+      if (isTraining(post)) {
+        await axios.post("http://127.0.0.1:8000/api/bookmarks", { trainingID: post.trainingID }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        bookmarks.value.push({ trainingID: post.trainingID, training: post });
+      } else {
+        await axios.post("http://127.0.0.1:8000/api/career-bookmarks", { careerID: post.careerID }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        bookmarks.value.push({ careerID: post.careerID, career: post });
+      }
+    }
+  } catch (error) {
+    console.error("❌ Failed to toggle bookmark:", error.response?.data || error);
+  }
+};
+
+
+const registerTraining = async (training) => {
+  const token = localStorage.getItem("token");
+  if (!token) return console.warn("⚠️ No token found");
+
+  // ✅ If already registered → UNREGISTER
+  if (myRegistrations.value.has(training.trainingID)) {
+    try {
+      // Find registration ID of this user for this training
+      const res = await axios.get("http://127.0.0.1:8000/api/registrations", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const registration = res.data.find(
+        (r) => r.trainingID === training.trainingID
+      );
+
+      if (!registration) {
+        addToast("Registration not found", "error");
+        return;
+      }
+
+      // Delete registration on backend
+      await axios.delete(
+        `http://127.0.0.1:8000/api/registrations/${registration.registrationID}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      myRegistrations.value.delete(training.trainingID);
+      addToast("You have been unregistered", "info");
+
+      // Force reactivity
+      myRegistrations.value = new Set([...myRegistrations.value]);
+    } catch (error) {
+      console.error(error);
+      addToast("Failed to unregister", "error");
+    }
+  }
+
+  // ✅ If not registered → REGISTER
+  else {
+    try {
+      await axios.post(
+        "http://127.0.0.1:8000/api/registrations",
+        { trainingID: training.trainingID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      myRegistrations.value.add(training.trainingID);
+      addToast("Registered successfully!", "success");
+
+      // Force reactivity
+      myRegistrations.value = new Set([...myRegistrations.value]);
+    } catch (error) {
+      if (error.response?.status === 409) {
+        addToast("Already registered", "accent");
+      } else {
+        addToast("Failed to register", "error");
+      }
+    }
+  }
+};
+
+// ✅ Lifecycle
+onMounted(() => {
+  fetchOrganizations();
+  loadBookmarks();
+  fetchTrainingCounters();
+    const savedUser = localStorage.getItem("user");
+  if (savedUser) {
+    try {
+      const user = JSON.parse(savedUser);
+      userName.value = `${user.firstName} ${user.lastName}`;
+    } catch {
+      userName.value = "Guest";
+    }
+  } else {
+    userName.value = "Guest";
+  }
+   
+});
 </script>
 
 <template>
@@ -260,7 +352,7 @@ function submitApplication() {
               <span
                 class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
               >
-                0
+                {{ upcomingCount }}
               </span>
             </div>
 
@@ -275,7 +367,7 @@ function submitApplication() {
               <span
                 class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
               >
-                0
+                {{ completedCount }}
               </span>
             </div>
           </div>
@@ -433,9 +525,7 @@ function submitApplication() {
                       {{ career.position }}
                     </h3>
                     <p class="text-sm text-gray-600">
-                      {{
-                        organizations[career.organizationID] || "Unknown Org"
-                      }}
+                      {{ career.organizationName|| "Unknown Org" }}
                     </p>
                   </div>
                 </div>
@@ -443,30 +533,29 @@ function submitApplication() {
                   No bookmarked careers found.
                 </p>
               </div>
+              
 
               <!-- Training Bookmarks (from backend) -->
               <div v-else class="p-4">
-                <div v-if="displayedTrainings.length" class="space-y-3">
-                  <div
-                    v-for="training in displayedTrainings"
-                    :key="training.trainingID"
-                    @click="openModal(training)"
-                    class="p-4 border rounded-lg cursor-pointer bg-blue-gray hover:bg-gray-300 transition"
-                  >
-                    <h3 class="text-base font-semibold">
-                      {{ training.title }}
-                    </h3>
-                    <p class="text-sm text-gray-600">
-                      {{
-                        organizations[training.organizationID] || "Unknown Org"
-                      }}
-                    </p>
+                  <div v-if="displayedTrainings.length" class="space-y-3">
+                    <div
+                      v-for="training in displayedTrainings"
+                      :key="training.trainingID"
+                      @click="openModal(training)"
+                      class="p-4 border rounded-lg cursor-pointer bg-blue-gray hover:bg-gray-300 transition"
+                    >
+                      <h3 class="text-base font-semibold">
+                        {{ training.title }}
+                      </h3>
+                      <p class="text-sm text-gray-600">
+                        {{ training.organization?.name || "Unknown Org" }}
+                      </p>
+                    </div>
                   </div>
+                  <p v-else class="text-center text-gray-500 mt-6">
+                    No bookmarked trainings found.
+                  </p>
                 </div>
-                <p v-else class="text-center text-gray-500 mt-6">
-                  No bookmarked trainings found.
-                </p>
-              </div>
 
               <!-- ✅ Unified Modal System -->
               <!-- Post Details Modal -->
@@ -487,8 +576,7 @@ function submitApplication() {
                     <p class="text-sm text-gray-600 mb-2">
                       Organization:
                       {{
-                        organizations[selectedPost.organizationID] ||
-                        "Unknown Org"
+                           selectedPost.organization?.name || "Unknown Org"
                       }}
                     </p>
                     <div class="my-4 flex justify-end gap-2">
@@ -496,13 +584,13 @@ function submitApplication() {
                         class="btn btn-outline btn-sm"
                         @click="bookmarkPost(selectedPost)"
                       >
-                        Bookmark
+                       {{ isBookmarked(selectedPost) ? "Bookmarked" : "Bookmark" }}
                       </button>
                       <button
                         class="btn bg-customButton btn-sm text-white"
                         @click="registerTraining(selectedPost)"
                       >
-                        Register
+                        {{ myRegistrations.has(selectedPost.trainingID) ? "Unregister" : "Register" }}
                       </button>
                     </div>
                     <p>
@@ -530,8 +618,7 @@ function submitApplication() {
                     <p class="text-sm text-gray-600 mb-2">
                       Organization:
                       {{
-                        organizations[selectedPost.organizationID] ||
-                        "Unknown Org"
+                         selectedPost.organizationName || "Unknown Org"
                       }}
                     </p>
                     <div class="my-4 flex justify-end gap-2">
@@ -539,7 +626,7 @@ function submitApplication() {
                         class="btn btn-outline btn-sm"
                         @click="bookmarkPost(selectedPost)"
                       >
-                        Bookmark
+                        {{ isBookmarked(selectedPost) ? "Bookmarked" : "Bookmark" }}
                       </button>
                       <button
                         class="btn btn-sm bg-customButton text-white"
@@ -617,6 +704,22 @@ function submitApplication() {
                   </form>
                 </div>
               </dialog>
+
+              <!-- Toast Notifications -->
+                <div class="toast toast-end toast-top z-50">
+                  <div
+                    v-for="toast in toasts"
+                    :key="toast.id"
+                    class="alert"
+                    :class="{
+                      'alert-info': toast.type === 'info',
+                      'alert-success': toast.type === 'success',
+                      'alert-accent': toast.type === 'accent',
+                    }"
+                  >
+                    {{ toast.message }}
+                  </div>
+                </div>
             </div>
           </div>
         </div>

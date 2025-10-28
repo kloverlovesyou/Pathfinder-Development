@@ -33,7 +33,7 @@
             <span
               class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
             >
-              0
+              {{ upcomingCount }}
             </span>
           </div>
 
@@ -48,7 +48,7 @@
             <span
               class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
             >
-              0
+              {{ completedCount }}
             </span>
           </div>
         </div>
@@ -322,6 +322,8 @@ import { useRouter } from "vue-router";
 const router = useRouter();
 const showDeleteModal = ref(false);
 const isDeleting = ref(false);
+const upcomingCount = ref(0);
+const completedCount = ref(0);
 
 const form = ref({
   firstName: "",
@@ -337,6 +339,7 @@ const form = ref({
 const userName = ref("");
 
 onMounted(async () => {
+  fetchTrainingCounters();
   try {
     // --- Fetch user from API ---
     const res = await axios.get("http://127.0.0.1:8000/api/user", {
@@ -402,6 +405,32 @@ function deleteAccount() {
       console.error(err);
       alert("Failed to delete account.");
     });
+}
+
+// Fetch TrainingCounter
+async function fetchTrainingCounters() {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const response = await axios.get("http://127.0.0.1:8000/api/registrations", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const trainings = response.data || [];
+
+    upcomingCount.value = trainings.filter(
+      (r) =>
+        r.registrationStatus?.toLowerCase() === "upcoming" ||
+        r.registrationStatus?.toLowerCase() === "registered"
+    ).length;
+
+    completedCount.value = trainings.filter(
+      (r) => r.registrationStatus?.toLowerCase() === "completed"
+    ).length;
+  } catch (error) {
+    console.error("❌ Error fetching training counters:", error);
+  }
 }
 
 const handleUpdate = async () => {

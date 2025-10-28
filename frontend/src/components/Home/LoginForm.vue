@@ -1,7 +1,5 @@
 <template>
-  <div
-    class="font-poppins min-h-screen flex items-center justify-center  p-4"
-  >
+  <div class="font-poppins min-h-screen flex items-center justify-center p-4">
     <!-- Wrapper -->
     <div class="relative w-full max-w-md">
       <!-- Login Card -->
@@ -14,7 +12,7 @@
 
         <form @submit.prevent="handleLogin">
           <!-- Email -->
-          <div class="form-control mb-4">
+          <div class="form-control mb-2">
             <input
               v-model="email"
               class="input validator w-full"
@@ -26,17 +24,101 @@
           </div>
 
           <!-- Password -->
-          <div class="form-control mb-4">
+          <div class="form-control relative mb-4">
             <input
-              v-model="password"
-              type="password"
-              class="input validator input-bordered w-full"
+              :type="showPassword ? 'text' : 'password'"
+              class="w-full border rounded-lg input"
               required
               placeholder="Password"
-              minlength="8"
+              v-model="password"
               pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
+              title="Must contain at least 8 characters, including a number, a lowercase and an uppercase letter"
             />
-            <p class="validator-hint" v-if="passwordError">Invalid Password</p>
+
+            <!-- 👁 Toggle Button -->
+            <button
+              type="button"
+              class="absolute right-3 top-3 text-gray-500"
+              aria-label="Toggle confirm password visibility"
+              @click="showPassword = !showPassword"
+            >
+              <span v-if="showPassword"
+                ><svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M15.5799 11.9999C15.5799 13.9799 13.9799 15.5799 11.9999 15.5799C10.0199 15.5799 8.41992 13.9799 8.41992 11.9999C8.41992 10.0199 10.0199 8.41992 11.9999 8.41992C13.9799 8.41992 15.5799 10.0199 15.5799 11.9999Z"
+                    stroke="#292D32"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M12.0001 20.27C15.5301 20.27 18.8201 18.19 21.1101 14.59C22.0101 13.18 22.0101 10.81 21.1101 9.39997C18.8201 5.79997 15.5301 3.71997 12.0001 3.71997C8.47009 3.71997 5.18009 5.79997 2.89009 9.39997C1.99009 10.81 1.99009 13.18 2.89009 14.59C5.18009 18.19 8.47009 20.27 12.0001 20.27Z"
+                    stroke="#292D32"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </span>
+              <span v-else
+                ><svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M14.5299 9.46992L9.46992 14.5299C8.81992 13.8799 8.41992 12.9899 8.41992 11.9999C8.41992 10.0199 10.0199 8.41992 11.9999 8.41992C12.9899 8.41992 13.8799 8.81992 14.5299 9.46992Z"
+                    stroke="#292D32"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M17.8201 5.76998C16.0701 4.44998 14.0701 3.72998 12.0001 3.72998C8.47009 3.72998 5.18009 5.80998 2.89009 9.40998C1.99009 10.82 1.99009 13.19 2.89009 14.6C3.68009 15.84 4.60009 16.91 5.60009 17.77"
+                    stroke="#292D32"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M8.41992 19.5299C9.55992 20.0099 10.7699 20.2699 11.9999 20.2699C15.5299 20.2699 18.8199 18.1899 21.1099 14.5899C22.0099 13.1799 22.0099 10.8099 21.1099 9.39993C20.7799 8.87993 20.4199 8.38993 20.0499 7.92993"
+                    stroke="#292D32"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M15.5099 12.7C15.2499 14.11 14.0999 15.26 12.6899 15.52"
+                    stroke="#292D32"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M9.47 14.53L2 22"
+                    stroke="#292D32"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M22 2L14.53 9.47"
+                    stroke="#292D32"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </span>
+            </button>
           </div>
 
           <div class="card-actions justify-center">
@@ -73,7 +155,7 @@ import { useRouter } from "vue-router";
 import axios from "axios";
 
 const router = useRouter();
-
+const showPassword = ref(false);
 const email = ref("");
 const password = ref("");
 const emailError = ref(false);
@@ -82,8 +164,7 @@ const passwordError = ref(false);
 const loginError = ref(""); // just show as text now
 
 const validateEmail = (emailVal) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
-const validatePassword = (pw) =>
-  /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
+const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
 
 const handleLogin = async () => {
   emailError.value = !validateEmail(email.value);
@@ -91,7 +172,7 @@ const handleLogin = async () => {
   loginError.value = "";
   if (emailError.value || passwordError.value) return;
 
-  try {   
+  try {
     const response = await axios.post("http://127.0.0.1:8000/api/login", {
       emailAddress: email.value,
       password: password.value,
@@ -130,3 +211,14 @@ const handleLogin = async () => {
   }
 };
 </script>
+<style>
+/* Hide Chrome/Edge/Safari built-in "eye" icon */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
+input::-webkit-credentials-auto-fill-button {
+  visibility: hidden;
+}
+</style>

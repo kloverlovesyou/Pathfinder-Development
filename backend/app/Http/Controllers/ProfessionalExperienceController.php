@@ -32,11 +32,14 @@ class ProfessionalExperienceController extends Controller
 
     public function store(Request $request)
     {
-        // 1️⃣ Get the authenticated user from middleware
-        $user = $request->authUser;
+        $token = $request->bearerToken();
+        $applicant = Applicant::where('api_token', $token)->first();
 
-        // 2️⃣ Find the resume for this user
-        $resume = Resume::where('applicantID', $user->applicantID)->first();
+        if (!$applicant) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $resume = Resume::where('applicantID', $applicant->applicantID)->first();
 
         if (!$resume) {
             return response()->json([
@@ -44,7 +47,6 @@ class ProfessionalExperienceController extends Controller
             ], 400);
         }
 
-        // 3️⃣ Validate incoming request
         $validated = $request->validate([
             'jobTitle' => 'required|string|max:255',
             'companyName' => 'required|string|max:255',
@@ -53,7 +55,6 @@ class ProfessionalExperienceController extends Controller
             'endYear' => 'required|date|after_or_equal:startYear',
         ]);
 
-        // 4️⃣ Create the experience
         $experience = ProfessionalExperience::create([
             'jobTitle' => $validated['jobTitle'],
             'companyName' => $validated['companyName'],
@@ -63,7 +64,6 @@ class ProfessionalExperienceController extends Controller
             'resumeID' => $resume->resumeID,
         ]);
 
-        // 5️⃣ Return response
         return response()->json($experience, 201);
     }
 
