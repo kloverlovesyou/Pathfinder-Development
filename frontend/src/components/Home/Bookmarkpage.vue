@@ -13,6 +13,14 @@ const organizations = ref([]);
 const activeTab = ref("career");
 const screenIsLarge = ref(window.innerWidth >= 1024);
 const myRegistrations = ref(new Set());
+const toasts = ref([]);
+
+function addToast(message, type = "info") {
+  toasts.value.push({ message, type });
+  setTimeout(() => {
+    toasts.value.shift();
+  }, 3000);
+}
 
 // ✅ Modal States
 const selectedPost = ref(null);
@@ -203,34 +211,64 @@ const bookmarkPost = async (post) => {
 
 
 const registerTraining = async (training) => {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) return console.warn("⚠️ No token found");
+  const token = localStorage.getItem("token");
+  if (!token) return console.warn("⚠️ No token found");
 
-    if (myRegistrations.value.has(training.trainingID)) {
-      // Unregister
-      await axios.delete(`http://127.0.0.1:8000/api/registrations/${training.trainingID}`, {
+  // ✅ If already registered → UNREGISTER
+  if (myRegistrations.value.has(training.trainingID)) {
+    try {
+      // Find registration ID of this user for this training
+      const res = await axios.get("http://127.0.0.1:8000/api/registrations", {
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      const registration = res.data.find(
+        (r) => r.trainingID === training.trainingID
+      );
+
+      if (!registration) {
+        addToast("Registration not found", "error");
+        return;
+      }
+
+      // Delete registration on backend
+      await axios.delete(
+        `http://127.0.0.1:8000/api/registrations/${registration.registrationID}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
       myRegistrations.value.delete(training.trainingID);
+      addToast("You have been unregistered", "info");
 
-      // ✅ Force reactivity
+      // Force reactivity
       myRegistrations.value = new Set([...myRegistrations.value]);
+    } catch (error) {
+      console.error(error);
+      addToast("Failed to unregister", "error");
+    }
+  }
 
-    } else {
-      // Register
+  // ✅ If not registered → REGISTER
+  else {
+    try {
       await axios.post(
         "http://127.0.0.1:8000/api/registrations",
         { trainingID: training.trainingID },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      myRegistrations.value.add(training.trainingID);
 
-      // ✅ Force reactivity
+      myRegistrations.value.add(training.trainingID);
+      addToast("Registered successfully!", "success");
+
+      // Force reactivity
       myRegistrations.value = new Set([...myRegistrations.value]);
+    } catch (error) {
+      if (error.response?.status === 409) {
+        addToast("Already registered", "accent");
+      } else {
+        addToast("Failed to register", "error");
+      }
     }
-  } catch (error) {
-    console.error("❌ Failed to toggle registration:", error.response?.data || error);
   }
 };
 
@@ -636,6 +674,22 @@ onMounted(() => {
                   </form>
                 </div>
               </dialog>
+
+              <div class="fixed bottom-4 right-4 space-y-2 z-50">
+                <div
+                  v-for="(toast, index) in toasts"
+                  :key="index"
+                  class="px-4 py-2 rounded shadow text-white"
+                  :class="{
+                    'bg-green-600': toast.type === 'success',
+                    'bg-blue-600': toast.type === 'info',
+                    'bg-yellow-500': toast.type === 'accent',
+                    'bg-red-600': toast.type === 'error'
+                  }"
+                >
+                  {{ toast.message }}
+                </div>
+              </div>
             </div>
           </div>
         </div>
