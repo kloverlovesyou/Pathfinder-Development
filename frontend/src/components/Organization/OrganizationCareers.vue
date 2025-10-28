@@ -131,7 +131,7 @@
             </div>
 
             <!-- 3-dot menu -->
-            <div class="menu" :key="career.careerID">
+            <div class="menu" :key="career.CareerID">
               <div class="menu-icon" @click.stop="toggleUpcomingMenu(career.careerID)">⋮</div>
               <div v-if="openUpcomingMenu === career.careerID" class="dropdown-menu">
                 <ul>
@@ -405,6 +405,7 @@
 <script>
 import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
 import axios from "axios";
+import api from "@/api/axios";
 
 export default {
   data() {
@@ -695,27 +696,63 @@ export default {
       this.openApplicantsModal();
     },
 
-    async saveCareer() {
-      try {
-        if (
-          !this.newCareer.position ||
-          !this.newCareer.details ||
-          !this.newCareer.qualifications ||
-          !this.newCareer.requirements ||
-          !this.newCareer.letterAddress ||
-          !this.newCareer.deadline
-        ) {
-          alert("Please fill out all fields before saving.");
-          return;
-        }
+   async saveCareer() {
+  try {
+    if (
+      !this.newCareer.position ||
+      !this.newCareer.details ||
+      !this.newCareer.qualifications ||
+      !this.newCareer.requirements ||
+      !this.newCareer.letterAddress ||
+      !this.newCareer.deadline
+    ) {
+      alert("⚠️ Please fill out all fields before saving.");
+      return;
+    }
 
-        const response = await axios.post("http://127.0.0.1:8000/api/careers", this.newCareer);
-        this.upcomingCareers.push(response.data);
-        this.closeCareerPopup();
-      } catch (error) {
-        console.error("ERROR SAVING CAREER:", error);
+    const token = localStorage.getItem("token");
+
+    const response = await api.post(
+      "http://127.0.0.1:8000/api/careers",
+      this.newCareer,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       }
-    },
+    );
+
+    // ✅ Backend responded successfully
+    if (response.data.message === "Career already exists") {
+      alert("⚠️ This career is already posted.");
+    } else {
+      alert("✅ Career successfully saved!");
+      this.upcomingCareers.push(response.data);
+      this.closeCareerPopup();
+      this.resetNewCareer();
+
+       await this.fetchCareers();
+    }
+  } catch (error) {
+    console.error("ERROR SAVING CAREER:", error);
+
+    // 🧩 Handle specific errors
+    if (error.response) {
+      if (error.response.status === 401) {
+        alert("🔒 Unauthorized: Please log in again.");
+      } else if (error.response.status === 409) {
+        alert("⚠️ This career already exists!");
+      } else if (error.response.status === 422) {
+        alert("⚠️ Validation failed. Please check your inputs.");
+      } else {
+        alert("❌ Something went wrong. Please try again.");
+      }
+    } else {
+      alert("🚫 Unable to connect to the server.");
+    }
+  }
+},
 
     resetNewCareer() {
       this.newCareer = {

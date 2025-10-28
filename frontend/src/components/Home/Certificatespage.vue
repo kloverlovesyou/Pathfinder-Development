@@ -12,6 +12,8 @@ const userName = ref("");
 const isModalOpen = ref(false);
 const selectedImage = ref(null);
 const selectedTitle = ref(null);
+const upcomingCount = ref(0);
+const completedCount = ref(0);
 
 // ➤ Add a new upload entry
 function addCertificate() {
@@ -40,6 +42,32 @@ function handleFileUpload(event, index) {
   reader.readAsDataURL(file);
 }
 
+// Fetch TrainingCounter
+async function fetchTrainingCounters() {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const response = await axios.get("http://127.0.0.1:8000/api/registrations", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const trainings = response.data || [];
+
+    upcomingCount.value = trainings.filter(
+      (r) =>
+        r.registrationStatus?.toLowerCase() === "upcoming" ||
+        r.registrationStatus?.toLowerCase() === "registered"
+    ).length;
+
+    completedCount.value = trainings.filter(
+      (r) => r.registrationStatus?.toLowerCase() === "completed"
+    ).length;
+  } catch (error) {
+    console.error("❌ Error fetching training counters:", error);
+  }
+}
+
 // ➤ Fetch uploaded certificates only
 async function fetchCertificates(applicantID) {
   try {
@@ -50,12 +78,16 @@ async function fetchCertificates(applicantID) {
     );
 
     uploadedCertificates.value = response.data.map((cert) => ({
-      id: cert.certificationID, // ✅ include correct ID
-      title: cert.certificationName,
-      image: cert.certificate, // already base64 from backend
+      certificationID: cert.certificationID,
+      certificationName: cert.certificationName,
+      image: cert.certificate,
+      IsSelected: cert.IsSelected === 1, // ✅ ensure boolean
     }));
   } catch (error) {
-    console.error("❌ Error fetching certificates:", error.response?.data || error);
+    console.error(
+      "❌ Error fetching certificates:",
+      error.response?.data || error
+    );
   }
 }
 
@@ -100,33 +132,74 @@ async function uploadCertificate(cert, index) {
     await fetchCertificates(user.applicantID);
 
     // ✅ Show success toast
-    showToast(`Certificate "${cert.title || 'Untitled'}" uploaded successfully!`, "success");
+    showToast(
+      `Certificate "${cert.title || "Untitled"}" uploaded successfully!`,
+      "success"
+    );
   } catch (error) {
     console.error("❌ Upload error:", error.response?.data || error);
     showToast("Failed to upload certificate", "error");
   }
 }
 
-// ✅ Delete certificate
-async function deleteCertificate(id) {
-  if (!confirm("Are you sure you want to delete this certificate?")) return;
+const showDeleteModal = ref(false);
+const certToDelete = ref(null);
 
+function confirmDeleteCertificate(cert) {
+  certToDelete.value = cert;
+  showDeleteModal.value = true;
+}
+
+async function deleteCertificateConfirmed() {
   const token = localStorage.getItem("token");
+  const id = certToDelete.value.certificationID || certToDelete.value.id;
 
   try {
     await axios.delete(`http://127.0.0.1:8000/api/certificates/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    console.log("✅ Deleted certificate:", id);
-
-    // ✅ Instantly remove from frontend
-    uploadedCertificates.value = uploadedCertificates.value.filter(cert => cert.id !== id);
+    // Remove locally
+    uploadedCertificates.value = uploadedCertificates.value.filter(
+      (c) => c.certificationID !== id && c.id !== id
+    );
 
     showToast("Certificate deleted successfully", "success");
   } catch (error) {
     console.error("❌ Delete error:", error.response?.data || error);
     showToast("Failed to delete certificate", "error");
+  } finally {
+    showDeleteModal.value = false;
+    certToDelete.value = null;
+  }
+}
+
+// ✅ Toggle certificate selection for resume
+async function toggleCertificateSelection(cert) {
+  const token = localStorage.getItem("token");
+
+  try {
+    const id = cert.certificationID || cert.id;
+    const response = await axios.patch(
+      `http://127.0.0.1:8000/api/certificates/${id}/toggle`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    // ✅ Update local state using correct field name
+    cert.IsSelected =
+      response.data.IsSelected === 1 || response.data.IsSelected === true;
+
+    // ✅ Use correct property for name
+    showToast(
+      cert.IsSelected
+        ? `"${cert.certificationName}" added to resume!`
+        : `"${cert.certificationName}" removed from resume!`,
+      "success"
+    );
+  } catch (error) {
+    console.error("❌ Toggle selection error:", error.response?.data || error);
+    showToast("Failed to update selection", "error");
   }
 }
 
@@ -151,7 +224,10 @@ onMounted(async () => {
   const savedUser = localStorage.getItem("user");
   if (savedUser) {
     const user = JSON.parse(savedUser);
-    userName.value = user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : "Guest";
+    userName.value =
+      user.firstName && user.lastName
+        ? `${user.firstName} ${user.lastName}`
+        : "Guest";
 
     if (user.applicantID) {
       await fetchCertificates(user.applicantID);
@@ -159,6 +235,7 @@ onMounted(async () => {
   } else {
     userName.value = "Guest";
   }
+  await fetchTrainingCounters();
 });
 
 // ➤ Toast helper
@@ -167,7 +244,7 @@ function showToast(message, type = "success", duration = 3000) {
   toasts.value.push({ id, message, type });
 
   setTimeout(() => {
-    toasts.value = toasts.value.filter(t => t.id !== id);
+    toasts.value = toasts.value.filter((t) => t.id !== id);
   }, duration);
 }
 </script>
@@ -176,7 +253,9 @@ function showToast(message, type = "success", duration = 3000) {
   <div class="min-h-screen p-3 rounded-lg font-poppins">
     <div class="min-h-screen font-poppins lg:flex">
       <!-- Sidebar -->
-      <div class="w-full lg:w-1/4 bg-white rounded-lg shadow p-6 flex flex-col items-center hidden lg:flex">
+      <div
+        class="w-full lg:w-1/4 bg-white rounded-lg shadow p-6 flex flex-col items-center hidden lg:flex"
+      >
         <div class="w-24 h-24 rounded-full bg-white mb-4">
           <img
             src="https://img.daisyui.com/images/profile/demo/yellingcat@192.webp"
@@ -185,7 +264,7 @@ function showToast(message, type = "success", duration = 3000) {
           />
         </div>
         <h2 class="text-xl font-semibold mb-6">{{ userName }}</h2>
-        
+
         <div
           class="w-full flex items-center justify-center gap-6 mb-6 relative"
         >
@@ -200,7 +279,7 @@ function showToast(message, type = "success", duration = 3000) {
             <span
               class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
             >
-              0
+              {{ upcomingCount }}
             </span>
           </div>
 
@@ -215,7 +294,7 @@ function showToast(message, type = "success", duration = 3000) {
             <span
               class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
             >
-              0
+              {{ completedCount  }}
             </span>
           </div>
         </div>
@@ -368,15 +447,28 @@ function showToast(message, type = "success", duration = 3000) {
                 type="file"
                 accept="image/*"
                 class="file-input"
+                
                 @change="handleFileUpload($event, index)"
               />
             </div>
 
-            <div v-if="cert.image" class="h-32 w-full flex items-center justify-center border rounded">
-              <img :src="cert.image" alt="Preview" class="h-32 object-cover rounded-lg" />
+            
+
+            <div
+              v-if="cert.image"
+              class="h-32 w-full flex items-center justify-center border rounded"
+            >
+              <img
+                :src="cert.image"
+                alt="Preview"
+                class="h-32 object-cover rounded-lg"
+              />
             </div>
 
-            <div v-else class="h-32 w-full flex items-center justify-center border rounded text-gray-400 text-sm">
+            <div
+              v-else
+              class="h-32 w-full flex items-center justify-center border rounded text-gray-400 text-sm"
+            >
               Certificate Preview
             </div>
 
@@ -398,64 +490,140 @@ function showToast(message, type = "success", duration = 3000) {
             <div
               v-for="(cert, index) in uploadedCertificates"
               :key="'uploaded-' + index"
-              class="flex flex-col items-center bg-white shadow rounded-lg p-4 relative"
+              class="flex flex-col bg-white shadow rounded-lg overflow-hidden relative"
             >
-              <!-- ❌ Delete Button -->
-              <button
-                @click="deleteCertificate(cert.id)"
-                class="absolute top-2 right-2 text-gray-500 hover:text-red-600"
-                title="Delete certificate"
-              >
-                ✕
-              </button>
-
+              <!-- 🖼️ Certificate Image -->
               <div
-                class="w-full h-48 bg-gray-200 flex items-center justify-center rounded cursor-pointer hover:opacity-90 transition"
+                class="w-full h-48 bg-gray-200 flex items-center justify-center cursor-pointer hover:opacity-90 transition"
                 @click="openModal(cert.image, cert.title)"
               >
                 <img
                   v-if="cert.image"
                   :src="cert.image"
                   alt="Certificate Image"
-                  class="h-full w-full object-cover rounded"
+                  class="h-full w-full object-cover"
                 />
                 <span v-else class="text-gray-500">No Image</span>
               </div>
-              <p class="mt-2 text-center font-medium text-gray-800">{{ cert.title }}</p>
+
+              <!-- 🏷️ Bottom section -->
+              <div class="flex justify-between items-center px-4 py-3">
+                <!-- ✏️ Editable Certificate Name -->
+                <!-- Certificate Name (read-only) -->
+                <p class="text-gray-800 font-medium truncate w-2/3">
+                  {{ cert.certificationName }}
+                </p>
+
+                <!-- ✅ Right side buttons -->
+                <div class="flex items-center gap-3">
+                  <!-- Checkbox (Show on Resume) -->
+                  <div
+                    class="flex items-center justify-center"
+                    title="Show on Resume"
+                  >
+                    <input
+                      type="checkbox"
+                      :checked="cert.IsSelected"
+                      @change="() => toggleCertificateSelection(cert)"
+                      class="w-4 h-4 accent-customButton cursor-pointer"
+                    />
+                  </div>
+
+                  <!-- Delete Button -->
+                  <button
+                    @click.stop="confirmDeleteCertificate(cert)"
+                    title="Delete certificate"
+                  >
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M7 21C6.45 21 5.97917 20.8042 5.5875 20.4125C5.19583 20.0208 5 19.55 5 19V6H4V4H9V3H15V4H20V6H19V19C19 19.55 18.8042 20.0208 18.4125 20.4125C18.0208 20.8042 17.55 21 17 21H7ZM17 6H7V19H17V6ZM9 17H11V8H9V17ZM13 17H15V8H13V17Z"
+                        fill="#7A838F"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
           <!-- Modal -->
           <div
             v-if="isModalOpen"
-            class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+            class="fixed inset-0 flex items-center justify-center z-50"
           >
-            <div class="bg-white rounded-lg shadow-lg max-w-3xl w-full p-4 relative">
+            <div
+              class="bg-white rounded-lg shadow-lg max-w-3xl w-full p-4 relative"
+            >
               <button
                 class="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
                 @click="closeModal"
               >
                 ✕
               </button>
-              <img :src="selectedImage" :alt="selectedTitle" class="max-h-[80vh] w-auto mx-auto rounded" />
-              <p class="mt-4 text-center text-lg font-semibold text-gray-800">{{ selectedTitle }}</p>
+              <img
+                :src="selectedImage"
+                :alt="selectedTitle"
+                class="max-h-[80vh] w-auto mx-auto rounded"
+              />
             </div>
           </div>
 
           <!-- Toast notifications -->
-            <div class="fixed top-5 right-5 space-y-2 z-50">
-              <div
-                v-for="toast in toasts"
-                :key="toast.id"
-                :class="[
-                  'px-4 py-2 rounded shadow text-white',
-                  toast.type === 'success' ? 'bg-green-500' :
-                  toast.type === 'error' ? 'bg-red-500' : 'bg-gray-500'
-                ]"
-              >
-                {{ toast.message }}
+          <div class="fixed top-5 right-5 space-y-2 z-50">
+            <div
+              v-for="toast in toasts"
+              :key="toast.id"
+              :class="[
+                'px-4 py-2 rounded shadow ',
+                toast.type === 'success'
+                  ? 'bg-white text-black'
+                  : toast.type === 'error'
+                  ? 'bg-red-500 text-white'
+                  : 'bg-gray-500',
+              ]"
+            >
+              {{ toast.message }}
+            </div>
+          </div>
+          <!-- Delete Confirmation Modal -->
+          <div
+            v-if="showDeleteModal"
+            class="fixed inset-0 flex items-center justify-center z-50"
+          >
+            <div class="bg-white p-6 rounded-xl shadow-xl w-80 text-center">
+              <h3 class="text-lg font-semibold mb-3 text-gray-800">
+                Delete Certificate?
+              </h3>
+              <p class="text-sm text-gray-600 mb-5">
+                Are you sure you want to delete
+                <strong>{{
+                  certToDelete?.certificationName || certToDelete?.title
+                }}</strong
+                >? This action cannot be undone.
+              </p>
+
+              <div class="flex justify-center gap-3">
+                <button
+                  @click="showDeleteModal = false"
+                  class="px-4 py-2 bg-gray-300 rounded-lg text-gray-800 hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+                <button
+                  @click="deleteCertificateConfirmed"
+                  class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                  Delete
+                </button>
               </div>
             </div>
+          </div>
         </div>
       </div>
     </div>

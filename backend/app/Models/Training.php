@@ -49,8 +49,11 @@ class Training extends Model
 		'mode',
 		'location',
 		'trainingLink',
-		'organizationID'
+		'organizationID',
+		'attendance_key',          // ✅ Add this
+		'attendance_expires_at',   // ✅ Add this
 	];
+
 
 	public function organization(): BelongsTo
 	{
@@ -65,5 +68,10 @@ class Training extends Model
 	public function trainingbookmarks()
 	{
 		return $this->hasMany(Trainingbookmark::class, 'trainingID');
+	}
+
+	public function attendances(): HasMany
+	{
+		return $this->hasMany(Attendance::class, 'trainingID');
 	}
 }

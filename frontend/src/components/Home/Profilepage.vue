@@ -1,32 +1,77 @@
 <script setup>
-import { useRouter } from "vue-router";
 import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import axios from "axios";
+
 const router = useRouter();
+
+// 🔹 User info
 const userName = ref("");
 
-const logout = () => {
-  // Remove user data
-  localStorage.removeItem("user");
-  localStorage.removeItem("token"); // if you store an auth token
-  // Redirect to login page
-  router.push({ name: "Login" });
-};
+// 🔹 Counters
+const upcomingCount = ref(0);
+const completedCount = ref(0);
 
-// Check if user is logged in and retrieve user data
-onMounted(() => {
-  const savedUser = localStorage.getItem("user");
-  if (savedUser) {
-    const user = JSON.parse(savedUser);
-    if (user.firstName && user.lastName) {
-      userName.value = `${user.firstName} ${user.lastName}`;
-    } else {
-      userName.value = "Guest";
-    }
-  } else {
+// 🔹 Load user and training registration stats
+onMounted(async () => {
+  const userData = localStorage.getItem("user");
+  const token = localStorage.getItem("token");
+
+  if (!userData || !token) {
     userName.value = "Guest";
+    return;
+  }
+
+  const user = JSON.parse(userData);
+  userName.value = `${user.firstName} ${user.lastName}`;
+
+  try {
+    const res = await axios.get("http://127.0.0.1:8000/api/registrations", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const registrations = res.data || [];
+
+    // ✅ Filter only the current user's registrations
+    const myRegistrationsList = registrations.filter(
+      (r) => r.userID === user.userID
+    );
+
+    // ✅ Separate counts for this user
+    upcomingCount.value = myRegistrationsList.filter(
+      (r) =>
+        r.registrationStatus?.toLowerCase() === "upcoming" ||
+        r.registrationStatus?.toLowerCase() === "registered"
+    ).length;
+
+    completedCount.value = myRegistrationsList.filter(
+      (r) => r.registrationStatus?.toLowerCase() === "completed"
+    ).length;
+
+    console.log("My registrations:", myRegistrationsList);
+    console.log("Registration Data:", registrations);
+  } catch (error) {
+    console.error("Error fetching registration stats:", error);
   }
 });
+
+// 🔹 Optional helper to adjust counters manually
+function updateCounters(type, increase = true) {
+  if (type === "upcoming") {
+    upcomingCount.value += increase ? 1 : -1;
+  } else if (type === "completed") {
+    completedCount.value += increase ? 1 : -1;
+  }
+}
+
+// 🔹 Logout
+const logout = () => {
+  localStorage.removeItem("user");
+  localStorage.removeItem("token");
+  router.push({ name: "Login" });
+};
 </script>
+
 <template>
   <div class="min-h-screen bg-gray-100 font-poppins">
     <div class="lg:hidden block font-poppins">
@@ -60,7 +105,7 @@ onMounted(() => {
               <span
                 class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
               >
-                0
+                {{ upcomingCount }}
               </span>
             </div>
 
@@ -75,7 +120,7 @@ onMounted(() => {
               <span
                 class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
               >
-                0
+                {{ completedCount }}
               </span>
             </div>
           </div>
@@ -169,7 +214,7 @@ onMounted(() => {
             <span
               class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
             >
-              0
+             {{ upcomingCount }}
             </span>
           </div>
 
@@ -184,7 +229,7 @@ onMounted(() => {
             <span
               class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
             >
-              0
+              {{ completedCount }}
             </span>
           </div>
         </div>
