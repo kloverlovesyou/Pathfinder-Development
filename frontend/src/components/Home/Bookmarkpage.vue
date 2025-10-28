@@ -675,21 +675,21 @@ onMounted(() => {
                 </div>
               </dialog>
 
-              <div class="fixed bottom-4 right-4 space-y-2 z-50">
-                <div
-                  v-for="(toast, index) in toasts"
-                  :key="index"
-                  class="px-4 py-2 rounded shadow text-white"
-                  :class="{
-                    'bg-green-600': toast.type === 'success',
-                    'bg-blue-600': toast.type === 'info',
-                    'bg-yellow-500': toast.type === 'accent',
-                    'bg-red-600': toast.type === 'error'
-                  }"
-                >
-                  {{ toast.message }}
+              <!-- Toast Notifications -->
+                <div class="toast toast-end toast-top z-50">
+                  <div
+                    v-for="toast in toasts"
+                    :key="toast.id"
+                    class="alert"
+                    :class="{
+                      'alert-info': toast.type === 'info',
+                      'alert-success': toast.type === 'success',
+                      'alert-accent': toast.type === 'accent',
+                    }"
+                  >
+                    {{ toast.message }}
+                  </div>
                 </div>
-              </div>
             </div>
           </div>
         </div>
