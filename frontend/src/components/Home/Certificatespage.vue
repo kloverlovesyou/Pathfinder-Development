@@ -12,6 +12,8 @@ const userName = ref("");
 const isModalOpen = ref(false);
 const selectedImage = ref(null);
 const selectedTitle = ref(null);
+const upcomingCount = ref(0);
+const completedCount = ref(0);
 
 // ➤ Add a new upload entry
 function addCertificate() {
@@ -38,6 +40,32 @@ function handleFileUpload(event, index) {
     certificates.value[index].file = file;
   };
   reader.readAsDataURL(file);
+}
+
+// Fetch TrainingCounter
+async function fetchTrainingCounters() {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const response = await axios.get("http://127.0.0.1:8000/api/registrations", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const trainings = response.data || [];
+
+    upcomingCount.value = trainings.filter(
+      (r) =>
+        r.registrationStatus?.toLowerCase() === "upcoming" ||
+        r.registrationStatus?.toLowerCase() === "registered"
+    ).length;
+
+    completedCount.value = trainings.filter(
+      (r) => r.registrationStatus?.toLowerCase() === "completed"
+    ).length;
+  } catch (error) {
+    console.error("❌ Error fetching training counters:", error);
+  }
 }
 
 // ➤ Fetch uploaded certificates only
@@ -207,6 +235,7 @@ onMounted(async () => {
   } else {
     userName.value = "Guest";
   }
+  await fetchTrainingCounters();
 });
 
 // ➤ Toast helper
@@ -250,7 +279,7 @@ function showToast(message, type = "success", duration = 3000) {
             <span
               class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
             >
-              0
+              {{ upcomingCount }}
             </span>
           </div>
 
@@ -265,7 +294,7 @@ function showToast(message, type = "success", duration = 3000) {
             <span
               class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
             >
-              0
+              {{ completedCount  }}
             </span>
           </div>
         </div>

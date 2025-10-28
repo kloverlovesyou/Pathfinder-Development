@@ -9,6 +9,8 @@ const pdfUrl = ref(null);
 const newSkill = ref("");
 const router = useRouter();
 const userName = ref("");
+const upcomingCount = ref(0);
+const completedCount = ref(0);
 
 // --- Forms ---
 const showNewExperienceForm = ref(false);
@@ -47,6 +49,32 @@ const form = reactive({
   phoneNumber: "",
   address: "",
 });
+
+// Fetch TrainingCounter
+async function fetchTrainingCounters() {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const response = await axios.get("http://127.0.0.1:8000/api/registrations", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const trainings = response.data || [];
+
+    upcomingCount.value = trainings.filter(
+      (r) =>
+        r.registrationStatus?.toLowerCase() === "upcoming" ||
+        r.registrationStatus?.toLowerCase() === "registered"
+    ).length;
+
+    completedCount.value = trainings.filter(
+      (r) => r.registrationStatus?.toLowerCase() === "completed"
+    ).length;
+  } catch (error) {
+    console.error("❌ Error fetching training counters:", error);
+  }
+}
 
 // --- Save Resume ---
 async function saveResume() {
@@ -474,6 +502,7 @@ onMounted(async () => {
     }
   }
   await loadResume();
+  await fetchTrainingCounters();
 });
 
 const logout = () => {
@@ -547,7 +576,7 @@ onMounted(fetchSelectedCertificates);
             <span
               class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
             >
-              0
+              {{ upcomingCount }}
             </span>
           </div>
 
@@ -562,7 +591,7 @@ onMounted(fetchSelectedCertificates);
             <span
               class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
             >
-              0
+              {{ completedCount }}
             </span>
           </div>
         </div>
