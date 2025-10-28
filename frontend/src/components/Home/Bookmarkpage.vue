@@ -14,6 +14,8 @@ const activeTab = ref("career");
 const screenIsLarge = ref(window.innerWidth >= 1024);
 const myRegistrations = ref(new Set());
 const toasts = ref([]);
+const upcomingCount = ref(0);
+const completedCount = ref(0);
 
 function addToast(message, type = "info") {
   toasts.value.push({ message, type });
@@ -48,6 +50,7 @@ const fetchOrganizations = async () => {
     console.error("❌ Failed to fetch organizations:", error);
   }
 };
+
 // ✅ Load Bookmarks
 const loadBookmarks = async () => {
   try {
@@ -128,6 +131,32 @@ const isBookmarked = (post) => {
     );
   }
 };
+
+// Fetch TrainingCounter
+async function fetchTrainingCounters() {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const response = await axios.get("http://127.0.0.1:8000/api/registrations", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const trainings = response.data || [];
+
+    upcomingCount.value = trainings.filter(
+      (r) =>
+        r.registrationStatus?.toLowerCase() === "upcoming" ||
+        r.registrationStatus?.toLowerCase() === "registered"
+    ).length;
+
+    completedCount.value = trainings.filter(
+      (r) => r.registrationStatus?.toLowerCase() === "completed"
+    ).length;
+  } catch (error) {
+    console.error("❌ Error fetching training counters:", error);
+  }
+}
 
 
 const loadRegistrations = async () => {
@@ -276,7 +305,7 @@ const registerTraining = async (training) => {
 onMounted(() => {
   fetchOrganizations();
   loadBookmarks();
-
+  fetchTrainingCounters();
     const savedUser = localStorage.getItem("user");
   if (savedUser) {
     try {
@@ -288,6 +317,7 @@ onMounted(() => {
   } else {
     userName.value = "Guest";
   }
+   
 });
 </script>
 
@@ -322,7 +352,7 @@ onMounted(() => {
               <span
                 class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
               >
-                0
+                {{ upcomingCount }}
               </span>
             </div>
 
@@ -337,7 +367,7 @@ onMounted(() => {
               <span
                 class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
               >
-                0
+                {{ completedCount }}
               </span>
             </div>
           </div>
