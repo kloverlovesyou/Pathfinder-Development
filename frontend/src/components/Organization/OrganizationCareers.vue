@@ -357,7 +357,7 @@
               class="career-input" />
             <!-- Deadline input with calendar icon (career) -->
             <div class="deadline-input-wrapper">
-              <input type="date" v-model="newCareer.deadline" placeholder="Deadline of Submission"
+              <input type="date" v-model="newCareer.deadline" :min="todayDate" placeholder="Deadline of Submission"
                 class="career-input" />
               <span class="calendar-icon">
                 <!-- use the same SVG you shared -->
@@ -727,6 +727,16 @@ export default {
         deadline: "",
       };
     },
+  },
+
+  computed: {
+    todayDate() {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, "0");
+      const day = String(today.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`; // YYYY-MM-DD
+    }
   },
 
   mounted() {
@@ -1801,8 +1811,8 @@ input[type="text"] {
 
 .modal-close-btn {
   position: absolute;
-  top: 8px;
-  right: 10px;
+  top: 10px;
+  right: 15px;
   background: transparent;
   border: none;
   font-size: 1.2rem;

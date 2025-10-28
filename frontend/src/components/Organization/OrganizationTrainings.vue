@@ -133,7 +133,6 @@
               </div>
               <div v-if="openUpcomingMenu === training.trainingID" class="dropdown-menu" @click.stop>
                 <ul>
-                  <li @click="openRegistrantsModal(training)">Registrants</li>
                   <li>Delete Training</li>
                 </ul>
               </div>
@@ -172,7 +171,6 @@
               </div>
               <div v-if="openCompletedMenu === training.trainingID" class="dropdown-menu" @click.stop>
                 <ul>
-                  <li @click="openRegistrantsModal(training)">Registrants</li>
                   <li>Delete Training</li>
                 </ul>
               </div>
@@ -185,57 +183,54 @@
           @click="showAllCompleted = !showAllCompleted">
           {{ showAllCompleted ? 'Show Less' : 'Show More' }}
         </button>
-        
+
       </section>
 
-          <!-- Registrants Modal -->
-          <div v-if="showRegistrantsModal" class="modal-overlay" @click.self="closeModal">
-            <div class="modal-content">
-              <button class="modal-close-btn" @click="closeModal">✕</button>
-              <h3 class="modal-title">Registrants for {{ selectedTraining.title }}</h3>
+      <!-- Registrants Modal -->
+      <div v-if="showRegistrantsModal" class="modal-overlay" @click.self="closeModal">
+        <div class="modal-content">
+          <button class="modal-close-btn" @click="closeModal">✕</button>
+          <h3 class="modal-title">Registrants for {{ selectedTraining.title }}</h3>
 
-              <div class="registrants-table-container">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>FULL NAME</th>
-                      <th>REGISTRATION DATE</th>
-                      <th>STATUS</th>
-                      <th class="cert-col-header">CERTIFICATE</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="person in registrantsList" :key="person.id">
-                      <td>
-                        <p class="registrant-name">{{ person.name }}</p>
-                      </td>
-                      <td>
-                        <p class="registration-date">{{ person.dateRegistered }}</p>
-                      </td>
-                      <td :class="{
-                      'status-attended': person.status === 'Attended',
-                      'status-registered': person.status === 'Registered',
-                      'status-did-not-attend': person.status === 'Did not Attend'
-                            }">
-                      {{ person.status }}
-                    </td>
+          <div class="registrants-table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>FULL NAME</th>
+                  <th>REGISTRATION DATE</th>
+                  <th>STATUS</th>
+                  <th class="cert-col-header">CERTIFICATE</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="person in registrantsList" :key="person.id">
+                  <td>
+                    <p class="registrant-name">{{ person.name }}</p>
+                  </td>
+                  <td>
+                    <p class="registration-date">{{ person.dateRegistered }}</p>
+                  </td>
+                  <td :class="{
+                    'status-attended': person.status === 'Attended',
+                    'status-registered': person.status === 'Registered',
+                    'status-did-not-attend': person.status === 'Did not Attend'
+                  }">
+                    {{ person.status }}
+                  </td>
 
-                      <td>
-                        <button
-                          class="action-btn"
-                          :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
-                          :disabled="person.hasCertificate"
-                          @click="openCertUploadModal(person)"
-                        >
-                          {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                  <td>
+                    <button class="action-btn"
+                      :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
+                      :disabled="person.hasCertificate" @click="openCertUploadModal(person)">
+                      {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
+        </div>
+      </div>
 
       <!-- Training Details Modal -->
       <div v-if="showTrainingDetailsModal" class="modal-overlay" @click.self="closeTrainingDetails">
@@ -374,7 +369,7 @@
               <div class="schedule-input-wrapper">
                 <!-- Date input with calendar icon -->
                 <div class="date-input-wrapper">
-                  <input type="date" id="schedule" v-model="newTraining.date" placeholder="Schedule" />
+                  <input type="date" id="schedule" v-model="newTraining.date" :min="todayDate" placeholder="Schedule" />
                   <span class="calendar-icon">
                     <!-- your SVG calendar icon -->
                     <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -494,13 +489,13 @@ export default {
       this.isSidebarOpen = !this.isSidebarOpen;
     },
 
-      handleViewRegistrants(training) {
-    if (!training) {
-      console.error("❌ handleViewRegistrants called without training");
-      return;
-    }
-    this.openRegistrantsModal(training);
-  },
+    handleViewRegistrants(training) {
+      if (!training) {
+        console.error("❌ handleViewRegistrants called without training");
+        return;
+      }
+      this.openRegistrantsModal(training);
+    },
 
     /* ==========================
        ✅ Dropdown Menu Logic
@@ -510,7 +505,7 @@ export default {
       this.openCompletedMenu = null;
     },
     closeModal() {
-  this.showRegistrantsModal = false;
+      this.showRegistrantsModal = false;
     },
     toggleCompletedMenu(id) {
       this.openCompletedMenu = this.openCompletedMenu === id ? null : id;
@@ -528,65 +523,65 @@ export default {
       }
     },
 
-          /* ==========================
-        ✅ Registrants Modal
-      ========================== */
-      async openRegistrantsModal(training) {
-        try {
-          // Set selected training
-          this.selectedTraining = training;
+    /* ==========================
+  ✅ Registrants Modal
+========================== */
+    async openRegistrantsModal(training) {
+      try {
+        // Set selected training
+        this.selectedTraining = training;
 
-          // Get token from localStorage
-          const token = localStorage.getItem("token");
-          if (!token) {
-            console.error("No token found. Please log in first.");
-            alert("You must log in to view registrants.");
-            return;
-          }
-
-          // Fetch registrants from API
-          const response = await axios.get(
-           `http://127.0.0.1:8000/api/trainings/${training.trainingID}/registrants`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                Accept: "application/json",
-              },
-            }
-          );
-
-          // Populate registrants list dynamically
-          this.registrantsList = response.data;
-
-          // Open the modal
-          this.showRegistrantsModal = true;
-
-          // Close any dropdown menus
-          this.closeAllMenus();
-
-        } catch (error) {
-          if (error.response) {
-            console.error("Error fetching registrants:", error.response.status, error.response.data);
-            if (error.response.status === 401) {
-              alert("Unauthorized. Please log in again.");
-            } else if (error.response.status === 403) {
-              alert("You don't have permission to view registrants for this training.");
-            } else if (error.response.status === 404) {
-              alert("Training not found or you don't have access to it.");
-            } else {
-              alert("Failed to fetch registrants. Please try again.");
-            }
-          } else {
-            console.error("Network or other error:", error.message);
-            alert("An error occurred while fetching registrants.");
-          }
+        // Get token from localStorage
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.error("No token found. Please log in first.");
+          alert("You must log in to view registrants.");
+          return;
         }
-      },
 
-      closeRegistrantsModal() {
-        this.showRegistrantsModal = false;
-        this.registrantsList = [];
-      },
+        // Fetch registrants from API
+        const response = await axios.get(
+          `http://127.0.0.1:8000/api/trainings/${training.trainingID}/registrants`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+            },
+          }
+        );
+
+        // Populate registrants list dynamically
+        this.registrantsList = response.data;
+
+        // Open the modal
+        this.showRegistrantsModal = true;
+
+        // Close any dropdown menus
+        this.closeAllMenus();
+
+      } catch (error) {
+        if (error.response) {
+          console.error("Error fetching registrants:", error.response.status, error.response.data);
+          if (error.response.status === 401) {
+            alert("Unauthorized. Please log in again.");
+          } else if (error.response.status === 403) {
+            alert("You don't have permission to view registrants for this training.");
+          } else if (error.response.status === 404) {
+            alert("Training not found or you don't have access to it.");
+          } else {
+            alert("Failed to fetch registrants. Please try again.");
+          }
+        } else {
+          console.error("Network or other error:", error.message);
+          alert("An error occurred while fetching registrants.");
+        }
+      }
+    },
+
+    closeRegistrantsModal() {
+      this.showRegistrantsModal = false;
+      this.registrantsList = [];
+    },
 
     /* ==========================
        ✅ Certificate Upload Modal
@@ -770,6 +765,13 @@ export default {
   },
 
   computed: {
+    todayDate() {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, "0");
+      const day = String(today.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`; // format: YYYY-MM-DD
+    },
     visibleUpcomingTrainings() {
       const list = this.sortedUpcomingTrainings;
       return this.showAllUpcoming ? list : list.slice(0, 4);
