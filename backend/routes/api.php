@@ -18,7 +18,8 @@ use App\Http\Controllers\{
     TrainingBookmarkController,
     CertificateController,
     CareerBookmarkController,
-    SearchController
+    SearchController,
+    MyActivityController
 };
 
 // ----------------------
@@ -129,5 +130,7 @@ Route::get('/user', function (Request $request) {
     if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
     return $user;
 });
+
+Route::get('/my-activities/{applicantID}', [MyActivityController::class, 'getMyActivities']);
 
 

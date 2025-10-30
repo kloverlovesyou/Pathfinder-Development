@@ -218,6 +218,68 @@ function showToast(message, type = "success", duration = 3000) {
     toasts.value = toasts.value.filter((t) => t.id !== id);
   }, duration);
 }
+
+const showManageMenu = ref(false);
+
+const toggleManageMenu = () => {
+  showManageMenu.value = !showManageMenu.value;
+};
+
+const selectAllCertificates = async () => {
+  const token = localStorage.getItem("token");
+
+  try {
+    // Update each certificate both locally and in backend
+    await Promise.all(
+      uploadedCertificates.value.map(async (cert) => {
+        if (!cert.IsSelected) {
+          const id = cert.certificationID || cert.id;
+          await axios.patch(
+            `http://127.0.0.1:8000/api/certificates/${id}/toggle`,
+            {},
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          cert.IsSelected = true;
+        }
+      })
+    );
+
+    showToast("All certificates selected for resume!", "success");
+  } catch (error) {
+    console.error("Error selecting all certificates:", error);
+    showToast("Failed to select all certificates", "error");
+  } finally {
+    showManageMenu.value = false;
+  }
+};
+
+const deselectAllCertificates = async () => {
+  const token = localStorage.getItem("token");
+
+  try {
+    // Update each certificate both locally and in backend
+    await Promise.all(
+      uploadedCertificates.value.map(async (cert) => {
+        if (cert.IsSelected) {
+          const id = cert.certificationID || cert.id;
+          await axios.patch(
+            `http://127.0.0.1:8000/api/certificates/${id}/toggle`,
+            {},
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          cert.IsSelected = false;
+        }
+      })
+    );
+
+    showToast("All certificates removed from resume!", "success");
+  } catch (error) {
+    console.error("Error deselecting all certificates:", error);
+    showToast("Failed to deselect all certificates", "error");
+  } finally {
+    showManageMenu.value = false;
+  }
+};
 </script>
 
 <template>
@@ -460,6 +522,36 @@ function showToast(message, type = "success", duration = 3000) {
         <!-- Uploaded certificates display -->
         <div class="bg-white rounded-lg shadow p-6 flex-1">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div class="text-gray-500">
+              Select certificates to appear in the resume.
+            </div>
+            <div class="relative ml-auto">
+              <button
+                @click="toggleManageMenu"
+                class="bg-customButton hover:bg-dark-slate text-white text-sm px-3 py-2 rounded-md transition"
+              >
+                Manage Selection ▾
+              </button>
+
+              <!-- Dropdown -->
+              <div
+                v-if="showManageMenu"
+                class="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-md shadow-lg z-10"
+              >
+                <button
+                  @click="selectAllCertificates"
+                  class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                >
+                  Select All
+                </button>
+                <button
+                  @click="deselectAllCertificates"
+                  class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                >
+                  Deselect All
+                </button>
+              </div>
+            </div>
             <div
               v-for="(cert, index) in uploadedCertificates"
               :key="'uploaded-' + index"
