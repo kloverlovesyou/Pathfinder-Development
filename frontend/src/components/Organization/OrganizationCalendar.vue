@@ -129,13 +129,13 @@
                   <div v-if="date && getEventsByDate(date).length" class="events-list">
                     <div v-if="date && getEventTitles(date).length" class="events-list">
                       <!-- Show only first 2 events -->
-                      <div v-for="(event, i) in getEventTitles(date).slice(0, 2)" :key="i" class="event-title"
+                      <div v-for="(event, i) in getEventTitles(date).slice(0, 1)" :key="i" class="event-title"
                         :class="event.type">
                         {{ event.title }}
                       </div>
 
                       <!-- Show "+ Show more" if there are more than 2 events -->
-                      <div v-if="getEventTitles(date).length > 2" class="show-more"
+                      <div v-if="getEventTitles(date).length > 1" class="show-more"
                         @click.stop="openEventDetailsByDate(date)">
                         + Show more
                       </div>
@@ -145,10 +145,10 @@
               </div>
               <div class="calendar-legend">
                 <div class="legend-item">
-                  <span class="legend-color training"></span> Training
+                  <span class="training">🟦</span> Training
                 </div>
                 <div class="legend-item">
-                  <span class="legend-color career"></span> Career
+                  <span class="career">🟨</span> Career
                 </div>
               </div>
             </div>
@@ -353,8 +353,8 @@ export default {
     getEventColor(date) {
       if (!date) return "";
       const formatted = this.formatDate(date);
-      if (this.trainings.some(t => t.date === formatted)) return "#d0e6ff"; // light blue
-      if (this.careers.some(c => c.date === formatted)) return "#fff5c2"; // light yellow
+      if (this.trainings.some(t => t.date === formatted)) return "#F5F5F5"; 
+      if (this.careers.some(c => c.date === formatted)) return "#F5F5F5"; 
       return "";
     },
     formatDate(date) {
@@ -990,7 +990,7 @@ const isToday = (date) => {
 }
 
 .close-btn:hover {
-  background: #2e3c50;
+  background: #374151;
 }
 
 .calendar-legend {
@@ -1079,7 +1079,7 @@ const isToday = (date) => {
 }
 
 .close-btn {
-  background: #e2e8f0;
+  background: #44576D;
   border: none;
   padding: 8px 14px;
   border-radius: 6px;
@@ -1088,7 +1088,7 @@ const isToday = (date) => {
 }
 
 .close-btn:hover {
-  background: #cbd5e1;
+  background: #374151;
 }
 
 /* Color indicators */
