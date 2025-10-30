@@ -40,9 +40,9 @@ const router = createRouter({
         { path: "login", name: "Login", component: LoginForm },
         {
           path: "register",
-          alias: "/typeofaccount",   // 👈 Now /typeofaccount works too
+          alias: "/typeofaccount", // 👈 Now /typeofaccount works too
           name: "Register",
-          component: TypeOfAccount
+          component: TypeOfAccount,
         },
         {
           path: "aregistration",
@@ -92,33 +92,33 @@ const router = createRouter({
       ],
     },
 
-        {
-      path: '/organization',
-      name: 'OrgHome',
+    {
+      path: "/organization",
+      name: "OrgHome",
       component: OrgHomePage,
-      meta: { requiresAuth: true, role: 'organization' },
+      meta: { requiresAuth: true, role: "organization" },
     },
     {
-      path: '/organization/org-trainings',
-      name: 'OrgTrainings',
+      path: "/organization/org-trainings",
+      name: "OrgTrainings",
       component: OrgTraining,
-      meta: { requiresAuth: true, role: 'organization' },
+      meta: { requiresAuth: true, role: "organization" },
     },
     {
-      path: '/organization/org-careers',
-      name: 'OrgCareers',
+      path: "/organization/org-careers",
+      name: "OrgCareers",
       component: OrgCareer,
-      meta: { requiresAuth: true, role: 'organization' },
+      meta: { requiresAuth: true, role: "organization" },
     },
     {
       path: "/organization/org-calendar",
-      name: 'OrgCalendar',
+      name: "OrgCalendar",
       component: OrgCalendar,
       meta: { requiresAuth: true, role: "organization" },
     },
     {
       path: "/organization/org-profile",
-      name: 'OrgProfile',
+      name: "OrgProfile",
       component: OrgProfile,
       meta: { requiresAuth: true, role: "organization" },
     },
