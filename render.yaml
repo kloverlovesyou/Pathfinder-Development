@@ -4,13 +4,15 @@ services:
     plan: free
     rootDir: backend
     buildCommand: |
-      apt-get update && apt-get install -y php-cli php-mbstring php-xml php-bcmath php-curl unzip
+      apt-get update && apt-get install -y php php-mbstring php-xml php-bcmath php-curl unzip
       curl -sS https://getcomposer.org/installer | php
       php composer.phar install --no-dev --optimize-autoloader
       php artisan config:cache
       php artisan route:cache
       php artisan view:cache
-    startCommand: php artisan serve --host=0.0.0.0 --port=10000
+    startCommand: |
+      sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
+      apache2-foreground
     envVars:
       - key: APP_ENV
         value: production
@@ -18,5 +20,3 @@ services:
         value: false
       - key: APP_URL
         value: https://pathfinder-laravel-backend.onrender.com
-      - key: PORT
-        value: 10000
