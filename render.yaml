@@ -1,11 +1,12 @@
-
 services:
   - type: web
     name: pathfinder-laravel-backend
-    env: php
+    plan: free
     rootDir: backend
     buildCommand: |
-      composer install --no-dev --optimize-autoloader
+      apt-get update && apt-get install -y php-cli php-mbstring php-xml php-bcmath php-curl unzip
+      curl -sS https://getcomposer.org/installer | php
+      php composer.phar install --no-dev --optimize-autoloader
       php artisan config:cache
       php artisan route:cache
       php artisan view:cache
