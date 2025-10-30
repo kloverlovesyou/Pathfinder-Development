@@ -1,89 +1,101 @@
 <script setup>
-import { ref, computed } from "vue";
-import { useRouter } from "vue-router";
+import { ref, onMounted, nextTick } from "vue";
+import axios from "axios";
 
-const router = useRouter();
+const calendarRef = ref(null);
+const posts = ref([]); // will hold trainings from backend
+const eventsByDate = ref({});
+const selectedEvents = ref([]);
+const selectedDate = ref("");
 
-// Use a simple data structure for schedules: id, title, date
-const schedules = ref([
-  { id: 1, title: "Project meeting", date: "2025-08-10" },
-  { id: 2, title: "Dentist appointment", date: "2025-08-15" },
-  { id: 3, title: "Team lunch", date: "2025-08-15" },
-  { id: 4, title: "Weekly standup", date: "2025-08-18" },
-  { id: 5, title: "Submit report", date: "2025-08-25" },
-  { id: 6, title: "Vacation begins", date: "2025-09-01" },
-  { id: 7, title: "Project deadline", date: "2025-07-28" },
-]);
+// ✅ Fetch trainings from backend
+async function fetchScheduledTrainings() {
+  try {
+    const token = localStorage.getItem("token"); // Adjust if you store token differently
 
-// State for managing the modal
-const isModalOpen = ref(false);
-const selectedSchedule = ref(null);
+    const res = await axios.get("http://127.0.0.1:8000/api/trainings", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-// State for the current month and year
-const currentDate = ref(new Date());
+    // Map response to match your structure
+    posts.value = res.data.map((training) => ({
+      trainingID: training.trainingID,
+      title: training.title,
+      schedule: training.schedule,
+      organizationID: training.organizationID,
+      location: training.location,
+      trainingLink: training.trainingLink,
+      mode: training.mode,
+      description: training.description,
+    }));
 
-// Function to handle clicking on a schedule
-const handleScheduleClick = (schedule) => {
-  selectedSchedule.value = schedule;
-  isModalOpen.value = true;
-};
+    buildEvents();
+    highlightEventDays();
 
-// Function to handle deleting a schedule
-const handleDeleteSchedule = (id) => {
-  schedules.value = schedules.value.filter((schedule) => schedule.id !== id);
-  isModalOpen.value = false;
-  selectedSchedule.value = null;
-};
+    console.log("✅ Trainings fetched:", posts.value);
+  } catch (error) {
+    console.error("❌ Error fetching trainings:", error);
+  }
+}
 
-// Function to navigate to the previous month
-const handlePreviousMonth = () => {
-  const newDate = new Date(
-    currentDate.value.getFullYear(),
-    currentDate.value.getMonth() - 1,
-    1
-  );
-  currentDate.value = newDate;
-};
+// ✅ Build a map of events per date
+function buildEvents() {
+  eventsByDate.value = {};
 
-// Function to navigate to the next month
-const handleNextMonth = () => {
-  const newDate = new Date(
-    currentDate.value.getFullYear(),
-    currentDate.value.getMonth() + 1,
-    1
-  );
-  currentDate.value = newDate;
-};
-
-// Computed property to get the days in the currently selected month
-const daysInMonth = computed(() => {
-  const year = currentDate.value.getFullYear();
-  const month = currentDate.value.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  return Array.from({ length: daysInMonth }, (_, i) => i + 1);
-});
-
-// Computed property for month and year display
-const monthYearDisplay = computed(() => {
-  return currentDate.value.toLocaleString("default", {
-    month: "long",
-    year: "numeric",
+  posts.value.forEach((training) => {
+    const dateKey = new Date(training.schedule).toISOString().split("T")[0];
+    if (!eventsByDate.value[dateKey]) eventsByDate.value[dateKey] = [];
+    eventsByDate.value[dateKey].push(training);
   });
+}
+
+// ✅ Highlight calendar days that have events
+function highlightEventDays() {
+  const calendar = calendarRef.value;
+  if (!calendar) return;
+
+  calendar.querySelectorAll("[data-date]").forEach((el) => {
+    const date = el.getAttribute("data-date");
+    el.classList.remove("highlight-day");
+    if (eventsByDate.value[date]) {
+      el.classList.add("highlight-day");
+    }
+  });
+}
+
+// ✅ Show events for a selected date
+function showEvents(date) {
+  selectedDate.value = date;
+  selectedEvents.value = eventsByDate.value[date] || [];
+}
+
+// ✅ On mounted
+onMounted(async () => {
+  await nextTick();
+  await fetchScheduledTrainings();
+
+  const calendar = calendarRef.value;
+  if (!calendar) return;
+
+  const today = new Date().toISOString().split("T")[0];
+
+  // Listen to calendar changes
+  calendar.addEventListener("change", (e) => {
+    const pickedDate = e.target.value;
+    showEvents(pickedDate);
+
+    // Highlight selected day
+    calendar.querySelectorAll("[data-date]").forEach((el) =>
+      el.classList.remove("selected-day")
+    );
+    const selectedEl = calendar.querySelector(`[data-date="${pickedDate}"]`);
+    if (selectedEl) selectedEl.classList.add("selected-day");
+  });
+
+  // Default: show today's events
+  calendar.value = today;
+  showEvents(today);
 });
-
-// Computed properties for calendar rendering logic
-const currentMonth = computed(() => currentDate.value.getMonth());
-const currentYear = computed(() => currentDate.value.getFullYear());
-const firstDayOfMonth = computed(() =>
-  new Date(currentYear.value, currentMonth.value, 1).getDay()
-);
-
-const getSchedulesForDay = (day) => {
-  const dateStr = `${currentYear.value}-${String(
-    currentMonth.value + 1
-  ).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-  return schedules.value.filter((schedule) => schedule.date === dateStr);
-};
 </script>
 
 <template>
@@ -135,7 +147,7 @@ const getSchedulesForDay = (day) => {
       </div>
     </div>
 
-    <!-- Calendar Grid -->
+    <!-- Calendar Grid (Desktop) -->
     <div class="w-full max-w-6xl p-6 rounded-2xl hidden lg:block">
       <div
         class="grid grid-cols-7 gap-1 sm:gap-2 text-center text-gray-500 font-semibold mb-4"
@@ -151,6 +163,7 @@ const getSchedulesForDay = (day) => {
       <div class="grid grid-cols-7 gap-2">
         <!-- Fill in blank spaces for the first week -->
         <div v-for="n in firstDayOfMonth" :key="`blank-${n}`" class="p-2"></div>
+
         <!-- Render calendar days -->
         <div
           v-for="day in daysInMonth"
@@ -158,9 +171,10 @@ const getSchedulesForDay = (day) => {
           class="bg-gray-50 h-32 md:h-40 rounded-lg p-2 flex flex-col items-start overflow-auto shadow-sm hover:bg-gray-100 transition-colors duration-200"
         >
           <div class="text-lg font-bold text-gray-800">{{ day }}</div>
+
           <div
             v-for="schedule in getSchedulesForDay(day)"
-            :key="schedule.id"
+            :key="schedule.trainingID"
             @click="handleScheduleClick(schedule)"
             class="cursor-pointer mt-1 w-full bg-blue-100 text-blue-800 text-sm p-1 rounded-md hover:bg-blue-200 transition-colors duration-200 truncate"
           >
@@ -170,7 +184,7 @@ const getSchedulesForDay = (day) => {
       </div>
     </div>
 
-    <!-- Schedule Modal -->
+    <!-- Schedule Modal (Desktop) -->
     <div
       v-if="isModalOpen && selectedSchedule"
       class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden lg:block"
@@ -202,56 +216,59 @@ const getSchedulesForDay = (day) => {
       </div>
     </div>
 
-    <!--List for small screen-->
+    <!-- 📱 List for small screen -->
     <div>
       <div class="p-4 rounded-lg lg:hidden">
         <div
           class="bg-blue-gray p-4 rounded-md cally bg-base-100 border border-base-300 shadow-lg rounded-box flex justify-center"
         >
-          <calendar-date>
-            <svg
-              aria-label="Previous"
-              class="fill-current size-4"
-              slot="previous"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-            >
-              <path fill="currentColor" d="M15.75 19.5 8.25 12l7.5-7.5"></path>
-            </svg>
-            <svg
-              aria-label="Next"
-              class="fill-current size-4"
-              slot="next"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-            >
-              <path fill="currentColor" d="m8.25 4.5 7.5 7.5-7.5 7.5"></path>
-            </svg>
-            <calendar-month></calendar-month>
+          <calendar-date
+            ref="calendarRef"
+            first-day-of-week="0"
+            class="cally bg-base-100 border border-base-300 shadow rounded-box p-3 flex-shrink-0"
+          >
+            <calendar-month>
+              <template #day="{ date, label }">
+                <div
+                  class="w-8 h-8 flex items-center justify-center rounded-full"
+                  :data-date="date"
+                >
+                  {{ label }}
+                </div>
+              </template>
+            </calendar-month>
           </calendar-date>
         </div>
+
+        <!-- ✅ Dynamic event list -->
         <div class="mt-8">
-          <h2 class="text-xl font-bold mb-4">Upcoming</h2>
-          <div class="space-y-4">
-            <div class="p-4 bg-gray-100 rounded-lg">
-              <h3 class="font-semibold hover:text-dark-slate">
-                Professional development in emerging technologies and cognitive
-                enhancement
-              </h3>
-              <p class="text-gray-600 text-sm">Tomorrow, 10:00 AM</p>
-            </div>
-            <div class="p-4 bg-gray-100 rounded-lg">
-              <h3 class="font-semibold hover:text-dark-slate">
-                Mind Over Machine: Navigating AI in Everyday Life
-              </h3>
-              <p class="text-gray-600 text-sm">Dec 15</p>
-            </div>
-            <div class="p-4 bg-gray-100 rounded-lg">
-              <h3 class="font-semibold hover:text-dark-slate">
-                Business Conference
-              </h3>
-              <p class="text-gray-600 text-sm">Dec 18, 2:00 PM</p>
-            </div>
+          <h2 class="text-xl font-bold mb-4">Upcoming Trainings</h2>
+
+          <div v-if="selectedEvents.length === 0" class="text-gray-500">
+            No events scheduled for {{ selectedDate || "this day" }}.
+          </div>
+
+          <div
+            v-for="event in selectedEvents"
+            :key="event.trainingID"
+            class="p-4 bg-gray-100 rounded-lg mb-3"
+          >
+            <h3 class="font-semibold hover:text-dark-slate">
+              {{ event.title }}
+            </h3>
+            <p class="text-gray-600 text-sm">
+              📅 {{ new Date(event.schedule).toLocaleString() }}
+            </p>
+            <p class="text-gray-600 text-sm">📍 {{ event.location }}</p>
+            <p class="text-gray-600 text-sm">
+              🔗
+              <a
+                :href="event.trainingLink"
+                target="_blank"
+                class="text-blue-500 underline"
+                >Open Link</a
+              >
+            </p>
           </div>
         </div>
       </div>
