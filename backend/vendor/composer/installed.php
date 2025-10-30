@@ -3,7 +3,7 @@
         'name' => 'laravel/laravel',
         'pretty_version' => 'dev-keiro',
         'version' => 'dev-keiro',
-        'reference' => 'd2bfb251eefa292d10667dc3e4871d563dbe7566',
+        'reference' => '2751138bf342d5e82d3fb7e16b6f16077d94efd1',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -463,7 +463,7 @@
         'laravel/laravel' => array(
             'pretty_version' => 'dev-keiro',
             'version' => 'dev-keiro',
-            'reference' => 'd2bfb251eefa292d10667dc3e4871d563dbe7566',
+            'reference' => '2751138bf342d5e82d3fb7e16b6f16077d94efd1',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
