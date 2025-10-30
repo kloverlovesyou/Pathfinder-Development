@@ -120,7 +120,8 @@
 
         <!-- ✅ Grid Layout -->
         <div class="trainings-grid">
-          <div v-for="training in visibleUpcomingTrainings" :key="training.trainingID" class="training-card">
+          <div v-for="training in visibleUpcomingTrainings" :key="training.trainingID" class="training-card"
+            @click="openTrainingDetails(training)">
             <div class="training-right" @click="openTrainingDetails(training)">
               <h3 class="training-title">{{ training.title }}</h3>
               <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
@@ -133,8 +134,7 @@
               </div>
               <div v-if="openUpcomingMenu === training.trainingID" class="dropdown-menu" @click.stop>
                 <ul>
-                  <li @click="openRegistrantsModal(training)">Registrants</li>
-                  <li>Delete Training</li>
+                  <li @click="deleteTraining(training.trainingID)">Delete Training</li>
                 </ul>
               </div>
             </div>
@@ -159,7 +159,8 @@
 
         <!-- ✅ Grid Layout -->
         <div class="trainings-grid">
-          <div v-for="training in visibleCompletedTrainings" :key="training.trainingID" class="training-card">
+          <div v-for="training in visibleCompletedTrainings" :key="training.trainingID" class="training-card"
+            @click="openTrainingDetails(training)">
             <div class="training-right" @click="openTrainingDetails(training)">
               <h3 class="training-title">{{ training.title }}</h3>
               <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
@@ -172,8 +173,7 @@
               </div>
               <div v-if="openCompletedMenu === training.trainingID" class="dropdown-menu" @click.stop>
                 <ul>
-                  <li @click="openRegistrantsModal(training)">Registrants</li>
-                  <li>Delete Training</li>
+                  <li @click="deleteTraining(training.trainingID)">Delete Training</li>
                 </ul>
               </div>
             </div>
@@ -185,57 +185,53 @@
           @click="showAllCompleted = !showAllCompleted">
           {{ showAllCompleted ? 'Show Less' : 'Show More' }}
         </button>
-        
       </section>
 
-          <!-- Registrants Modal -->
-          <div v-if="showRegistrantsModal" class="modal-overlay" @click.self="closeModal">
-            <div class="modal-content">
-              <button class="modal-close-btn" @click="closeModal">✕</button>
-              <h3 class="modal-title">Registrants for {{ selectedTraining.title }}</h3>
+      <!-- Registrants Modal -->
+      <div v-if="showRegistrantsModal" class="modal-overlay" @click.self="closeModal">
+        <div class="modal-content">
+          <button class="modal-close-btn" @click="closeModal">✕</button>
+          <h3 class="modal-title">Registrants for {{ selectedTraining.title }}</h3>
 
-              <div class="registrants-table-container">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>FULL NAME</th>
-                      <th>REGISTRATION DATE</th>
-                      <th>STATUS</th>
-                      <th class="cert-col-header">CERTIFICATE</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="person in registrantsList" :key="person.id">
-                      <td>
-                        <p class="registrant-name">{{ person.name }}</p>
-                      </td>
-                      <td>
-                        <p class="registration-date">{{ person.dateRegistered }}</p>
-                      </td>
-                      <td :class="{
-                      'status-attended': person.status === 'Attended',
-                      'status-registered': person.status === 'Registered',
-                      'status-did-not-attend': person.status === 'Did not Attend'
-                            }">
-                      {{ person.status }}
-                    </td>
+          <div class="registrants-table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>FULL NAME</th>
+                  <th>REGISTRATION DATE</th>
+                  <th>STATUS</th>
+                  <th class="cert-col-header">CERTIFICATE</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="person in registrantsList" :key="person.id">
+                  <td>
+                    <p class="registrant-name">{{ person.name }}</p>
+                  </td>
+                  <td>
+                    <p class="registration-date">{{ person.dateRegistered }}</p>
+                  </td>
+                  <td :class="{
+                    'status-attended': person.status === 'Attended',
+                    'status-registered': person.status === 'Registered',
+                    'status-did-not-attend': person.status === 'Did not Attend'
+                  }">
+                    {{ person.status }}
+                  </td>
 
-                      <td>
-                        <button
-                          class="action-btn"
-                          :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
-                          :disabled="person.hasCertificate"
-                          @click="openCertUploadModal(person)"
-                        >
-                          {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                  <td>
+                    <button class="action-btn"
+                      :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
+                      :disabled="person.hasCertificate" @click="openCertUploadModal(person)">
+                      {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
+        </div>
+      </div>
 
       <!-- Training Details Modal -->
       <div v-if="showTrainingDetailsModal" class="modal-overlay" @click.self="closeTrainingDetails">
@@ -271,14 +267,13 @@
               View Registrants
             </button>
           </div>
-              <!-- ✅ Show QR only if training is live/upcoming within allowed time -->
-            <div 
-              v-if="qrCodeValue && activeTrainingId === selectedTraining.trainingID && isTrainingActive(selectedTraining)" 
-              class="qr-container"
-                >
-              <h3>QR Code (Expires at: {{ qrExpiresAt }})</h3>
-              <qrcode-vue :value="qrCodeValue" :size="200" />
-            </div>            
+          <!-- ✅ Show QR only if training is live/upcoming within allowed time -->
+          <div
+            v-if="qrCodeValue && activeTrainingId === selectedTraining.trainingID && isTrainingActive(selectedTraining)"
+            class="qr-container">
+            <h3>QR Code (Expires at: {{ qrExpiresAt }})</h3>
+            <qrcode-vue :value="qrCodeValue" :size="200" />
+          </div>
         </div>
       </div>
 
@@ -382,7 +377,7 @@
               <div class="schedule-input-wrapper">
                 <!-- Date input with calendar icon -->
                 <div class="date-input-wrapper">
-                  <input type="date" id="schedule" v-model="newTraining.date" placeholder="Schedule" />
+                  <input type="date" id="schedule" v-model="newTraining.date" :min="todayDate" placeholder="Schedule" />
                   <span class="calendar-icon">
                     <!-- your SVG calendar icon -->
                     <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -451,8 +446,6 @@ import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
 import axios from "axios";
 import QrcodeVue from "qrcode.vue";
 
-
-
 export default {
   components: { QrcodeVue }, // ✅ register component
   data() {
@@ -503,9 +496,9 @@ export default {
         trainingLink: "",
       },
 
-      QrcodeVue:"",
+      QrcodeVue: "",
       qrExpiresAt: "",
-       activeTrainingId: null // which training shows the QR
+      activeTrainingId: null // which training shows the QR
     };
   },
 
@@ -514,13 +507,13 @@ export default {
       this.isSidebarOpen = !this.isSidebarOpen;
     },
 
-      handleViewRegistrants(training) {
-    if (!training) {
-      console.error("❌ handleViewRegistrants called without training");
-      return;
-    }
-    this.openRegistrantsModal(training);
-  },
+    handleViewRegistrants(training) {
+      if (!training) {
+        console.error("❌ handleViewRegistrants called without training");
+        return;
+      }
+      this.openRegistrantsModal(training);
+    },
 
     /* ==========================
        ✅ Dropdown Menu Logic
@@ -530,7 +523,7 @@ export default {
       this.openCompletedMenu = null;
     },
     closeModal() {
-  this.showRegistrantsModal = false;
+      this.showRegistrantsModal = false;
     },
     toggleCompletedMenu(id) {
       this.openCompletedMenu = this.openCompletedMenu === id ? null : id;
@@ -541,23 +534,23 @@ export default {
       this.openUpcomingMenu = null;
       this.openCompletedMenu = null;
     },
-    
-       scheduleQR(training) {
-          // If QR already active for this training, do nothing
-          if (this.activeTrainingId === training.trainingID && this.qrCodeValue) return;
 
-          const now = new Date();
-          const trainingTime = new Date(training.schedule);
-          const msUntilStart = trainingTime - now;
+    scheduleQR(training) {
+      // If QR already active for this training, do nothing
+      if (this.activeTrainingId === training.trainingID && this.qrCodeValue) return;
 
-          if (msUntilStart <= 0) {
-            // Already started or past, generate immediately
-            this.generateQR(training);
-          } else {
-            setTimeout(() => this.generateQR(training), msUntilStart);
-            console.log(`QR for "${training.title}" will generate in ${msUntilStart / 1000}s`);
-          }
-        },
+      const now = new Date();
+      const trainingTime = new Date(training.schedule);
+      const msUntilStart = trainingTime - now;
+
+      if (msUntilStart <= 0) {
+        // Already started or past, generate immediately
+        this.generateQR(training);
+      } else {
+        setTimeout(() => this.generateQR(training), msUntilStart);
+        console.log(`QR for "${training.title}" will generate in ${msUntilStart / 1000}s`);
+      }
+    },
 
 
     handleOutsideClick(e) {
@@ -567,68 +560,68 @@ export default {
     },
 
 
-         // ✅ Generate QR and call backend
-         
+    // ✅ Generate QR and call backend
 
-          /* ==========================
-        ✅ Registrants Modal
-      ========================== */
-      async openRegistrantsModal(training) {
-        try {
-          // Set selected training
-          this.selectedTraining = training;
 
-          // Get token from localStorage
-          const token = localStorage.getItem("token");
-          if (!token) {
-            console.error("No token found. Please log in first.");
-            alert("You must log in to view registrants.");
-            return;
-          }
+    /* ==========================
+  ✅ Registrants Modal
+========================== */
+    async openRegistrantsModal(training) {
+      try {
+        // Set selected training
+        this.selectedTraining = training;
 
-          // Fetch registrants from API
-          const response = await axios.get(
-           `http://127.0.0.1:8000/api/trainings/${training.trainingID}/registrants`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                Accept: "application/json",
-              },
-            }
-          );
-
-          // Populate registrants list dynamically
-          this.registrantsList = response.data;
-
-          // Open the modal
-          this.showRegistrantsModal = true;
-
-          // Close any dropdown menus
-          this.closeAllMenus();
-
-        } catch (error) {
-          if (error.response) {
-            console.error("Error fetching registrants:", error.response.status, error.response.data);
-            if (error.response.status === 401) {
-              alert("Unauthorized. Please log in again.");
-            } else if (error.response.status === 403) {
-              alert("You don't have permission to view registrants for this training.");
-            } else if (error.response.status === 404) {
-              alert("Training not found or you don't have access to it.");
-            } else {
-              alert("Failed to fetch registrants. Please try again.");
-            }
-          } else {
-            console.error("Network or other error:", error.message);
-            alert("An error occurred while fetching registrants.");
-          }
+        // Get token from localStorage
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.error("No token found. Please log in first.");
+          alert("You must log in to view registrants.");
+          return;
         }
-      },
 
-      closeRegistrantsModal() {
-        this.showRegistrantsModal = false;
-        this.registrantsList = [];
-      },
+        // Fetch registrants from API
+        const response = await axios.get(
+          `http://127.0.0.1:8000/api/trainings/${training.trainingID}/registrants`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+            },
+          }
+        );
+
+        // Populate registrants list dynamically
+        this.registrantsList = response.data;
+
+        // Open the modal
+        this.showRegistrantsModal = true;
+
+        // Close any dropdown menus
+        this.closeAllMenus();
+
+      } catch (error) {
+        if (error.response) {
+          console.error("Error fetching registrants:", error.response.status, error.response.data);
+          if (error.response.status === 401) {
+            alert("Unauthorized. Please log in again.");
+          } else if (error.response.status === 403) {
+            alert("You don't have permission to view registrants for this training.");
+          } else if (error.response.status === 404) {
+            alert("Training not found or you don't have access to it.");
+          } else {
+            alert("Failed to fetch registrants. Please try again.");
+          }
+        } else {
+          console.error("Network or other error:", error.message);
+          alert("An error occurred while fetching registrants.");
+        }
+      }
+    },
+
+    closeRegistrantsModal() {
+      this.showRegistrantsModal = false;
+      this.registrantsList = [];
+    },
 
     /* ==========================
        ✅ Certificate Upload Modal
@@ -696,7 +689,7 @@ export default {
         }
       });
     },
-    
+
 
     /* ==========================
        ✅ Training Popup Methods
@@ -725,10 +718,13 @@ export default {
           return;
         }
 
-        const combinedSchedule = `${this.newTraining.date} ${this.newTraining.time}`;
+        // ✅ Combine date and time as a proper local timestamp (not UTC)
+        const combinedSchedule = `${this.newTraining.date}T${this.newTraining.time}:00`;
+
         const payload = {
           title: this.newTraining.title,
           description: this.newTraining.description,
+          // ✅ Store local time in the same format you see (not auto-converted to UTC)
           schedule: combinedSchedule,
           mode: this.newTraining.mode,
           location: this.newTraining.location || null,
@@ -753,7 +749,8 @@ export default {
             organizationName = user.displayName || user.name || "Unknown Organization";
           }
 
-          const scheduleDate = new Date(newTraining.schedule);
+          // ✅ Use local date and time directly without timezone shift
+          const scheduleDate = new Date(combinedSchedule);
           const formattedDate = scheduleDate.toLocaleDateString("en-US", {
             weekday: "short",
             year: "numeric",
@@ -769,14 +766,14 @@ export default {
             id: newTraining.trainingID,
             title: newTraining.title,
             description: newTraining.description,
-            schedule: newTraining.schedule,
+            schedule: combinedSchedule,
             date: formattedDate,
             time: formattedTime,
             mode: newTraining.mode,
             ...(newTraining.mode === "On-Site"
               ? { location: newTraining.location }
               : { trainingLink: newTraining.trainingLink }),
-            organizationName: organizationName,
+            organizationName,
           });
         }
 
@@ -789,10 +786,65 @@ export default {
       }
     },
 
+    async deleteTraining(trainingID) {
+      if (!confirm("Are you sure you want to delete this training?")) return;
+
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          alert("You must be logged in to delete a training.");
+          return;
+        }
+
+        // Send DELETE request to your backend
+        await axios.delete(`http://127.0.0.1:8000/api/trainings/${trainingID}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+        });
+
+        // Remove deleted training from UI
+        this.upcomingtrainings = this.upcomingtrainings.filter(t => t.trainingID !== trainingID);
+        this.completedtrainings = this.completedtrainings.filter(t => t.trainingID !== trainingID);
+
+        this.closeAllMenus();
+        alert("✅ Training deleted successfully.");
+
+      } catch (error) {
+        if (error.response) {
+          console.error("Delete error:", error.response.data);
+          if (error.response.status === 404) {
+            alert("Training not found or already deleted.");
+          } else if (error.response.status === 401) {
+            alert("Unauthorized. Please log in again.");
+          } else {
+            alert("Failed to delete training. Please try again.");
+          }
+        } else {
+          console.error("Network error:", error.message);
+          alert("Network error. Please check your connection.");
+        }
+      }
+    },
+
     formatSchedule(schedule) {
       if (!schedule) return "No schedule set";
       try {
-        const date = new Date(schedule);
+        // ✅ Prevent UTC conversion; parse as local
+        const [datePart, timePart] = schedule.split(/[ T]/);
+        const [year, month, day] = datePart.split("-");
+        const [hour, minute, second] = (timePart || "00:00:00").split(":");
+
+        const date = new Date(
+          Number(year),
+          Number(month) - 1,
+          Number(day),
+          Number(hour),
+          Number(minute),
+          Number(second || 0)
+        );
+
         return date.toLocaleString("en-US", {
           weekday: "short",
           year: "numeric",
@@ -800,13 +852,14 @@ export default {
           day: "numeric",
           hour: "2-digit",
           minute: "2-digit",
+          hour12: true, // ✅ 12-hour format
         });
       } catch (error) {
         return schedule;
       }
     },
 
-     /* ✅ ADD THIS FUNCTION HERE */
+    /* ✅ ADD THIS FUNCTION HERE */
     async generateQR(training) {
       try {
         const token = localStorage.getItem("token");
@@ -851,10 +904,10 @@ export default {
       }
     },
 
-    
+
   },
 
-  
+
   mounted() {
     this.fetchTrainings();
     document.addEventListener("click", this.handleOutsideClick);
@@ -865,6 +918,13 @@ export default {
   },
 
   computed: {
+    todayDate() {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, "0");
+      const day = String(today.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`; // format: YYYY-MM-DD
+    },
     visibleUpcomingTrainings() {
       const list = this.sortedUpcomingTrainings;
       return this.showAllUpcoming ? list : list.slice(0, 4);
@@ -886,7 +946,7 @@ export default {
       const now = new Date();
       return this.upcomingtrainings
         .filter(t => new Date(t.schedule) < now)
-        .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
+        .sort((a, b) => new Date(b.schedule) - new Date(a.schedule));
     },
   },
 };
@@ -894,7 +954,7 @@ export default {
 
 
 <script setup>
-import { ref, onMounted , computed } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 const isSidebarOpen = ref(true);
 const organizationName = ref("");
@@ -1224,20 +1284,21 @@ const logout = () => {
 
 .trainings-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  /* 4 per row */
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  /* 4 per row if enough space */
   gap: 1rem;
-  margin-top: 1rem;
 }
 
 .training-card {
   background: #fff;
-  border: 1px solid #ddd;
   border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   padding: 1rem;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   position: relative;
+  transition: transform 0.2s ease;
 }
 
 .training-card:hover {
