@@ -36,45 +36,65 @@ class TrainingController extends Controller
         return response()->json($formatted);
     }
 
- public function store(Request $request)
-{
-    $user = $request->user(); // ✅ Correct way to get auth user
+    public function store(Request $request)
+    {
+        $user = $request->user(); 
 
-    if (!$user) {
-        return response()->json(['message' => 'Unauthorized - no auth user found'], 401);
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized - no auth user found'], 401);
+        }
+
+        // Ensure only organizations can post trainings
+        if (!isset($user->organizationID)) {
+            return response()->json(['message' => 'Only organizations can create trainings'], 403);
+        }
+
+        //validate the request
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'required|string|max:255',
+            'schedule' => 'required',
+            'mode' => 'required|string|in:On-Site,Online',
+            'location' => 'nullable|string|max:255',
+            'training_link' => 'nullable|url',
+            'Tags' => 'nullable|array',
+            'Tags.*' => 'integer|exists:tag,TagID',
+        ]);
+
+        $schedule = Carbon::parse($validated['schedule'])->format('Y-m-d H:i');
+
+        //create the training method
+        $training = Training::create([
+            'title' => $validated['title'],
+            'description' => $validated['description'],
+            'schedule' => $schedule,
+            'mode' => $validated['mode'],
+            'location' => $validated['location'] ?? null,
+            'trainingLink' => $validated['training_link'] ?? null,
+            'organizationID' => $user->organizationID,
+        ]);
+
+        //handle tags
+        if (!empty($validated['Tags'])) {
+            $training->tags()->attach($validated['Tags']);
+        }
+        
+        /* if (!empty($validated['Tags'])) {
+            foreach ($validated['Tags'] as $tagID) {
+                DB::table('TrainingTag')->insert([
+                    'TrainingID' => $training->TrainingID,
+                    'TagID' => $tagID
+                ]);
+            }
+        } */
+
+        return response()->json([
+            'message' => 'TRAINING CREATED SUCCESSFULLY!',
+            'data' => $training->load('organization')
+        ], 201);
     }
 
-    // Ensure only organizations can post trainings
-    if (!isset($user->organizationID)) {
-        return response()->json(['message' => 'Only organizations can create trainings'], 403);
-    }
 
-    $validated = $request->validate([
-        'title' => 'required|string|max:255',
-        'description' => 'required|string|max:255',
-        'schedule' => 'required',
-        'mode' => 'required|string|in:On-Site,Online',
-        'location' => 'nullable|string|max:255',
-        'training_link' => 'nullable|url'
-    ]);
-
-    $schedule = Carbon::parse($validated['schedule'])->format('Y-m-d H:i');
-
-    $training = Training::create([
-        'title' => $validated['title'],
-        'description' => $validated['description'],
-        'schedule' => $schedule,
-        'mode' => $validated['mode'],
-        'location' => $validated['location'] ?? null,
-        'trainingLink' => $validated['training_link'] ?? null,
-        'organizationID' => $user->organizationID,
-    ]);
-
-    return response()->json([
-        'message' => 'Training created successfully!',
-        'data' => $training->load('organization')
-    ], 201);
-}
     /**
      * Display the specified resource.
      */

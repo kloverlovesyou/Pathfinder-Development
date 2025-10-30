@@ -13,7 +13,7 @@ class ApplicationController extends Controller
     //list applicant's applications
     public function index(Request $request)
     {
-        $user = $request->authUser;
+        $user = $request->user();
 
         $apps = Application::with('career')
             ->where('applicantID', $user->applicantID)
@@ -25,7 +25,7 @@ class ApplicationController extends Controller
     //create application
     public function store(Request $request)
     {
-        $user = $request->authUser;
+        $user = $request->user();
 
         $validated = $request->validate([
             'careerID' => 'required|exists:career,careerID',
@@ -54,7 +54,7 @@ class ApplicationController extends Controller
         $app = Application::create([
             'requirements' => $requirementsPath,
             'dateSubmitted' => Carbon::now(),
-            'applicationStatus' => 'In Review',
+            'applicationStatus' => 'Applied',
             'interviewSchedule' => null,
             'interviewMode' => null,
             'interviewLocation' => null,

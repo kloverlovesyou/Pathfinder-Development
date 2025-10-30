@@ -314,13 +314,14 @@
 
         <div class="divider"></div>
 
+        <!--
         <div class="relative mb-4">
           <label class="block font-semibold text-gray-500"
             >To help us personalize recommendations for you,
           </label>
           <p class="text-gray-500 mb-2">fill up the fields below.</p>
 
-          <!-- Input box -->
+        
           <div @click="focusInput">
             <input
               ref="inputEl"
@@ -334,7 +335,7 @@
             />
           </div>
 
-          <!-- Dropdown list -->
+          
           <ul
             v-if="showDropdown"
             class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-auto"
@@ -351,7 +352,7 @@
             </li>
           </ul>
 
-          <!-- Selected positions (wrap downward, fixed layout) -->
+          
           <div
             v-if="selectedJobs.length"
             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-3 rounded-lg"
@@ -370,10 +371,36 @@
               </button>
             </div>
           </div>
+        </div> -->
+
+        <div class="relative mb-4">
+          <label class="block font-semibold text-gray-500">
+            To help us personalize recommendations for you,
+          </label>
+          <p class="text-gray-500 mb-2">please select your target career below.</p>
+
+          <!-- Dropdown -->
+          <div class="relative">
+            <select
+              v-model="form.careerID"
+              @focus="showDropdown = true"
+              class="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              <option disabled value="">Select your target career</option>
+              <option
+                v-for="career in careers"
+                :key="career.id"
+                :value="career.id"
+              >
+                {{ career.position }}
+              </option>
+            </select>
+          </div>
         </div>
 
+
         <div class="w-full">
-          <!-- Input Field -->
+          
           <div>
             <input
               v-model="newSkill"
@@ -503,14 +530,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
 
 // Example skills array (can come from API or props)
 const skills = ref(["JavaScript", "Vue.js", "Python", "Communication"]);
 
-function addCustomJob() {
+/* function addCustomJob() {
   const trimmed = search.value.trim();
   if (trimmed && !selectedJobs.value.includes(trimmed)) {
     selectedJobs.value.push(trimmed);
@@ -518,7 +545,7 @@ function addCustomJob() {
 
   search.value = "";
   showDropdown.value = true;
-}
+} */
 
 // Input model
 const newSkill = ref("");
@@ -547,12 +574,24 @@ const form = ref({
   password: "",
   confirmPassword: "",
   message: "password does not match",
+  careerID: "",
 });
 
 const termsAccepted = ref(false);
 const showTermsModal = ref(false); // terms modal
 const showSuccessModal = ref(false); // ✅ success modal
 const showSkillsModal = ref(false); // skills modal
+const careers = ref([]);
+
+onMounted(async () => {
+  try {
+    const res = await axios.get("http://127.0.0.1:8000/api/careers")
+    careers.value = Array.isArray(res.data) ? res.data : res.data.careers || [];
+  } catch (error) {
+    console.error('Error fetching careers:', error)
+  }
+}) 
+
 
 const handleSubmit = async () => {
   if (!termsAccepted.value) {

@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\ApplicantController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\AuthController;
@@ -16,10 +17,18 @@ use App\Http\Controllers\CareerController;
 use App\Http\Controllers\TrainingBookmarkController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\CareerBookmarkController;
+use App\Http\Controllers\TagController;
+use App\Http\Controllers\CareerRecommendationController;
+
 
 //no auth required
 Route::get('/trainings', [TrainingController::class, 'index']);
 Route::get('/careers', [CareerController::class, 'index']);
+//tags
+Route::get('/tags', [TagController::class, 'index']);
+Route::post('/tags', [TagController::class, 'store']);
+
+Route::get('/careers/{id}/details', [CareerRecommendationController::class, 'getCareerWithRecommendations']);
 
 //auth required
 Route::middleware('auth.custom')->group(function () {
@@ -36,6 +45,8 @@ Route::middleware('auth.custom')->group(function () {
     Route::get('/applications', [ApplicationController::class, 'index']);
     Route::post('/applications', [ApplicationController::class, 'store']);
     Route::delete('/applications/{id}', [ApplicationController::class, 'destroy']);
+
+    
 
     // Certificates ✅
     Route::get('/certificates/{applicantID}', [CertificateController::class, 'index']);
