@@ -19,6 +19,7 @@ import MainLayout from "@/components/Layout/MainLayout.vue";
 import AuthLayout from "@/components/Layout/AuthLayout.vue";
 import OrgCalendar from "@/components/Organization/OrganizationCalendar.vue";
 import OrgProfile from "@/components/Organization/Profile.vue";
+import AdminHomePage from "@/components/Admin/AdminHomePage.vue";
 
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
@@ -121,6 +122,13 @@ const router = createRouter({
       name: "OrgProfile",
       component: OrgProfile,
       meta: { requiresAuth: true, role: "organization" },
+    },
+    // Admin Home Page - Public Access
+    {
+      path: "/admin",
+      name: "AdminHomePage",
+      component: AdminHomePage,
+      meta: { requiresAuth: false }, // public access
     },
     // 🚨 Catch-all must always be last
     {
