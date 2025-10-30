@@ -139,7 +139,7 @@
 
         <button v-if="sortedUpcomingCareers.length > 4" class="show-more-btn"
           @click="showAllUpcoming = !showAllUpcoming">
-          {{ showAllUpcoming ? 'Show Less' : 'Show More' }}
+          {{ showMoreUpcoming ? 'Show Less' : 'Show More' }}
         </button>
       </section>
 
@@ -393,7 +393,8 @@
           <p class="career-info"><strong>Qualifications:</strong> {{ selectedCareer.qualifications }}</p>
           <p class="career-info"><strong>Requirements:</strong> {{ selectedCareer.requirements }}</p>
           <p class="career-info"><strong>Letter Address:</strong> {{ selectedCareer.applicationLetterAddress }}</p>
-          <p class="career-info"><strong>Deadline:</strong> {{ formatdeadline(selectedCareer.deadlineOfSubmission) }}</p>
+          <p class="career-info"><strong>Deadline:</strong> {{ formatdeadline(selectedCareer.deadlineOfSubmission) }}
+          </p>
           <div class="career-actions">
             <button class="btn-view-applicants" @click="handleViewApplicants">
               View Applicants
@@ -510,7 +511,6 @@ export default {
 
       showApplicantsModal: false,
       upcomingCareers: [],
-      completedCareers: [],
 
       // Popup state + form
       showCareerPopup: false,
@@ -784,34 +784,25 @@ export default {
     sortedUpcomingCareers() {
       const now = new Date();
       const list = Array.isArray(this.upcomingCareers) ? this.upcomingCareers : [];
-      // if you don't have deadlines and want to show all, remove filter
       return list
         .filter(c => {
-          if (!c.deadline) return true; // keep if no deadline
-          const d = new Date(c.deadline);
-          return !isNaN(d) ? d >= now : true;
+          if (!c.deadlineOfSubmission) return true;
+          const d = new Date(c.deadlineOfSubmission);
+          return d >= now; // only future deadlines
         })
-        .sort((a, b) => {
-          const da = new Date(a.deadline); const db = new Date(b.deadline);
-          if (isNaN(da) || isNaN(db)) return 0;
-          return da - db;
-        });
+        .sort((a, b) => new Date(a.deadlineOfSubmission) - new Date(b.deadlineOfSubmission));
     },
 
     sortedCompletedCareers() {
       const now = new Date();
-      const list = Array.isArray(this.completedCareers) ? this.completedCareers : [];
+      const list = Array.isArray(this.upcomingCareers) ? this.upcomingCareers : [];
       return list
         .filter(c => {
-          if (!c.deadline) return false; // no deadline -> treat as not completed
-          const d = new Date(c.deadline);
-          return !isNaN(d) ? d < now : false;
+          if (!c.deadlineOfSubmission) return false;
+          const d = new Date(c.deadlineOfSubmission);
+          return d < now; // only past deadlines
         })
-        .sort((a, b) => {
-          const da = new Date(a.deadline); const db = new Date(b.deadline);
-          if (isNaN(da) || isNaN(db)) return 0;
-          return db - da; // newest closed first
-        });
+        .sort((a, b) => new Date(b.deadlineOfSubmission) - new Date(a.deadlineOfSubmission));
     },
   },
 

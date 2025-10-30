@@ -120,7 +120,8 @@
 
         <!-- ✅ Grid Layout -->
         <div class="trainings-grid">
-          <div v-for="training in visibleUpcomingTrainings" :key="training.trainingID" class="training-card">
+          <div v-for="training in visibleUpcomingTrainings" :key="training.trainingID" class="training-card"
+            @click="openTrainingDetails(training)">
             <div class="training-right" @click="openTrainingDetails(training)">
               <h3 class="training-title">{{ training.title }}</h3>
               <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
@@ -158,7 +159,8 @@
 
         <!-- ✅ Grid Layout -->
         <div class="trainings-grid">
-          <div v-for="training in visibleCompletedTrainings" :key="training.trainingID" class="training-card">
+          <div v-for="training in visibleCompletedTrainings" :key="training.trainingID" class="training-card"
+            @click="openTrainingDetails(training)">
             <div class="training-right" @click="openTrainingDetails(training)">
               <h3 class="training-title">{{ training.title }}</h3>
               <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
@@ -183,7 +185,6 @@
           @click="showAllCompleted = !showAllCompleted">
           {{ showAllCompleted ? 'Show Less' : 'Show More' }}
         </button>
-
       </section>
 
       <!-- Registrants Modal -->
@@ -945,7 +946,7 @@ export default {
       const now = new Date();
       return this.upcomingtrainings
         .filter(t => new Date(t.schedule) < now)
-        .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
+        .sort((a, b) => new Date(b.schedule) - new Date(a.schedule));
     },
   },
 };
