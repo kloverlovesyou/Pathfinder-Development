@@ -108,32 +108,27 @@
         </div>
       </header>
 
-      <!-- Insert job picks style block here -->
+      <!-- UPCOMING CAREERS -->
       <section class="upcoming">
         <div class="flex items-center justify-between">
-          <!-- Left side: title + count -->
           <h2 class="section-title flex items-center gap-1">
-            On-Going Careers
-            <span class="count-badge">{{ upcomingCareers.length }}</span>
+            Upcoming Careers
+            <span class="count-badge">{{ sortedUpcomingCareers.length }}</span>
           </h2>
-
-          <!-- Right side: plain plus -->
           <button class="plus-btn-text" @click="openCareerPopup">+</button>
         </div>
 
-        <div class="career-slider">
-          <div class="career-card" v-for="career in upcomingCareers" :key="career.careerID">
-            <div class="career-left">
-            </div>
-
+        <div class="career-grid">
+          <div class="career-card" v-for="career in visibleUpcomingCareers" :key="career.careerID || career.id"
+            @click="openCareerDetails(career)">
             <div class="career-right">
               <h3 class="career-title">{{ career.position }}</h3>
+              <p class="career-deadline">Deadline: {{ formatdeadline(career.deadlineOfSubmission) }}</p>
             </div>
 
-            <!-- 3-dot menu -->
-            <div class="menu" :key="career.CareerID">
-              <div class="menu-icon" @click.stop="toggleUpcomingMenu(career.careerID)">⋮</div>
-              <div v-if="openUpcomingMenu === career.careerID" class="dropdown-menu">
+            <div class="menu">
+              <div class="menu-icon" @click.stop="toggleUpcomingMenu(career.careerID || career.id)">⋮</div>
+              <div v-if="openUpcomingMenu === (career.careerID || career.id)" class="dropdown-menu" @click.stop>
                 <ul>
                   <li @click.stop="openApplicantsModal">Applicants</li>
                 </ul>
@@ -141,29 +136,33 @@
             </div>
           </div>
         </div>
+
+        <button v-if="sortedUpcomingCareers.length > 4" class="show-more-btn"
+          @click="showAllUpcoming = !showAllUpcoming">
+          {{ showAllUpcoming ? 'Show Less' : 'Show More' }}
+        </button>
       </section>
 
+      <!-- COMPLETED CAREERS -->
       <section class="completed">
         <div class="flex items-center justify-between">
           <h2 class="section-title flex items-center gap-1">
-            Filled Out Careers
-            <span class="count-badge">{{ completedCareers.length }}</span>
+            Completed Careers
+            <span class="count-badge">{{ sortedCompletedCareers.length }}</span>
           </h2>
         </div>
-        <div class="career-slider">
-          <div class="career-card" v-for="career in completedCareers" :key="career.id"
+
+        <div class="career-grid">
+          <div class="career-card" v-for="career in visibleCompletedCareers" :key="career.careerID || career.id"
             @click="openCareerDetails(career)">
-            <div class="career-left">
-            </div>
-
             <div class="career-right">
-              <h3 class="career-title">{{ career.title }}</h3>
+              <h3 class="career-title">{{ career.title || career.position }}</h3>
+              <p class="career-deadline">Closed: {{ formatdeadline(career.deadlineOfSubmission) }}</p>
             </div>
 
-            <!-- 3-dot menu -->
             <div class="menu">
-              <div class="menu-icon" @click.stop="toggleCompletedMenu(career.id)">⋮</div>
-              <div v-if="openCompletedMenu === career.id" class="dropdown-menu">
+              <div class="menu-icon" @click.stop="toggleCompletedMenu(career.careerID || career.id)">⋮</div>
+              <div v-if="openCompletedMenu === (career.careerID || career.id)" class="dropdown-menu" @click.stop>
                 <ul>
                   <li @click.stop="openApplicantsModal">Applicants</li>
                 </ul>
@@ -171,8 +170,12 @@
             </div>
           </div>
         </div>
-      </section>
 
+        <button v-if="sortedCompletedCareers.length > 4" class="show-more-btn"
+          @click="showAllCompleted = !showAllCompleted">
+          {{ showAllCompleted ? 'Show Less' : 'Show More' }}
+        </button>
+      </section>
 
 
       <!-- Applicants Modal -->
@@ -386,11 +389,11 @@
           <button class="modal-close-btn" @click="closeCareerDetails">✕</button>
           <h3 class="modal-title">{{ selectedCareer.title }}</h3>
           <p class="career-info"><strong>Position:</strong> {{ selectedCareer.position }}</p>
-          <p class="career-info"><strong>Details:</strong> {{ selectedCareer.details }}</p>
+          <p class="career-info"><strong>Details:</strong> {{ selectedCareer.detailsAndInstructions }}</p>
           <p class="career-info"><strong>Qualifications:</strong> {{ selectedCareer.qualifications }}</p>
           <p class="career-info"><strong>Requirements:</strong> {{ selectedCareer.requirements }}</p>
-          <p class="career-info"><strong>Letter Address:</strong> {{ selectedCareer.letterAddress }}</p>
-          <p class="career-info"><strong>Deadline:</strong> {{ selectedCareer.deadline }}</p>
+          <p class="career-info"><strong>Letter Address:</strong> {{ selectedCareer.applicationLetterAddress }}</p>
+          <p class="career-info"><strong>Deadline:</strong> {{ formatdeadline(selectedCareer.deadlineOfSubmission) }}</p>
           <div class="career-actions">
             <button class="btn-view-applicants" @click="handleViewApplicants">
               View Applicants
@@ -421,6 +424,9 @@ export default {
       showViewScheduleModal: false,
       showScheduleModal: false,
       selectedPerson: null,
+
+      showAllUpcoming: false,
+      showAllCompleted: false,
 
       scheduleData: {
         date: "",
@@ -504,36 +510,7 @@ export default {
 
       showApplicantsModal: false,
       upcomingCareers: [],
-      completedCareers: [
-        {
-          id: 1,
-          title: "HR Specialist",
-          position: "Human Resource Specialist",
-          details:
-            "Responsible for managing employee relations, recruitment, and performance evaluations.",
-          qualifications:
-            "Bachelor’s degree in Psychology, Human Resource Management, or related field.",
-          requirements:
-            "At least 1 year of HR experience; excellent communication and organizational skills.",
-          letterAddress:
-            "Address your application letter to the HR Department, DICT Regional Office.",
-          deadline: "October 30, 2025",
-        },
-        {
-          id: 2,
-          title: "Graphic Designer",
-          position: "Graphic Designer",
-          details:
-            "Creates visual content for social media, print, and digital platforms to support organizational campaigns.",
-          qualifications:
-            "Bachelor’s degree in Multimedia Arts, Fine Arts, or related field.",
-          requirements:
-            "Proficient in Adobe Creative Suite; strong portfolio showcasing design skills.",
-          letterAddress:
-            "Address your application letter to the Creative Services Unit, DICT Regional Office.",
-          deadline: "November 5, 2025",
-        },
-      ],
+      completedCareers: [],
 
       // Popup state + form
       showCareerPopup: false,
@@ -570,6 +547,13 @@ export default {
     },
     closeModal() {
       this.showApplicantsModal = false;
+    },
+
+    showMoreUpcoming() {
+      this.visibleUpcomingCount += 4; // show 4 more
+    },
+    showMoreCompleted() {
+      this.visibleCompletedCount += 4;
     },
 
     // ✅ OPEN SCHEDULE MODAL (only when status = For Review)
@@ -696,63 +680,63 @@ export default {
       this.openApplicantsModal();
     },
 
-   async saveCareer() {
-  try {
-    if (
-      !this.newCareer.position ||
-      !this.newCareer.details ||
-      !this.newCareer.qualifications ||
-      !this.newCareer.requirements ||
-      !this.newCareer.letterAddress ||
-      !this.newCareer.deadline
-    ) {
-      alert("⚠️ Please fill out all fields before saving.");
-      return;
-    }
+    async saveCareer() {
+      try {
+        if (
+          !this.newCareer.position ||
+          !this.newCareer.details ||
+          !this.newCareer.qualifications ||
+          !this.newCareer.requirements ||
+          !this.newCareer.letterAddress ||
+          !this.newCareer.deadline
+        ) {
+          alert("⚠️ Please fill out all fields before saving.");
+          return;
+        }
 
-    const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token");
 
-    const response = await api.post(
-      "http://127.0.0.1:8000/api/careers",
-      this.newCareer,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+        const response = await api.post(
+          "http://127.0.0.1:8000/api/careers",
+          this.newCareer,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        // ✅ Backend responded successfully
+        if (response.data.message === "Career already exists") {
+          alert("⚠️ This career is already posted.");
+        } else {
+          alert("✅ Career successfully saved!");
+          this.upcomingCareers.push(response.data);
+          this.closeCareerPopup();
+          this.resetNewCareer();
+
+          await this.fetchCareers();
+        }
+      } catch (error) {
+        console.error("ERROR SAVING CAREER:", error);
+
+        // 🧩 Handle specific errors
+        if (error.response) {
+          if (error.response.status === 401) {
+            alert("🔒 Unauthorized: Please log in again.");
+          } else if (error.response.status === 409) {
+            alert("⚠️ This career already exists!");
+          } else if (error.response.status === 422) {
+            alert("⚠️ Validation failed. Please check your inputs.");
+          } else {
+            alert("❌ Something went wrong. Please try again.");
+          }
+        } else {
+          alert("🚫 Unable to connect to the server.");
+        }
       }
-    );
-
-    // ✅ Backend responded successfully
-    if (response.data.message === "Career already exists") {
-      alert("⚠️ This career is already posted.");
-    } else {
-      alert("✅ Career successfully saved!");
-      this.upcomingCareers.push(response.data);
-      this.closeCareerPopup();
-      this.resetNewCareer();
-
-       await this.fetchCareers();
-    }
-  } catch (error) {
-    console.error("ERROR SAVING CAREER:", error);
-
-    // 🧩 Handle specific errors
-    if (error.response) {
-      if (error.response.status === 401) {
-        alert("🔒 Unauthorized: Please log in again.");
-      } else if (error.response.status === 409) {
-        alert("⚠️ This career already exists!");
-      } else if (error.response.status === 422) {
-        alert("⚠️ Validation failed. Please check your inputs.");
-      } else {
-        alert("❌ Something went wrong. Please try again.");
-      }
-    } else {
-      alert("🚫 Unable to connect to the server.");
-    }
-  }
-},
+    },
 
     resetNewCareer() {
       this.newCareer = {
@@ -764,6 +748,20 @@ export default {
         deadline: "",
       };
     },
+
+    formatdeadline(deadline) {
+      if (!deadline) return "No deadline set";
+      try {
+        const date = new Date(deadline);
+        return date.toLocaleString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+      } catch (error) {
+        return deadline;
+      }
+    },
   },
 
   computed: {
@@ -773,7 +771,48 @@ export default {
       const month = String(today.getMonth() + 1).padStart(2, "0");
       const day = String(today.getDate()).padStart(2, "0");
       return `${year}-${month}-${day}`; // YYYY-MM-DD
-    }
+    },
+    visibleUpcomingCareers() {
+      const list = this.sortedUpcomingCareers;
+      return this.showAllUpcoming ? list : list.slice(0, 4);
+    },
+    visibleCompletedCareers() {
+      const list = this.sortedCompletedCareers;
+      return this.showAllCompleted ? list : list.slice(0, 4);
+    },
+
+    sortedUpcomingCareers() {
+      const now = new Date();
+      const list = Array.isArray(this.upcomingCareers) ? this.upcomingCareers : [];
+      // if you don't have deadlines and want to show all, remove filter
+      return list
+        .filter(c => {
+          if (!c.deadline) return true; // keep if no deadline
+          const d = new Date(c.deadline);
+          return !isNaN(d) ? d >= now : true;
+        })
+        .sort((a, b) => {
+          const da = new Date(a.deadline); const db = new Date(b.deadline);
+          if (isNaN(da) || isNaN(db)) return 0;
+          return da - db;
+        });
+    },
+
+    sortedCompletedCareers() {
+      const now = new Date();
+      const list = Array.isArray(this.completedCareers) ? this.completedCareers : [];
+      return list
+        .filter(c => {
+          if (!c.deadline) return false; // no deadline -> treat as not completed
+          const d = new Date(c.deadline);
+          return !isNaN(d) ? d < now : false;
+        })
+        .sort((a, b) => {
+          const da = new Date(a.deadline); const db = new Date(b.deadline);
+          if (isNaN(da) || isNaN(db)) return 0;
+          return db - da; // newest closed first
+        });
+    },
   },
 
   mounted() {
@@ -1093,13 +1132,19 @@ const logout = () => {
 /* Training and Job Offer Area*/
 
 .career-slider {
-  display: flex;
-  gap: 16px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  padding: 10px 0;
-  scrollbar-width: thin;
-  scrollbar-color: #cbd5e0 #edf2f7;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  /* 4 per row on large screens */
+  gap: 1.5rem;
+  /* space between cards */
+  margin-top: 1rem;
+}
+
+.career-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  /* 4 per row if enough space */
+  gap: 1rem;
 }
 
 .upcoming {
@@ -1126,16 +1171,19 @@ const logout = () => {
 }
 
 .career-card {
-  flex: 0 0 auto;
-  width: 350px;
-  display: flex;
-  align-items: flex-start;
-  background: white;
+  background: #fff;
   border-radius: 10px;
-  padding: 15px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   position: relative;
-  scroll-snap-align: start;
+  transition: transform 0.2s ease;
+}
+
+.career-card:hover {
+  transform: translateY(-4px);
 }
 
 .career-left {
@@ -1154,6 +1202,10 @@ const logout = () => {
   color: #2d3748;
 }
 
+.career-deadline {
+  font-size: 13px;
+  color: #4a5568;
+}
 
 .career-company {
   font-size: 14px;
@@ -2014,5 +2066,30 @@ input[type="text"] {
     transform: scale(1);
     opacity: 1;
   }
+}
+
+/* Show more css */
+.show-more-btn {
+  background-color: #374151;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 10px;
+  /* smaller padding */
+  font-size: 0.85rem;
+  /* smaller text */
+  margin: 6px auto 0;
+  /* centered horizontally */
+  display: block;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.show-more-btn:hover {
+  background-color: #1d222b;
+}
+
+.show-more-btn:active {
+  transform: scale(0.97);
 }
 </style>
