@@ -5,57 +5,52 @@ import axios from "axios";
 
 const router = useRouter();
 
-// 🔹 User info
-const userName = ref("");
-
-// 🔹 Counters
+const userName = ref("Guest");
+const activities = ref([]);
 const upcomingCount = ref(0);
 const completedCount = ref(0);
+const showModal = ref(false);
+const selectedActivity = ref(null);
 
-// 🔹 Load user and training registration stats
-onMounted(async () => {
-  const userData = localStorage.getItem("user");
-  const token = localStorage.getItem("token");
+// ✅ Logout
+function logout() {
+  localStorage.removeItem("user");
+  localStorage.removeItem("token");
+  router.push({ name: "Login" });
+}
 
-  if (!userData || !token) {
-    userName.value = "Guest";
-    return;
-  }
+// ✅ Fetch all activities for this user
+async function fetchMyActivities() {
+  const savedUser = localStorage.getItem("user");
+  if (!savedUser) return;
 
-  const user = JSON.parse(userData);
-  userName.value = `${user.firstName} ${user.lastName}`;
+  const user = JSON.parse(savedUser);
+  userName.value = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Guest";
 
   try {
-    const res = await axios.get("http://127.0.0.1:8000/api/registrations", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await axios.get(`http://127.0.0.1:8000/api/my-activities/${user.applicantID}`);
+    activities.value = res.data.activities || [];
 
-    const registrations = res.data || [];
-
-    // ✅ Filter only the current user's registrations
-    const myRegistrationsList = registrations.filter(
-      (r) => r.userID === user.userID
-    );
-
-    // ✅ Separate counts for this user
-    upcomingCount.value = myRegistrationsList.filter(
-      (r) =>
-        r.registrationStatus?.toLowerCase() === "upcoming" ||
-        r.registrationStatus?.toLowerCase() === "registered"
+    // ✅ Count by status
+    upcomingCount.value = activities.value.filter(a =>
+      ["upcoming", "registered"].includes(a.status?.toLowerCase())
     ).length;
 
-    completedCount.value = myRegistrationsList.filter(
-      (r) => r.registrationStatus?.toLowerCase() === "completed"
+    completedCount.value = activities.value.filter(a =>
+      a.status?.toLowerCase() === "completed"
     ).length;
 
-    console.log("My registrations:", myRegistrationsList);
-    console.log("Registration Data:", registrations);
+    console.log("Activities fetched:", activities.value);
+    console.log("Upcoming:", upcomingCount.value, "Completed:", completedCount.value);
   } catch (error) {
-    console.error("Error fetching registration stats:", error);
+    console.error("Error fetching activities:", error);
   }
-});
+}
 
-// 🔹 Optional helper to adjust counters manually
+// ✅ Call on mount
+onMounted(fetchMyActivities);
+
+// ✅ Manual counter adjuster
 function updateCounters(type, increase = true) {
   if (type === "upcoming") {
     upcomingCount.value += increase ? 1 : -1;
@@ -64,12 +59,29 @@ function updateCounters(type, increase = true) {
   }
 }
 
-// 🔹 Logout
-const logout = () => {
-  localStorage.removeItem("user");
-  localStorage.removeItem("token");
-  router.push({ name: "Login" });
-};
+// ✅ Attendance submit (optional)
+async function submitAttendance(activity) {
+  try {
+    await axios.post("http://127.0.0.1:8000/api/attendance", {
+      registrationID: activity.RegistrationID,
+      qrCode: activity.qrInput,
+    });
+    alert("Attendance recorded successfully!");
+    await fetchMyActivities(); // 🔹 Refresh counts after update
+  } catch (error) {
+    console.error("Error submitting attendance:", error);
+  }
+}
+
+// ✅ Modal controls
+function openModal(activity) {
+  selectedActivity.value = activity;
+  showModal.value = true;
+}
+function closeModal() {
+  showModal.value = false;
+  selectedActivity.value = null;
+}
 </script>
 
 <template>
@@ -126,37 +138,104 @@ const logout = () => {
           </div>
         </div>
       </div>
-
-      <!-- Row 3: Upcoming Schedules -->
       <div class="bg-white mx-3 p-4 rounded-lg">
         <h3 class="text-lg font-semibold mb-2">My Activity</h3>
+
         <ul class="space-y-4">
-          <!-- Placeholder Event Items -->
           <li
+            v-for="activity in activities"
+            :key="activity.registrationID || activity.applicationID"
             class="relative p-2 shadow-sm bg-blue-gray rounded-lg hover:bg-gray-300 transition cursor-pointer"
           >
             <div>
               <div
                 class="flex flex-col gap-2 p-4 rounded cursor-pointer"
-                onclick="document.getElementById('my_modal').showModal()"
+                @click="openModal(activity)"
               >
+                <!-- Title -->
                 <div class="text-sm">
-                  <span class="font-semibold">Title:</span> Career Post Title
+                  <span class="font-semibold">Title:</span> {{ activity.title }}
                 </div>
+
+                <!-- Date -->
                 <div class="text-sm">
-                  <span class="font-semibold">Date/Time:</span> -------
+                  <span class="font-semibold">
+                    {{
+                      activity.type === "training" ? "Schedule:" : "Deadline:"
+                    }}
+                  </span>
+                  {{
+                    activity.schedule || activity.deadlineOfSubmission || "N/A"
+                  }}
                 </div>
+
+                <!-- Status -->
                 <div class="text-sm">
                   <span class="font-semibold">Status:</span>
-                  <span class="text-green-600">Applied</span>
+                  <span
+                    :class="{
+                      'text-green-600': [
+                        'Applied',
+                        'Registered',
+                        'Completed',
+                      ].includes(activity.status),
+                      'text-yellow-600': activity.status === 'Ongoing',
+                      'text-red-600': activity.status === 'Cancelled',
+                    }"
+                  >
+                    {{ activity.status || "N/A" }}
+                  </span>
                 </div>
+
+                <!-- Requirement / Certificate -->
                 <div class="text-sm">
-                  <span class="font-semibold">Requirement:</span>
+                  <span class="font-semibold">
+                    {{
+                      activity.type === "career"
+                        ? "Requirement:"
+                        : "Certificate:"
+                    }}
+                  </span>
                   <button
-                    class="ml-2 px-3 py-1 rounded bg-gray-300 text-white cursor-not-allowed"
-                    disabled
+                    v-if="activity.type === 'career'"
+                    class="ml-2 px-3 py-1 rounded text-white text-sm"
+                    :class="
+                      activity.requirements
+                        ? 'bg-blue-500 hover:bg-blue-600'
+                        : 'bg-gray-300 cursor-not-allowed'
+                    "
+                    :disabled="!activity.requirements"
                   >
                     View Requirement
+                  </button>
+
+                  <button
+                    v-else
+                    class="ml-2 px-3 py-1 rounded text-white text-sm"
+                    :class="
+                      activity.certificate
+                        ? 'bg-green-500 hover:bg-green-600'
+                        : 'bg-gray-300 cursor-not-allowed'
+                    "
+                    :disabled="!activity.certificate"
+                  >
+                    {{ activity.certificate ? "View Certificate" : "Pending" }}
+                  </button>
+                </div>
+
+                <!-- Attendance Input (Training only) -->
+                <div v-if="activity.type === 'training'" class="mt-3">
+                  <input
+                    v-model="activity.qrInput"
+                    type="text"
+                    placeholder="Enter attendance code"
+                    class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                  <button
+                    class="mt-2 w-full bg-customButton text-white py-2 rounded hover:bg-dark-slate"
+                    @click.stop="submitAttendance(activity)"
+                  >
+                    Submit Attendance
                   </button>
                 </div>
               </div>
@@ -164,22 +243,76 @@ const logout = () => {
           </li>
         </ul>
       </div>
-    </div>
+      <!-- 🟣 MODAL -->
+      <div
+        v-if="showModal"
+        class="fixed inset-0 flex items-center justify-center z-50"
+      >
+        <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg relative">
+          <button
+            @click="closeModal"
+            class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-xl"
+          >
+            ×
+          </button>
 
-    <dialog id="my_modal" class="modal">
-      <div class="modal-box">
-        <h3 class="font-bold text-lg">Career Post Title</h3>
-        <p class="py-2">Date/Time: -------</p>
-        <p class="py-2">Status: <span class="text-green-600">Applied</span></p>
-        <p class="py-2">Requirement: None available yet</p>
+          <h3 class="text-xl font-semibold mb-2">
+            {{ selectedActivity.title }}
+          </h3>
+          <p class="text-sm text-gray-600 mb-4">
+            <strong>Organization:</strong>
+            {{ selectedActivity.organizationName }}
+          </p>
 
-        <div class="modal-action">
-          <form method="dialog">
-            <button class="btn">Close</button>
-          </form>
+          <div v-if="selectedActivity.type === 'training'">
+            <p><strong>Mode:</strong> {{ selectedActivity.mode }}</p>
+            <p><strong>Schedule:</strong> {{ selectedActivity.schedule }}</p>
+            <p><strong>Location:</strong> {{ selectedActivity.location }}</p>
+            <p v-if="selectedActivity.trainingLink">
+              <strong>Training Link:</strong>
+              <a
+                :href="selectedActivity.trainingLink"
+                target="_blank"
+                class="text-blue-600 underline"
+              >
+                {{ selectedActivity.trainingLink }}
+              </a>
+            </p>
+            <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
+            <p v-if="selectedActivity.certificate">
+              <strong>Certificate:</strong>
+              <a
+                :href="selectedActivity.certificate"
+                target="_blank"
+                class="text-blue-600 underline"
+              >
+                View Certificate
+              </a>
+            </p>
+          </div>
+
+          <div v-else-if="selectedActivity.type === 'career'">
+            <p>
+              <strong>Details:</strong>
+              {{ selectedActivity.detailsAndInstructions }}
+            </p>
+            <p>
+              <strong>Qualifications:</strong>
+              {{ selectedActivity.qualifications }}
+            </p>
+            <p>
+              <strong>Requirements:</strong>
+              {{ selectedActivity.requirements }}
+            </p>
+            <p>
+              <strong>Deadline:</strong>
+              {{ selectedActivity.deadlineOfSubmission }}
+            </p>
+            <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
+          </div>
         </div>
       </div>
-    </dialog>
+    </div>
 
     <!--Large screen-->
     <div class="min-h-screen p-3 font-poppins hidden lg:flex">
@@ -376,122 +509,173 @@ const logout = () => {
                   >
                     Requirement/Certificate
                   </th>
-                  <th scope="col" class="relative px-6 py-3">
-                    <span class="sr-only">Actions</span>
+                  <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider"
+                  >
+                    Attendance
                   </th>
                 </tr>
               </thead>
+
               <tbody class="bg-white divide-y divide-gray-200">
-                <!-- Example Event Row -->
-                <tr class="bg-gray-50 hover:bg-gray-100">
+                <tr
+                  v-for="activity in activities"
+                  :key="activity.title"
+                  class="hover:bg-gray-100"
+                  @click="openModal(activity)"
+                >
+                  <td class="px-6 py-4 text-sm font-semibold text-gray-900">
+                    {{ activity.title }}
+                  </td>
+
+                  <td class="px-6 py-4 text-sm text-gray-700">
+                    {{
+                      activity.schedule || activity.deadlineOfSubmission || "—"
+                    }}
+                  </td>
+
                   <td
-                    class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900"
+                    class="px-6 py-4 text-sm font-medium"
+                    :class="{
+                      'text-green-600':
+                        activity.status === 'Registered' ||
+                        activity.status === 'Applied',
+                      'text-yellow-600': activity.status === 'Scheduled',
+                      'text-red-600': activity.status === 'Cancelled',
+                    }"
                   >
-                    Career Post Title
+                    {{ activity.status }}
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                    -------
-                  </td>
-                  <td
-                    class="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium"
-                  >
-                    Applied
-                  </td>
+
+                  <!-- Requirements / Certificate -->
                   <td class="px-6 py-4 whitespace-nowrap text-sm">
-                    <!-- Certificate button, disabled for now -->
                     <button
-                      class="px-3 py-1 rounded bg-gray-300 text-white cursor-not-allowed"
-                      disabled
+                      v-if="activity.type === 'career'"
+                      :disabled="!activity.requirements"
+                      :class="[
+                        'px-3 py-1 rounded text-white',
+                        activity.requirements
+                          ? 'bg-blue-500 hover:bg-blue-600'
+                          : 'bg-gray-300 cursor-not-allowed',
+                      ]"
                     >
                       View Requirement
                     </button>
-                  </td>
-                  <td
-                    class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
-                  >
-                    <div class="dropdown dropdown-end">
-                      <div
-                        tabindex="0"
-                        role="button"
-                        class="btn btn-ghost m-1 p-1"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="15"
-                          height="15"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                        >
-                          <path
-                            d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-                          />
-                        </svg>
-                      </div>
-                      <ul
-                        tabindex="0"
-                        class="dropdown-content menu bg-base-100 rounded-box z-10 w-52 p-2 shadow-sm"
-                      >
-                        <li><a>Cancel</a></li>
-                      </ul>
-                    </div>
-                  </td>
-                </tr>
 
-                <!-- Repeat rows as needed -->
-                <tr class="hover:bg-gray-100">
-                  <td
-                    class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900"
-                  >
-                    Training Post Title
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                    2025-09-10 2:00 PM
-                  </td>
-                  <td
-                    class="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium"
-                  >
-                    Upcoming
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm">
                     <button
-                      class="px-3 py-1 rounded bg-gray-300 text-white cursor-not-allowed"
-                      disabled
+                      v-else
+                      :disabled="!activity.certificate"
+                      :class="[
+                        'px-3 py-1 rounded text-white',
+                        activity.certificate
+                          ? 'bg-green-500 hover:bg-green-600'
+                          : 'bg-gray-300 cursor-not-allowed',
+                      ]"
                     >
-                      Certificate Issued
+                      {{
+                        activity.certificate
+                          ? "View Certificate"
+                          : "Certificate Pending"
+                      }}
                     </button>
                   </td>
-                  <td
-                    class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
-                  >
-                    <div class="dropdown dropdown-end">
-                      <div
-                        tabindex="0"
-                        role="button"
-                        class="btn btn-ghost m-1 p-1"
+
+                  <!-- Attendance input (training only) -->
+                  <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    <div v-if="activity.type === 'training'" class="flex gap-2">
+                      <input
+                        v-model="activity.qrInput"
+                        type="text"
+                        placeholder="Enter attendance code"
+                        class="w-full px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      />
+                      <button
+                        @click="submitAttendance(activity)"
+                        class="px-3 py-1 bg-customButton text-white rounded hover:bg-blue-600"
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="15"
-                          height="15"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                        >
-                          <path
-                            d="M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"
-                          />
-                        </svg>
-                      </div>
-                      <ul
-                        tabindex="0"
-                        class="dropdown-content menu bg-base-100 rounded-box z-10 w-52 p-2 shadow-sm"
-                      >
-                        <li><a>Cancel</a></li>
-                      </ul>
+                        Submit
+                      </button>
                     </div>
                   </td>
                 </tr>
               </tbody>
             </table>
+            <!-- 🟣 MODAL -->
+            <div
+              v-if="showModal"
+              class="fixed inset-0 flex items-center justify-center z-50"
+            >
+              <div
+                class="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg relative"
+              >
+                <button
+                  @click="closeModal"
+                  class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-xl"
+                >
+                  ×
+                </button>
+
+                <h3 class="text-xl font-semibold mb-2">
+                  {{ selectedActivity.title }}
+                </h3>
+                <p class="text-sm text-gray-600 mb-4">
+                  <strong>Organization:</strong>
+                  {{ selectedActivity.organizationName }}
+                </p>
+
+                <div v-if="selectedActivity.type === 'training'">
+                  <p><strong>Mode:</strong> {{ selectedActivity.mode }}</p>
+                  <p>
+                    <strong>Schedule:</strong> {{ selectedActivity.schedule }}
+                  </p>
+                  <p>
+                    <strong>Location:</strong> {{ selectedActivity.location }}
+                  </p>
+                  <p v-if="selectedActivity.trainingLink">
+                    <strong>Training Link:</strong>
+                    <a
+                      :href="selectedActivity.trainingLink"
+                      target="_blank"
+                      class="text-blue-600 underline"
+                    >
+                      {{ selectedActivity.trainingLink }}
+                    </a>
+                  </p>
+                  <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
+                  <p v-if="selectedActivity.certificate">
+                    <strong>Certificate:</strong>
+                    <a
+                      :href="selectedActivity.certificate"
+                      target="_blank"
+                      class="text-blue-600 underline"
+                    >
+                      View Certificate
+                    </a>
+                  </p>
+                </div>
+
+                <div v-else-if="selectedActivity.type === 'career'">
+                  <p>
+                    <strong>Details:</strong>
+                    {{ selectedActivity.detailsAndInstructions }}
+                  </p>
+                  <p>
+                    <strong>Qualifications:</strong>
+                    {{ selectedActivity.qualifications }}
+                  </p>
+                  <p>
+                    <strong>Requirements:</strong>
+                    {{ selectedActivity.requirements }}
+                  </p>
+                  <p>
+                    <strong>Deadline:</strong>
+                    {{ selectedActivity.deadlineOfSubmission }}
+                  </p>
+                  <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
