@@ -186,6 +186,8 @@ const handleLogin = async () => {
     if (role === "organization") {
       displayName =
         userData.organizationName || userData.name || "Organization";
+    } else if (role === "admin") {
+      displayName = userData.name || "Admin";
     } else {
       displayName = `${userData.firstName} ${userData.lastName}`;
     }
@@ -200,8 +202,11 @@ const handleLogin = async () => {
       })
     );
 
+    // ✅ Redirect based on role
     if (role === "organization") {
       router.push("/organization");
+    } else if (role === "admin") {
+      router.push("/admin");
     } else {
       router.push("/app");
     }
@@ -211,6 +216,7 @@ const handleLogin = async () => {
   }
 };
 </script>
+
 <style>
 /* Hide Chrome/Edge/Safari built-in "eye" icon */
 input::-ms-reveal,
