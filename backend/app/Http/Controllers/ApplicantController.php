@@ -10,40 +10,43 @@ use Illuminate\Support\Str;
 class ApplicantController extends Controller
 {
     public function a_register(Request $request)
-{
-    $validator = \Validator::make($request->all(), [
-        'firstName'    => 'required|string|max:255',
-        'lastName'     => 'required|string|max:255',
-        'address'      => 'required|string|max:255',
-        'emailAddress' => 'required|email|unique:applicant,emailAddress',
-        'phoneNumber'  => 'required|string|max:11',
-        'password'     => 'required|string|min:8',
-    ]);
+    {
+        $validator = \Validator::make($request->all(), [
+            'firstName'    => 'required|string|max:255',
+            'lastName'     => 'required|string|max:255',
+            'address'      => 'required|string|max:255',
+            'emailAddress' => 'required|email|unique:applicant,emailAddress',
+            'phoneNumber'  => 'required|string|max:11',
+            'password'     => 'required|string|min:8',
+            'careerID'  => 'required|exists:career,careerID',
+        ]);
 
-    if ($validator->fails()) {
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $applicant = Applicant::create([
+            'firstName'    => $request->firstName,
+            'middleName'   => $request->middleName,
+            'lastName'     => $request->lastName,
+            'address'      => $request->address,
+            'emailAddress' => $request->emailAddress,
+            'phoneNumber'  => $request->phoneNumber,
+            'password'     => bcrypt($request->password),
+            'api_token'    => Str::random(60),
+            'careerID'  => $request->careerID,
+        ]);
+
         return response()->json([
-            'status' => 'error',
-            'errors' => $validator->errors(),
-        ], 422);
+            'status'  => 'success',
+            'message' => 'Registration successful',
+            'user'    => $applicant,
+        ], 201);
     }
 
-    $applicant = Applicant::create([
-        'firstName'    => $request->firstName,
-        'middleName'   => $request->middleName,
-        'lastName'     => $request->lastName,
-        'address'      => $request->address,
-        'emailAddress' => $request->emailAddress,
-        'phoneNumber'  => $request->phoneNumber,
-        'password'     => bcrypt($request->password),
-        'api_token'    => Str::random(60),
-    ]);
-
-    return response()->json([
-        'status'  => 'success',
-        'message' => 'Registration successful',
-        'user'    => $applicant,
-    ], 201);
-}
 public function login(Request $request)
 {
     $request->validate([
