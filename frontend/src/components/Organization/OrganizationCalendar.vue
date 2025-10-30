@@ -127,8 +127,18 @@
                   <span v-if="date" class="date-number">{{ date.getDate() }}</span>
 
                   <div v-if="date && getEventsByDate(date).length" class="events-list">
-                    <div v-for="(title, i) in getEventTitles(date)" :key="i" class="event-title">
-                      {{ title }}
+                    <div v-if="date && getEventTitles(date).length" class="events-list">
+                      <!-- Show only first 2 events -->
+                      <div v-for="(event, i) in getEventTitles(date).slice(0, 2)" :key="i" class="event-title"
+                        :class="event.type">
+                        {{ event.title }}
+                      </div>
+
+                      <!-- Show "+ Show more" if there are more than 2 events -->
+                      <div v-if="getEventTitles(date).length > 2" class="show-more"
+                        @click.stop="openEventDetailsByDate(date)">
+                        + Show more
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -143,23 +153,45 @@
               </div>
             </div>
 
-
             <!-- Right-side Panel -->
             <div class="calendar-side">
-              <template v-if="selectedEvent">
-                <h3>{{ selectedEvent.title }}</h3>
-                <p><strong>Date:</strong> {{ selectedEvent.date }}</p>
-                <p v-if="selectedEvent.mode"><strong>Mode:</strong> {{ selectedEvent.mode }}</p>
-                <p v-if="selectedEvent.location"><strong>Location:</strong> {{ selectedEvent.location }}</p>
-                <p v-if="selectedEvent.description"><strong>Description:</strong></p>
-                <p v-if="selectedEvent.description">{{ selectedEvent.description }}</p>
+              <!-- When there are events -->
+              <template v-if="selectedEvents && (selectedEvents.trainings?.length || selectedEvents.careers?.length)">
+                <h3>Events on {{ selectedDate }}</h3>
 
-                <button class="close-btn" @click="selectedEvent = null">Close</button>
+                <!-- Trainings -->
+                <div v-if="selectedEvents.trainings.length" class="event-group">
+                  <h4 class="group-title">🟦 Trainings</h4>
+                  <div v-for="(event, i) in selectedEvents.trainings" :key="'t-' + i" class="event-details-card">
+                    <h5>{{ event.title }}</h5>
+                    <p class="event-info" v-if="event.mode"><strong>Mode:</strong> {{ event.mode }}</p>
+                    <p class="event-info" v-if="event.location"><strong>Location:</strong> {{ event.location }}</p>
+                    <p class="event-info" v-if="event.description"><strong>Description:</strong></p>
+                    <p class="event-info" v-if="event.description">{{ event.description }}</p>
+                  </div>
+                </div>
+
+                <!-- Careers -->
+                <div v-if="selectedEvents.careers.length" class="event-group">
+                  <h4 class="group-title">🟨 Careers</h4>
+                  <div v-for="(event, i) in selectedEvents.careers" :key="'c-' + i" class="event-details-card">
+                    <h5>{{ event.title }}</h5>
+                    <p class="event-info" v-if="event.qualifications"><strong>Qualifications:</strong></p>
+                    <p class="event-info" v-if="event.qualifications">{{ event.qualifications }}</p>
+                    <p class="event-info" v-if="event.requirements"><strong>Requirements:</strong></p>
+                    <p class="event-info" v-if="event.requirements">{{ event.requirements }}</p>
+                    <p class="event-info" v-if="event.details"><strong>Details:</strong></p>
+                    <p class="event-info" v-if="event.details">{{ event.details }}</p>
+                  </div>
+                </div>
+
+                <button class="close-btn" @click="closeSidebar">Close</button>
               </template>
 
+              <!-- When no date is selected -->
               <template v-else>
-                <h3>Select an event</h3>
-                <p>Click a date or event in the calendar to view its details.</p>
+                <h3>Select a date</h3>
+                <p>Click a date in the calendar to view its trainings and careers.</p>
               </template>
             </div>
           </div>
@@ -178,7 +210,7 @@ export default {
     return {
       dictLogo,
       currentDate: new Date(),
-      selectedEvent: null,
+      selectedEvents: { trainings: [], careers: [] },
       isSidebarOpen: true,
       dayNames: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
 
@@ -217,7 +249,6 @@ export default {
       return days;
     },
 
-    // 👇 ADD THIS NEW COMPUTED
     formattedSelectedDate() {
       if (!this.selectedDate) return "";
       return this.selectedDate.toLocaleDateString("en-US", {
@@ -260,13 +291,19 @@ export default {
       this.careers = res.data.map(c => ({
         id: c.careerID,
         title: c.position,
-        details: c.detailsAndInstruction,
+        details: c.detailsAndInstructions,
         qualifications: c.qualifications,
         requirements: c.requirements,
         letterAddress: c.applicationLetterAddress,
-        date: c.deadlineOfSubmission.split(" ")[0],
-        organizationID: c.organization.organizationID,
+        // 👇 Fix the date formatting here
+        date: c.deadlineOfSubmission ? c.deadlineOfSubmission.split("T")[0] : null,
+        // 👇 Also fix organization mapping if your backend nests it
+        organizationID: c.organization?.organizationID || c.organizationID,
       }));
+    },
+    openEventDetailsByDate(date) {
+      this.selectedDate = date;
+      this.openDayModal(date);
     },
     formatDate(date) {
       const year = date.getFullYear();
@@ -300,14 +337,18 @@ export default {
     },
     getEventTitles(date) {
       if (!date) return [];
+
       const formatted = this.formatDate(date);
-      const trainingTitles = this.trainings
+
+      const trainings = this.trainings
         .filter(t => t.date === formatted)
-        .map(t => "🟦 " + t.title);
-      const careerTitles = this.careers
+        .map(t => ({ type: "training", title: "🟦 " + t.title }));
+
+      const careers = this.careers
         .filter(c => c.date === formatted)
-        .map(c => "🟨 " + c.title);
-      return [...trainingTitles, ...careerTitles];
+        .map(c => ({ type: "career", title: "🟨 " + c.title }));
+
+      return [...trainings, ...careers];
     },
     getEventColor(date) {
       if (!date) return "";
@@ -324,9 +365,12 @@ export default {
     },
     getEventsByDate(date) {
       if (!date) return [];
-      return [...this.trainings, ...this.careers].filter(
-        event => new Date(event.date).toDateString() === date.toDateString()
-      );
+      const formatted = this.formatDate(date);
+
+      const trainings = this.trainings?.filter(t => t.date === formatted) || [];
+      const careers = this.careers?.filter(c => c.date === formatted) || [];
+
+      return [...trainings, ...careers];
     },
     openEventDetails(event) {
       this.selectedEvent = event;
@@ -335,12 +379,24 @@ export default {
     openDayModal(date) {
       if (!date) return;
 
-      // Find event(s) for this date
-      const allEvents = [...this.trainings, ...this.careers];
-      const event = allEvents.find(e => e.date === this.formatDate(date)); // adjust to your date format
+      const formatted = this.formatDate(date);
 
-      // Show details in sidebar
-      this.selectedEvent = event || null;
+      // Separate events by type
+      const trainings = this.trainings
+        .filter(t => t.date === formatted)
+        .map(t => ({ ...t, type: "Training" }));
+
+      const careers = this.careers
+        .filter(c => c.date === formatted)
+        .map(c => ({ ...c, type: "Career" }));
+
+      this.selectedDate = formatted;
+      this.selectedEvents = { trainings, careers };
+    },
+
+    closeSidebar() {
+      this.selectedEvents = { trainings: [], careers: [] };
+      this.selectedDate = null;
     },
 
     toggleMenu() {
@@ -829,6 +885,7 @@ const isToday = (date) => {
 
 .calendar-container {
   display: flex;
+  align-items: flex-start;
   flex-direction: row;
   gap: 1.5rem;
   width: 100%;
@@ -848,13 +905,11 @@ const isToday = (date) => {
 
 /* Right-side panel */
 .calendar-side {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
   flex: 1;
-  /* smaller portion */
-  background: #f9f9f9;
-  border-radius: 12px;
-  padding: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+  min-width: 250px;
 }
 
 .calendar-side h3 {
@@ -864,6 +919,26 @@ const isToday = (date) => {
   color: #333;
   border-bottom: 1px solid #eee;
   padding-bottom: 8px;
+}
+
+.event-details-card {
+  color: black;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.event-details-card h4 {
+  margin-bottom: 4px;
+  color: #1e293b;
+}
+
+.event-details-card h5 {
+  color: black;
+  font-weight: bold;
+  font-style: italic;
 }
 
 .event-list {
@@ -938,6 +1013,82 @@ const isToday = (date) => {
   height: 18px;
   border-radius: 4px;
   display: inline-block;
+}
+
+.event-info {
+  margin: 0.4rem 0;
+  color: #333;
+}
+
+.show-more {
+  font-size: 11px;
+  color: #555;
+  margin-top: 3px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.show-more:hover {
+  text-decoration: underline;
+}
+
+.event-title.training {
+  color: #2563eb;
+  /* blue */
+  font-size: 12px;
+}
+
+.event-title.career {
+  color: #fbbf24;
+  /* yellow */
+  font-size: 12px;
+}
+
+.calendar-side {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  flex: 1;
+  min-width: 280px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.event-group {
+  margin-bottom: 16px;
+}
+
+.group-title {
+  color: #333;
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+  font-weight: 600;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 4px;
+}
+
+.event-details-card {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+  transition: transform 0.1s ease;
+}
+
+.event-details-card:hover {
+  transform: translateY(-2px);
+}
+
+.close-btn {
+  background: #e2e8f0;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.close-btn:hover {
+  background: #cbd5e1;
 }
 
 /* Color indicators */
