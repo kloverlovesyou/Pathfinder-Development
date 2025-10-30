@@ -1,5 +1,7 @@
 <script setup>
 import { ref, onMounted, nextTick } from "vue";
+import axios from "axios";
+
 import "cally";
 
 const appliedPosts = ref({});
@@ -314,7 +316,7 @@ function submitApplication() {
             class="cally bg-base-100 border border-base-300 shadow rounded-box p-3 flex-shrink-0"
           >
             <calendar-month>
-              <template slot="day" date label>
+              <template #day="{ date, label }">
                 <div
                   class="w-8 h-8 flex items-center justify-center rounded-full"
                   :data-date="date"

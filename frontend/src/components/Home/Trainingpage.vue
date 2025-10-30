@@ -2,12 +2,14 @@
 import { ref, onMounted, computed, onActivated, reactive } from "vue";
 import axios from "axios";
 import QrcodeVue from "qrcode.vue";
+import { watch, nextTick } from "vue";
+
 const qrCodeValue = ref(null);
 const qrExpiresAt = ref(null);
 const qrActiveTrainingId = ref(null);
 const qrCountdowns = reactive({});
 let qrCountdownInterval = null;
-let qrInterval = null;
+let qrInterval = {};
 const qrCountdown = ref("00:00");
 
 
@@ -204,6 +206,52 @@ async function toggleRegistration(training) {
     }
   }
 }
+
+// Function to handle the calendar DOM manipulation and listeners
+function setupCalendarDOM() {
+    // We use nextTick to wait for the DOM updates (like the sidebar opening) 
+    // to complete before trying to access the element via its ref.
+    nextTick(() => { 
+        const calendar = calendarRef.value;
+        
+        if (!calendar)  // Guard against calendar not being rendered yet
+        console.error("Calendar DOM element not found.");
+        return;
+        const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
+        // Highlight event days and today
+        calendar.addEventListener("render", () => {
+            calendar.querySelectorAll("[data-date]").forEach((el) => {
+                const dateStr = el.getAttribute("data-date");
+                el.classList.remove("event-day", "today");
+
+                // This logic uses the 'events.value' which was populated in fetchMyRegistrations
+                if (events.value[dateStr]) el.classList.add("event-day"); 
+                if (dateStr === today) el.classList.add("today");
+            });
+        });
+
+        // Show registered trainings for selected date
+        calendar.addEventListener("change", (e) => {
+            const pickedDate = e.target.value;
+            showEvents(pickedDate);
+
+            calendar
+                .querySelectorAll("[data-date]")
+                .forEach((el) => el.classList.remove("selected-day"));
+            const selectedEl = calendar.querySelector(`[data-date="${pickedDate}"]`);
+            if (selectedEl) selectedEl.classList.add("selected-day");
+        });
+
+        // Auto-select today's date
+        calendar.value = today;
+        showEvents(today);
+
+        const event = new Event("change", { bubbles: true });
+        calendar.dispatchEvent(event);
+    });
+}
+
 // ============================
 // 🔔 Toast Function
 // ============================
@@ -222,6 +270,7 @@ async function fetchTrainings() {
   try {
     const response = await axios.get("http://127.0.0.1:8000/api/trainings");
     trainings.value = response.data;
+    
   } catch (error) {
     console.error("Error fetching trainings:", error);
     addToast("FAILED TO LOAD TRAININGS", "error");
@@ -238,6 +287,7 @@ async function fetchMyRegistrations() {
     });
 
     myRegistrations.value = new Set(res.data.map(r => r.trainingID));
+    buildEvents(); // 👈 Add this
 
     // If any QR exists for the applicant, start countdown
     const activeQRTraining = res.data.find(r => r.attendance_key && r.attendance_expires_at);
@@ -305,39 +355,39 @@ function startAllQRCountdowns() {
   Object.values(qrIntervals).forEach(clearInterval);
   qrIntervals = {};
 
-  function startAllQRCountdowns() {
-  // Clear any previous intervals
-  Object.values(qrIntervals).forEach(clearInterval);
-  qrIntervals = {};
+//start all countdowns for existing QR codes
+function startAllQRCountdowns() {
+  // Clear any previous intervals (This assumes qrIntervals is defined, see fix 1)
+  Object.values(qrIntervals).forEach(clearInterval);
+  qrIntervals = {};
 
-  trainingsWithOrg.value.forEach(training => {
-    if (myRegistrations.value.has(training.trainingID) && training.attendance_expires_at) {
-      const trainingId = training.trainingID;
+  trainingsWithOrg.value.forEach(training => {
+    if (myRegistrations.value.has(training.trainingID) && training.attendance_expires_at) {
+      const trainingId = training.trainingID;
 
-      const updateCountdown = () => {
-        const now = new Date();
-        const expires = new Date(training.attendance_expires_at);
-        const diff = expires - now;
+      const updateCountdown = () => {
+        const now = new Date();
+        const expires = new Date(training.attendance_expires_at);
+        const diff = expires - now;
 
-        if (diff <= 0) {
-          qrCountdowns[trainingId] = "00:00";
-          clearInterval(qrIntervals[trainingId]);
-        } else {
-          const minutes = Math.floor(diff / 60000).toString().padStart(2, "0");
-          const seconds = Math.floor((diff % 60000) / 1000).toString().padStart(2, "0");
-          qrCountdowns[trainingId] = `${minutes}:${seconds}`;
-        }
-      };
+        if (diff <= 0) {
+          qrCountdowns[trainingId] = "00:00";
+          clearInterval(qrIntervals[trainingId]);
+        } else {
+          const minutes = Math.floor(diff / 60000).toString().padStart(2, "0");
+          const seconds = Math.floor((diff % 60000) / 1000).toString().padStart(2, "0");
+          qrCountdowns[trainingId] = `${minutes}:${seconds}`;
+        }
+      };
 
-      // Initialize the key so template reacts immediately
-      qrCountdowns[trainingId] = "loading...";
+      // Initialize the key so template reacts immediately
+      qrCountdowns[trainingId] = "loading...";
 
-      updateCountdown(); // initial call
-      qrIntervals[trainingId] = setInterval(updateCountdown, 1000);
-    }
-  });
+      updateCountdown(); // initial call
+      qrIntervals[trainingId] = setInterval(updateCountdown, 1000);
+    }
+  });
 }
-
 const modalQR = reactive({
   value: null,
   expiresAt: null,
@@ -380,12 +430,17 @@ function startModalQRCountdown(training) {
 // 🚀 Lifecycle Hooks
 // ============================
 onMounted(async () => {
-  await fetchOrganizations();
-  await fetchTrainings();
-  await fetchMyRegistrations();
-  await fetchBookmarks(); // ✅ Fetch user bookmarks from backend
-  startAllQRCountdowns();
-  setInterval(fetchTrainings, 30000);
+await fetchOrganizations();
+    await fetchTrainings();
+    await fetchMyRegistrations(); 
+    await fetchBookmarks();
+    startAllQRCountdowns();
+
+  
+    buildEvents();
+    setupCalendarDOM(); // 👈 New call
+
+    setInterval(fetchTrainings, 30000);
 });
 
 onActivated(() => {
@@ -407,14 +462,23 @@ function openModal(post) {
 // Build events map
 function buildEvents() {
   events.value = {};
-  posts.value.forEach((post) => {
-    const date = post.trainingID
-      ? post.schedule.split("T")[0]
-      : post.deadlineOfSubmission;
+  console.log("🔍 trainings:", trainings.value);
+  console.log("🔍 myRegistrations:", myRegistrations.value);
 
-    if (!events.value[date]) events.value[date] = [];
-    events.value[date].push(post);
+  trainings.value.forEach((training) => {
+    // Make sure the training has an ID and schedule
+    if (!training.trainingID || !training.schedule) return;
+
+    // Check if user is registered
+    if (myRegistrations.value.has(training.trainingID)) {
+      const date = training.schedule.split(/[T\s]/)[0];
+      if (!events.value[date]) events.value[date] = [];
+      events.value[date].push(training);
+    }
   });
+
+  console.log("✅ Built events:", events.value);
+  console.log("Schedule for training:", training.schedule);
 }
 
 // Show events on calendar click
@@ -423,42 +487,10 @@ function showEvents(dateStr) {
   dayEvents.value = events.value[dateStr] || [];
 }
 
-onMounted(async () => {
-  await nextTick();
+watch([trainings, myRegistrations], async () => {
   buildEvents();
-
-  const calendar = calendarRef.value;
-  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-
-  // Highlight event days and today
-  calendar.addEventListener("render", () => {
-    calendar.querySelectorAll("[data-date]").forEach((el) => {
-      const dateStr = el.getAttribute("data-date");
-      el.classList.remove("event-day", "today");
-
-      if (events.value[dateStr]) el.classList.add("event-day");
-      if (dateStr === today) el.classList.add("today");
-    });
-  });
-
-  calendar.addEventListener("change", (e) => {
-    const pickedDate = e.target.value;
-    showEvents(pickedDate);
-
-    calendar
-      .querySelectorAll("[data-date]")
-      .forEach((el) => el.classList.remove("selected-day"));
-    const selectedEl = calendar.querySelector(`[data-date="${pickedDate}"]`);
-    if (selectedEl) selectedEl.classList.add("selected-day");
-  });
-
-  // ✅ Auto-select today's date to show events
-  calendar.value = today; // Set the <calendar-date> selected value
-  showEvents(today); // Load today's events into the panel
-
-  // Manually trigger "change" event to simulate user selecting today
-  const event = new Event("change", { bubbles: true });
-  calendar.dispatchEvent(event);
+  await nextTick();
+  setupCalendarDOM();
 });
 
 function formatDateTime(dt) {
@@ -551,7 +583,7 @@ function formatDate(d) {
           class="cally bg-base-100 border border-base-300 shadow rounded-box p-3 flex-shrink-0"
         >
           <calendar-month>
-            <template slot="day" date label>
+            <template #day="{ date, label }">
               <div
                 class="w-8 h-8 flex items-center justify-center rounded-full"
                 :data-date="date"
@@ -577,28 +609,23 @@ function formatDate(d) {
             <div
               v-for="(event, i) in dayEvents"
               :key="i"
-              @click="openModal(event)"
-              class="bg-gray-100 p-2 rounded-lg shadow-sm cursor-pointer hover:bg-gray-200 break-words flex justify-between items-center"
+              @click="openTrainingModal(event)"
+              class="bg-gray-100 p-2 rounded-lg shadow-sm cursor-pointer hover:bg-gray-200 flex justify-between items-center"
             >
               <div>
-                <h3 class="font-semibold text-sm">
-                  {{ isTraining(event) ? event.title : event.position }}
-                </h3>
-                <p class="text-xs text-gray-600">
-                  {{ organizations[event.organizationID] }}
+                <h3 class="font-semibold text-sm">{{ event.title }}</h3>
+                <p class="text-xs text-gray-600">{{ event.organizationName }}</p>
+                <p class="text-xs text-gray-500">
+                  {{ formatDateTime(event.schedule) }}
                 </p>
               </div>
-
-              <!-- ✅ Badge -->
               <span
-                v-if="isRegisteredOrApplied(event)"
-                class="text-[10px] text-white px-2 py-1 rounded-full"
-                :class="isTraining(event) ? 'bg-blue-500' : 'bg-green-500'"
+                class="text-[10px] text-white px-2 py-1 rounded-full bg-blue-500"
               >
-                {{ isTraining(event) ? "Registered" : "Applied" }}
+                Registered
               </span>
             </div>
-          </div>
+</div>
         </div>
       </div>
     </aside>
