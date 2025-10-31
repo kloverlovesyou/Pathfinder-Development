@@ -92,34 +92,39 @@ class TrainingController extends Controller
     /**
      * List all trainings (QR auto-generated if schedule started)
      */
-    public function index()
-    {
-        $trainings = Training::with('organization')->get();
+    public function index(Request $request)
+{
+    $query = Training::with('organization');
 
-        foreach ($trainings as $training) {
-            $this->autoGenerateQR($training);
-        }
-
-        $formatted = $trainings->map(function ($training) {
-            return [
-                'trainingID' => $training->trainingID,
-                'title' => $training->title,
-                'description' => $training->description,
-                'schedule' => $training->schedule?->format('Y-m-d H:i'),
-                'mode' => $training->mode,
-                'location' => $training->location,
-                'trainingLink' => $training->trainingLink,
-                'attendance_key' => $training->attendance_key,
-                'attendance_expires_at' => $training->attendance_expires_at,
-                'organization' => [
-                    'organizationID' => $training->organizationID,
-                    'name' => optional($training->organization)->name ?? 'Unknown',
-                ],
-            ];
-        });
-
-        return response()->json($formatted);
+    // Filter by organization if query param exists
+    if ($request->has('organizationID')) {
+        $query->where('organizationID', $request->organizationID);
     }
+
+    $trainings = $query->get();
+
+    foreach ($trainings as $training) {
+        $this->autoGenerateQR($training);
+    }
+
+    return response()->json($trainings->map(function ($training) {
+        return [
+            'trainingID' => $training->trainingID,
+            'title' => $training->title,
+            'description' => $training->description,
+            'schedule' => $training->schedule?->format('Y-m-d H:i'),
+            'mode' => $training->mode,
+            'location' => $training->location,
+            'trainingLink' => $training->trainingLink,
+            'attendance_key' => $training->attendance_key,
+            'attendance_expires_at' => $training->attendance_expires_at,
+            'organizationID' => $training->organizationID,
+            'organization' => [
+                'name' => optional($training->organization)->name ?? 'Unknown',
+            ],
+        ];
+    }));
+}
 
     /**
      * Store new training
