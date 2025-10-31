@@ -65,6 +65,13 @@ async function fetchMyActivities() {
   }
 }
 
+function isTrainingPassed(activity) {
+  if (!activity.schedule) return false;
+  const now = new Date();
+  const scheduleDate = new Date(activity.schedule);
+  return now >= scheduleDate; // true if the schedule date has passed
+}
+
 // ✅ Call on mount
 onMounted(fetchMyActivities);
 
@@ -244,17 +251,22 @@ function closeModal() {
                 <!-- Attendance Input (Training only) -->
                 <div v-if="activity.type === 'training'" class="mt-3">
                   <input
-                    v-model="activity.qrInput"
-                    type="text"
-                    placeholder="Enter attendance code"
-                    class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  />
-                  <button
-                    class="mt-2 w-full bg-customButton text-white py-2 rounded hover:bg-dark-slate"
-                    @click.stop="submitAttendance(activity)"
-                  >
-                    Submit Attendance
-                  </button>
+                      v-model="activity.qrInput"
+                      type="text"
+                      placeholder="Enter attendance code"
+                      class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      :disabled="!isTrainingPassed(activity)"
+                    />
+                    <button
+                      class="mt-2 w-full text-white py-2 rounded"
+                      :class="isTrainingPassed(activity)
+                        ? 'bg-customButton hover:bg-dark-slate'
+                        : 'bg-gray-400 cursor-not-allowed'"
+                      :disabled="!isTrainingPassed(activity)"
+                      @click.stop="submitAttendance(activity)"
+                    >
+                      Submit Attendance
+                    </button>
                 </div>
               </div>
             </div>
@@ -603,17 +615,24 @@ function closeModal() {
                   <td class="px-6 py-4 whitespace-nowrap text-sm">
                     <div v-if="activity.type === 'training'" class="flex gap-2">
                       <input
-                        v-model="activity.qrInput"
-                        type="text"
-                        placeholder="Enter attendance code"
-                        class="w-full px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      />
-                      <button
-                        @click="submitAttendance(activity)"
-                        class="px-3 py-1 bg-customButton text-white rounded hover:bg-blue-600"
-                      >
-                        Submit
-                      </button>
+                          v-model="activity.qrInput"
+                          type="text"
+                          placeholder="Enter attendance code"
+                          class="w-full px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          :disabled="!isTrainingPassed(activity)"
+                        />
+                        <button
+                          @click="submitAttendance(activity)"
+                          :class="[
+                            'px-3 py-1 text-white rounded',
+                            isTrainingPassed(activity)
+                              ? 'bg-customButton hover:bg-blue-600'
+                              : 'bg-gray-400 cursor-not-allowed'
+                          ]"
+                          :disabled="!isTrainingPassed(activity)"
+                        >
+                          Submit
+                        </button>
                     </div>
                   </td>
                 </tr>
