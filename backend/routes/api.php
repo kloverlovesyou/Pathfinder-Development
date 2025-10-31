@@ -19,7 +19,8 @@ use App\Http\Controllers\{
     CertificateController,
     CareerBookmarkController,
     SearchController,
-    MyActivityController
+    MyActivityController,
+    EventController
 };
 
 // ----------------------
@@ -132,5 +133,5 @@ Route::get('/user', function (Request $request) {
 });
 
 Route::get('/my-activities/{applicantID}', [MyActivityController::class, 'getMyActivities']);
-
+Route::get('/calendar/{applicantID}', [EventController::class, 'getUserEvents']);
 
