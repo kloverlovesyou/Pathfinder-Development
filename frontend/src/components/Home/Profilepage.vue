@@ -12,6 +12,24 @@ const completedCount = ref(0);
 const showModal = ref(false);
 const selectedActivity = ref(null);
 
+function formatDateTime(dateStr) {
+  if (!dateStr) return "N/A";
+
+  const date = new Date(dateStr);
+  if (isNaN(date)) return dateStr; // fallback if invalid
+
+  const options = {
+    year: "numeric",
+    month: "short", // Oct
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true, // ensures AM/PM
+  };
+
+  return date.toLocaleString("en-US", options);
+}
+
 // ✅ Logout
 function logout() {
   localStorage.removeItem("user");
@@ -165,7 +183,7 @@ function closeModal() {
                     }}
                   </span>
                   {{
-                    activity.schedule || activity.deadlineOfSubmission || "N/A"
+                   activity.schedule ? formatDateTime(activity.schedule) : formatDateTime(activity.deadlineOfSubmission) || "—"
                   }}
                 </div>
 
@@ -266,7 +284,7 @@ function closeModal() {
 
           <div v-if="selectedActivity.type === 'training'">
             <p><strong>Mode:</strong> {{ selectedActivity.mode }}</p>
-            <p><strong>Schedule:</strong> {{ selectedActivity.schedule }}</p>
+            <p><strong>Schedule:</strong> {{ formatDateTime(selectedActivity.schedule) }}</p>
             <p><strong>Location:</strong> {{ selectedActivity.location }}</p>
             <p v-if="selectedActivity.trainingLink">
               <strong>Training Link:</strong>
@@ -306,7 +324,7 @@ function closeModal() {
             </p>
             <p>
               <strong>Deadline:</strong>
-              {{ selectedActivity.deadlineOfSubmission }}
+              {{ formatDateTime(selectedActivity.deadlineOfSubmission)}}
             </p>
             <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
           </div>
@@ -531,7 +549,7 @@ function closeModal() {
 
                   <td class="px-6 py-4 text-sm text-gray-700">
                     {{
-                      activity.schedule || activity.deadlineOfSubmission || "—"
+                      activity.schedule ? formatDateTime(activity.schedule) : formatDateTime(activity.deadlineOfSubmission) || "—"
                     }}
                   </td>
 
@@ -627,7 +645,7 @@ function closeModal() {
                 <div v-if="selectedActivity.type === 'training'">
                   <p><strong>Mode:</strong> {{ selectedActivity.mode }}</p>
                   <p>
-                    <strong>Schedule:</strong> {{ selectedActivity.schedule }}
+                     <strong>Schedule:</strong> {{ formatDateTime(selectedActivity.schedule) }}
                   </p>
                   <p>
                     <strong>Location:</strong> {{ selectedActivity.location }}
@@ -670,7 +688,7 @@ function closeModal() {
                   </p>
                   <p>
                     <strong>Deadline:</strong>
-                    {{ selectedActivity.deadlineOfSubmission }}
+                    {{ formatDateTime(selectedActivity.deadlineOfSubmission) }}
                   </p>
                   <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
                 </div>
