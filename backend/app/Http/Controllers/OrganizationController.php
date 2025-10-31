@@ -8,7 +8,16 @@ use Illuminate\Support\Facades\Hash;
 
 class OrganizationController extends Controller
 {
+
+    public function index()
+    {
+        // Include careers and trainings
+        $organizations = Organization::with(['careers', 'trainings'])->get();
+
+        return response()->json($organizations);
+    }
     // Register Organization
+
     public function o_register(Request $request)
     {
         $validator = \Validator::make($request->all(), [
@@ -59,8 +68,5 @@ class OrganizationController extends Controller
     }
 
     // List All Organizations
-    public function index()
-    {
-        return response()->json(Organization::all());
-    }
+    
 }
