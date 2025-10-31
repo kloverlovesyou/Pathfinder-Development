@@ -125,6 +125,7 @@
             <div class="training-right" @click="openTrainingDetails(training)">
               <h3 class="training-title">{{ training.title }}</h3>
               <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
+
             </div>
 
             <!-- Menu -->
@@ -243,8 +244,10 @@
             <strong>Description:</strong> {{ selectedTraining.description }}
           </p>
           <p class="training-info">
-            <strong>Date and Time:</strong> {{ formatSchedule(selectedTraining.schedule) }}
+            <strong>Date and Start Time:</strong> {{ formatSchedule(selectedTraining.schedule) }}
           </p>
+          <p class="training-info">
+            <strong>End Time:</strong> {{ formatSchedule(selectedTraining.end_time) }}</p> <!-- 👈 Show end_time -->
           <p class="training-info">
             <strong>Mode:</strong> {{ selectedTraining.mode }}
           </p>
@@ -372,46 +375,82 @@
 
 
             <!-- Schedule -->
-            <div class="popup-form-group schedule-group">
-              <label for="schedule">Schedule</label>
-              <div class="schedule-input-wrapper">
-                <!-- Date input with calendar icon -->
-                <div class="date-input-wrapper">
-                  <input type="date" id="schedule" v-model="newTraining.date" :min="todayDate" placeholder="Schedule" />
-                  <span class="calendar-icon">
-                    <!-- your SVG calendar icon -->
-                    <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path
-                        d="M2.16669 9.41675C2.16669 7.53113 2.16669 6.58832 2.75247 6.00253C3.33826 5.41675 4.28107 5.41675 6.16669 5.41675H19.8334C21.719 5.41675 22.6618 5.41675 23.2476 6.00253C23.8334 6.58832 23.8334 7.53113 23.8334 9.41675V9.83342C23.8334 10.3048 23.8334 10.5405 23.6869 10.687C23.5405 10.8334 23.3048 10.8334 22.8334 10.8334H3.16669C2.69528 10.8334 2.45958 10.8334 2.31313 10.687C2.16669 10.5405 2.16669 10.3048 2.16669 9.83341V9.41675Z"
-                        fill="black" />
-                      <path
-                        d="M22.833 13C23.3042 13 23.5401 13.0002 23.6865 13.1465C23.833 13.2929 23.833 13.5286 23.833 14V19.833C23.833 21.7186 23.8329 22.6613 23.2471 23.2471C22.6613 23.8329 21.7186 23.833 19.833 23.833H6.16699C4.28137 23.833 3.33872 23.8329 2.75293 23.2471C2.16714 22.6613 2.16699 21.7186 2.16699 19.833V14C2.16699 13.5286 2.16703 13.2929 2.31348 13.1465C2.45994 13.0002 2.69576 13 3.16699 13H22.833Z"
-                        fill="black" />
-                      <path d="M7.58331 3.25L7.58331 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
-                      <path d="M18.4167 3.25L18.4167 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
-                    </svg>
-                  </span>
-                </div>
+            <!-- Schedule -->
+<div class="popup-form-group schedule-group">
+  <label for="schedule">Schedule</label>
+  <div class="schedule-input-wrapper">
+    <!-- Date input with calendar icon -->
+    <div class="date-input-wrapper">
+      <input
+        type="date"
+        id="schedule"
+        v-model="newTraining.date"
+        :min="todayDate"
+        placeholder="Schedule"
+      />
+      <span class="calendar-icon">
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M2.16669 9.41675C2.16669 7.53113 2.16669 6.58832 2.75247 6.00253C3.33826 5.41675 4.28107 5.41675 6.16669 5.41675H19.8334C21.719 5.41675 22.6618 5.41675 23.2476 6.00253C23.8334 6.58832 23.8334 7.53113 23.8334 9.41675V9.83342C23.8334 10.3048 23.8334 10.5405 23.6869 10.687C23.5405 10.8334 23.3048 10.8334 22.8334 10.8334H3.16669C2.69528 10.8334 2.45958 10.8334 2.31313 10.687C2.16669 10.5405 2.16669 10.3048 2.16669 9.83341V9.41675Z"
+            fill="black"
+          />
+          <path
+            d="M22.833 13C23.3042 13 23.5401 13.0002 23.6865 13.1465C23.833 13.2929 23.833 13.5286 23.833 14V19.833C23.833 21.7186 23.8329 22.6613 23.2471 23.2471C22.6613 23.8329 21.7186 23.833 19.833 23.833H6.16699C4.28137 23.833 3.33872 23.8329 2.75293 23.2471C2.16714 22.6613 2.16699 21.7186 2.16699 19.833V14C2.16699 13.5286 2.16703 13.2929 2.31348 13.1465C2.45994 13.0002 2.69576 13 3.16699 13H22.833Z"
+            fill="black"
+          />
+          <path d="M7.58331 3.25L7.58331 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
+          <path d="M18.4167 3.25L18.4167 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </span>
+    </div>
 
-                <!-- Time -->
-                <div class="time-input-wrapper">
-                  <label for="time">Time</label>
-                  <div class="date-input-wrapper">
-                    <input type="time" id="time" v-model="newTraining.time" placeholder="Time" />
-                    <span class="calendar-icon">
-                      <!-- your SVG clock icon -->
-                      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path
-                          d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
-                          fill="black" />
-                        <path d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
-                          fill="black" />
-                      </svg>
-                    </span>
-                  </div>
-                </div>
-              </div>
+    <!-- Start Time -->
+    <div class="time-input-wrapper">
+      <label for="startTime">Start Time</label>
+      <div class="date-input-wrapper">
+        <input
+          type="time"
+          id="startTime"
+          v-model="newTraining.startTime"
+          placeholder="Start Time"
+        />
+        <span class="calendar-icon">
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
+              fill="black"
+            />
+            <path d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
+              fill="black" />
+          </svg>
+        </span>
+      </div>
+    </div>
+
+          <!-- End Time -->
+          <div class="time-input-wrapper">
+            <label for="endTime">End Time</label>
+            <div class="date-input-wrapper">
+              <input
+                type="time"
+                id="endTime"
+                v-model="newTraining.endTime"
+                placeholder="End Time"
+              />
+              <span class="calendar-icon">
+                <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
+                    fill="black"
+                  />
+                  <path d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
+                    fill="black" />
+                </svg>
+              </span>
             </div>
+          </div>
+        </div>
+      </div>
 
             <!-- On-Site / Online -->
             <div class="training-radio-group">
@@ -525,16 +564,17 @@ export default {
 
       // Popup state + form
       showTrainingPopup: false,
-      newTraining: {
-        title: "",
-        description: "",
-        date: "",
-        time: "",
-        mode: "",
-        location: "",
-        trainingLink: "",
-        Tags: []
-      },
+        newTraining: {
+          title: "",
+          description: "",
+          date: "",
+          startTime: "",
+          endTime: "",
+          mode: "",
+          location: "",
+          trainingLink: "",
+          Tags: []
+        },
 
       QrcodeVue: "",
       qrExpiresAt: "",
@@ -794,85 +834,98 @@ export default {
       this.fetchTags(); // Load tags into dropdown
     },
 
-    closeTrainingPopup() {
-      this.showTrainingPopup = false;
-      this.newTraining = {
-        title: "",
-        description: "",
-        date: "",
-        time: "",
-        mode: "",
-        location: "",
-        trainingLink: "",
-        Tags: []
-      };
-    },
+closeTrainingPopup() {
+  this.showTrainingPopup = false;
+  this.newTraining = {
+    title: "",
+    description: "",
+    date: "",
+    startTime: "",
+    endTime: "",
+    mode: "",
+    location: "",
+    trainingLink: "",
+    Tags: []
+  };
+  this.newTagName = ""; // optional: clear the tag input too
+},
 
-    async saveTraining() {
-    const token = localStorage.getItem("token"); // Check token before proceeding
-    if (!token) {
+async saveTraining() {
+  const token = localStorage.getItem("token");
+  if (!token) {
     alert("Please log in to continue.");
-    return; // If token is invalid, exit
-    }
-    try {
-    // Validate required fields
-    if (!this.newTraining.title || !this.newTraining.description || !this.newTraining.date || !this.newTraining.time) {
-    alert("PLEASE FILL OUT ALL FIELDS BEFORE POSTING!!!");
     return;
+  }
+
+  try {
+    // Validate required fields
+    if (
+      !this.newTraining.title ||
+      !this.newTraining.description ||
+      !this.newTraining.date ||
+      !this.newTraining.startTime ||
+      !this.newTraining.endTime ||
+      !this.newTraining.mode
+    ) {
+      alert("PLEASE FILL OUT ALL FIELDS BEFORE POSTING!!!");
+      return;
     }
-    const combinedSchedule = `${this.newTraining.date} ${this.newTraining.time}`;
+
+    // Combine date and time
+    const startSchedule = `${this.newTraining.date} ${this.newTraining.startTime}`;
+    const endSchedule = `${this.newTraining.date} ${this.newTraining.endTime}`;
+
+    // Make sure endTime is after startTime
+    if (new Date(endSchedule) <= new Date(startSchedule)) {
+      alert("End time must be later than start time!");
+      return;
+    }
+
     const payload = {
       title: this.newTraining.title,
       description: this.newTraining.description,
-      schedule: combinedSchedule,
+      schedule: startSchedule,
+      end_time: endSchedule, // 👈 NEW
       mode: this.newTraining.mode,
       location: this.newTraining.location || null,
       training_link: this.newTraining.trainingLink || null,
-      Tags: this.newTraining.Tags // Include selected tag IDs
+      Tags: this.newTraining.Tags
     };
 
-    // Send the POST request to save the training
     const response = await axios.post("http://127.0.0.1:8000/api/trainings", payload, {
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
+        "Content-Type": "application/json"
+      }
     });
 
-    // Log the full response for debugging
     console.log("API Response:", response);
 
-    // Check if the response is successful
-    if (response && response.status >= 200 && response.status < 300 && response.data && response.data.data) {
+    if (response && response.status >= 200 && response.status < 300 && response.data?.data) {
       const newTraining = response.data.data;
       this.upcomingtrainings.push(newTraining);
-      alert("TRAINING POSTED SUCCESFULLY!!!");
+      alert("TRAINING POSTED SUCCESSFULLY!!!");
       this.closeTrainingPopup();
-   // Clear the form after saving
     } else {
-      console.error("Unexpected response structure:", response);
+      console.error("Unexpected response:", response);
       alert("Something went wrong while saving the training. Please try again.");
     }
 
-    } catch (error) {
-      console.error("ERROR SAVING TRAINING:", error);
-      // Handle specific error messages based on response status
-      if (error.response) {
+  } catch (error) {
+    console.error("ERROR SAVING TRAINING:", error);
+    if (error.response) {
       if (error.response.status === 401) {
         alert("Unauthorized: Please log in again.");
-      } else if (error.response.status === 409) {
-        alert("This training already exists!");
       } else if (error.response.status === 422) {
         alert("Validation failed. Please check your inputs.");
       } else {
         alert("Something went wrong. Please try again.");
       }
-      } else {
-        alert("Unable to connect to the server.");
-      }
-      }
-    },
-
+    } else {
+      alert("Unable to connect to the server.");
+    }
+  }
+},
 
     formatSchedule(schedule) {
       if (!schedule) return "No schedule set";

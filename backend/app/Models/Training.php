@@ -39,19 +39,23 @@ class Training extends Model
 
 	protected $casts = [
 		'schedule' => 'datetime',
-		'organizationID' => 'int'
+		'end_time' => 'datetime', 
+		'organizationID' => 'int',
+
 	];
 
 	protected $fillable = [
 		'title',
 		'description',
 		'schedule',
+		'end_time',
 		'mode',
 		'location',
 		'trainingLink',
 		'organizationID',
 		'attendance_key',          // ✅ Add this
 		'attendance_expires_at',   // ✅ Add this
+		
 	];
 
 
