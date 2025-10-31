@@ -309,7 +309,7 @@ onMounted(fetchMyActivities);
                   </button>
                 </div>
 
-                <!-- Attendance Input (Training only) -->
+                <!-- Attendance Input (Training only) Mobile View-->
                 <div v-if="activity.type === 'training'" class="mt-3">
                   <input
                       v-model="activity.qrInput"
@@ -317,6 +317,7 @@ onMounted(fetchMyActivities);
                       placeholder="Enter attendance code"
                       class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
                       :disabled="!isAttendanceEnabled(activity)"
+                      @click.stop
                     />
                     <button
                       class="mt-2 w-full text-white py-2 rounded"
@@ -698,7 +699,7 @@ onMounted(fetchMyActivities);
                     </button>
                   </td>
 
-                  <!-- Attendance input (training only) -->
+                  <!-- Attendance input (training only) Desktop -->
                   <td class="px-6 py-4 whitespace-nowrap text-sm">
                     <div v-if="activity.type === 'training'" class="flex gap-2">
                       <input
