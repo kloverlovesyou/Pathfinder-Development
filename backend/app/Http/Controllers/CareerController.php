@@ -9,6 +9,16 @@ use Illuminate\Http\Request;
 
 class CareerController extends Controller
 {
+    public function getCareers()
+    {
+        $careers = Career::select('careerID', 'position')->get();
+
+        return response()->json([
+            'status' => 'success',
+            'careers' => $careers,
+        ]);
+    }
+    
     public function index()
     {
         //fetch all careers
@@ -34,39 +44,45 @@ class CareerController extends Controller
     }
     
     public function store(Request $request)
-{
-    \Log::info('INCOMING CAREER DATA:', $request->all());
+    {
+        \Log::info('INCOMING CAREER DATA:', $request->all());
 
-    $validated = $request->validate([
-        'position' => 'required|string|max:255',
-        'details' => 'required|string|max:255',
-        'qualifications' => 'required|string|max:255',
-        'requirements' => 'required|string|max:255',
-        'letterAddress' => 'required|string|max:255',
-        'deadline' => 'required|date'
-    ]);
+        $validated = $request->validate([
+            'position' => 'required|string|max:255',
+            'details' => 'required|string|max:255',
+            'qualifications' => 'required|string|max:255',
+            'requirements' => 'required|string|max:255',
+            'letterAddress' => 'required|string|max:255',
+            'deadline' => 'required|date',
+            'Tags' => 'nullable|array', 
+            'Tags.*' => 'integer|exists:tag,TagID',
+        ]);
 
-    $deadline = Carbon::parse($validated['deadline'])->format('Y-m-d');
+        $deadline = Carbon::parse($validated['deadline'])->format('Y-m-d');
 
-    // ✅ Correct way to get authenticated user
-    $user = $request->user();
+        $user = $request->user();
 
-    // Optional: log to verify
-    \Log::info('AUTHENTICATED USER:', ['user' => $user]);
+        // optional log to verify
+        \Log::info('AUTHENTICATED USER:', ['user' => $user]);
 
-    $career = Career::create([
-        'position' => $validated['position'],
-        'detailsAndInstructions' => $validated['details'],
-        'qualifications' => $validated['qualifications'],
-        'requirements' => $validated['requirements'],
-        'applicationLetterAddress' => $validated['letterAddress'],
-        'deadlineOfSubmission' => $deadline,
-        'organizationID' => $user->organizationID ?? null, // safe access
-    ]);
+        $career = Career::create([
+            'position' => $validated['position'],
+            'detailsAndInstructions' => $validated['details'],
+            'qualifications' => $validated['qualifications'],
+            'requirements' => $validated['requirements'],
+            'applicationLetterAddress' => $validated['letterAddress'],
+            'deadlineOfSubmission' => $deadline,
+            'organizationID' => $user->organizationID ?? null, // safe access
+        ]);
 
-    return response()->json([
-        'message' => 'CAREER POSTED SUCCESSFULLY!!!',
-        'data' => $career
-    ], 201);
-}
+        if (!empty($validated['Tags'])) {
+            $career->tags()->attach($validated['Tags']);
+        }
+
+        return response()->json([
+            'message' => 'CAREER POSTED SUCCESSFULLY!!!',
+            'data' => $career,
+            'tags' => $validated['Tags'] 
+        ], 201);
+    }
 }

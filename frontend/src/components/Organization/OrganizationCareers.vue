@@ -377,6 +377,44 @@
               </span>
             </div>
 
+         <!-- Tag selection -->
+            <div class="relative mb-4">
+            <label class="block font-semibold text-gray-600 mb-2">Tags</label>
+            <!-- Tag List Wrapper for horizontal scrolling -->
+            <div class="tag-list-wrapper">
+            <div class="tag-list">
+            <span
+            v-for="tag in tagOptions"
+            :key="tag.TagID"
+            class="tag-chip"
+            @click="toggleTag(tag.TagID)"
+            :class="{ 'tag-chip-selected': isTagSelected(tag.TagID) }"
+            >
+            {{ tag.TagName }}
+            </span>
+            </div>
+            </div>
+            <!-- Display Selected Tags as Chips -->
+            <div v-if="newCareer.Tags.length" class="flex flex-wrap gap-2 mt-2">
+            <span
+            v-for="tagID in newCareer.Tags"
+            :key="tagID"
+            class="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-full"
+            >
+            {{ getTagName(tagID) }}
+            <button @click.stop="removeTag(tagID)" class="ml-1 text-red-500">×</button> <!-- Remove Button -->
+            </span>
+            </div>
+            <!-- Input for New Tag -->
+            <input
+            v-model="newTagName"
+            type="text"
+            placeholder="Add new tag"
+            class="career-input mt-2"
+            />
+            <button @click.prevent="addTag" class="career-save-btn mt-2">Add Tag</button>
+            </div>
+
             <!-- Save -->
             <button type="submit" class="career-save-btn">Post</button>
           </form>
@@ -408,12 +446,25 @@
 
 <script>
 import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
+import { ref, onMounted } from 'vue';
 import axios from "axios";
 import api from "@/api/axios";
+
+const fetchTags = async () => {
+  try {
+    const response = await axios.get('http://127.0.0.1:8000/api/tags');
+    console.log(response.data); // Log the API response
+    this.tagOptions = response.data; // Update tagOptions
+  } catch (error) {
+    console.error('Error fetching tags:', error);
+  }
+}
+
 
 export default {
   data() {
     return {
+      newTagName: '',
       dictLogo,
       openUpcomingMenu: null,
       openCompletedMenu: null,
@@ -512,6 +563,8 @@ export default {
       showApplicantsModal: false,
       upcomingCareers: [],
 
+      
+
       // Popup state + form
       showCareerPopup: false,
       newCareer: {
@@ -521,11 +574,107 @@ export default {
         requirements: "",
         letterAddress: "",
         deadline: "",
+        Tags: []
       },
+      tagOptions: []
+     
+      
+
     };
   },
+  
 
   methods: {
+    checkToken() {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("🔒 Please log in to continue.");
+        return false; // Token is not valid
+      }
+      return token; // Token is valid
+    },
+    
+    async addTag() {
+      if (!this.newTagName) {
+        alert("Please enter a tag name.");
+        return;
+      }
+
+      const token = this.checkToken(); // Check token before proceeding
+      if (!token) return; // If token is invalid, exit
+
+      try {
+        // Send the new tag to the backend
+        const response = await axios.post('http://127.0.0.1:8000/api/tags', {
+          TagName: this.newTagName
+        }, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+
+        // Add the new tag to the tagOptions and newCareer.Tags
+        this.tagOptions.push(response.data);
+        this.newCareer.Tags.push(response.data.TagID);
+
+        // Clear the input field
+        this.newTagName = '';
+        alert("Tag added successfully!");
+      } catch (error) {
+        console.error("Error adding tag:", error);
+        alert("Failed to add tag.");
+      }
+    },
+
+
+     // Toggle selection of a tag
+      toggleTag(tagID) {
+        const index = this.newCareer.Tags.indexOf(tagID);
+        if (index === -1) {
+          // If the tag is not selected, add it
+          this.newCareer.Tags.push(tagID);
+        } else {
+          // If the tag is already selected, remove it
+          this.newCareer.Tags.splice(index, 1);
+        }
+      },
+
+      // Check if a tag is selected
+      isTagSelected(tagID) {
+        return this.newCareer.Tags.includes(tagID);
+      },
+
+      // Remove a tag directly from the selected tags
+      removeTag(tagID) {
+        const index = this.newCareer.Tags.indexOf(tagID);
+        if (index !== -1) {
+          this.newCareer.Tags.splice(index, 1);
+        }
+      },
+
+    async fetchTags() {
+      try {
+        const response = await axios.get('http://127.0.0.1:8000/api/tags');
+        this.tagOptions = response.data; // Update tagOptions correctly
+        console.log(this.tagOptions); // Log the tags to see if they are fetched correctly
+      } catch (error) {
+        console.error('Error fetching tags:', error);
+      }
+    },
+
+    getTagName(id) {
+      const tag = this.tagOptions.find(t => t.TagID === id);
+      return tag ? tag.TagName : '';
+    },
+
+
+    openCareerPopup() {
+      this.showCareerPopup = true;
+      this.fetchTags(); // 👈 Load tags into dropdown
+    },
+    
+
     toggleUpcomingMenu(id) {
       this.openUpcomingMenu = this.openUpcomingMenu === id ? null : id;
       this.openCompletedMenu = null;
@@ -681,7 +830,11 @@ export default {
     },
 
     async saveCareer() {
+      const token = this.checkToken(); // Check token before proceeding
+      if (!token) return; // If token is invalid, exit
+
       try {
+        // Validate required fields
         if (
           !this.newCareer.position ||
           !this.newCareer.details ||
@@ -690,15 +843,28 @@ export default {
           !this.newCareer.letterAddress ||
           !this.newCareer.deadline
         ) {
-          alert("⚠️ Please fill out all fields before saving.");
+          alert("PLEASE FILL OUT ALL FIELDS BEFORE SAVING!!!");
           return;
         }
 
-        const token = localStorage.getItem("token");
+        // Optional check for tags
+        if (!this.newCareer.Tags || this.newCareer.Tags.length === 0) {
+          const proceed = confirm("No tags selected. Do you want to continue without tags?");
+          if (!proceed) return;
+        }
 
+        // Send data to backend (including tags)
         const response = await api.post(
           "http://127.0.0.1:8000/api/careers",
-          this.newCareer,
+          {
+            position: this.newCareer.position,
+            details: this.newCareer.details,
+            qualifications: this.newCareer.qualifications,
+            requirements: this.newCareer.requirements,
+            letterAddress: this.newCareer.letterAddress,
+            deadline: this.newCareer.deadline,
+            Tags: this.newCareer.Tags,
+          },
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -707,36 +873,35 @@ export default {
           }
         );
 
-        // ✅ Backend responded successfully
+        // Handle backend response
         if (response.data.message === "Career already exists") {
-          alert("⚠️ This career is already posted.");
+          alert("This career is already posted.");
         } else {
-          alert("✅ Career successfully saved!");
+          alert("CAREER POSTED SUCCESSFULLY!!!");
           this.upcomingCareers.push(response.data);
           this.closeCareerPopup();
           this.resetNewCareer();
-
           await this.fetchCareers();
         }
       } catch (error) {
         console.error("ERROR SAVING CAREER:", error);
-
-        // 🧩 Handle specific errors
+        // Handle specific errors
         if (error.response) {
           if (error.response.status === 401) {
-            alert("🔒 Unauthorized: Please log in again.");
+            alert("Unauthorized: Please log in again.");
           } else if (error.response.status === 409) {
-            alert("⚠️ This career already exists!");
+            alert("This career already exists!");
           } else if (error.response.status === 422) {
-            alert("⚠️ Validation failed. Please check your inputs.");
+            alert("Validation failed. Please check your inputs.");
           } else {
-            alert("❌ Something went wrong. Please try again.");
+            alert("Something went wrong. Please try again.");
           }
         } else {
-          alert("🚫 Unable to connect to the server.");
+          alert("Unable to connect to the server.");
         }
       }
     },
+
 
     resetNewCareer() {
       this.newCareer = {
@@ -746,6 +911,7 @@ export default {
         requirements: "",
         letterAddress: "",
         deadline: "",
+        Tags: []
       };
     },
 
@@ -806,14 +972,19 @@ export default {
     },
   },
 
+  
+
   mounted() {
     this.fetchCareers();
+    this.fetchTags();
     document.addEventListener("click", this.handleClickOutside);
   },
 
   beforeUnmount() {
     document.removeEventListener("click", this.handleClickOutside);
   },
+
+  
 };
 </script>
 
@@ -882,7 +1053,40 @@ const logout = () => {
 };
 </script>
 
+
+
 <style scoped>
+
+.tag-list-wrapper {
+  overflow-x: auto; 
+  white-space: nowrap; 
+  padding: 5px 0; 
+}
+
+.tag-list {
+  display: flex; 
+}
+
+
+.tag-chip {
+  cursor: pointer;
+  background-color: #e2e8f0; 
+  padding: 8px 12px; 
+  border-radius: 16px;
+  margin-right: 8px; 
+  transition: background-color 0.2s;
+  flex-shrink: 0; 
+}
+
+.tag-chip:hover {
+  background-color: #cbd5e0; 
+}
+
+.tag-chip-selected {
+  background-color: #4a5568; 
+  color: white; 
+}
+
 /* Optional fade animation */
 .fade-enter-active,
 .fade-leave-active {
