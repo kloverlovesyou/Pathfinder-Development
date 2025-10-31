@@ -496,10 +496,10 @@ watch([trainings, myRegistrations], async () => {
 function formatDateTime(dt) {
   if (!dt) return "";
   const date = new Date(dt);
-  // Convert to Philippine Time
-  const phDate = new Date(date.getTime() + PH_TIME_OFFSET * 60 * 1000);
 
-  return phDate.toLocaleString("en-PH", {
+  // Let JS handle the correct Philippine timezone automatically
+  return date.toLocaleString("en-PH", {
+    timeZone: "Asia/Manila",
     dateStyle: "long",
     timeStyle: "short",
   });
