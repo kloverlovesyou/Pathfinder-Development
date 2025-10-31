@@ -22,7 +22,10 @@ use App\Http\Controllers\CareerRecommendationController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\MyActivityController;
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> df294467c026157305070ce7cdec2b5c3cc65f50
 
 // ----------------------
 // Public routes
@@ -80,7 +83,6 @@ Route::middleware('auth.custom')->group(function () {
     Route::post('/applications', [ApplicationController::class, 'store']);
     Route::delete('/applications/{id}', [ApplicationController::class, 'destroy']);
 
-    // Certificates
     
 
     // Certificates ✅
