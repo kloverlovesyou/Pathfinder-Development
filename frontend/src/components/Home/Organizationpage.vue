@@ -1,79 +1,20 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, nextTick } from "vue";
+import axios from "axios";
 
-//onMounted(async () => {
-// try {
-//  const res = await axios.get("http://127.0.0.1:8000/api/organization");
-// organizations.value = res.data;
-//} catch (error) {
-//console.error("Error fetching organizations:", error);
-//}
-//});
-
+// Modal & sidebar
 const isModalOpen = ref(false);
 const selectedOrg = ref(null);
 const isSidebarOpen = ref(false);
 
-const organizations = ref([
-  {
-    id: 1,
-    name: "TechNova Solutions",
-    location: "Quezon City, Philippines",
-    website: "https://www.technova.com",
-    logo: "https://cdn-icons-png.flaticon.com/512/5968/5968705.png",
-    careers: [
-      { id: 1, position: "Frontend Developer", deadline: "Nov 30, 2025" },
-      { id: 2, position: "UI/UX Designer", deadline: "Dec 15, 2025" },
-      { id: 3, position: "UI/UX Designer", deadline: "Dec 15, 2025" },
-      { id: 4, position: "UI/UX Designer", deadline: "Dec 15, 2025" },
-      { id: 5, position: "UI/UX Designer", deadline: "Dec 15, 2025" },
-    ],
-    trainings: [
-      { id: 1, title: "Vue.js Fundamentals", schedule: "Oct 25, 2025" },
-      { id: 2, title: "Advanced JavaScript", schedule: "Nov 5, 2025" },
-    ],
-  },
-  {
-    id: 2,
-    name: "GreenFields Agritech",
-    location: "Cebu City, Philippines",
-    website: "https://www.greenfields.com",
-    logo: "https://cdn-icons-png.flaticon.com/512/616/616408.png",
-    careers: [
-      { id: 1, position: "Agricultural Analyst", deadline: "Nov 10, 2025" },
-      {
-        id: 2,
-        position: "Field Operations Supervisor",
-        deadline: "Nov 25, 2025",
-      },
-    ],
-    trainings: [
-      { id: 1, title: "Sustainable Farming 101", schedule: "Oct 28, 2025" },
-      { id: 2, title: "Farm Data Analytics", schedule: "Nov 18, 2025" },
-    ],
-  },
-  {
-    id: 3,
-    name: "FinEdge Bank",
-    location: "Makati City, Philippines",
-    website: "https://www.finedgebank.com",
-    logo: "https://cdn-icons-png.flaticon.com/512/888/888879.png",
-    careers: [
-      { id: 1, position: "Financial Advisor", deadline: "Dec 20, 2025" },
-    ],
-    trainings: [
-      { id: 1, title: "Financial Literacy Workshop", schedule: "Nov 12, 2025" },
-      { id: 2, title: "Excel for Accountants", schedule: "Dec 3, 2025" },
-    ],
-  },
-]);
+// Organizations
+const organizations = ref([]);
 
-// 🔹 Modal functions
+// Modal functions
 function openModal(org) {
   selectedOrg.value = org;
   isModalOpen.value = true;
 }
-
 function closeModal() {
   isModalOpen.value = false;
   selectedOrg.value = null;
@@ -85,19 +26,35 @@ const selectedDate = ref("");
 const dayEvents = ref([]);
 const calendarRef = ref(null);
 
-// Modal
+// Modal posts
 const selectedPost = ref(null);
 
 // Build events map
 function buildEvents() {
   events.value = {};
-  posts.value.forEach((post) => {
-    const date = post.trainingID
-      ? post.schedule.split("T")[0]
-      : post.deadlineOfSubmission;
 
-    if (!events.value[date]) events.value[date] = [];
-    events.value[date].push(post);
+  organizations.value.forEach((org) => {
+    // Add trainings
+    org.trainings.forEach((training) => {
+      const date = training.schedule?.split("T")[0]; // YYYY-MM-DD
+      if (!events.value[date]) events.value[date] = [];
+      events.value[date].push({
+        ...training,
+        type: "training",
+        organizationID: org.id,
+      });
+    });
+
+    // Add careers
+    org.careers.forEach((career) => {
+      const date = career.deadline?.split("T")[0]; // Assuming it's ISO string
+      if (!events.value[date]) events.value[date] = [];
+      events.value[date].push({
+        ...career,
+        type: "career",
+        organizationID: org.id,
+      });
+    });
   });
 }
 
@@ -107,44 +64,17 @@ function showEvents(dateStr) {
   dayEvents.value = events.value[dateStr] || [];
 }
 
-onMounted(async () => {
-  await nextTick();
-  buildEvents();
+// Get organization name by ID (for events)
+function getOrgNameById(id) {
+  const org = organizations.value.find(o => o.id === id);
+  return org ? org.name : "Unknown Organization";
+}
 
-  const calendar = calendarRef.value;
-  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+function isTraining(event) {
+  return event.type === "training";
+}
 
-  // Highlight event days and today
-  calendar.addEventListener("render", () => {
-    calendar.querySelectorAll("[data-date]").forEach((el) => {
-      const dateStr = el.getAttribute("data-date");
-      el.classList.remove("event-day", "today");
-
-      if (events.value[dateStr]) el.classList.add("event-day");
-      if (dateStr === today) el.classList.add("today");
-    });
-  });
-
-  calendar.addEventListener("change", (e) => {
-    const pickedDate = e.target.value;
-    showEvents(pickedDate);
-
-    calendar
-      .querySelectorAll("[data-date]")
-      .forEach((el) => el.classList.remove("selected-day"));
-    const selectedEl = calendar.querySelector(`[data-date="${pickedDate}"]`);
-    if (selectedEl) selectedEl.classList.add("selected-day");
-  });
-
-  // ✅ Auto-select today's date to show events
-  calendar.value = today; // Set the <calendar-date> selected value
-  showEvents(today); // Load today's events into the panel
-
-  // Manually trigger "change" event to simulate user selecting today
-  const event = new Event("change", { bubbles: true });
-  calendar.dispatchEvent(event);
-});
-
+// Format dates
 function formatDateTime(dt) {
   if (!dt) return "";
   return new Date(dt).toLocaleString("en-US", {
@@ -158,6 +88,78 @@ function formatDate(d) {
     dateStyle: "long",
   });
 }
+
+
+// Format ISO date-time to readable string
+function formatSchedule(dt) {
+  if (!dt) return "N/A";
+  const date = new Date(dt);
+  return date.toLocaleString("en-US", {
+    weekday: "short",   // e.g., "Mon"
+    month: "short",     // e.g., "Oct"
+    day: "numeric",     // e.g., 31
+    year: "numeric",    // e.g., 2025
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true
+  });
+}
+
+// Fetch organizations from backend
+onMounted(async () => {
+  try {
+    const res = await axios.get("http://127.0.0.1:8000/api/organization");
+    // Map backend fields to frontend template
+    organizations.value = res.data.map(org => ({
+      id: org.organizationID,
+      name: org.name,
+      location: org.location || "N/A",
+      website: org.websiteURL || "#",
+      logo: org.logo || null,          // optional
+      careers: org.careers || [],
+      trainings: org.trainings || []
+    }));
+     buildEvents();
+  } catch (error) {
+    console.error("Error fetching organizations:", error);
+  }
+
+  await nextTick();
+
+  // Calendar events setup (if you have events)
+  const calendar = calendarRef.value;
+  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
+  if (calendar) {
+    calendar.addEventListener("render", () => {
+      calendar.querySelectorAll("[data-date]").forEach((el) => {
+        const dateStr = el.getAttribute("data-date");
+        el.classList.remove("event-day", "today");
+
+        if (events.value[dateStr]) el.classList.add("event-day");
+        if (dateStr === today) el.classList.add("today");
+      });
+    });
+
+    calendar.addEventListener("change", (e) => {
+      const pickedDate = e.target.value;
+      showEvents(pickedDate);
+
+      calendar
+        .querySelectorAll("[data-date]")
+        .forEach((el) => el.classList.remove("selected-day"));
+      const selectedEl = calendar.querySelector(`[data-date="${pickedDate}"]`);
+      if (selectedEl) selectedEl.classList.add("selected-day");
+    });
+
+    // Auto-select today's date
+    calendar.value = today;
+    showEvents(today);
+
+    const event = new Event("change", { bubbles: true });
+    calendar.dispatchEvent(event);
+  }
+});
 </script>
 
 <template>
@@ -268,7 +270,7 @@ function formatDate(d) {
                   {{ isTraining(event) ? event.title : event.position }}
                 </h3>
                 <p class="text-xs text-gray-600">
-                  {{ organizations[event.organizationID] }}
+                  {{ getOrgNameById(event.organizationID) }}
                 </p>
               </div>
 
@@ -382,7 +384,7 @@ function formatDate(d) {
                 {{ training.title }}
               </h4>
               <p class="text-[11px] text-gray-600 truncate">
-                Schedule: {{ training.schedule }}
+                Schedule: {{ formatSchedule(training.schedule) }}
               </p>
             </div>
           </div>
