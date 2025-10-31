@@ -432,6 +432,45 @@
             <input v-else-if="newTraining.mode === 'Online'" v-model="newTraining.trainingLink" type="url"
               placeholder="Training Link" class="training-input" />
 
+            <!-- Tag selection -->
+            <div class="relative mb-4">
+                <label class="block font-semibold text-gray-600 mb-2">Tags</label>
+                <!-- Tag List Wrapper for horizontal scrolling -->
+                <div class="tag-list-wrapper">
+                    <div class="tag-list">
+                        <span
+                            v-for="tag in tagOptions"
+                            :key="tag.TagID"
+                            class="tag-chip"
+                            @click="toggleTag(tag.TagID)"
+                            :class="{ 'tag-chip-selected': isTagSelected(tag.TagID) }"
+                        >
+                            {{ tag.TagName }}
+                        </span>
+                    </div>
+                </div>
+                <!-- Display Selected Tags as Chips -->
+                <div v-if="newTraining.Tags.length" class="flex flex-wrap gap-2 mt-2">
+                    <span
+                        v-for="tagID in newTraining.Tags"
+                        :key="tagID"
+                        class="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-full"
+                    >
+                        {{ getTagName(tagID) }}
+                        <button @click.stop="removeTag(tagID)" class="ml-1 text-red-500">×</button> <!-- Remove Button -->
+                    </span>
+                </div>
+                <!-- Input for New Tag -->
+                <input
+                    v-model="newTagName"
+                    type="text"
+                    placeholder="Add new tag"
+                    class="training-input mt-2"
+                />
+                <button @click.prevent="addTag" class="training-save-btn mt-2">Add Tag</button>
+            </div>
+
+
             <!-- Save -->
             <button type="submit" class="training-post-btn">Post</button>
           </form>
@@ -494,15 +533,77 @@ export default {
         mode: "",
         location: "",
         trainingLink: "",
+        Tags: []
       },
 
       QrcodeVue: "",
       qrExpiresAt: "",
-      activeTrainingId: null // which training shows the QR
+      activeTrainingId: null, // which training shows the QR
+      tagOptions: [],
+      newTagName: ''
     };
   },
 
   methods: {
+    async fetchTags() {
+      try {
+        const response = await axios.get('http://127.0.0.1:8000/api/tags');
+        this.tagOptions = response.data; // Update tagOptions correctly
+      } catch (error) {
+        console.error('Error fetching tags:', error);
+      }
+    },
+
+    toggleTag(tagID) {
+      const index = this.newTraining.Tags.indexOf(tagID);
+      if (index > -1) {
+        this.newTraining.Tags.splice(index, 1); // Remove tag if already selected
+      } else {
+        this.newTraining.Tags.push(tagID); // Add tag if not selected
+      }
+    },
+
+    isTagSelected(tagID) {
+      return this.newTraining.Tags.includes(tagID);
+    },
+
+    removeTag(tagID) {
+      const index = this.newTraining.Tags.indexOf(tagID);
+      if (index > -1) {
+        this.newTraining.Tags.splice(index, 1); // Remove the tag
+      }
+    },
+
+    async addTag() {
+      const newTag = this.newTagName.trim();
+      if (newTag) {
+        try {
+          // Send the new tag to the backend
+          const response = await axios.post('http://127.0.0.1:8000/api/tags', {
+            TagName: newTag
+          });
+
+          // Add the new tag to the tagOptions and newTraining.Tags
+          this.tagOptions.push(response.data); // Assuming response.data returns the new tag object
+          this.newTraining.Tags.push(response.data.TagID); // Add the new tag ID to the selected tags
+
+          // Clear the input field
+          this.newTagName = '';
+          alert("Tag added successfully!");
+        } catch (error) {
+          console.error("Error adding tag:", error);
+          alert("Failed to add tag.");
+        }
+      } else {
+        alert("Please enter a tag name.");
+      }
+    },
+
+    getTagName(tagID) {
+      const tag = this.tagOptions.find(t => t.TagID === tagID);
+      return tag ? tag.TagName : tagID; // Return the tag name or ID if not found
+    },
+
     toggleSidebar() {
       this.isSidebarOpen = !this.isSidebarOpen;
     },
@@ -674,9 +775,7 @@ export default {
       this.openRegistrantsModal(training); // pass training to fetch registrants
     },
 
-    /* ==========================
-       ✅ Trainings Fetch
-    ========================== */
+    
     async fetchTrainings() {
       const response = await axios.get("http://127.0.0.1:8000/api/trainings");
       const newTrainings = response.data;
@@ -690,12 +789,9 @@ export default {
       });
     },
 
-
-    /* ==========================
-       ✅ Training Popup Methods
-    ========================== */
     openTrainingPopup() {
       this.showTrainingPopup = true;
+      this.fetchTags(); // Load tags into dropdown
     },
 
     closeTrainingPopup() {
@@ -708,125 +804,75 @@ export default {
         mode: "",
         location: "",
         trainingLink: "",
+        Tags: []
       };
     },
 
     async saveTraining() {
-      try {
-        if (!this.newTraining.date || !this.newTraining.time) {
-          alert("PLEASE SELECT BOTH A DATE AND TIME FOR THE TRAINING");
-          return;
-        }
+    const token = localStorage.getItem("token"); // Check token before proceeding
+    if (!token) {
+    alert("Please log in to continue.");
+    return; // If token is invalid, exit
+    }
+    try {
+    // Validate required fields
+    if (!this.newTraining.title || !this.newTraining.description || !this.newTraining.date || !this.newTraining.time) {
+    alert("PLEASE FILL OUT ALL FIELDS BEFORE POSTING!!!");
+    return;
+    }
+    const combinedSchedule = `${this.newTraining.date} ${this.newTraining.time}`;
+    const payload = {
+      title: this.newTraining.title,
+      description: this.newTraining.description,
+      schedule: combinedSchedule,
+      mode: this.newTraining.mode,
+      location: this.newTraining.location || null,
+      training_link: this.newTraining.trainingLink || null,
+      Tags: this.newTraining.Tags // Include selected tag IDs
+    };
 
-        // ✅ Combine date and time as a proper local timestamp (not UTC)
-        const combinedSchedule = `${this.newTraining.date}T${this.newTraining.time}:00`;
+    // Send the POST request to save the training
+    const response = await axios.post("http://127.0.0.1:8000/api/trainings", payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
 
-        const payload = {
-          title: this.newTraining.title,
-          description: this.newTraining.description,
-          // ✅ Store local time in the same format you see (not auto-converted to UTC)
-          schedule: combinedSchedule,
-          mode: this.newTraining.mode,
-          location: this.newTraining.location || null,
-          training_link: this.newTraining.trainingLink || null,
-        };
+    // Log the full response for debugging
+    console.log("API Response:", response);
 
-        const token = localStorage.getItem("token");
-        const response = await axios.post("http://127.0.0.1:8000/api/trainings", payload, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
+    // Check if the response is successful
+    if (response && response.status >= 200 && response.status < 300 && response.data && response.data.data) {
+      const newTraining = response.data.data;
+      this.upcomingtrainings.push(newTraining);
+      alert("TRAINING POSTED SUCCESFULLY!!!");
+      this.closeTrainingPopup();
+   // Clear the form after saving
+    } else {
+      console.error("Unexpected response structure:", response);
+      alert("Something went wrong while saving the training. Please try again.");
+    }
 
-        if (response.data && response.data.data) {
-          const newTraining = response.data.data;
-
-          const storedUser = localStorage.getItem("user");
-          let organizationName = "Unknown Organization";
-          if (storedUser) {
-            const user = JSON.parse(storedUser);
-            organizationName = user.displayName || user.name || "Unknown Organization";
-          }
-
-          // ✅ Use local date and time directly without timezone shift
-          const scheduleDate = new Date(combinedSchedule);
-          const formattedDate = scheduleDate.toLocaleDateString("en-US", {
-            weekday: "short",
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          });
-          const formattedTime = scheduleDate.toLocaleTimeString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-
-          this.upcomingtrainings.push({
-            id: newTraining.trainingID,
-            title: newTraining.title,
-            description: newTraining.description,
-            schedule: combinedSchedule,
-            date: formattedDate,
-            time: formattedTime,
-            mode: newTraining.mode,
-            ...(newTraining.mode === "On-Site"
-              ? { location: newTraining.location }
-              : { trainingLink: newTraining.trainingLink }),
-            organizationName,
-          });
-        }
-
-        alert("TRAINING POSTED SUCCESSFULLY!!!");
-        this.newTraining = { title: "", description: "", date: "", time: "", mode: "", location: "", trainingLink: "" };
-        this.showTrainingPopup = false;
-      } catch (error) {
-        console.error("ERROR SAVING TRAINING:", error.response?.data || error);
-        alert("SOMETHING WENT WRONG WHILE SAVING THE TRAINING");
+    } catch (error) {
+      console.error("ERROR SAVING TRAINING:", error);
+      // Handle specific error messages based on response status
+      if (error.response) {
+      if (error.response.status === 401) {
+        alert("Unauthorized: Please log in again.");
+      } else if (error.response.status === 409) {
+        alert("This training already exists!");
+      } else if (error.response.status === 422) {
+        alert("Validation failed. Please check your inputs.");
+      } else {
+        alert("Something went wrong. Please try again.");
+      }
+      } else {
+        alert("Unable to connect to the server.");
+      }
       }
     },
 
-    async deleteTraining(trainingID) {
-      if (!confirm("Are you sure you want to delete this training?")) return;
-
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          alert("You must be logged in to delete a training.");
-          return;
-        }
-
-        // Send DELETE request to your backend
-        await axios.delete(`http://127.0.0.1:8000/api/trainings/${trainingID}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        });
-
-        // Remove deleted training from UI
-        this.upcomingtrainings = this.upcomingtrainings.filter(t => t.trainingID !== trainingID);
-        this.completedtrainings = this.completedtrainings.filter(t => t.trainingID !== trainingID);
-
-        this.closeAllMenus();
-        alert("✅ Training deleted successfully.");
-
-      } catch (error) {
-        if (error.response) {
-          console.error("Delete error:", error.response.data);
-          if (error.response.status === 404) {
-            alert("Training not found or already deleted.");
-          } else if (error.response.status === 401) {
-            alert("Unauthorized. Please log in again.");
-          } else {
-            alert("Failed to delete training. Please try again.");
-          }
-        } else {
-          console.error("Network error:", error.message);
-          alert("Network error. Please check your connection.");
-        }
-      }
-    },
 
     formatSchedule(schedule) {
       if (!schedule) return "No schedule set";
@@ -1014,6 +1060,35 @@ const logout = () => {
 </script>
 
 <style scoped>
+.tag-list-wrapper {
+  overflow-x: auto; 
+  white-space: nowrap; 
+  padding: 5px 0; 
+}
+
+.tag-list {
+  display: flex; 
+}
+
+.tag-chip {
+  cursor: pointer;
+  background-color: #e2e8f0; 
+  padding: 8px 12px; 
+  border-radius: 16px;
+  margin-right: 8px; 
+  transition: background-color 0.2s;
+  flex-shrink: 0; 
+}
+
+.tag-chip:hover {
+  background-color: #cbd5e0; 
+}
+
+.tag-chip-selected {
+  background-color: #4a5568; 
+  color: white; 
+}
+
 /* Optional fade animation */
 .fade-enter-active,
 .fade-leave-active {
