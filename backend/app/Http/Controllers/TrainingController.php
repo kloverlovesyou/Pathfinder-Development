@@ -68,90 +68,34 @@ class TrainingController extends Controller
         return response()->json(['message' => 'QR Valid — Please Login to Record Attendance']);
     }
 
-    /**
-     * Manually generate QR (optional)
-     */
-    public function generateQRCode(Request $request)
-    {
-        $training = Training::find($request->trainingID);
-
-        if (!$training) {
-            return response()->json(['message' => 'Training not found'], 404);
-        }
-
-        $training->attendance_key = Str::random(16);
-        $training->attendance_expires_at = now()->addMinutes(30);
-        $training->save();
-
-        return response()->json([
-            'key' => $training->attendance_key,
-            'expires_at' => $training->attendance_expires_at,
-        ]);
-    }
-
-    /**
-     * List all trainings (QR auto-generated if schedule started)
-     */
-    public function index(Request $request)
-{
-    $query = Training::with('organization');
-
-    // Filter by organization if query param exists
-    if ($request->has('organizationID')) {
-        $query->where('organizationID', $request->organizationID);
-    }
-
-    $trainings = $query->get();
-
-    foreach ($trainings as $training) {
-        $this->autoGenerateQR($training);
-    }
-
-    return response()->json($trainings->map(function ($training) {
-        return [
-            'trainingID' => $training->trainingID,
-            'title' => $training->title,
-            'description' => $training->description,
-            'schedule' => $training->schedule?->format('Y-m-d H:i'),
-            'mode' => $training->mode,
-            'location' => $training->location,
-            'trainingLink' => $training->trainingLink,
-            'attendance_key' => $training->attendance_key,
-            'attendance_expires_at' => $training->attendance_expires_at,
-            'organizationID' => $training->organizationID,
-            'organization' => [
-                'name' => optional($training->organization)->name ?? 'Unknown',
-            ],
-        ];
-    }));
-}
-
-    /**
-     * Store new training
-     */
     public function store(Request $request)
     {
-        $user = $request->user();
+        $user = $request->user(); 
 
         if (!$user) {
             return response()->json(['message' => 'Unauthorized - no auth user found'], 401);
         }
 
+        // Ensure only organizations can post trainings
         if (!isset($user->organizationID)) {
             return response()->json(['message' => 'Only organizations can create trainings'], 403);
         }
 
+        //validate the request
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string|max:255',
             'schedule' => 'required',
             'mode' => 'required|string|in:On-Site,Online',
             'location' => 'nullable|string|max:255',
-            'training_link' => 'nullable|url'
+            'training_link' => 'nullable|url',
+            'Tags' => 'nullable|array',
+            'Tags.*' => 'integer|exists:tag,TagID',
         ]);
 
         $schedule = Carbon::parse($validated['schedule'])->format('Y-m-d H:i');
 
+        //create the training method
         $training = Training::create([
             'title' => $validated['title'],
             'description' => $validated['description'],
@@ -162,8 +106,22 @@ class TrainingController extends Controller
             'organizationID' => $user->organizationID,
         ]);
 
+        //handle tags
+        if (!empty($validated['Tags'])) {
+            $training->tags()->attach($validated['Tags']);
+        }
+        
+        /* if (!empty($validated['Tags'])) {
+            foreach ($validated['Tags'] as $tagID) {
+                DB::table('TrainingTag')->insert([
+                    'TrainingID' => $training->TrainingID,
+                    'TagID' => $tagID
+                ]);
+            }
+        } */
+
         return response()->json([
-            'message' => 'Training created successfully!',
+            'message' => 'TRAINING CREATED SUCCESSFULLY!',
             'data' => $training->load('organization')
         ], 201);
     }

@@ -74,4 +74,9 @@ class Training extends Model
 	{
 		return $this->hasMany(Attendance::class, 'trainingID');
 	}
+	public function tags()
+	{
+		return $this->belongsToMany(Tag::class, 'training_tag', 'trainingID', 'TagID');
+	}
+
 }
