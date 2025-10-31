@@ -2,25 +2,27 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\ApplicantController;
+use App\Http\Controllers\OrganizationController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ResumeController;
+use App\Http\Controllers\ApplicationController;
+use App\Http\Controllers\RegistrationController;
+use App\Http\Controllers\ProfessionalExperienceController;
+use App\Http\Controllers\EducationController;
+use App\Http\Controllers\SkillController;
+use App\Http\Controllers\TrainingController;
+use App\Http\Controllers\CareerController;
+use App\Http\Controllers\TrainingBookmarkController;
+use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\CareerBookmarkController;
+use App\Http\Controllers\TagController;
+use App\Http\Controllers\CareerRecommendationController;
+use App\Http\Controllers\SearchController;
+use App\Http\Controllers\MyActivityController;
 
-use App\Http\Controllers\{
-    ApplicantController,
-    OrganizationController,
-    AuthController,
-    ResumeController,
-    ApplicationController,
-    RegistrationController,
-    ProfessionalExperienceController,
-    EducationController,
-    SkillController,
-    TrainingController,
-    CareerController,
-    TrainingBookmarkController,
-    CertificateController,
-    CareerBookmarkController,
-    SearchController,
-    MyActivityController
-};
+
 
 // ----------------------
 // Public routes
@@ -28,6 +30,11 @@ use App\Http\Controllers\{
 Route::get('/trainings', [TrainingController::class, 'index']);
 Route::get('/careers', [CareerController::class, 'index']);
 Route::get('/organization', [OrganizationController::class, 'index']);
+//tags
+Route::get('/tags', [TagController::class, 'index']);
+Route::post('/tags', [TagController::class, 'store']);
+
+Route::get('/careers/{id}/details', [CareerRecommendationController::class, 'getCareerWithRecommendations']);
 
 // Auth routes
 Route::post('/a_register', [AuthController::class, 'a_register']);
@@ -74,6 +81,9 @@ Route::middleware('auth.custom')->group(function () {
     Route::delete('/applications/{id}', [ApplicationController::class, 'destroy']);
 
     // Certificates
+    
+
+    // Certificates ✅
     Route::get('/certificates/{applicantID}', [CertificateController::class, 'index']);
     Route::post('/certificates', [CertificateController::class, 'store']);
     Route::delete('/certificates/{id}', [CertificateController::class, 'destroy']);

@@ -63,4 +63,9 @@ class Career extends Model
 	{
 		return $this->hasMany(Careerbookmark::class, 'careerID');
 	}
+
+	public function tags()
+    {
+        return $this->belongsToMany(Tag::class, 'career_tag', 'careerID', 'TagID');
+    }
 }

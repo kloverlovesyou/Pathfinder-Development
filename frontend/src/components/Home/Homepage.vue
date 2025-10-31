@@ -8,6 +8,30 @@ const appliedPosts = ref({});
 const isSidebarOpen = ref(false);
 const bookmarkedPosts = ref({});
 const registeredPosts = ref({});
+const selectedCareerDetails = ref(null);
+const recommendedTrainings = ref([]);
+
+
+async function openCareerModal(career) {
+  try {
+    console.log('Career Object:', career);
+
+    const careerID = parseInt(career.careerID, 10);
+    console.log('Parsed Career ID:', careerID);
+
+    const res = await api.get(`http://127.0.0.1:8000/api/careers/${careerID}/details`);
+
+    //store main career + recommended trainings
+    selectedCareerDetails.value = res.data.career;
+    recommendedTrainings.value = res.data.recommended_trainings || [];
+    
+    showCareerPopup.value = true;
+  } catch (error) {
+    console.error("Error loading career details:", error);
+    alert("Failed to load career details.");
+  }
+}
+
 
 function cancelApplication(post) {
   const id = post.careerID;
@@ -273,7 +297,7 @@ function submitApplication() {
             v-for="post in posts"
             :key="post.trainingID || post.careerID"
             class="p-4 bg-blue-gray rounded-lg relative cursor-pointer hover:bg-gray-300 transition"
-            @click="openModal(post)"
+            @click="openCareerModal(post)"
           >
             <h3 class="font-semibold text-lg">
               {{ isTraining(post) ? post.title : post.position }}
@@ -473,10 +497,10 @@ function submitApplication() {
         </div>
 
         <!-- ✅ Career -->
-        <div v-else>
-          <h2 class="text-xl font-bold mb-2">{{ selectedPost.position }}</h2>
+        <div v-else v-if="selectedCareerDetails">
+          <h2 class="text-xl font-bold mb-2">{{ selectedCareerDetails.position }}</h2>
           <p class="text-sm text-gray-600 mb-2">
-            Organization: {{ organizations[selectedPost.organizationID] }}
+            Organization: {{ selectedCareerDetails.organizationName }}
           </p>
 
           <!-- Buttons -->
@@ -484,11 +508,11 @@ function submitApplication() {
             <!-- Bookmark -->
             <button
               class="btn btn-outline btn-sm"
-              @click="toggleBookmark(selectedPost)"
+              @click="toggleBookmark(selectedCareerDetails)"
             >
               {{
                 bookmarkedPosts[
-                  selectedPost.trainingID || selectedPost.careerID
+                selectedCareerDetails.trainingID || selectedCareerDetails.careerID
                 ]
                   ? "Bookmarked"
                   : "Bookmark"
@@ -496,9 +520,9 @@ function submitApplication() {
             </button>
             <!-- Apply / Cancel (for career posts only) -->
             <button
-              v-if="!appliedPosts[selectedPost.careerID]"
+              v-if="!appliedPosts[selectedCareerDetails.careerID]"
               class="btn btn-sm bg-customButton text-white"
-              @click="openApplyModal(selectedPost)"
+              @click="openApplyModal(selectedCareerDetails)"
             >
               Apply
             </button>
@@ -506,7 +530,7 @@ function submitApplication() {
             <button
               v-else
               class="btn btn-sm bg-gray-500 text-white"
-              @click="cancelApplication(selectedPost)"
+              @click="cancelApplication(selectedCareerDetails)"
             >
               Cancel Application
             </button>
@@ -514,19 +538,19 @@ function submitApplication() {
 
           <!-- Career Details -->
           <p>
-            <strong>Details:</strong> {{ selectedPost.detailsAndInstructions }}
+            <strong>Details:</strong> {{ selectedCareerDetails.detailsAndInstructions }}
           </p>
           <p>
-            <strong>Qualifications:</strong> {{ selectedPost.qualifications }}
+            <strong>Qualifications:</strong> {{ selectedCareerDetails.qualifications }}
           </p>
-          <p><strong>Requirements:</strong> {{ selectedPost.requirements }}</p>
+          <p><strong>Requirements:</strong> {{ selectedCareerDetails.requirements }}</p>
           <p>
             <strong>Application Address:</strong>
-            {{ selectedPost.applicationLetterAddress }}
+            {{ selectedCareerDetails.applicationLetterAddress }}
           </p>
           <p>
             <strong>Deadline:</strong>
-            {{ formatDate(selectedPost.deadlineOfSubmission) }}
+            {{ formatDate(selectedCareerDetails.deadlineOfSubmission) }}
           </p>
 
           <!-- ✅ Recommended Trainings (career only) -->
@@ -539,16 +563,16 @@ function submitApplication() {
               style="scrollbar-width: thin"
             >
               <div
-                v-for="post in posts.filter((p) => isTraining(p))"
-                :key="post.trainingID"
+                v-for="training in recommendedTrainings"
+                :key="training.trainingID"
                 class="snap-start w-[180px] flex-shrink-0 p-3 bg-blue-gray rounded-lg cursor-pointer hover:bg-gray-200 transition shadow-sm"
-                @click.stop="openTrainingModal(post)"
+                @click.stop="openTrainingModal(training)"
               >
                 <h4 class="font-semibold text-sm leading-snug mb-1">
-                  {{ post.title }}
+                  {{ training.title }}
                 </h4>
                 <p class="text-[11px] text-gray-600 truncate">
-                  {{ organizations[post.organizationID] }}
+                  {{ training.provider }}
                 </p>
               </div>
             </div>
@@ -604,7 +628,7 @@ function submitApplication() {
       </div>
     </dialog>
   </div>
-</template>
+</template> 
 
 <style>
 .event-day {
