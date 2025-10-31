@@ -34,7 +34,7 @@ const bookmarkedTrainings = ref([]);
 // Computed trainings with org info
 const trainingsWithOrg = computed(() =>
   trainings.value.map((t) => {
-    const org = organizations.value.find((o) => o.id === t.organizationID);
+    const org = organizations.value.find((o) => o.organizationID === t.organizationID); // <-- fix here
     return {
       ...t,
       organizationName: org ? org.name : "Unknown",
@@ -430,21 +430,21 @@ function startModalQRCountdown(training) {
 // 🚀 Lifecycle Hooks
 // ============================
 onMounted(async () => {
-await fetchOrganizations();
-    await fetchTrainings();
-    await fetchMyRegistrations(); 
-    await fetchBookmarks();
-    startAllQRCountdowns();
+  await fetchOrganizations();
+  console.log("✅ Organizations loaded:", organizations.value); // <-- here
 
-  
-    buildEvents();
-    setupCalendarDOM(); // 👈 New call
+  const orgID = 1; // replace with dynamic value
+  await fetchTrainings(orgID);
+  console.log("✅ Trainings loaded:", trainings.value); // <-- and here
 
-    setInterval(fetchTrainings, 30000);
-});
+  await fetchMyRegistrations(); 
+  await fetchBookmarks();
+  startAllQRCountdowns();
 
-onActivated(() => {
-  fetchTrainings();
+  buildEvents();
+  setupCalendarDOM();
+
+  setInterval(() => fetchTrainings(orgID), 30000);
 });
 
 // Calendar + events
@@ -496,10 +496,10 @@ watch([trainings, myRegistrations], async () => {
 function formatDateTime(dt) {
   if (!dt) return "";
   const date = new Date(dt);
-  // Convert to Philippine Time
-  const phDate = new Date(date.getTime() + PH_TIME_OFFSET * 60 * 1000);
 
-  return phDate.toLocaleString("en-PH", {
+  // Let JS handle the correct Philippine timezone automatically
+  return date.toLocaleString("en-PH", {
+    timeZone: "Asia/Manila",
     dateStyle: "long",
     timeStyle: "short",
   });
