@@ -918,37 +918,44 @@ export default {
   },
 
   computed: {
-    todayDate() {
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, "0");
-      const day = String(today.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`; // format: YYYY-MM-DD
-    },
-    visibleUpcomingTrainings() {
-      const list = this.sortedUpcomingTrainings;
-      return this.showAllUpcoming ? list : list.slice(0, 4);
-    },
-
-    visibleCompletedTrainings() {
-      const list = this.sortedCompletedTrainings;
-      return this.showAllCompleted ? list : list.slice(0, 4);
-    },
-
-    sortedUpcomingTrainings() {
-      const now = new Date();
-      return this.upcomingtrainings
-        .filter(t => new Date(t.schedule) >= now)
-        .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
-    },
-
-    sortedCompletedTrainings() {
-      const now = new Date();
-      return this.upcomingtrainings
-        .filter(t => new Date(t.schedule) < now)
-        .sort((a, b) => new Date(b.schedule) - new Date(a.schedule));
-    },
+  todayDate() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`; // format: YYYY-MM-DD
   },
+
+  visibleUpcomingTrainings() {
+    const orgId = this.currentOrganizationId;
+    const list = this.sortedUpcomingTrainings.filter(
+      training => training.organization_id === orgId
+    );
+    return this.showAllUpcoming ? list : list.slice(0, 4);
+  },
+
+  visibleCompletedTrainings() {
+    const orgId = this.currentOrganizationId;
+    const list = this.sortedCompletedTrainings.filter(
+      training => training.organization_id === orgId
+    );
+    return this.showAllCompleted ? list : list.slice(0, 4);
+  },
+
+  sortedUpcomingTrainings() {
+    const now = new Date();
+    return this.upcomingtrainings
+      .filter(t => new Date(t.schedule) >= now)
+      .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
+  },
+
+  sortedCompletedTrainings() {
+    const now = new Date();
+    return this.upcomingtrainings
+      .filter(t => new Date(t.schedule) < now)
+      .sort((a, b) => new Date(b.schedule) - new Date(a.schedule));
+  },
+},
 };
 </script>
 
