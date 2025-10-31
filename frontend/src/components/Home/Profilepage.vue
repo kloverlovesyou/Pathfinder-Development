@@ -76,9 +76,9 @@ const startAllQRCountdowns = () => {
 
   qrCountdownInterval = setInterval(() => {
     activities.value.forEach(activity => {
-      if (activity.qr_expires_at) {
+      if (activity.end_time) {
         const now = new Date().getTime();
-        const expiry = new Date(activity.qr_expires_at).getTime();
+        const expiry = new Date(activity.end_time).getTime();
         const diff = expiry - now;
 
         if (diff > 0) {
@@ -101,6 +101,38 @@ function isTrainingPassed(activity) {
   return now >= scheduleDate;
 }
 
+function isAttendanceEnabled(activity) {
+  if (!activity.schedule) return false;
+
+  const now = new Date();
+  const start = new Date(activity.schedule);
+  const end = activity.end_time ? new Date(activity.end_time) : new Date(start.getTime() + 2*60*60*1000); // default 2h
+
+  // Enabled only between start and end
+  return now >= start && now <= end;
+}
+
+// ✅ Determine if training has ended
+function isTrainingEnded(activity) {
+  if (!activity.end_time) return false; // If no end_time, assume not ended
+  const now = new Date();
+  const endTime = new Date(activity.end_time);
+  return now > endTime;
+}
+function isTrainingActive(activity) {
+  if (!activity.schedule) return false;
+
+  const now = new Date();
+  const start = new Date(activity.schedule);
+
+  // If end_time is missing, assume training lasts 2 hours
+  const end = activity.end_time ? new Date(activity.end_time) : new Date(start.getTime() + 2 * 60 * 60 * 1000);
+
+  // Validate dates
+  if (isNaN(start) || isNaN(end)) return false;
+
+  return now >= start && now <= end;
+}
 // ✅ Attendance submit (optional)
 async function submitAttendance(activity) {
   try {
@@ -284,14 +316,14 @@ onMounted(fetchMyActivities);
                       type="text"
                       placeholder="Enter attendance code"
                       class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                      :disabled="!isTrainingPassed(activity)"
+                      :disabled="!isAttendanceEnabled(activity)"
                     />
                     <button
                       class="mt-2 w-full text-white py-2 rounded"
-                      :class="isTrainingPassed(activity)
+                      :class="isAttendanceEnabled(activity)
                         ? 'bg-customButton hover:bg-dark-slate'
                         : 'bg-gray-400 cursor-not-allowed'"
-                      :disabled="!isTrainingPassed(activity)"
+                      :disabled="!isAttendanceEnabled(activity)"
                       @click.stop="submitAttendance(activity)"
                     >
                       Submit Attendance
@@ -674,17 +706,17 @@ onMounted(fetchMyActivities);
                           type="text"
                           placeholder="Enter attendance code"
                           class="w-full px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                          :disabled="!isTrainingPassed(activity)"
+                          :disabled="!isAttendanceEnabled(activity)"
                         />
                         <button
                           @click="submitAttendance(activity)"
                           :class="[
                             'px-3 py-1 text-white rounded',
-                            isTrainingPassed(activity)
+                            isAttendanceEnabled(activity)
                               ? 'bg-customButton hover:bg-blue-600'
                               : 'bg-gray-400 cursor-not-allowed'
                           ]"
-                          :disabled="!isTrainingPassed(activity)"
+                          :disabled="!isAttendanceEnabled(activity)"
                         >
                           Submit
                         </button>

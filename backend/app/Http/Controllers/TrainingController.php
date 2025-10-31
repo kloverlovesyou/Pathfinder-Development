@@ -19,25 +19,25 @@ class TrainingController extends Controller
     {
         $now = now();
 
-        // Generate QR if schedule has started and no key exists
-        if ($now->greaterThanOrEqualTo($training->schedule) && !$training->attendance_key) {
-            $training->attendance_key = Str::random(16);
-            $training->attendance_expires_at = $now->addMinutes(30);
+        // Clear QR if training has ended
+        if ($training->attendance_key && $now->greaterThanOrEqualTo($training->end_time)) {
+            $training->attendance_key = null;
+            $training->qr_generated_at = null;
             $training->save();
+            return; // stop here
         }
 
-        // Hide QR if 30 minutes have passed since generation
-        if ($training->attendance_expires_at && $now->greaterThan($training->attendance_expires_at)) {
-            $training->attendance_key = null;
-            $training->attendance_expires_at = null;
+        // Only generate QR if training has started and no QR exists
+        if ($now->greaterThanOrEqualTo($training->schedule) && !$training->attendance_key) {
+            $training->attendance_key = Str::random(16);
+            $training->qr_generated_at = $now;
             $training->save();
         }
     }
-
     /**
      * User attendance check-in via QR code
      */
-    public function attendanceCheckin(Request $request)
+   public function attendanceCheckin(Request $request)
     {
         $training = Training::where('trainingID', $request->trainingID)
             ->where('attendance_key', $request->key)
@@ -47,8 +47,8 @@ class TrainingController extends Controller
             return response()->json(['message' => 'Invalid or Fake QR Code'], 400);
         }
 
-        // Check if QR expired
-        if (now()->greaterThan($training->attendance_expires_at)) {
+        // Check if QR expired (training ended)
+        if (now()->greaterThanOrEqualTo($training->end_time)) {
             return response()->json(['message' => 'QR Code Expired'], 400);
         }
 
@@ -71,23 +71,28 @@ class TrainingController extends Controller
     /**
      * Manually generate QR (optional)
      */
-    public function generateQRCode(Request $request)
-    {
-        $training = Training::find($request->trainingID);
+public function generateQRCode(Request $request)
+{
+    $training = Training::find($request->trainingID);
 
-        if (!$training) {
-            return response()->json(['message' => 'Training not found'], 404);
-        }
+    if (!$training) {
+        return response()->json(['message' => 'Training not found'], 404);
+    }
 
+    // Only generate if training hasn't ended
+    if (now()->lessThan($training->end_time)) {
         $training->attendance_key = Str::random(16);
-        $training->attendance_expires_at = now()->addMinutes(30);
+        $training->qr_generated_at = now();
         $training->save();
 
         return response()->json([
             'key' => $training->attendance_key,
-            'expires_at' => $training->attendance_expires_at,
+            'expires_at' => $training->end_time, // expiration inferred from end_time
         ]);
     }
+
+    return response()->json(['message' => 'Cannot generate QR — training already ended'], 400);
+}
 
     /**
      * List all trainings (QR auto-generated if schedule started)
@@ -113,6 +118,7 @@ class TrainingController extends Controller
             'title' => $training->title,
             'description' => $training->description,
             'schedule' => $training->schedule?->format('Y-m-d H:i'),
+            'end_time' => $training->end_time?->format('Y-m-d H:i'),
             'mode' => $training->mode,
             'location' => $training->location,
             'trainingLink' => $training->trainingLink,
@@ -124,7 +130,7 @@ class TrainingController extends Controller
             ],
         ];
     }));
-}
+    }
 
     /**
      * Store new training
@@ -137,49 +143,35 @@ class TrainingController extends Controller
             return response()->json(['message' => 'Unauthorized - no auth user found'], 401);
         }
 
-        // Ensure only organizations can post trainings
         if (!isset($user->organizationID)) {
             return response()->json(['message' => 'Only organizations can create trainings'], 403);
         }
 
-        //validate the request
         $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string|max:255',
-            'schedule' => 'required',
-            'mode' => 'required|string|in:On-Site,Online',
-            'location' => 'nullable|string|max:255',
-            'training_link' => 'nullable|url',
-            'Tags' => 'nullable|array',
-            'Tags.*' => 'integer|exists:tag,TagID',
-        ]);
+        'title' => 'required|string|max:255',
+        'description' => 'required|string|max:255',
+        'schedule' => 'required|date_format:Y-m-d H:i',
+        'end_time' => 'required|date_format:Y-m-d H:i|after:schedule',
+        'mode' => 'required|string|in:On-Site,Online',
+        'location' => 'nullable|string|max:255',
+        'training_link' => 'nullable|url',
+        'Tags' => 'nullable|array',
+        'Tags.*' => 'integer|exists:tag,TagID',
+    ]);
 
-        $schedule = Carbon::parse($validated['schedule'])->format('Y-m-d H:i');
-
-        //create the training method
-        $training = Training::create([
+            $training = Training::create([
             'title' => $validated['title'],
             'description' => $validated['description'],
-            'schedule' => $schedule,
+            'schedule' => $validated['schedule'],
+            'end_time' => $validated['end_time'],
             'mode' => $validated['mode'],
             'location' => $validated['location'] ?? null,
             'trainingLink' => $validated['training_link'] ?? null,
             'organizationID' => $user->organizationID,
         ]);
-
-        //handle tags
         if (!empty($validated['Tags'])) {
             $training->tags()->attach($validated['Tags']);
         }
-        
-        /* if (!empty($validated['Tags'])) {
-            foreach ($validated['Tags'] as $tagID) {
-                DB::table('TrainingTag')->insert([
-                    'TrainingID' => $training->TrainingID,
-                    'TagID' => $tagID
-                ]);
-            }
-        } */
 
         return response()->json([
             'message' => 'TRAINING CREATED SUCCESSFULLY!',

@@ -242,11 +242,19 @@ onMounted(async () => {
   calendar.dispatchEvent(event);
 });
 
-function formatDateTime(dt) {
-  if (!dt) return "";
-  return new Date(dt).toLocaleString("en-US", {
-    dateStyle: "long",
-    timeStyle: "short",
+// ✅ Format datetime (with AM/PM)
+function formatDateTime(dateStr) {
+  if (!dateStr) return "N/A";
+  const date = new Date(dateStr);
+  if (isNaN(date)) return dateStr;
+
+  return date.toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
   });
 }
 
@@ -455,7 +463,7 @@ function formatDate(d) {
         </p>
         <p>
           <strong>Deadline:</strong>
-          {{ selectedCareer.deadlineOfSubmission }}
+          {{ formatDateTime(selectedCareer.deadlineOfSubmission) }}
         </p>
       </div>
     </dialog>

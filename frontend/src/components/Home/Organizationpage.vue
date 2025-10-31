@@ -74,12 +74,19 @@ function isTraining(event) {
   return event.type === "training";
 }
 
-// Format dates
-function formatDateTime(dt) {
-  if (!dt) return "";
-  return new Date(dt).toLocaleString("en-US", {
-    dateStyle: "long",
-    timeStyle: "short",
+// ✅ Format datetime (with AM/PM)
+function formatDateTime(dateStr) {
+  if (!dateStr) return "N/A";
+  const date = new Date(dateStr);
+  if (isNaN(date)) return dateStr;
+
+  return date.toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
   });
 }
 function formatDate(d) {
@@ -362,7 +369,7 @@ onMounted(async () => {
                 {{ career.position }}
               </h4>
               <p class="text-[11px] text-gray-600 truncate">
-                Deadline: {{ career.deadline }}
+                Deadline: {{ formatDateTime(career.deadlineOfSubmission) }}
               </p>
             </div>
           </div>

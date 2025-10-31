@@ -4,14 +4,20 @@ import axios from "axios";
 import QrcodeVue from "qrcode.vue";
 import { watch, nextTick } from "vue";
 
-const qrCodeValue = ref(null);
-const qrExpiresAt = ref(null);
-const qrActiveTrainingId = ref(null);
-const qrCountdowns = reactive({});
-let qrCountdownInterval = null;
-let qrInterval = {};
-const qrCountdown = ref("00:00");
+// Holds countdown string for each training card
+const qrCountdowns = reactive({}); 
 
+// Interval handles for training cards
+let qrIntervals = {}; 
+
+// Modal QR
+const qrCodeValue = ref(null);
+const qrActiveTrainingId = ref(null);
+const qrCountdown = ref("00:00");
+let modalQRInterval = null; 
+
+// Optional: expiration timestamp for modal QR
+const qrExpiresAt = ref(null); 
 
 // Date of PH
 const PH_TIME_OFFSET = 8 * 60; // +8 hours in minutes
@@ -308,7 +314,7 @@ const registeredTrainingsWithQR = computed(() => {
       return {
         ...t,
         qrKey: t.attendance_key,
-        qrExpires: t.attendance_expires_at,
+        qrExpires: t.end_Time,
         isActiveQR,
         qrCountdown: isActiveQR ? qrCountdown.value : null
       };
@@ -349,81 +355,67 @@ function startQRCountdown(training) {
   qrCountdownInterval = setInterval(updateCountdown, 1000);
 }
 
-//start all countdowns for existing QR codes
+// Reactive object to hold countdowns for all trainings
+
+
+// Start countdowns for all registered trainings with QR
 function startAllQRCountdowns() {
-  // Clear existing intervals
   Object.values(qrIntervals).forEach(clearInterval);
   qrIntervals = {};
 
-//start all countdowns for existing QR codes
-function startAllQRCountdowns() {
-  // Clear any previous intervals (This assumes qrIntervals is defined, see fix 1)
-  Object.values(qrIntervals).forEach(clearInterval);
-  qrIntervals = {};
+  trainingsWithOrg.value.forEach(training => {
+    if (myRegistrations.value.has(training.trainingID) && training.attendance_key) {
+      const trainingId = training.trainingID;
+      const expiresAt = new Date(training.end_time || training.attendance_expires_at);
 
-  trainingsWithOrg.value.forEach(training => {
-    if (myRegistrations.value.has(training.trainingID) && training.attendance_expires_at) {
-      const trainingId = training.trainingID;
+      const updateCountdown = () => {
+        const diff = expiresAt - new Date();
+        if (diff <= 0) {
+          qrCountdowns[trainingId] = "00:00";
+          training.attendance_key = null;
+          clearInterval(qrIntervals[trainingId]);
+        } else {
+          const minutes = String(Math.floor(diff / 60000)).padStart(2, "0");
+          const seconds = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
+          qrCountdowns[trainingId] = `${minutes}:${seconds}`;
+        }
+      };
 
-      const updateCountdown = () => {
-        const now = new Date();
-        const expires = new Date(training.attendance_expires_at);
-        const diff = expires - now;
-
-        if (diff <= 0) {
-          qrCountdowns[trainingId] = "00:00";
-          clearInterval(qrIntervals[trainingId]);
-        } else {
-          const minutes = Math.floor(diff / 60000).toString().padStart(2, "0");
-          const seconds = Math.floor((diff % 60000) / 1000).toString().padStart(2, "0");
-          qrCountdowns[trainingId] = `${minutes}:${seconds}`;
-        }
-      };
-
-      // Initialize the key so template reacts immediately
-      qrCountdowns[trainingId] = "loading...";
-
-      updateCountdown(); // initial call
-      qrIntervals[trainingId] = setInterval(updateCountdown, 1000);
-    }
-  });
+      updateCountdown();
+      qrIntervals[trainingId] = setInterval(updateCountdown, 1000);
+    }
+  });
 }
-const modalQR = reactive({
-  value: null,
-  expiresAt: null,
-  countdown: "00:00",
-  interval: null,
-});
 
-//ModalQrCountdown
+// Modal QR countdown
 function startModalQRCountdown(training) {
-  if (!training.attendance_key || !training.attendance_expires_at) return;
+  if (!training.attendance_key || !(training.end_time || training.attendance_expires_at)) return;
 
-  qrCodeValue.value = training.attendance_key; // just use the key
+  qrCodeValue.value = training.attendance_key;
+  qrActiveTrainingId.value = training.trainingID;
   qrCountdown.value = "";
 
-  const expiresAt = new Date(training.attendance_expires_at); // use server time directly
+  if (modalQRInterval) clearInterval(modalQRInterval);
 
-  if (qrInterval) clearInterval(qrInterval);
+  const expiresAt = new Date(training.end_time || training.attendance_expires_at);
 
   const updateCountdown = () => {
-    const now = new Date();
-    const diff = expiresAt - now;
-
+    const diff = expiresAt - new Date();
     if (diff <= 0) {
       qrCountdown.value = "00:00";
       qrCodeValue.value = null;
-      clearInterval(qrInterval);
+      training.attendance_key = null;
+      qrActiveTrainingId.value = null;
+      clearInterval(modalQRInterval);
     } else {
-      const minutes = Math.floor(diff / 60000).toString().padStart(2, "0");
-      const seconds = Math.floor((diff % 60000) / 1000).toString().padStart(2, "0");
+      const minutes = String(Math.floor(diff / 60000)).padStart(2, "0");
+      const seconds = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
       qrCountdown.value = `${minutes}:${seconds}`;
     }
   };
 
   updateCountdown();
-  qrInterval = setInterval(updateCountdown, 1000);
-}
+  modalQRInterval = setInterval(updateCountdown, 1000);
 }
 
 // ============================
@@ -541,7 +533,7 @@ function formatDate(d) {
                 <div v-if="training.attendance_key">
                   <qrcode-vue :value="training.attendance_key" :size="120" />
                   <p class="text-sm text-gray-600 mt-1">
-                    Expires in: {{ qrCountdowns[training.trainingID] || formatDateTime(training.attendance_expires_at) }}
+                    Expires in: {{ qrCountdown[training.trainingID] || formatDateTime(training.end_time) }}
                   </p>
                 </div>
                 <div v-else>
@@ -720,7 +712,7 @@ function formatDate(d) {
           <div v-if="selectedTraining.attendance_key">
             <qrcode-vue :value="selectedTraining.attendance_key" :size="150" class="my-4" />
             <p class="text-sm text-gray-600 mt-1">
-              Expires in: {{ qrCountdowns[selectedTraining.trainingID] || formatDateTime(selectedTraining.attendance_expires_at) }}
+              Expires in: {{ qrCountdown[selectedTraining.trainingID] || formatDateTime(selectedTraining.end_time) }}
             </p>
           </div>
           <div v-else>
