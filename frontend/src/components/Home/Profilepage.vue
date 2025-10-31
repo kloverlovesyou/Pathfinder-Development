@@ -1,7 +1,8 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, reactive } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
+import QrcodeVue from "qrcode.vue";
 
 const router = useRouter();
 
@@ -12,22 +13,24 @@ const completedCount = ref(0);
 const showModal = ref(false);
 const selectedActivity = ref(null);
 
+// ✅ For QR countdown timers
+const qrCountdowns = reactive({});
+let qrCountdownInterval = null;
+
+// ✅ Format datetime (with AM/PM)
 function formatDateTime(dateStr) {
   if (!dateStr) return "N/A";
-
   const date = new Date(dateStr);
-  if (isNaN(date)) return dateStr; // fallback if invalid
+  if (isNaN(date)) return dateStr;
 
-  const options = {
+  return date.toLocaleString("en-US", {
     year: "numeric",
-    month: "short", // Oct
+    month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    hour12: true, // ensures AM/PM
-  };
-
-  return date.toLocaleString("en-US", options);
+    hour12: true,
+  });
 }
 
 // ✅ Logout
@@ -58,30 +61,44 @@ async function fetchMyActivities() {
       a.status?.toLowerCase() === "completed"
     ).length;
 
+    // ✅ Start QR countdown timers
+    startAllQRCountdowns();
+
     console.log("Activities fetched:", activities.value);
-    console.log("Upcoming:", upcomingCount.value, "Completed:", completedCount.value);
   } catch (error) {
     console.error("Error fetching activities:", error);
   }
 }
 
+// ✅ Countdown logic for QR expiration
+const startAllQRCountdowns = () => {
+  if (qrCountdownInterval) clearInterval(qrCountdownInterval);
+
+  qrCountdownInterval = setInterval(() => {
+    activities.value.forEach(activity => {
+      if (activity.qr_expires_at) {
+        const now = new Date().getTime();
+        const expiry = new Date(activity.qr_expires_at).getTime();
+        const diff = expiry - now;
+
+        if (diff > 0) {
+          const mins = Math.floor(diff / 1000 / 60);
+          const secs = Math.floor((diff / 1000) % 60);
+          qrCountdowns[activity.id] = `${mins}m ${secs}s`;
+        } else {
+          qrCountdowns[activity.id] = "Expired";
+        }
+      }
+    });
+  }, 1000);
+};
+
+// ✅ Determine if training has passed
 function isTrainingPassed(activity) {
   if (!activity.schedule) return false;
   const now = new Date();
   const scheduleDate = new Date(activity.schedule);
-  return now >= scheduleDate; // true if the schedule date has passed
-}
-
-// ✅ Call on mount
-onMounted(fetchMyActivities);
-
-// ✅ Manual counter adjuster
-function updateCounters(type, increase = true) {
-  if (type === "upcoming") {
-    upcomingCount.value += increase ? 1 : -1;
-  } else if (type === "completed") {
-    completedCount.value += increase ? 1 : -1;
-  }
+  return now >= scheduleDate;
 }
 
 // ✅ Attendance submit (optional)
@@ -92,7 +109,7 @@ async function submitAttendance(activity) {
       qrCode: activity.qrInput,
     });
     alert("Attendance recorded successfully!");
-    await fetchMyActivities(); // 🔹 Refresh counts after update
+    await fetchMyActivities();
   } catch (error) {
     console.error("Error submitting attendance:", error);
   }
@@ -107,6 +124,18 @@ function closeModal() {
   showModal.value = false;
   selectedActivity.value = null;
 }
+
+// ✅ Manual counter adjuster
+function updateCounters(type, increase = true) {
+  if (type === "upcoming") {
+    upcomingCount.value += increase ? 1 : -1;
+  } else if (type === "completed") {
+    completedCount.value += increase ? 1 : -1;
+  }
+}
+
+// ✅ Call on mount
+onMounted(fetchMyActivities);
 </script>
 
 <template>
@@ -273,75 +302,101 @@ function closeModal() {
           </li>
         </ul>
       </div>
-      <!-- 🟣 MODAL -->
-      <div
-        v-if="showModal"
-        class="fixed inset-0 flex items-center justify-center z-50"
-      >
-        <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg relative">
-          <button
-            @click="closeModal"
-            class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-xl"
-          >
-            ×
-          </button>
+<!-- 🟣 MODAL -->
+<div
+  v-if="showModal"
+  class="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-40"
+>
+  <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg relative">
+    <button
+      @click="closeModal"
+      class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-xl"
+    >
+      ×
+    </button>
 
-          <h3 class="text-xl font-semibold mb-2">
-            {{ selectedActivity.title }}
-          </h3>
-          <p class="text-sm text-gray-600 mb-4">
-            <strong>Organization:</strong>
-            {{ selectedActivity.organizationName }}
-          </p>
+    <h3 class="text-xl font-semibold mb-2">
+      {{ selectedActivity.title }}
+    </h3>
+    <p class="text-sm text-gray-600 mb-4">
+      <strong>Organization:</strong>
+      {{ selectedActivity.organizationName }}
+    </p>
 
-          <div v-if="selectedActivity.type === 'training'">
-            <p><strong>Mode:</strong> {{ selectedActivity.mode }}</p>
-            <p><strong>Schedule:</strong> {{ formatDateTime(selectedActivity.schedule) }}</p>
-            <p><strong>Location:</strong> {{ selectedActivity.location }}</p>
-            <p v-if="selectedActivity.trainingLink">
-              <strong>Training Link:</strong>
-              <a
-                :href="selectedActivity.trainingLink"
-                target="_blank"
-                class="text-blue-600 underline"
-              >
-                {{ selectedActivity.trainingLink }}
-              </a>
-            </p>
-            <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
-            <p v-if="selectedActivity.certificate">
-              <strong>Certificate:</strong>
-              <a
-                :href="selectedActivity.certificate"
-                target="_blank"
-                class="text-blue-600 underline"
-              >
-                View Certificate
-              </a>
-            </p>
-          </div>
+    <!-- ✅ TRAINING DETAILS -->
+    <div v-if="selectedActivity.type === 'training'">
+      <p><strong>Mode:</strong> {{ selectedActivity.mode }}</p>
+      <p><strong>Schedule:</strong> {{ formatDateTime(selectedActivity.schedule) }}</p>
+      <p><strong>Location:</strong> {{ selectedActivity.location }}</p>
 
-          <div v-else-if="selectedActivity.type === 'career'">
-            <p>
-              <strong>Details:</strong>
-              {{ selectedActivity.detailsAndInstructions }}
-            </p>
-            <p>
-              <strong>Qualifications:</strong>
-              {{ selectedActivity.qualifications }}
-            </p>
-            <p>
-              <strong>Requirements:</strong>
-              {{ selectedActivity.requirements }}
-            </p>
-            <p>
-              <strong>Deadline:</strong>
-              {{ formatDateTime(selectedActivity.deadlineOfSubmission)}}
-            </p>
-            <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
-          </div>
-        </div>
+      <p v-if="selectedActivity.trainingLink">
+        <strong>Training Link:</strong>
+        <a
+          :href="selectedActivity.trainingLink"
+          target="_blank"
+          class="text-blue-600 underline"
+        >
+          {{ selectedActivity.trainingLink }}
+        </a>
+      </p>
+
+      <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
+
+      <p v-if="selectedActivity.certificate">
+        <strong>Certificate:</strong>
+        <a
+          :href="selectedActivity.certificate"
+          target="_blank"
+          class="text-blue-600 underline"
+        >
+          View Certificate
+        </a>
+      </p>
+
+      <!-- ✅ QR Code Section -->
+      <div v-if="selectedActivity.attendance_key" class="mt-6 text-center border-t pt-4">
+        <p class="text-sm font-semibold mb-2">Scan this QR Code for Attendance</p>
+
+        <QrcodeVue
+          :value="`https://your-domain.com/attendance?trainingID=${selectedActivity.trainingID}&key=${selectedActivity.attendance_key}`"
+          :size="200"
+          level="H"
+          class="mx-auto"
+        />
+
+        <p class="text-gray-500 text-xs mt-2">
+          Expires at: {{ formatDateTime(selectedActivity.attendance_expires_at) }}
+        </p>
       </div>
+
+      <!-- ❌ No QR yet -->
+      <div v-else class="mt-6 text-center text-gray-400 border-t pt-4">
+        <p>QR Code not available yet. It will appear once the training starts.</p>
+      </div>
+    </div>
+
+    <!-- ✅ CAREER DETAILS -->
+    <div v-else-if="selectedActivity.type === 'career'">
+      <p>
+        <strong>Details:</strong>
+        {{ selectedActivity.detailsAndInstructions }}
+      </p>
+      <p>
+        <strong>Qualifications:</strong>
+        {{ selectedActivity.qualifications }}
+      </p>
+      <p>
+        <strong>Requirements:</strong>
+        {{ selectedActivity.requirements }}
+      </p>
+      <p>
+        <strong>Deadline:</strong>
+        {{ formatDateTime(selectedActivity.deadlineOfSubmission)}}
+      </p>
+      <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
+    </div>
+  </div>
+</div>
     </div>
 
     <!--Large screen-->
@@ -564,7 +619,7 @@ function closeModal() {
                       activity.schedule ? formatDateTime(activity.schedule) : formatDateTime(activity.deadlineOfSubmission) || "—"
                     }}
                   </td>
-
+                  
                   <td
                     class="px-6 py-4 text-sm font-medium"
                     :class="{
@@ -680,6 +735,7 @@ function closeModal() {
                     </a>
                   </p>
                   <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
+                  
                   <p v-if="selectedActivity.certificate">
                     <strong>Certificate:</strong>
                     <a
