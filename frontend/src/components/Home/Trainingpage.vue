@@ -795,7 +795,12 @@ function formatTime(datetime) {
 
           <!-- Right: QR code if registered -->
           <div v-if="myRegistrations.has(training.trainingID)">
-            <div v-if="training.attendance_key">
+            <div
+              v-if="
+                training.attendance_key &&
+                new Date(training.end_time) > new Date()
+              "
+            >
               <qrcode-vue :value="training.attendance_key" :size="80" />
             </div>
             <div v-else>
@@ -1023,7 +1028,8 @@ function formatTime(datetime) {
             class="mt-4 text-center"
           >
             <div
-              v-if="selectedTrainingForList.attendance_key"
+              v-if="selectedTrainingForList.attendance_key &&
+              new Date(training.end_time) > new Date()"
               class="text-center flex flex-col items-center justify-center"
             >
               <qrcode-vue
