@@ -783,12 +783,7 @@ onMounted(fetchMyActivities);
                       {{ selectedActivity.trainingLink }}
                     </a>
                   </p>
-                  <p   :class="{
-                      'text-green-500 font-semibold': activity.registrationStatus === 'Attended',
-                      'text-gray-500': activity.registrationStatus === 'Registered',
-                    }"><strong>Status:</strong> 
-                    {{ selectedActivity.status }}
-                  </p>
+                  <p ><strong>Status:</strong> {{ selectedActivity.status }}</p>
                   
                   <p v-if="selectedActivity.certificate">
                     <strong>Certificate:</strong>
