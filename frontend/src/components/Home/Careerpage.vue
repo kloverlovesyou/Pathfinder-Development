@@ -433,7 +433,7 @@ function formatDate(d) {
 
           <!-- Apply / Cancel -->
           <button
-            v-if="!myApplications.has(selectedCareer.careerID)"
+            v-if="!myApplications.has(selectedCareer?.careerID ?? selectedCareer?.id)"
             class="btn btn-sm bg-customButton text-white"
             @click="openUploadModal"
           >
