@@ -1,6 +1,3 @@
-<style scoped>
-
-</style>
 <script setup>
 import { ref, onMounted, nextTick } from "vue";
 import axios from "axios";
@@ -14,23 +11,25 @@ const orgModal = ref(null);
 // Organizations
 const organizations = ref([]);
 
-function openModal(org) {
-  console.log("openModal called with org:", org); // ✅ Check org data
-  selectedOrg.value = org;
+function openModal(item) {
+  console.log("openModal called with item:", item);
 
-  nextTick(() => {
-    console.log("orgModal ref:", orgModal.value); // ✅ Check if dialog exists
-    if (orgModal.value) {
-      try {
-        orgModal.value.showModal();
-        console.log("Modal opened"); // ✅ Confirm modal opens
-      } catch (err) {
-        console.error("Failed to open modal:", err);
-      }
-    } else {
-      console.warn("orgModal is null!"); // ⚠️ dialog not found
-    }
-  });
+  let org = item;
+
+if (item.organizationID) {
+  org = organizations.value.find(o => o.id === item.organizationID);
+}
+
+if (!org) {
+  console.warn("Organization not found for modal:", item);
+  return;
+}
+
+selectedOrg.value = JSON.parse(JSON.stringify(org));
+
+nextTick(() => {
+  if (orgModal.value) orgModal.value.showModal();
+});
 }
 
 function closeModal() {
@@ -137,27 +136,27 @@ onMounted(async () => {
   try {
     const res = await axios.get("http://127.0.0.1:8000/api/organization");
     // Map backend fields to frontend template
- organizations.value = res.data.map(org => ({
-      id: org.organizationID,
-      name: org.name,
-      location: org.location || "N/A",
-      website: org.websiteURL || "#",
-      logo: org.logo || null,
-      careers: (org.careers || []).map(c => ({
-        id: c.careerID,                 // <-- map careerID to id
-        position: c.position,
-        deadlineOfSubmission: c.deadlineOfSubmission,
-        // other fields if needed
-      })),
-      trainings: (org.trainings || []).map(t => ({
-        id: t.trainingID,               // <-- map trainingID to id
-        title: t.title,
-        description: t.description,
-        schedule: t.schedule,
-        end_time: t.end_time,
-        // other fields if needed
-      }))
-    }));
+
+    // Map backend fields for frontend usage
+      organizations.value = res.data.map(org => ({
+        id: org.organizationID,   // ← use organizationID
+        name: org.name,
+        location: org.location || "N/A",
+        website: org.websiteURL || "#",
+        logo: org.logo || null,
+        careers: (org.careers || []).map(c => ({
+          id: c.careerID,        // ← careerID from backend
+          position: c.position,
+          deadlineOfSubmission: c.deadlineOfSubmission,
+        })),
+        trainings: (org.trainings || []).map(t => ({
+          id: t.trainingID,      // ← trainingID from backend
+          title: t.title,
+          description: t.description,
+          schedule: t.schedule,
+          end_time: t.end_time,
+        })),
+      }));
      buildEvents();
   } catch (error) {
     console.error("Error fetching organizations:", error);
@@ -301,7 +300,7 @@ onMounted(async () => {
             <div
               v-for="(event, i) in dayEvents"
               :key="i"
-              @click="openModal(event)"
+             @click="openModal(organizations.find(o => o.id === event.organizationID))"
               class="bg-gray-100 p-2 rounded-lg shadow-sm cursor-pointer hover:bg-gray-200 break-words flex justify-between items-center"
             >
               <div>
@@ -357,16 +356,16 @@ onMounted(async () => {
     <button @click="closeModal" class="btn btn-sm btn-circle absolute right-2 top-2">✕</button>
 
     <!-- Organization Info -->
-    <div class="flex items-center gap-3 mb-3">
+     <div v-if="selectedOrg && selectedOrg.id" class="flex items-center gap-3 mb-3">
       <img v-if="selectedOrg.logo" :src="selectedOrg.logo" class="w-14 h-14 rounded-full object-cover" />
       <div>
-        <h2 class="text-xl font-bold">{{ selectedOrg.name }}</h2>
-        <p class="text-sm text-gray-600">{{ selectedOrg.location }}</p>
+        <h2 class="text-xl font-bold">{{ selectedOrg.name || "No Name"  }}</h2>
+        <p class="text-sm text-gray-600">{{ selectedOrg.location ||  "No location available" }}</p>
       </div>
     </div>
 
     <!-- Website -->
-    <p class="text-sm mb-5">
+      <p v-if="selectedOrg && selectedOrg.id" class="text-sm mb-5">
       <a :href="selectedOrg.website" target="_blank" class="text-blue-600 underline">
         {{ selectedOrg.website }}
       </a>
