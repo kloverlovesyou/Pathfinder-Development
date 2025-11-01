@@ -1,9 +1,9 @@
 <script setup>
 import { ref, onMounted, nextTick, reactive } from "vue";
 import axios from "axios";
-const registeredPosts = reactive({});
 
-const myRegistrations = ref(new Set());
+const registeredPosts = reactive({}); // stores registered trainings
+
 async function fetchMyRegistrations() {
   const token = localStorage.getItem("token");
   if (!token) return;
@@ -13,16 +13,61 @@ async function fetchMyRegistrations() {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    // Fill registeredPosts
+    // Fill registeredPosts (for quick lookup)
     res.data.forEach((r) => {
-      registeredPosts[r.trainingID] = { registrationID: r.registrationID };
+      registeredPosts[r.trainingID] = {
+        registrationID: r.registrationID,
+      };
     });
+
+    console.log("✅ Registered trainings loaded:", registeredPosts);
   } catch (err) {
-    console.error("Failed to fetch registrations:", err);
+    console.error("❌ Failed to fetch registrations:", err);
   }
 }
 
 onMounted(fetchMyRegistrations);
+
+// Toggle registration
+async function toggleRegister(training) {
+  const token = localStorage.getItem("token");
+  if (!token) return alert("Please log in first.");
+
+  // If already registered -> unregister
+  if (registeredPosts[training.trainingID]) {
+    try {
+      const registrationID =
+        registeredPosts[training.trainingID].registrationID;
+      await axios.delete(
+        `http://127.0.0.1:8000/api/registrations/${registrationID}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      delete registeredPosts[training.trainingID];
+      console.log(`🗑 Unregistered from ${training.title}`);
+    } catch (err) {
+      console.error("❌ Failed to unregister:", err);
+    }
+  }
+  // Else register
+  else {
+    try {
+      const res = await axios.post(
+        "http://127.0.0.1:8000/api/registrations",
+        { trainingID: training.trainingID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      registeredPosts[training.trainingID] = {
+        registrationID: res.data.registrationID,
+      };
+
+      console.log(`✅ Registered for ${training.title}`);
+    } catch (err) {
+      console.error("❌ Failed to register:", err);
+    }
+  }
+}
 
 const appliedPosts = ref({});
 const isSidebarOpen = ref(false);
@@ -36,23 +81,6 @@ function cancelApplication(post) {
 function toggleBookmark(post) {
   const id = post.trainingID || post.careerID;
   bookmarkedPosts.value[id] = !bookmarkedPosts.value[id];
-}
-async function toggleRegister(training) {
-  const id = training.trainingID;
-
-  if (registeredPosts[id]) {
-    // Unregister
-    await axios.delete(
-      `http://127.0.0.1:8000/api/registrations/${registeredPosts[id].registrationID}`
-    );
-    registeredPosts[id] = null; // or use: delete registeredPosts[id]
-  } else {
-    // Register
-    const res = await axios.post("http://127.0.0.1:8000/api/registrations", {
-      trainingID: id,
-    });
-    registeredPosts[id] = { registrationID: res.data.data.registrationID };
-  }
 }
 
 const selectedTraining = ref(null);
@@ -157,6 +185,27 @@ const selectedDate = ref("");
 const events = ref({}); // Map of date → [events]
 const dayEvents = ref([]);
 
+// --- Handle day click ---
+function onDayClick(date) {
+  selectedDate.value = toISODate(date);
+  showEvents(selectedDate.value);
+}
+
+// --- Initialize calendar: fetch events & select today ---
+onMounted(async () => {
+  await fetchEvents();
+  onDayClick(new Date()); // select today automatically
+});
+// --- Check if a date is today ---
+function isToday(date) {
+  const d = new Date(date);
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+}
 // --- EVENTS LOGIC ---
 
 async function fetchEvents() {
@@ -216,16 +265,42 @@ onMounted(async () => {
   const today = new Date().toISOString().split("T")[0];
   showEvents(today);
 
-  // Highlight event days on render
-  calendar.addEventListener("render", () => {
+  // Highlight event days and today on render
+  const highlightDays = () => {
     calendar.querySelectorAll("[data-date]").forEach((el) => {
       const dateStr = el.getAttribute("data-date");
-      el.classList.remove("event-day");
+      el.classList.remove("event-day", "today");
+
       if (events.value[dateStr]) {
         el.classList.add("event-day");
       }
+
+      if (dateStr === today) {
+        el.classList.add("today"); // <-- Highlight today
+      }
     });
-  });
+  };
+
+  const highlightToday = () => {
+    // Select all day elements
+    const dayEls = calendar.querySelectorAll("[data-date]");
+    if (!dayEls.length) return;
+
+    dayEls.forEach((el) => {
+      const dateStr = el.getAttribute("data-date");
+      el.classList.remove("today");
+
+      if (dateStr === today) {
+        el.classList.add("today"); // Add highlight to today
+      }
+    });
+  };
+
+  // Initial highlight
+  highlightDays();
+
+  // Optional: re-highlight on calendar render if your calendar library triggers it
+  calendar.addEventListener("render", highlightDays);
 
   // Handle day clicks
   calendar.addEventListener("change", (e) => {
@@ -233,6 +308,12 @@ onMounted(async () => {
     showEvents(pickedDate);
   });
 });
+
+// Format for comparisons / mapping
+function toISODate(d) {
+  if (!d) return "";
+  return new Date(d).toISOString().split("T")[0]; // YYYY-MM-DD
+}
 </script>
 
 <template>
@@ -300,26 +381,26 @@ onMounted(async () => {
             class="cally bg-base-100 border border-base-300 shadow rounded-box p-3 flex-shrink-0"
           >
             <calendar-month>
-              <template #day="{ date, label }">
+              <template #day="{ date }">
                 <div
-                  class="w-8 h-8 flex items-center justify-center rounded-full"
-                  :data-date="date"
+                  class="w-8 h-8 flex items-center justify-center rounded-full cursor-pointer"
                   :class="{
-                    'bg-blue-100 text-blue-700 font-semibold': events[date],
-                    'bg-gray-200 text-gray-600': !events[date],
+                    'border-2 border-blue-500 bg-blue-50':
+                      toISODate(date) === selectedDate, // today/selected
+                    'bg-blue-100 text-blue-700 font-semibold':
+                      events[toISODate(date)], // event day
+                    'bg-gray-200 text-gray-600': !events[toISODate(date)], // normal day
                   }"
-                  @click="showEvents(date)"
+                  @click="onDayClick(date)"
                 >
-                  {{ label }}
+                  {{ formatDate(date) }}
                 </div>
               </template>
             </calendar-month>
           </calendar-date>
 
           <!-- Events Panel -->
-          <div
-            class="bg-white w-full max-w-[250px] h-72 overflow-y-auto border rounded-lg p-3"
-          >
+          <div class="bg-white w-full max-w-[250px] h-72 overflow-y-auto">
             <h1 class="text-lg font-semibold mb-1">Upcoming Events</h1>
             <h2 class="mb-2 text-sm text-gray-600">
               on
@@ -650,5 +731,11 @@ onMounted(async () => {
   background-color: #3b82f6;
   color: white;
   border-radius: 9999px;
+}
+
+.today {
+  border: 2px solid #4caf50;
+  background-color: #e8f5e9;
+  border-radius: 50%;
 }
 </style>
