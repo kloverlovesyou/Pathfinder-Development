@@ -4,20 +4,227 @@ import axios from "axios";
 import QrcodeVue from "qrcode.vue";
 import { watch, nextTick } from "vue";
 
-// Holds countdown string for each training card
-const qrCountdowns = reactive({}); 
+const registeredPosts = reactive({}); // stores registered trainings
+const myRegistrations = ref(new Set()); // used for QR display
 
-// Interval handles for training cards
-let qrIntervals = {}; 
+// 🔹 Fetch user's registered trainings
+async function fetchMyRegistrations() {
+  const token = localStorage.getItem("token");
+  if (!token) return;
 
-// Modal QR
+  try {
+    const res = await axios.get("http://127.0.0.1:8000/api/registrations", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    // Clear previous data
+    Object.keys(registeredPosts).forEach((k) => delete registeredPosts[k]);
+    myRegistrations.value.clear();
+
+    // Fill both structures
+    res.data.forEach((r) => {
+      registeredPosts[r.trainingID] = {
+        registrationID: r.registrationID,
+      };
+      myRegistrations.value.add(r.trainingID); // ✅ for QR logic
+    });
+
+    console.log("✅ Registered trainings loaded:", registeredPosts);
+    console.log("✅ myRegistrations set:", Array.from(myRegistrations.value));
+  } catch (err) {
+    console.error("❌ Failed to fetch registrations:", err);
+  }
+}
+
+onMounted(fetchMyRegistrations);
+
+// 🔹 Toggle registration
+async function toggleRegister(training) {
+  const token = localStorage.getItem("token");
+  if (!token) return alert("Please log in first.");
+
+  // If already registered → unregister
+  if (registeredPosts[training.trainingID]) {
+    try {
+      const registrationID =
+        registeredPosts[training.trainingID].registrationID;
+
+      await axios.delete(
+        `http://127.0.0.1:8000/api/registrations/${registrationID}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      delete registeredPosts[training.trainingID];
+      myRegistrations.value.delete(training.trainingID); // 🧩 keep in sync
+      console.log(`🗑 Unregistered from ${training.title}`);
+    } catch (err) {
+      console.error("❌ Failed to unregister:", err);
+    }
+  }
+  // Else register
+  else {
+    try {
+      const res = await axios.post(
+        "http://127.0.0.1:8000/api/registrations",
+        { trainingID: training.trainingID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      registeredPosts[training.trainingID] = {
+        registrationID: res.data.registrationID,
+      };
+      myRegistrations.value.add(training.trainingID); // 🧩 sync for QR
+
+      console.log(`✅ Registered for ${training.title}`);
+    } catch (err) {
+      console.error("❌ Failed to register:", err);
+    }
+  }
+}
+
+async function fetchEvents() {
+  try {
+    const user = JSON.parse(localStorage.getItem("user"));
+    const token = localStorage.getItem("token");
+
+    if (!user || !token) {
+      console.warn("⚠️ No user or token found in localStorage");
+      return;
+    }
+
+    const response = await axios.get(
+      `http://127.0.0.1:8000/api/calendar/${user.applicantID}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    let eventList = response.data.events || [];
+    console.log("✅ API Events Fetched:", eventList);
+    console.log("Event keys:", Object.keys(eventList[0]));
+
+    // Normalize all dates (ensure YYYY-MM-DD)
+    eventList.forEach((e) => {
+      e.type = e.type || e.Type || "training";
+      e.mode = e.mode || e.Mode;
+      e.date = new Date(e.date).toISOString().split("T")[0];
+    });
+
+    // ✅ Build events map
+    const tempMap = {};
+    eventList.forEach((event) => {
+      if (!tempMap[event.date]) tempMap[event.date] = [];
+      tempMap[event.date].push(event);
+    });
+
+    events.value = tempMap;
+
+    console.log("📅 Events Map:", events.value);
+  } catch (error) {
+    console.error("❌ Error fetching events:", error);
+  }
+}
+
+function showEvents(date) {
+  selectedDate.value = date;
+  dayEvents.value = events.value[date] || [];
+  console.log("📅 Events for", date, ":", dayEvents.value);
+}
+
+// --- INITIALIZE CALENDAR ---
+onMounted(async () => {
+  await nextTick();
+  await fetchEvents();
+
+  const calendar = calendarRef.value;
+  if (!calendar) return;
+
+  const today = new Date().toISOString().split("T")[0];
+  showEvents(today);
+
+  // Highlight event days on render
+  calendar.addEventListener("render", () => {
+    calendar.querySelectorAll("[data-date]").forEach((el) => {
+      const dateStr = el.getAttribute("data-date");
+      el.classList.remove("event-day");
+      if (events.value[dateStr]) {
+        el.classList.add("event-day");
+      }
+    });
+  });
+
+  // Handle day clicks
+  calendar.addEventListener("change", (e) => {
+    const pickedDate = e.target.value;
+    showEvents(pickedDate);
+  });
+});
+
 const qrCodeValue = ref(null);
+const qrExpiresAt = ref(null);
 const qrActiveTrainingId = ref(null);
+const qrCountdowns = reactive({});
+let qrCountdownInterval = null;
+let qrInterval = {};
 const qrCountdown = ref("00:00");
-let modalQRInterval = null; 
 
-// Optional: expiration timestamp for modal QR
-const qrExpiresAt = ref(null); 
+const trainingDialog = ref(null); // 🟢 Add this near the top of your script
+const careerDialog = ref(null); // 🟢 Optional: for the career modal too
+
+function openModal(item) {
+  console.log("Opening modal for:", item);
+
+  // Determine whether it's training or career
+  const type = item.type || (item.trainingID ? "training" : "career");
+
+  if (type === "training") {
+    selectedTraining.value = item;
+    selectedPost.value = null;
+    isModalOpen.value = true;
+
+    // 🔍 Debug info
+    console.log("Opening training modal:", item);
+    console.log("Attendance key:", item.attendance_key);
+    console.log("Expires at:", item.attendance_expires_at);
+
+    // 🕒 Start countdown if user registered
+    if (myRegistrations.has(item.trainingID)) {
+      startModalQRCountdown(item);
+    }
+
+    // ✅ Show the modal after Vue updates the DOM
+    nextTick(() => {
+      if (trainingDialog.value) {
+        trainingDialog.value.showModal();
+        console.log("✅ Training modal opened");
+      } else {
+        console.error("❌ trainingDialog ref not found");
+      }
+    });
+
+    // 🕒 Start countdown if registered
+    if (myRegistrations.has(item.trainingID)) {
+      startModalQRCountdown(item);
+    }
+  } else if (type === "career") {
+    selectedPost.value = item;
+    selectedTraining.value = null;
+    isModalOpen.value = true;
+
+    nextTick(() => {
+      if (careerDialog.value) {
+        careerDialog.value.showModal();
+        console.log("✅ Career modal opened");
+      } else {
+        console.error("❌ careerDialog ref not found");
+      }
+    });
+  } else {
+    console.warn("⚠️ Unknown post type:", item);
+  }
+}
 
 // Date of PH
 const PH_TIME_OFFSET = 8 * 60; // +8 hours in minutes
@@ -30,9 +237,10 @@ const trainings = ref([]);
 
 // Modal + notifications
 const selectedTraining = ref(null);
+const isTrainingModalOpen = ref(false);
+
 const isModalOpen = ref(false);
 const toasts = ref([]);
-const myRegistrations = ref(new Set());
 
 // Bookmarked trainings (IDs)
 const bookmarkedTrainings = ref([]);
@@ -40,7 +248,9 @@ const bookmarkedTrainings = ref([]);
 // Computed trainings with org info
 const trainingsWithOrg = computed(() =>
   trainings.value.map((t) => {
-    const org = organizations.value.find((o) => o.organizationID === t.organizationID); // <-- fix here
+    const org = organizations.value.find(
+      (o) => o.organizationID === t.organizationID
+    ); // <-- fix here
     return {
       ...t,
       organizationName: org ? org.name : "Unknown",
@@ -53,17 +263,48 @@ const trainingsWithOrg = computed(() =>
 // 📌 Modal Controls
 // ============================
 function openTrainingModal(training) {
-  console.log("Opening training modal:", training);
-  console.log("Attendance key:", training.attendance_key);
-  console.log("Expires at:", training.attendance_expires_at);
-  
-  selectedTraining.value = training;
+  // Format schedule nicely
+  const formattedSchedule = training.schedule
+    ? new Date(training.schedule).toLocaleString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "N/A";
+
+  // Build a clean, safe version of the training data
+  selectedTraining.value = {
+    ...training,
+    organizationName:
+      training.organizationName || training.organization?.name || "N/A",
+    mode: training.mode || training.Mode || "N/A",
+    location: training.location || "N/A",
+    trainingLink: training.trainingLink || null,
+    formattedSchedule,
+  };
+
+  // Show the modal
   isModalOpen.value = true;
 
+  console.log("✅ Opening training modal:", selectedTraining.value);
+  console.log("Attendance key:", training.attendance_key);
+  console.log("Expires at:", training.attendance_expires_at);
+
+  // Start QR countdown if registered
   if (myRegistrations.has(training.trainingID)) {
     startModalQRCountdown(training);
   }
+
+  if (!myRegistrations.has(training.trainingID) && training.registered) {
+    myRegistrations.value.add(training.trainingID);
+  }
+
+  selectedTraining.value = training;
 }
+
 function closeModal() {
   isModalOpen.value = false;
   selectedTraining.value = null;
@@ -147,10 +388,16 @@ function isTrainingBookmarked(trainingId) {
   return bookmarkedTrainings.value.includes(trainingId);
 }
 
+function isTraining(post) {
+  return post && (post.type === "training" || post.trainingID);
+}
+
+function closeTrainingModal() {
+  selectedTraining.value = null;
+}
 // ============================
 // 📝 Registration Function
 // ============================
-
 
 async function toggleRegistration(training) {
   if (!training) return;
@@ -213,51 +460,6 @@ async function toggleRegistration(training) {
   }
 }
 
-// Function to handle the calendar DOM manipulation and listeners
-function setupCalendarDOM() {
-    // We use nextTick to wait for the DOM updates (like the sidebar opening) 
-    // to complete before trying to access the element via its ref.
-    nextTick(() => { 
-        const calendar = calendarRef.value;
-        
-        if (!calendar)  // Guard against calendar not being rendered yet
-        console.error("Calendar DOM element not found.");
-        return;
-        const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-
-        // Highlight event days and today
-        calendar.addEventListener("render", () => {
-            calendar.querySelectorAll("[data-date]").forEach((el) => {
-                const dateStr = el.getAttribute("data-date");
-                el.classList.remove("event-day", "today");
-
-                // This logic uses the 'events.value' which was populated in fetchMyRegistrations
-                if (events.value[dateStr]) el.classList.add("event-day"); 
-                if (dateStr === today) el.classList.add("today");
-            });
-        });
-
-        // Show registered trainings for selected date
-        calendar.addEventListener("change", (e) => {
-            const pickedDate = e.target.value;
-            showEvents(pickedDate);
-
-            calendar
-                .querySelectorAll("[data-date]")
-                .forEach((el) => el.classList.remove("selected-day"));
-            const selectedEl = calendar.querySelector(`[data-date="${pickedDate}"]`);
-            if (selectedEl) selectedEl.classList.add("selected-day");
-        });
-
-        // Auto-select today's date
-        calendar.value = today;
-        showEvents(today);
-
-        const event = new Event("change", { bubbles: true });
-        calendar.dispatchEvent(event);
-    });
-}
-
 // ============================
 // 🔔 Toast Function
 // ============================
@@ -276,47 +478,34 @@ async function fetchTrainings() {
   try {
     const response = await axios.get("http://127.0.0.1:8000/api/trainings");
     trainings.value = response.data;
-    
   } catch (error) {
     console.error("Error fetching trainings:", error);
     addToast("FAILED TO LOAD TRAININGS", "error");
   }
 }
 
-async function fetchMyRegistrations() {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) return;
+// Check if QR should be visible
+function isTrainingActive(training) {
+  if (!training.schedule || !training.end_time) return false;
 
-    const res = await axios.get("http://127.0.0.1:8000/api/registrations", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+  const now = new Date();
+  const start = new Date(training.schedule);
+  const end = new Date(training.end_time);
 
-    myRegistrations.value = new Set(res.data.map(r => r.trainingID));
-    buildEvents(); // 👈 Add this
-
-    // If any QR exists for the applicant, start countdown
-    const activeQRTraining = res.data.find(r => r.attendance_key && r.attendance_expires_at);
-    if (activeQRTraining) {
-      startQRCountdown(activeQRTraining);
-    }
-
-  } catch (_) {}
+  return now >= start && now <= end;
 }
-
-// fetchQRCode
 
 const registeredTrainingsWithQR = computed(() => {
   return trainingsWithOrg.value
-    .filter(t => myRegistrations.value.has(t.trainingID))
-    .map(t => {
+    .filter((t) => myRegistrations.value.has(t.trainingID))
+    .map((t) => {
       const isActiveQR = qrActiveTrainingId.value === t.trainingID;
       return {
         ...t,
         qrKey: t.attendance_key,
         qrExpires: t.end_Time,
         isActiveQR,
-        qrCountdown: isActiveQR ? qrCountdown.value : null
+        qrCountdown: isActiveQR ? qrCountdown.value : null,
       };
     });
 });
@@ -326,31 +515,38 @@ function startQRCountdown(training) {
   // Stop any running countdown interval
   if (qrCountdownInterval) clearInterval(qrCountdownInterval);
 
-  // Set QR code value with training ID and attendance key
+  // 📌 Use the training.end_time as expiration reference
+  const endTime = new Date(training.end_time || training.end_Time); // supports both snakeCase or camelCase
+
+  // Generate QR (you can change this to your full URL if needed)
   qrCodeValue.value = `http://192.168.1.247:8000/attendance/submit?trainingID=${training.trainingID}&key=${training.attendance_key}`;
-  qrExpiresAt.value = new Date(training.attendance_expires_at);
+  qrExpiresAt.value = endTime;
   qrActiveTrainingId.value = training.trainingID;
 
-  // Countdown updater
+  // ⏳ Countdown function
   const updateCountdown = () => {
     const now = new Date();
-    const diff = qrExpiresAt.value - now;
+    const diff = endTime - now;
 
     if (diff <= 0) {
-      // ✅ Stop, don't regenerate QR
-      qrCodeValue.value = "expired";   // Or set to "expired" if you want to show message
+      // ⛔ QR expired
+      clearInterval(qrCountdownInterval);
+      qrCountdown.value = "00:00";
+      qrCodeValue.value = "expired";
       qrActiveTrainingId.value = null;
       qrExpiresAt.value = null;
-      qrCountdown.value = "00:00";
-      clearInterval(qrCountdownInterval);
     } else {
-      const minutes = Math.floor(diff / 60000).toString().padStart(2, "0");
-      const seconds = Math.floor((diff % 60000) / 1000).toString().padStart(2, "0");
+      const minutes = Math.floor(diff / 60000)
+        .toString()
+        .padStart(2, "0");
+      const seconds = Math.floor((diff % 60000) / 1000)
+        .toString()
+        .padStart(2, "0");
       qrCountdown.value = `${minutes}:${seconds}`;
     }
   };
 
-  // Start immediately then repeat every second
+  // Start immediately and every second
   updateCountdown();
   qrCountdownInterval = setInterval(updateCountdown, 1000);
 }
@@ -363,59 +559,90 @@ function startAllQRCountdowns() {
   Object.values(qrIntervals).forEach(clearInterval);
   qrIntervals = {};
 
-  trainingsWithOrg.value.forEach(training => {
-    if (myRegistrations.value.has(training.trainingID) && training.attendance_key) {
-      const trainingId = training.trainingID;
-      const expiresAt = new Date(training.end_time || training.attendance_expires_at);
+  //start all countdowns for existing QR codes
+  function startAllQRCountdowns() {
+    // Clear any previous intervals (This assumes qrIntervals is defined, see fix 1)
+    Object.values(qrIntervals).forEach(clearInterval);
+    qrIntervals = {};
 
-      const updateCountdown = () => {
-        const diff = expiresAt - new Date();
-        if (diff <= 0) {
-          qrCountdowns[trainingId] = "00:00";
-          training.attendance_key = null;
-          clearInterval(qrIntervals[trainingId]);
-        } else {
-          const minutes = String(Math.floor(diff / 60000)).padStart(2, "0");
-          const seconds = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
-          qrCountdowns[trainingId] = `${minutes}:${seconds}`;
-        }
-      };
+    trainingsWithOrg.value.forEach((training) => {
+      if (
+        myRegistrations.value.has(training.trainingID) &&
+        training.attendance_expires_at
+      ) {
+        const trainingId = training.trainingID;
 
-      updateCountdown();
-      qrIntervals[trainingId] = setInterval(updateCountdown, 1000);
-    }
+        const updateCountdown = () => {
+          const now = new Date();
+          const expires = new Date(training.attendance_expires_at);
+          const diff = expires - now;
+
+          if (diff <= 0) {
+            qrCountdowns[trainingId] = "00:00";
+            clearInterval(qrIntervals[trainingId]);
+          } else {
+            const minutes = Math.floor(diff / 60000)
+              .toString()
+              .padStart(2, "0");
+            const seconds = Math.floor((diff % 60000) / 1000)
+              .toString()
+              .padStart(2, "0");
+            qrCountdowns[trainingId] = `${minutes}:${seconds}`;
+          }
+        }; // Initialize the key so template reacts immediately
+
+        qrCountdowns[trainingId] = "loading...";
+
+        updateCountdown(); // initial call
+        qrIntervals[trainingId] = setInterval(updateCountdown, 1000);
+      }
+    });
+  }
+  const modalQR = reactive({
+    value: null,
+    expiresAt: null,
+    countdown: "00:00",
+    interval: null,
   });
-}
 
-// Modal QR countdown
+  //ModalQrCountdown
+// Modal QR Countdown
 function startModalQRCountdown(training) {
-  if (!training.attendance_key || !(training.end_time || training.attendance_expires_at)) return;
+  if (!training.attendance_key || !training.end_time) return;
 
   qrCodeValue.value = training.attendance_key;
-  qrActiveTrainingId.value = training.trainingID;
   qrCountdown.value = "";
 
-  if (modalQRInterval) clearInterval(modalQRInterval);
+  const expiresAt = new Date(training.end_time);
 
-  const expiresAt = new Date(training.end_time || training.attendance_expires_at);
+  if (qrInterval) clearInterval(qrInterval);
 
   const updateCountdown = () => {
-    const diff = expiresAt - new Date();
+    const now = new Date();
+    const diff = expiresAt - now;
+
     if (diff <= 0) {
+      // ⛔ Hide QR and stop countdown
       qrCountdown.value = "00:00";
-      qrCodeValue.value = null;
-      training.attendance_key = null;
-      qrActiveTrainingId.value = null;
-      clearInterval(modalQRInterval);
+      qrCodeValue.value = null; // hide QR code
+      clearInterval(qrInterval);
+
+      // Optional: if you’re showing a modal or section, hide it too
+      if (isModalOpen.value) isModalOpen.value = false;
     } else {
-      const minutes = String(Math.floor(diff / 60000)).padStart(2, "0");
-      const seconds = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
+      const minutes = Math.floor(diff / 60000)
+        .toString()
+        .padStart(2, "0");
+      const seconds = Math.floor((diff % 60000) / 1000)
+        .toString()
+        .padStart(2, "0");
       qrCountdown.value = `${minutes}:${seconds}`;
     }
   };
 
   updateCountdown();
-  modalQRInterval = setInterval(updateCountdown, 1000);
+  qrInterval = setInterval(updateCountdown, 1000);
+}
 }
 
 // ============================
@@ -429,7 +656,7 @@ onMounted(async () => {
   await fetchTrainings(orgID);
   console.log("✅ Trainings loaded:", trainings.value); // <-- and here
 
-  await fetchMyRegistrations(); 
+  await fetchMyRegistrations();
   await fetchBookmarks();
   startAllQRCountdowns();
 
@@ -447,38 +674,6 @@ const calendarRef = ref(null);
 
 // Modal
 const selectedPost = ref(null);
-function openModal(post) {
-  selectedPost.value = post;
-}
-
-// Build events map
-function buildEvents() {
-  events.value = {};
-  console.log("🔍 trainings:", trainings.value);
-  console.log("🔍 myRegistrations:", myRegistrations.value);
-
-  trainings.value.forEach((training) => {
-    // Make sure the training has an ID and schedule
-    if (!training.trainingID || !training.schedule) return;
-
-    // Check if user is registered
-    if (myRegistrations.value.has(training.trainingID)) {
-      const date = training.schedule.split(/[T\s]/)[0];
-      if (!events.value[date]) events.value[date] = [];
-      events.value[date].push(training);
-    }
-  });
-
-  console.log("✅ Built events:", events.value);
-  console.log("Schedule for training:", training.schedule);
-}
-
-// Show events on calendar click
-function showEvents(dateStr) {
-  selectedDate.value = dateStr;
-  dayEvents.value = events.value[dateStr] || [];
-}
-
 watch([trainings, myRegistrations], async () => {
   buildEvents();
   await nextTick();
@@ -496,10 +691,78 @@ function formatDateTime(dt) {
     timeStyle: "short",
   });
 }
-function formatDate(d) {
-  if (!d) return "";
-  return new Date(d).toLocaleDateString("en-US", {
-    dateStyle: "long",
+
+const uploadedFile = ref(null);
+const applyModalOpen = ref(false);
+function openApplyModal(post) {
+  selectedPost.value = post;
+  applyModalOpen.value = true;
+}
+
+function closeApplyModal() {
+  applyModalOpen.value = false;
+  uploadedFile.value = null;
+}
+
+function handleFileUpload(e) {
+  uploadedFile.value = e.target.files[0];
+}
+
+function submitApplication() {
+  if (!uploadedFile.value) {
+    alert("Please upload a PDF file first.");
+    return;
+  }
+
+  // ✅ Safety check: make sure a post is selected
+  if (!selectedPost.value) return;
+
+  // Log info (for debugging)
+  console.log("Submitting application for:", selectedPost.value);
+  console.log("Uploaded file:", uploadedFile.value);
+
+  const id = selectedPost.value.careerID;
+  appliedPosts.value[id] = true;
+
+  alert("Application submitted successfully!");
+  closeApplyModal();
+}
+
+const selectedTrainingForList = ref(null);
+
+function openTrainingListModal(training) {
+  selectedTrainingForList.value = training;
+}
+
+function closeTrainingListModal() {
+  selectedTrainingForList.value = null;
+}
+
+function formatDate(datetime, options = { detailed: true }) {
+  if (!datetime) return options.detailed ? "N/A" : "";
+
+  const date = new Date(datetime);
+
+  if (options.detailed) {
+    // Full detailed format with weekday
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  } else {
+    // Simple long format
+    return date.toLocaleDateString("en-US", { dateStyle: "long" });
+  }
+}
+
+function formatTime(datetime) {
+  if (!datetime) return "N/A";
+  const date = new Date(datetime);
+  return date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 </script>
@@ -515,33 +778,34 @@ function formatDate(d) {
         </h2>
       </div>
       <!-- Training Cards -->
-        <div class="space-y-4">
-            <div
-              v-for="training in trainingsWithOrg"
-              :key="training.trainingID"
-              class="p-4 bg-blue-gray rounded-lg relative hover:bg-gray-300 transition cursor-pointer"
-              @click="openTrainingModal(training)"
-            >
-              <!-- Card content -->
-              <h3 class="font-semibold text-lg">{{ training.title }}</h3>
-              <p class="text-gray-700 font-medium">
-                {{ training.organizationName }}
-              </p>
+      <div class="space-y-4">
+        <div
+          v-for="training in trainingsWithOrg"
+          :key="training.trainingID"
+          class="p-4 bg-blue-gray rounded-lg hover:bg-gray-300 transition cursor-pointer flex justify-between items-center"
+          @click="openTrainingListModal(training)"
+        >
+          <!-- Left: Training info -->
+          <div>
+            <h3 class="font-semibold text-lg">{{ training.title }}</h3>
+            <p class="text-gray-700 font-medium">
+              {{ training.organization?.name || training.organizationName }}
+            </p>
+          </div>
 
-              <!-- QR code: only if user registered -->
-              <div v-if="myRegistrations.has(training.trainingID)" class="mt-4">
-                <div v-if="training.attendance_key">
-                  <qrcode-vue :value="training.attendance_key" :size="120" />
-                  <p class="text-sm text-gray-600 mt-1">
-                    Expires in: {{ qrCountdown[training.trainingID] || formatDateTime(training.end_time) }}
-                  </p>
-                </div>
-                <div v-else>
-                  <p class="text-sm text-gray-500">QR code not yet generated or expired.</p>
-                </div>
-              </div>
+          <!-- Right: QR code if registered -->
+          <div v-if="myRegistrations.has(training.trainingID)">
+            <div v-if="training.attendance_key">
+              <qrcode-vue :value="training.attendance_key" :size="80" />
+            </div>
+            <div v-else>
+              <p class="text-sm text-gray-500 text-center">
+                QR code not yet generated or expired.
+              </p>
             </div>
           </div>
+        </div>
+      </div>
     </div>
 
     <!-- OVERLAY -->
@@ -579,6 +843,11 @@ function formatDate(d) {
               <div
                 class="w-8 h-8 flex items-center justify-center rounded-full"
                 :data-date="date"
+                :class="{
+                  'bg-blue-100 text-blue-700 font-semibold': events[date],
+                  'bg-gray-200 text-gray-600': !events[date],
+                }"
+                @click="showEvents(date)"
               >
                 {{ label }}
               </div>
@@ -586,14 +855,17 @@ function formatDate(d) {
           </calendar-month>
         </calendar-date>
 
-        <!-- Events -->
+        <!-- Events Panel -->
         <div class="bg-white w-full max-w-[250px] h-72 overflow-y-auto">
-          <h1 class="text-lg font-semibold">Upcoming Events</h1>
-          <h2 class="mb-2">
-            on <span>{{ selectedDate || "Select a date" }}</span>
+          <h1 class="text-lg font-semibold mb-1">Upcoming Events</h1>
+          <h2 class="mb-2 text-sm text-gray-600">
+            on
+            <span class="font-medium">{{
+              selectedDate || "Select a date"
+            }}</span>
           </h2>
 
-          <div v-if="dayEvents.length === 0" class="text-gray-700">
+          <div v-if="dayEvents.length === 0" class="text-gray-500 text-sm">
             No events scheduled
           </div>
 
@@ -601,23 +873,27 @@ function formatDate(d) {
             <div
               v-for="(event, i) in dayEvents"
               :key="i"
-              @click="openTrainingModal(event)"
+              @click="openModal(event)"
               class="bg-gray-100 p-2 rounded-lg shadow-sm cursor-pointer hover:bg-gray-200 flex justify-between items-center"
             >
               <div>
                 <h3 class="font-semibold text-sm">{{ event.title }}</h3>
-                <p class="text-xs text-gray-600">{{ event.organizationName }}</p>
-                <p class="text-xs text-gray-500">
-                  {{ formatDateTime(event.schedule) }}
+                <p class="text-xs text-gray-600"></p>
+                <p class="text-xs text-gray-600">
+                  {{ event.organization }}
                 </p>
               </div>
+              <!-- ✅ Event Type Badge -->
               <span
-                class="text-[10px] text-white px-2 py-1 rounded-full bg-blue-500"
+                class="text-[10px] text-white px-2 py-1 rounded-full"
+                :class="
+                  event.type === 'training' ? 'bg-blue-500' : 'bg-green-500'
+                "
               >
-                Registered
+                {{ event.type === "training" ? "Training" : "Career" }}
               </span>
             </div>
-</div>
+          </div>
         </div>
       </div>
     </aside>
@@ -645,8 +921,255 @@ function formatDate(d) {
       </svg>
     </button>
 
-    <!-- ✅ Training Details Modal -->
+    <!--Training List Modal-->
+    <dialog v-if="selectedTrainingForList" open class="modal sm:modal-middle">
+      <div class="modal-box max-w-3xl relative font-poppins">
+        <!-- Close button -->
+        <button
+          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
+          @click="closeTrainingListModal"
+        >
+          ✕
+        </button>
+
+        <!-- Safety check wrapper -->
+        <template v-if="selectedTrainingForList">
+          <!-- Training Details -->
+          <h2 class="text-xl font-bold mb-2">
+            {{ selectedTrainingForList.title || "Untitled Training" }}
+          </h2>
+          <p class="text-sm text-gray-600 mb-2">
+            Organization:
+            {{
+              selectedTrainingForList.organization?.name ||
+              selectedTrainingForList.organizationName ||
+              "Unknown Organization"
+            }}
+          </p>
+
+          <!-- Buttons -->
+          <div
+            class="my-4 flex justify-end gap-2"
+            v-if="selectedTrainingForList.trainingID"
+          >
+            <!-- Bookmark -->
+            <button
+              class="btn btn-outline btn-sm"
+              @click="toggleBookmark(selectedTrainingForList.trainingID)"
+            >
+              {{
+                bookmarkedPosts?.[selectedTrainingForList.trainingID]
+                  ? "Bookmarked"
+                  : "Bookmark"
+              }}
+            </button>
+
+            <!-- Register / Unregister -->
+            <button
+              class="btn btn-sm text-white"
+              :class="
+                registeredPosts[selectedTrainingForList.trainingID]
+                  ? 'bg-gray-500'
+                  : 'bg-customButton'
+              "
+              @click.stop="toggleRegister(selectedTrainingForList)"
+            >
+              {{
+                registeredPosts[selectedTrainingForList.trainingID]
+                  ? "Unregister"
+                  : "Register"
+              }}
+            </button>
+          </div>
+
+          <!-- Basic Info -->
+          <p><strong>Mode:</strong> {{ selectedTrainingForList.mode }}</p>
+          <p>
+            <strong>Description:</strong>
+            {{ selectedTrainingForList.description }}
+          </p>
+
+          <!-- Conditional Display -->
+          <p v-if="selectedTrainingForList.Mode?.toLowerCase() === 'online'">
+            <strong>Link:</strong>
+            <a
+              :href="selectedTrainingForList.trainingLink"
+              target="_blank"
+              class="text-blue-500 underline"
+            >
+              {{ selectedTrainingForList.trainingLink }}
+            </a>
+          </p>
+
+          <p
+            v-else-if="
+              selectedTrainingForList.Mode?.toLowerCase() === 'on-site'
+            "
+          >
+            <strong>Location:</strong> {{ selectedTrainingForList.location }}
+          </p>
+
+          <p>
+            <strong>Schedule:</strong>
+            {{ formatDate(selectedTrainingForList.schedule) }}
+            <span v-if="selectedTrainingForList.schedule">
+              at {{ formatTime(selectedTrainingForList.schedule) }}
+            </span>
+          </p>
+
+          <!-- QR code if registered -->
+          <div
+            v-if="myRegistrations.has(selectedTrainingForList.trainingID)"
+            class="mt-4 text-center"
+          >
+            <div
+              v-if="selectedTrainingForList.attendance_key"
+              class="text-center flex flex-col items-center justify-center"
+            >
+              <qrcode-vue
+                :value="selectedTrainingForList.attendance_key"
+                :size="120"
+              />
+              <p class="text-sm text-gray-600 mt-1">
+                Expires in:
+                {{
+                  qrCountdowns[selectedTrainingForList.trainingID] ||
+                  formatDateTime(selectedTrainingForList.end_time)
+                }}
+              </p>
+            </div>
+            <div v-else>
+              <p class="text-sm text-gray-500">
+                QR code not yet generated or expired.
+              </p>
+            </div>
+          </div>
+        </template>
+      </div>
+    </dialog>
+
+    <!-- 🟦 Training Modal -->
     <dialog v-if="selectedTraining" open class="modal sm:modal-middle">
+      <div class="modal-box max-w-3xl relative font-poppins">
+        <!-- Close button -->
+        <button
+          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
+          @click="closeTrainingModal"
+        >
+          ✕
+        </button>
+
+        <!-- Safety check wrapper -->
+        <template v-if="selectedTraining">
+          <!-- Training Details -->
+          <h2 class="text-xl font-bold mb-2">
+            {{ selectedTraining.title || "Untitled Training" }}
+          </h2>
+          <p class="text-sm text-gray-600 mb-2">
+            Organization:
+            {{ selectedTraining.organization || "Unknown Organization" }}
+          </p>
+
+          <!-- Buttons -->
+          <div
+            class="my-4 flex justify-end gap-2"
+            v-if="selectedTraining.trainingID"
+          >
+            <!-- Bookmark -->
+            <button
+              class="btn btn-outline btn-sm"
+              @click="toggleBookmark(selectedTraining)"
+            >
+              {{
+                bookmarkedPosts?.[selectedTraining.trainingID]
+                  ? "Bookmarked"
+                  : "Bookmark"
+              }}
+            </button>
+
+            <!-- Register / Unregister -->
+            <button
+              class="btn btn-sm text-white"
+              :class="
+                registeredPosts[selectedTraining.trainingID]
+                  ? 'bg-gray-500'
+                  : 'bg-customButton'
+              "
+              @click.stop="toggleRegister(selectedTraining)"
+            >
+              {{
+                registeredPosts[selectedTraining.trainingID]
+                  ? "Unregister"
+                  : "Register"
+              }}
+            </button>
+          </div>
+
+          <!-- Basic Info -->
+          <p><strong>Mode:</strong> {{ selectedTraining.Mode || "N/A" }}</p>
+          <p>
+            <strong>Description:</strong> {{ selectedTraining.description }}
+          </p>
+
+          <!-- Conditional Display -->
+          <p v-if="selectedTraining.Mode?.toLowerCase() === 'online'">
+            <strong>Link:</strong>
+            <a
+              :href="selectedTraining.trainingLink"
+              target="_blank"
+              class="text-blue-500 underline"
+            >
+              {{ selectedTraining.trainingLink }}
+            </a>
+          </p>
+
+          <p v-else-if="selectedTraining.Mode?.toLowerCase() === 'on-site'">
+            <strong>Location:</strong> {{ selectedTraining.location }}
+          </p>
+
+          <p>
+            <strong>Schedule:</strong>
+            {{ formatDate(selectedTraining.date) }} at
+            {{ selectedTraining.time }}
+          </p>
+          <!-- QR code if registered -->
+          <div
+            v-if="myRegistrations.has(selectedTraining.trainingID)"
+            class="mt-4 text-center"
+          >
+            <div
+              v-if="selectedTraining.attendance_key"
+              class="text-center flex flex-col items-center justify-center"
+            >
+              <qrcode-vue
+                :value="selectedTraining.attendance_key"
+                :size="120"
+              />
+              <p class="text-sm text-gray-600 mt-1">
+                Expires in:
+                {{
+                  qrCountdowns[selectedTraining.trainingID] ||
+                  formatDateTime(selectedTraining.attendance_expires_at)
+                }}
+              </p>
+            </div>
+            <div v-else>
+              <p class="text-sm text-gray-500">
+                QR code not yet generated or expired.
+              </p>
+            </div>
+          </div>
+        </template>
+      </div>
+    </dialog>
+
+    <!-- 🟩 Career Modal -->
+    <dialog
+      ref="careerDialog"
+      v-if="selectedPost"
+      open
+      class="modal sm:modal-middle"
+    >
       <div class="modal-box max-w-3xl relative font-poppins">
         <!-- Close button -->
         <button
@@ -656,73 +1179,185 @@ function formatDate(d) {
           ✕
         </button>
 
-        <!-- Training Info -->
-        <h2 class="text-xl font-bold mb-2">{{ selectedTraining.title }}</h2>
-        <p class="text-sm text-gray-600 mb-2">
-          Organization: {{ selectedTraining.organizationName }}
-        </p>
+        <!-- Safety wrapper -->
+        <template v-if="selectedPost">
+          <!-- Career Details -->
+          <h2 class="text-xl font-bold mb-2">
+            {{ selectedPost.position || "Untitled Position" }}
+          </h2>
+          <p class="text-sm text-gray-600 mb-2">
+            Organization:
+            {{ organizations?.[selectedPost.organizationID] || "Unknown" }}
+          </p>
 
-
-        <!-- Action Buttons -->
-        <div class="my-4 flex justify-end gap-2">
-          <!-- Bookmark -->
-          <button
-            class="btn btn-outline btn-sm"
-            @click="toggleBookmark(selectedTraining.trainingID)"
-          >
-            {{
-              isTrainingBookmarked(selectedTraining.trainingID)
-                ? "Bookmarked"
-                : "Bookmark"
-            }}
-          </button>
-
-          <!-- Register / Unregister -->
-          <!-- Register / Unregister -->
+          <!-- Buttons -->
+          <div class="my-4 flex justify-end gap-2" v-if="selectedPost.careerID">
+            <!-- Bookmark -->
             <button
-              class="btn btn-sm text-white"
-              :class="
-                myRegistrations.has(selectedTraining.trainingID)
-                  ? 'bg-gray-500'
-                  : 'bg-customButton'
-              "
-              @click="toggleRegistration(selectedTraining)"
+              class="btn btn-outline btn-sm"
+              @click="toggleBookmark(selectedPost)"
             >
               {{
-                myRegistrations.has(selectedTraining.trainingID)
-                  ? 'Unregister'
-                  : 'Register'
+                bookmarkedPosts?.[selectedPost.careerID]
+                  ? "Bookmarked"
+                  : "Bookmark"
               }}
             </button>
-        </div>
 
-        <!-- Training Details -->
-        <p>
-          <strong>Mode:</strong> {{ selectedTraining.mode || "Not specified" }}
-        </p>
-        <p><strong>Description:</strong> {{ selectedTraining.description }}</p>
-        <p>
-          <strong>Schedule:</strong>
-          {{ formatDateTime(selectedTraining.schedule) }}
-        </p>
-        <p><strong>Location:</strong> {{ selectedTraining.location }}</p>
+            <!-- Apply / Cancel -->
+            <button
+              v-if="!appliedPosts?.[selectedPost.careerID]"
+              class="btn btn-sm bg-customButton text-white"
+              @click="openApplyModal(selectedPost)"
+            >
+              Apply
+            </button>
 
-                <!-- QR Code for registered trainings -->
-        <div v-if="myRegistrations.has(selectedTraining.trainingID)">
-          <div v-if="selectedTraining.attendance_key">
-            <qrcode-vue :value="selectedTraining.attendance_key" :size="150" class="my-4" />
-            <p class="text-sm text-gray-600 mt-1">
-              Expires in: {{ qrCountdown[selectedTraining.trainingID] || formatDateTime(selectedTraining.end_time) }}
-            </p>
+            <button
+              v-else
+              class="btn btn-sm bg-gray-500 text-white"
+              @click="cancelApplication(selectedPost)"
+            >
+              Cancel
+            </button>
           </div>
-          <div v-else>
-            <p class="text-sm text-gray-500 mt-4">QR code not yet generated or expired.</p>
+
+          <!-- Career Info -->
+          <p>
+            <strong>Details:</strong>
+            {{ selectedCareer?.detailsAndInstructions || "N/A" }}
+          </p>
+          <p>
+            <strong>Qualifications:</strong>
+            {{ selectedCareer?.qualifications || "N/A" }}
+          </p>
+          <p>
+            <strong>Requirements:</strong>
+            {{ selectedCareer?.requirements || "N/A" }}
+          </p>
+          <p>
+            <strong>Application Address:</strong>
+            {{ selectedCareer?.applicationLetterAddress || "N/A" }}
+          </p>
+          <p>
+            <strong>Deadline:</strong>
+            {{
+              selectedCareer?.deadlineOfSubmission
+                ? formatDate(selectedCareer.deadlineOfSubmission)
+                : "No deadline set"
+            }}
+          </p>
+
+          <!-- Interview Schedule -->
+          <p v-if="selectedCareer?.date && selectedCareer?.time">
+            <strong>Interview Schedule:</strong>
+            {{ formatDate(selectedCareer.date) }} at
+            {{ formatTime(selectedCareer.time) }}
+          </p>
+
+          <!-- Interview Mode -->
+          <p v-if="selectedCareer?.mode">
+            <strong>Mode:</strong> {{ selectedCareer.mode }}
+          </p>
+
+          <!-- Conditional display based on mode -->
+          <p
+            v-if="
+              selectedCareer?.mode?.toLowerCase() === 'online' &&
+              selectedCareer?.interviewLink
+            "
+          >
+            <strong>Link:</strong>
+            <a
+              :href="selectedCareer.interviewLink"
+              target="_blank"
+              class="text-blue-500 underline"
+            >
+              {{ selectedCareer.interviewLink }}
+            </a>
+          </p>
+
+          <p
+            v-if="
+              selectedCareer?.mode?.toLowerCase() === 'on-site' &&
+              selectedCareer?.interviewLocation
+            "
+          >
+            <strong>Location:</strong> {{ selectedCareer.interviewLocation }}
+          </p>
+
+          <!-- Recommended Trainings -->
+          <div class="mt-6">
+            <h3 class="text-base font-semibold mb-3">Recommended Trainings</h3>
+            <div
+              class="flex overflow-x-auto space-x-3 pb-2 snap-x snap-mandatory"
+              style="scrollbar-width: thin"
+            >
+              <div
+                v-for="post in posts.filter((p) => p.type === 'training')"
+                :key="post.trainingID"
+                class="snap-start w-[180px] flex-shrink-0 p-3 bg-blue-gray rounded-lg cursor-pointer hover:bg-gray-200 transition shadow-sm"
+                @click.stop="openModal(post)"
+              >
+                <h4 class="font-semibold text-sm leading-snug mb-1">
+                  {{ post.title }}
+                </h4>
+                <p class="text-[11px] text-gray-600 truncate">
+                  {{ organizations?.[post.organizationID] || "Unknown" }}
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
+        </template>
       </div>
-      
     </dialog>
 
+    <!-- Apply Modal -->
+    <dialog v-if="applyModalOpen" open class="modal sm:modal-middle">
+      <div class="modal-box max-w-lg relative font-poppins">
+        <button
+          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
+          @click="closeApplyModal"
+        >
+          ✕
+        </button>
+
+        <h2 class="text-xl font-bold mb-4">
+          Apply for {{ selectedPost?.position }}
+        </h2>
+
+        <form @submit.prevent="submitApplication">
+          <div class="mb-4">
+            <label class="block text-sm font-medium mb-1"
+              >Upload PDF Requirements</label
+            >
+            <input
+              type="file"
+              accept="application/pdf"
+              @change="handleFileUpload"
+              required
+              class="file-input file-input-bordered w-full"
+            />
+          </div>
+
+          <div class="flex justify-end gap-2">
+            <button
+              type="button"
+              class="btn btn-outline btn-sm"
+              @click="closeApplyModal"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="btn bg-customButton hover:bg-dark-slate text-white btn-sm"
+            >
+              Submit
+            </button>
+          </div>
+        </form>
+      </div>
+    </dialog>
     <!-- Toast Notifications -->
     <div class="toast toast-end toast-top z-50">
       <div

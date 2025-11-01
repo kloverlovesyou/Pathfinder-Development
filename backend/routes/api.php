@@ -21,7 +21,7 @@ use App\Http\Controllers\TagController;
 use App\Http\Controllers\CareerRecommendationController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\MyActivityController;
-
+use App\Http\Controllers\EventController;
 
 // ----------------------
 // Public routes
@@ -140,5 +140,5 @@ Route::get('/user', function (Request $request) {
 });
 
 Route::get('/my-activities/{applicantID}', [MyActivityController::class, 'getMyActivities']);
-
+Route::get('/calendar/{applicantID}', [EventController::class, 'getUserEvents']);
 
