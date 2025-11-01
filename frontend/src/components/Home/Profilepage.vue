@@ -52,6 +52,7 @@ async function fetchMyActivities() {
     const res = await axios.get(`http://127.0.0.1:8000/api/my-activities/${user.applicantID}`);
     activities.value = res.data.activities || [];
 
+    console.log("Raw activities data:", activities.value);
     // ✅ Count by status
     upcomingCount.value = activities.value.filter(a =>
       ["upcoming", "registered"].includes(a.status?.toLowerCase())
@@ -101,14 +102,25 @@ function isTrainingPassed(activity) {
   return now >= scheduleDate;
 }
 
+
+function parseDate(dateStr) {
+  if (!dateStr) return null;
+  return new Date(dateStr.replace(' ', 'T')); // ensure proper Date parsing
+}
+
 function isAttendanceEnabled(activity) {
-  if (!activity.schedule) return false;
+  if (!activity.schedule || !activity.end_time) return false;
 
   const now = new Date();
-  const start = new Date(activity.schedule);
-  const end = activity.end_time ? new Date(activity.end_time) : new Date(start.getTime() + 2*60*60*1000); // default 2h
+  const start = parseDate(activity.schedule);
+  const end = parseDate(activity.end_time);
 
-  // Enabled only between start and end
+  console.log("Now:", now);
+  console.log("Start:", start);
+  console.log("End from data:", activity.end_time);
+  console.log("Final end time used:", end);
+  console.log("Enabled:", now >= start && now <= end);
+
   return now >= start && now <= end;
 }
 
@@ -356,12 +368,11 @@ onMounted(fetchMyActivities);
       {{ selectedActivity.organizationName }}
     </p>
 
-    <!-- ✅ TRAINING DETAILS -->
+    <!-- TRAINING DETAILS -->
     <div v-if="selectedActivity.type === 'training'">
       <p><strong>Mode:</strong> {{ selectedActivity.mode }}</p>
       <p><strong>Schedule:</strong> {{ formatDateTime(selectedActivity.schedule) }}</p>
       <p><strong>Location:</strong> {{ selectedActivity.location }}</p>
-
       <p v-if="selectedActivity.trainingLink">
         <strong>Training Link:</strong>
         <a
@@ -372,60 +383,36 @@ onMounted(fetchMyActivities);
           {{ selectedActivity.trainingLink }}
         </a>
       </p>
-
       <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
 
-      <p v-if="selectedActivity.certificate">
-        <strong>Certificate:</strong>
-        <a
-          :href="selectedActivity.certificate"
-          target="_blank"
-          class="text-blue-600 underline"
-        >
-          View Certificate
-        </a>
-      </p>
-
-      <!-- ✅ QR Code Section -->
+      <!-- QR Code Section -->
       <div v-if="selectedActivity.attendance_key" class="mt-6 text-center border-t pt-4">
         <p class="text-sm font-semibold mb-2">Scan this QR Code for Attendance</p>
 
         <QrcodeVue
-          :value="`https://your-domain.com/attendance?trainingID=${selectedActivity.trainingID}&key=${selectedActivity.attendance_key}`"
+          :value="`http://127.0.0.1:8000/attendance?trainingID=${selectedActivity.trainingID}&key=${selectedActivity.attendance_key}`"
           :size="200"
           level="H"
           class="mx-auto"
         />
 
         <p class="text-gray-500 text-xs mt-2">
-          Expires at: {{ formatDateTime(selectedActivity.attendance_expires_at) }}
+          Expires at: {{ formatDateTime(selectedActivity.end_time) }}
         </p>
       </div>
 
-      <!-- ❌ No QR yet -->
+      <!-- No QR yet -->
       <div v-else class="mt-6 text-center text-gray-400 border-t pt-4">
         <p>QR Code not available yet. It will appear once the training starts.</p>
       </div>
     </div>
 
-    <!-- ✅ CAREER DETAILS -->
+    <!-- CAREER DETAILS -->
     <div v-else-if="selectedActivity.type === 'career'">
-      <p>
-        <strong>Details:</strong>
-        {{ selectedActivity.detailsAndInstructions }}
-      </p>
-      <p>
-        <strong>Qualifications:</strong>
-        {{ selectedActivity.qualifications }}
-      </p>
-      <p>
-        <strong>Requirements:</strong>
-        {{ selectedActivity.requirements }}
-      </p>
-      <p>
-        <strong>Deadline:</strong>
-        {{ formatDateTime(selectedActivity.deadlineOfSubmission)}}
-      </p>
+      <p><strong>Details:</strong> {{ selectedActivity.detailsAndInstructions }}</p>
+      <p><strong>Qualifications:</strong> {{ selectedActivity.qualifications }}</p>
+      <p><strong>Requirements:</strong> {{ selectedActivity.requirements }}</p>
+      <p><strong>Deadline:</strong> {{ formatDateTime(selectedActivity.deadlineOfSubmission) }}</p>
       <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
     </div>
   </div>

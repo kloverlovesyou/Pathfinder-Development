@@ -19,6 +19,7 @@ public function getMyActivities($applicantID)
             'training.description',
             'training.mode',
             'training.schedule',
+            'training.end_time',
             'training.location',
             'training.trainingLink',
             'registration.registrationStatus as status',
