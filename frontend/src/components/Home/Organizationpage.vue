@@ -1,23 +1,43 @@
+<style scoped>
+
+</style>
 <script setup>
 import { ref, onMounted, nextTick } from "vue";
 import axios from "axios";
 
 // Modal & sidebar
 const isModalOpen = ref(false);
-const selectedOrg = ref(null);
+const selectedOrg = ref({});
 const isSidebarOpen = ref(false);
+const orgModal = ref(null);
 
 // Organizations
 const organizations = ref([]);
 
-// Modal functions
 function openModal(org) {
+  console.log("openModal called with org:", org); // ✅ Check org data
   selectedOrg.value = org;
-  isModalOpen.value = true;
+
+  nextTick(() => {
+    console.log("orgModal ref:", orgModal.value); // ✅ Check if dialog exists
+    if (orgModal.value) {
+      try {
+        orgModal.value.showModal();
+        console.log("Modal opened"); // ✅ Confirm modal opens
+      } catch (err) {
+        console.error("Failed to open modal:", err);
+      }
+    } else {
+      console.warn("orgModal is null!"); // ⚠️ dialog not found
+    }
+  });
 }
+
 function closeModal() {
-  isModalOpen.value = false;
-  selectedOrg.value = null;
+  if (orgModal.value && orgModal.value.open) {
+    orgModal.value.close();
+  }
+  selectedOrg.value = {};
 }
 
 // Calendar + events
@@ -117,14 +137,26 @@ onMounted(async () => {
   try {
     const res = await axios.get("http://127.0.0.1:8000/api/organization");
     // Map backend fields to frontend template
-    organizations.value = res.data.map(org => ({
+ organizations.value = res.data.map(org => ({
       id: org.organizationID,
       name: org.name,
       location: org.location || "N/A",
       website: org.websiteURL || "#",
-      logo: org.logo || null,          // optional
-      careers: org.careers || [],
-      trainings: org.trainings || []
+      logo: org.logo || null,
+      careers: (org.careers || []).map(c => ({
+        id: c.careerID,                 // <-- map careerID to id
+        position: c.position,
+        deadlineOfSubmission: c.deadlineOfSubmission,
+        // other fields if needed
+      })),
+      trainings: (org.trainings || []).map(t => ({
+        id: t.trainingID,               // <-- map trainingID to id
+        title: t.title,
+        description: t.description,
+        schedule: t.schedule,
+        end_time: t.end_time,
+        // other fields if needed
+      }))
     }));
      buildEvents();
   } catch (error) {
@@ -132,7 +164,7 @@ onMounted(async () => {
   }
 
   await nextTick();
-
+  console.log("orgModal after onMounted + nextTick:", orgModal.value);
   // Calendar events setup (if you have events)
   const calendar = calendarRef.value;
   const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
@@ -319,84 +351,66 @@ onMounted(async () => {
     </button>
 
     <!-- Organization Details Modal -->
-    <dialog v-if="isModalOpen" open class="modal sm:modal-middle">
-      <div class="modal-box max-w-2xl relative font-poppins">
-        <!-- Close button -->
-        <button
-          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
-          @click="closeModal"
-        >
-          ✕
-        </button>
+<dialog ref="orgModal" class="modal sm:modal-middle">
+  <div class="modal-box max-w-2xl relative font-poppins">
+    <!-- Close button -->
+    <button @click="closeModal" class="btn btn-sm btn-circle absolute right-2 top-2">✕</button>
 
-        <!-- Organization Info -->
-        <div class="flex items-center gap-3 mb-3">
-          <img
-            v-if="selectedOrg.logo"
-            :src="selectedOrg.logo"
-            alt="Organization Logo"
-            class="w-14 h-14 rounded-full object-cover"
-          />
-          <div>
-            <h2 class="text-xl font-bold">{{ selectedOrg.name }}</h2>
-            <p class="text-sm text-gray-600">{{ selectedOrg.location }}</p>
-          </div>
-        </div>
+    <!-- Organization Info -->
+    <div class="flex items-center gap-3 mb-3">
+      <img v-if="selectedOrg.logo" :src="selectedOrg.logo" class="w-14 h-14 rounded-full object-cover" />
+      <div>
+        <h2 class="text-xl font-bold">{{ selectedOrg.name }}</h2>
+        <p class="text-sm text-gray-600">{{ selectedOrg.location }}</p>
+      </div>
+    </div>
 
-        <!-- Website -->
-        <p class="text-sm mb-5">
-          <a
-            :href="selectedOrg.website"
-            target="_blank"
-            class="text-blue-600 underline break-all"
-          >
-            {{ selectedOrg.website }}
-          </a>
-        </p>
-        <!-- ✅ Career Posts -->
-        <div class="mt-4">
-          <h3 class="text-base font-semibold mb-3">Career Posts</h3>
-          <div
-            class="flex overflow-x-auto space-x-3 pb-2 snap-x snap-mandatory"
-            style="scrollbar-width: thin"
-          >
-            <div
-              v-for="career in selectedOrg.careers"
-              :key="career.id"
-              class="snap-start w-[180px] flex-shrink-0 p-3 bg-blue-gray rounded-lg cursor-pointer hover:bg-gray-200 transition shadow-sm"
-            >
-              <h4 class="font-semibold text-sm leading-snug mb-1">
-                {{ career.position }}
-              </h4>
-              <p class="text-[11px] text-gray-600 truncate">
-                Deadline: {{ formatDateTime(career.deadlineOfSubmission) }}
-              </p>
-            </div>
-          </div>
-        </div>
+    <!-- Website -->
+    <p class="text-sm mb-5">
+      <a :href="selectedOrg.website" target="_blank" class="text-blue-600 underline">
+        {{ selectedOrg.website }}
+      </a>
+    </p>
 
-        <!-- ✅ Training Posts -->
-        <div class="mt-6">
-          <h3 class="text-base font-semibold mb-3">Training Posts</h3>
-          <div
-            class="flex overflow-x-auto space-x-3 pb-2 snap-x snap-mandatory"
-            style="scrollbar-width: thin"
-          >
-            <div
-              v-for="training in selectedOrg.trainings"
-              :key="training.id"
-              class="snap-start w-[180px] flex-shrink-0 p-3 bg-blue-gray rounded-lg cursor-pointer hover:bg-gray-200 transition shadow-sm"
-            >
-              <h4 class="font-semibold text-sm leading-snug mb-1">
-                {{ training.title }}
-              </h4>
-              <p class="text-[11px] text-gray-600 truncate">
-                Schedule: {{ formatSchedule(training.schedule) }}
-              </p>
-            </div>
-          </div>
+    <!-- Career Posts -->
+    <div class="mt-4">
+      <h3 class="text-base font-semibold mb-3">Career Posts</h3>
+      <div class="flex overflow-x-auto space-x-3 pb-2 snap-x">
+        <div v-for="career in selectedOrg.careers" :key="career.id" class="snap-start w-[180px] p-3 bg-gray-100 rounded-lg shadow-sm">
+          <h4 class="font-semibold text-sm">{{ career.position }}</h4>
+          <p class="text-[11px] text-gray-600">
+            Deadline: {{ formatDateTime(career.deadlineOfSubmission) }}
+          </p>
         </div>
       </div>
-    </dialog>
+    </div>
+
+    <!-- Training Posts -->
+    <div class="mt-6">
+      <h3 class="text-base font-semibold mb-3">Training Posts</h3>
+      <div class="flex overflow-x-auto space-x-3 pb-2 snap-x">
+        <div v-for="training in selectedOrg.trainings" :key="training.id" class="snap-start w-[180px] p-3 bg-gray-100 rounded-lg shadow-sm">
+          <h4 class="font-semibold text-sm">{{ training.title }}</h4>
+          <p class="text-[11px] text-gray-600">
+            Schedule: {{ formatSchedule(training.schedule) }}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</dialog>
   </main>
 </template>
+
+<style scoped>
+.modal {
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.modal::backdrop {
+  background: rgba(0, 0, 0, 0.4);
+}
+</style>
