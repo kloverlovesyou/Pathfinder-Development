@@ -1055,7 +1055,7 @@ function formatTime(datetime) {
     </dialog>
 
     <!-- 🟦 Training Modal -->
-    <dialog v-if="selectedTraining" open class="modal sm:modal-middle">
+    <dialog ref="trainingDialog" v-if="selectedTraining" open class="modal sm:modal-middle">
       <div class="modal-box max-w-3xl relative font-poppins">
         <!-- Close button -->
         <button
@@ -1140,7 +1140,7 @@ function formatTime(datetime) {
           </p>
           <!-- QR code if registered -->
           <div
-            v-if="myRegistrations.has(selectedTraining.trainingID)"
+            v-if="myRegistrations.has(selectedTraining)"
             class="mt-4 text-center"
           >
             <div
