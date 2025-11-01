@@ -126,6 +126,11 @@ function isAttendanceEnabled(activity) {
 
 // ✅ Determine if training has ended
 function isTrainingEnded(activity) {
+
+  console.log("Submitting attendance:", {
+  trainingID: activity.trainingID,
+  key: activity.qrInput.trim(),
+});
   if (!activity.end_time) return false; // If no end_time, assume not ended
   const now = new Date();
   const endTime = new Date(activity.end_time);
@@ -145,17 +150,41 @@ function isTrainingActive(activity) {
 
   return now >= start && now <= end;
 }
-// ✅ Attendance submit (optional)
+// ✅ Attendance submit (fixed)
 async function submitAttendance(activity) {
+  console.log("Activity object:", activity); // <-- debugging
+
+  const token = localStorage.getItem("token");
+  if (!token) {
+    alert("Please log in to submit attendance.");
+    return;
+  }
+
+  if (!activity.qrInput || activity.qrInput.trim() === "") {
+    alert("Please enter the attendance code.");
+    return;
+  }
+
   try {
-    await axios.post("http://127.0.0.1:8000/api/attendance", {
-      registrationID: activity.RegistrationID,
-      qrCode: activity.qrInput,
+    const res = await axios.get("http://127.0.0.1:8000/api/attendance/checkin", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      params: {
+        trainingID: activity.trainingID, // ✅ use registrationID instead
+        key: activity.qrInput.trim(),
+      },
     });
-    alert("Attendance recorded successfully!");
+
+    alert(res.data.message || "Attendance recorded successfully!");
+    activity.qrInput = "";
     await fetchMyActivities();
   } catch (error) {
-    console.error("Error submitting attendance:", error);
+    console.error("Attendance submission error:", error.response?.data || error);
+    alert(
+      error.response?.data?.message ||
+        "Failed to submit attendance. Please check the code."
+    );
   }
 }
 
@@ -754,7 +783,12 @@ onMounted(fetchMyActivities);
                       {{ selectedActivity.trainingLink }}
                     </a>
                   </p>
-                  <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
+                  <p   :class="{
+                      'text-green-500 font-semibold': activity.registrationStatus === 'Attended',
+                      'text-gray-500': activity.registrationStatus === 'Registered',
+                    }"><strong>Status:</strong> 
+                    {{ selectedActivity.status }}
+                  </p>
                   
                   <p v-if="selectedActivity.certificate">
                     <strong>Certificate:</strong>

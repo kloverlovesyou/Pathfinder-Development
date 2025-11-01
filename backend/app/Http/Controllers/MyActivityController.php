@@ -15,6 +15,8 @@ public function getMyActivities($applicantID)
         ->join('organization', 'training.organizationID', '=', 'organization.organizationID')
         ->select(
             'registration.registrationID',
+            'registration.trainingID',
+            'training.trainingID',
             'training.title',
             'training.description',
             'training.mode',

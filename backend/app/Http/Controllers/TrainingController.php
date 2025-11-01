@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\DB;
 
 class TrainingController extends Controller
 {
@@ -37,9 +38,15 @@ class TrainingController extends Controller
     /**
      * User attendance check-in via QR code
      */
-   public function attendanceCheckin(Request $request)
+    public function attendanceCheckin(Request $request)
     {
-        $training = Training::where('trainingID', $request->trainingID)
+        $request->validate([
+            'trainingID' => 'required|integer',
+            'key' => 'required|string',
+        ]);
+
+        $training = DB::table('training')
+            ->where('trainingID', $request->trainingID)
             ->where('attendance_key', $request->key)
             ->first();
 
@@ -47,27 +54,33 @@ class TrainingController extends Controller
             return response()->json(['message' => 'Invalid or Fake QR Code'], 400);
         }
 
-        // Check if QR expired (training ended)
         if (now()->greaterThanOrEqualTo($training->end_time)) {
             return response()->json(['message' => 'QR Code Expired'], 400);
         }
 
-        // Record attendance if user is logged in
-        if ($request->user()) {
-            Attendance::firstOrCreate([
-                'user_id' => $request->user()->id,
-                'trainingID' => $training->trainingID,
-            ], [
-                'time_in' => now(),
-                'status' => 'present',
-            ]);
-
-            return response()->json(['message' => '✅ Attendance Recorded']);
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'QR Valid — Please Login to Record Attendance'], 401);
         }
 
-        return response()->json(['message' => 'QR Valid — Please Login to Record Attendance']);
-    }
+        // ✅ Directly use applicantID from logged-in user
+        $applicantID = $user->applicantID;
 
+        $updated = DB::table('registration')
+            ->where('applicantID', $applicantID)
+            ->where('trainingID', $training->trainingID)
+            ->update([
+                'checked_in_at' => now(),
+                'registrationStatus' => 'Attended',
+                'certTrackingID' => $request->key,
+            ]);
+
+        if ($updated) {
+            return response()->json(['message' => '✅ Attendance Recorded Successfully']);
+        } else {
+            return response()->json(['message' => '⚠️ No registration record found for this user'], 404);
+        }
+    }
     /**
      * Manually generate QR (optional)
      */
