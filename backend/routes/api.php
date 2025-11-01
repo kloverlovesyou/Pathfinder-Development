@@ -2,26 +2,27 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\ApplicantController;
-use App\Http\Controllers\OrganizationController;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\ResumeController;
-use App\Http\Controllers\ApplicationController;
-use App\Http\Controllers\RegistrationController;
-use App\Http\Controllers\ProfessionalExperienceController;
-use App\Http\Controllers\EducationController;
-use App\Http\Controllers\SkillController;
-use App\Http\Controllers\TrainingController;
-use App\Http\Controllers\CareerController;
-use App\Http\Controllers\TrainingBookmarkController;
-use App\Http\Controllers\CertificateController;
-use App\Http\Controllers\CareerBookmarkController;
-use App\Http\Controllers\TagController;
-use App\Http\Controllers\CareerRecommendationController;
-use App\Http\Controllers\SearchController;
-use App\Http\Controllers\MyActivityController;
-use App\Http\Controllers\EventController;
+use App\Http\Controllers\{
+    ApplicantController,
+    OrganizationController,
+    AuthController,
+    ResumeController,
+    ApplicationController,
+    RegistrationController,
+    ProfessionalExperienceController,
+    EducationController,
+    SkillController,
+    TrainingController,
+    CareerController,
+    TrainingBookmarkController,
+    CertificateController,
+    CareerBookmarkController,
+    TagController,
+    CareerRecommendationController,
+    SearchController,
+    MyActivityController,
+    EventController
+};
 
 // ----------------------
 // Public routes
@@ -29,26 +30,33 @@ use App\Http\Controllers\EventController;
 Route::get('/trainings', [TrainingController::class, 'index']);
 Route::get('/careers', [CareerController::class, 'index']);
 Route::get('/organization', [OrganizationController::class, 'index']);
-//tags
+
+// Tags
 Route::get('/tags', [TagController::class, 'index']);
 Route::post('/tags', [TagController::class, 'store']);
 
+// Careers with recommendations
 Route::get('/careers/{id}/details', [CareerRecommendationController::class, 'getCareerWithRecommendations']);
 
+// ----------------------
 // Auth routes
+// ----------------------
 Route::post('/a_register', [AuthController::class, 'a_register']);
 Route::post('/o_register', [AuthController::class, 'o_register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Applicant routes
+// ----------------------
+// Applicant & Organization
+// ----------------------
 Route::post('/applicants', [ApplicantController::class, 'a_register']);
 Route::post('/applicants/login', [ApplicantController::class, 'login']);
 
-// Organization routes
 Route::post('/organization', [OrganizationController::class, 'o_register']);
 Route::post('/organizations/login', [OrganizationController::class, 'login']);
 
+// ----------------------
 // Resume (authenticated)
+// ----------------------
 Route::middleware('auth.custom')->group(function () {
     Route::post('/resume', [ResumeController::class, 'store']);
     Route::get('/resume', [ResumeController::class, 'show']);
@@ -79,14 +87,12 @@ Route::middleware('auth.custom')->group(function () {
     Route::post('/applications', [ApplicationController::class, 'store']);
     Route::delete('/applications/{id}', [ApplicationController::class, 'destroy']);
 
-    
-
     // Certificates ✅
     Route::get('/certificates/{applicantID}', [CertificateController::class, 'index']);
     Route::post('/certificates', [CertificateController::class, 'store']);
     Route::delete('/certificates/{id}', [CertificateController::class, 'destroy']);
-    Route::patch('/certificates/{id}/toggle', [CertificateController::class, 'toggleSelection']); // ✅ toggle select
-    Route::get('/certificates/{applicantID}/selected', [CertificateController::class, 'selectedCertificates']); // ✅ get selected only
+    Route::patch('/certificates/{id}/toggle', [CertificateController::class, 'toggleSelection']);
+    Route::get('/certificates/{applicantID}/selected', [CertificateController::class, 'selectedCertificates']);
 
     // Experience
     Route::get('/experiences', [ProfessionalExperienceController::class, 'show']);
@@ -100,7 +106,7 @@ Route::middleware('auth.custom')->group(function () {
     Route::put('/education/{id}', [EducationController::class, 'update']);
     Route::delete('/education/{id}', [EducationController::class, 'destroy']);
 
-    // Bookmarks
+    // ✅ Bookmarks
     Route::get('/bookmarks', [TrainingBookmarkController::class, 'index']);
     Route::post('/bookmarks', [TrainingBookmarkController::class, 'store']);
     Route::delete('/bookmarks/{trainingID}', [TrainingBookmarkController::class, 'destroy']);
@@ -111,7 +117,7 @@ Route::middleware('auth.custom')->group(function () {
 });
 
 // ----------------------
-// Resume, skills, user info (can be refined further)
+// Skills, User Info, Search, etc.
 // ----------------------
 Route::get('/skills/{resumeID}', [SkillController::class, 'index']);
 Route::post('/skills', [SkillController::class, 'store']);
@@ -119,17 +125,10 @@ Route::delete('/skills/{id}', [SkillController::class, 'destroy']);
 
 Route::delete('/user', [ApplicantController::class, 'destroy']);
 
-Route::middleware('auth.custom')->group(function () {
-    Route::get('/bookmarks', [TrainingBookmarkController::class, 'index']);
-    Route::post('/bookmarks', [TrainingBookmarkController::class, 'store']);
-    Route::delete('/bookmarks/{trainingID}', [TrainingBookmarkController::class, 'destroy']);
-});
-
 Route::get('/search', [SearchController::class, 'search']);
 Route::get('/training/{id}', [SearchController::class, 'getTraining']);
 Route::get('/career/{id}', [SearchController::class, 'getCareer']);
 Route::get('/organization/{id}', [SearchController::class, 'getOrganization']);
-
 
 // Optional: Get authenticated user by token
 Route::get('/user', function (Request $request) {
@@ -139,6 +138,6 @@ Route::get('/user', function (Request $request) {
     return $user;
 });
 
+// Activities & Events
 Route::get('/my-activities/{applicantID}', [MyActivityController::class, 'getMyActivities']);
 Route::get('/calendar/{applicantID}', [EventController::class, 'getUserEvents']);
-
