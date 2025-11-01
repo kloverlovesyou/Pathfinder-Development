@@ -114,9 +114,12 @@ console.log("🔹 Mapped careers:", bookmarks.value.filter(b => b.career));
 const displayedTrainings = computed(() =>
   bookmarks.value
     .filter((b) => b.training)
-    .map((b) => ({ ...b.training, trainingID: b.trainingID }))
+    .map((b) => ({
+      ...b.training,
+      trainingID: b.trainingID,
+      registered: myRegistrations.value.has(b.trainingID),
+    }))
 );
-
 const displayedCareers = computed(() =>
   bookmarks.value
     .filter((b) => b.career)
@@ -179,7 +182,7 @@ const loadRegistrations = async () => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const { data } = await axios.get("http://127.0.0.1:8000/api/my-registrations", {
+    const { data } = await axios.get("http://127.0.0.1:8000/api/registrations", {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -333,32 +336,38 @@ const submitApplication = async () => {
   formData.append("file", uploadedFile.value);
   formData.append("careerID", selectedPost.value.careerID);
 
-  try {
-    const response = await axios.post(
-      "http://127.0.0.1:8000/api/applications",
-      formData,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
+    try {
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/applications",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      addToast("Application submitted!", "success");
+      appliedCareers.value.add(selectedPost.value.careerID); // ✅ mark applied
+      
+    // ✅ Safely add to appliedCareers
+    const careerId = Number(selectedPost.value?.careerID);
+    if (!isNaN(careerId)) appliedCareers.value.add(careerId);
+
+      closeApplyModal();
+      uploadedFile.value = null;
+
+    } catch (error) {
+      if (error.response?.status === 409) {
+        addToast("Already applied", "info");
+         const careerId = Number(selectedPost.value?.careerID);
+        appliedCareers.value.add(selectedPost.value.careerID); // ✅ mark applied anyway
+      } else {
+        console.error("❌ Application error:", error.response?.data || error);
+        addToast("Failed to submit application", "error");
       }
-    );
-
-    addToast("Application submitted!", "success");
-    appliedCareers.value.add(selectedPost.value.careerID); // ✅ mark applied
-    closeApplyModal();
-    uploadedFile.value = null;
-
-  } catch (error) {
-    if (error.response?.status === 409) {
-      addToast("Already applied", "info");
-      appliedCareers.value.add(selectedPost.value.careerID); // mark applied anyway
-    } else {
-      console.error("❌ Application error:", error.response?.data || error);
-      addToast("Failed to submit application", "error");
     }
-  }
 };
 
 const userApplications = ref(new Set());
@@ -373,12 +382,13 @@ const loadApplications = async () => {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    // Save IDs of already applied careers
-    appliedCareers.value = new Set(data.map(app => app.career_id));
+    appliedCareers.value = new Set(data.map(app => Number(app.career_id)));
+    console.log("✅ Applied careers:", appliedCareers.value);
   } catch (error) {
-    console.error("❌ Failed to load applications:", error.response?.data || error);
+    console.error(error);
   }
 };
+
 
 // ✅ Lifecycle
 onMounted(() => {
@@ -669,9 +679,11 @@ onMounted(() => {
                       </button>
                       <button
                         class="btn bg-customButton btn-sm text-white"
+                        :class="myRegistrations.has(selectedPost.trainingID) ? 'bg-red-500 text-white' : 'bg-customButton text-white'"
                         @click="registerTraining(selectedPost)"
+                        :disabled="myRegistrations.has(selectedPost.trainingID)"
                       >
-                        {{ myRegistrations.has(selectedPost.trainingID) ? "Unregister" : "Register" }}
+                        {{ myRegistrations.has(selectedPost.trainingID) ? "Registered" : "Register" }}
                       </button>
                     </div>
                     <p>
@@ -709,13 +721,13 @@ onMounted(() => {
                       >
                         {{ isBookmarked(selectedPost) ? "Bookmarked" : "Bookmark" }}
                       </button>
-                      <button
-                        class="btn btn-sm bg-customButton text-white"
-                        @click="openApplyModal(selectedPost)"
-                        :disabled="appliedCareers.has(selectedPost?.careerID)"
-                      >
-                       {{ appliedCareers.has(selectedPost?.careerID) ? "Applied" : "Apply" }}
-                      </button>
+                         <button
+                            class="btn btn-sm bg-customButton text-white"
+                            @click="openApplyModal(selectedPost)"
+                            :disabled="appliedCareers.has(Number(selectedPost?.careerID))"
+                          >
+                            {{ appliedCareers.has(Number(selectedPost?.careerID)) ? 'Applied' : 'Apply' }}
+                          </button>
                     </div>
                     <p>
                       <strong>Details:</strong>
@@ -742,7 +754,7 @@ onMounted(() => {
               </dialog>
 
               <!-- Apply Modal -->
-              <dialog v-if="applyModalOpen" open class="modal sm:modal-middle">
+              <dialog v-if="applyModalOpen && appliedCareers" open class="modal sm:modal-middle">
                 <div class="modal-box max-w-lg relative font-poppins">
                   <button
                     class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
@@ -777,12 +789,12 @@ onMounted(() => {
                         Cancel
                       </button>
                       <!-- ✅ Updated Apply Button -->
-                      <button
+                     <button
                         type="submit"
                         class="btn bg-customButton hover:bg-dark-slate text-white btn-sm"
-                        :disabled="appliedCareers.has(selectedPost?.careerID)"
+                        :disabled="appliedCareers.has(Number(selectedPost?.careerID))"
                       >
-                        {{ appliedCareers.has(selectedPost?.careerID) ? "Applied" : "Submit Application" }}
+                        {{ appliedCareers.has(Number(selectedPost?.careerID)) ? "Applied" : "Submit Application" }}
                       </button>
                     </div>
                   </form>
