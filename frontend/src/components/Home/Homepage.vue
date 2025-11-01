@@ -1,37 +1,77 @@
 <script setup>
-import { ref, onMounted, nextTick } from "vue";
+import { ref, onMounted, nextTick, reactive } from "vue";
 import axios from "axios";
 
-import "cally";
+const registeredPosts = reactive({}); // stores registered trainings
+
+async function fetchMyRegistrations() {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+  try {
+    const res = await axios.get("http://127.0.0.1:8000/api/registrations", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    // Fill registeredPosts (for quick lookup)
+    res.data.forEach((r) => {
+      registeredPosts[r.trainingID] = {
+        registrationID: r.registrationID,
+      };
+    });
+
+    console.log("✅ Registered trainings loaded:", registeredPosts);
+  } catch (err) {
+    console.error("❌ Failed to fetch registrations:", err);
+  }
+}
+
+onMounted(fetchMyRegistrations);
+
+// Toggle registration
+async function toggleRegister(training) {
+  const token = localStorage.getItem("token");
+  if (!token) return alert("Please log in first.");
+
+  // If already registered -> unregister
+  if (registeredPosts[training.trainingID]) {
+    try {
+      const registrationID =
+        registeredPosts[training.trainingID].registrationID;
+      await axios.delete(
+        `http://127.0.0.1:8000/api/registrations/${registrationID}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      delete registeredPosts[training.trainingID];
+      console.log(`🗑 Unregistered from ${training.title}`);
+    } catch (err) {
+      console.error("❌ Failed to unregister:", err);
+    }
+  }
+  // Else register
+  else {
+    try {
+      const res = await axios.post(
+        "http://127.0.0.1:8000/api/registrations",
+        { trainingID: training.trainingID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      registeredPosts[training.trainingID] = {
+        registrationID: res.data.registrationID,
+      };
+
+      console.log(`✅ Registered for ${training.title}`);
+    } catch (err) {
+      console.error("❌ Failed to register:", err);
+    }
+  }
+}
 
 const appliedPosts = ref({});
 const isSidebarOpen = ref(false);
 const bookmarkedPosts = ref({});
-const registeredPosts = ref({});
-const selectedCareerDetails = ref(null);
-const recommendedTrainings = ref([]);
-
-
-async function openCareerModal(career) {
-  try {
-    console.log('Career Object:', career);
-
-    const careerID = parseInt(career.careerID, 10);
-    console.log('Parsed Career ID:', careerID);
-
-    const res = await api.get(`http://127.0.0.1:8000/api/careers/${careerID}/details`);
-
-    //store main career + recommended trainings
-    selectedCareerDetails.value = res.data.career;
-    recommendedTrainings.value = res.data.recommended_trainings || [];
-    
-    showCareerPopup.value = true;
-  } catch (error) {
-    console.error("Error loading career details:", error);
-    alert("Failed to load career details.");
-  }
-}
-
 
 function cancelApplication(post) {
   const id = post.careerID;
@@ -43,10 +83,6 @@ function toggleBookmark(post) {
   bookmarkedPosts.value[id] = !bookmarkedPosts.value[id];
 }
 
-function toggleRegister(post) {
-  const id = post.trainingID || post.careerID;
-  registeredPosts.value[id] = !registeredPosts.value[id];
-}
 const selectedTraining = ref(null);
 
 function openTrainingModal(training) {
@@ -57,92 +93,14 @@ function closeTrainingModal() {
   selectedTraining.value = null;
 }
 
-const posts = ref([
-  // Mock data only for frontend
-  {
-    trainingID: 1,
-    title: "Professional development in emerging technologies",
-    schedule: "2025-11-24T13:30:00",
-    organizationID: 1,
-    location: "Main Hall",
-    trainingLink: "#",
-    mode: "Onsite",
-    description: "Learn about emerging technologies.",
-  },
-  {
-    trainingID: 2,
-    title: "Mind Over Machine: Navigating AI in Everyday Life",
-    schedule: "2025-09-20T19:30:00",
-    organizationID: 2,
-    location: "Auditorium",
-    trainingLink: "#",
-    mode: "Onsite",
-    description: "Explore how AI affects daily life.",
-  },
-  {
-    trainingID: 6,
-    title: "Mind Over Machine: Navigating AI in Everyday Life",
-    schedule: "2025-09-20T19:30:00",
-    organizationID: 2,
-    location: "Auditorium",
-    trainingLink: "#",
-    mode: "Onsite",
-    description: "Explore how AI affects daily life.",
-  },
-  {
-    trainingID: 7,
-    title: "Mind Over Machine: Navigating AI in Everyday Life",
-    schedule: "2025-09-20T19:30:00",
-    organizationID: 2,
-    location: "Auditorium",
-    trainingLink: "#",
-    mode: "Onsite",
-    description: "Explore how AI affects daily life.",
-  },
-  {
-    careerID: 3,
-    position: "Software Engineer",
-    deadlineOfSubmission: "2025-07-24",
-    organizationID: 1,
-    detailsAndInstructions: "Submit resume and portfolio.",
-    qualifications: "BS in Computer Science",
-    requirements: "Proficiency in Vue.js",
-    applicationLetterAddress: "hr@techcorp.com",
-  },
-  {
-    careerID: 4,
-    position: "Software Engineer",
-    deadlineOfSubmission: "2025-07-24",
-    organizationID: 1,
-    detailsAndInstructions: "Submit resume and portfolio.",
-    qualifications: "BS in Computer Science",
-    requirements: "Proficiency in Vue.js",
-    applicationLetterAddress: "hr@techcorp.com",
-  },
-  {
-    careerID: 5,
-    position: "Software Engineer",
-    deadlineOfSubmission: "2025-07-24",
-    organizationID: 1,
-    detailsAndInstructions: "Submit resume and portfolio.",
-    qualifications: "BS in Computer Science",
-    requirements: "Proficiency in Vue.js",
-    applicationLetterAddress: "hr@techcorp.com",
-  },
-]);
-
-// Mock org names
-const organizations = {
-  1: "Tech Corp",
-  2: "Future Academy",
-};
-
 // ✅ User’s registered/applied posts (just keep IDs)
 const registeredTrainings = ref([1]); // trainingID
 const appliedCareers = ref([2]); // careerID
 
 // Helpers
-const isTraining = (post) => !!post.trainingID;
+function isTraining(post) {
+  return post && (post.type === "training" || post.trainingID);
+}
 
 const isRegisteredOrApplied = (post) => {
   if (isTraining(post)) {
@@ -152,77 +110,25 @@ const isRegisteredOrApplied = (post) => {
   }
 };
 
-// Calendar + events
-const events = ref({});
-const selectedDate = ref("");
-const dayEvents = ref([]);
-const calendarRef = ref(null);
-
 // Modal
 const selectedPost = ref(null);
 function openModal(post) {
-  selectedPost.value = post;
+  console.log("Opening modal for:", post); // ✅ debug line
+
+  if (post.type === "training") {
+    selectedTraining.value = post; // 🟦 training modal
+    selectedPost.value = null;
+  } else if (post.type === "career") {
+    selectedPost.value = post; // 🟩 career modal
+    selectedTraining.value = null;
+  } else {
+    console.warn("Unknown post type:", post);
+  }
 }
+
 function closeModal() {
   selectedPost.value = null;
 }
-
-// Build events map
-function buildEvents() {
-  events.value = {};
-  posts.value.forEach((post) => {
-    const date = post.trainingID
-      ? post.schedule.split("T")[0]
-      : post.deadlineOfSubmission;
-
-    if (!events.value[date]) events.value[date] = [];
-    events.value[date].push(post);
-  });
-}
-
-// Show events on calendar click
-function showEvents(dateStr) {
-  selectedDate.value = dateStr;
-  dayEvents.value = events.value[dateStr] || [];
-}
-
-onMounted(async () => {
-  await nextTick();
-  buildEvents();
-
-  const calendar = calendarRef.value;
-  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-
-  // Highlight event days and today
-  calendar.addEventListener("render", () => {
-    calendar.querySelectorAll("[data-date]").forEach((el) => {
-      const dateStr = el.getAttribute("data-date");
-      el.classList.remove("event-day", "today");
-
-      if (events.value[dateStr]) el.classList.add("event-day");
-      if (dateStr === today) el.classList.add("today");
-    });
-  });
-
-  calendar.addEventListener("change", (e) => {
-    const pickedDate = e.target.value;
-    showEvents(pickedDate);
-
-    calendar
-      .querySelectorAll("[data-date]")
-      .forEach((el) => el.classList.remove("selected-day"));
-    const selectedEl = calendar.querySelector(`[data-date="${pickedDate}"]`);
-    if (selectedEl) selectedEl.classList.add("selected-day");
-  });
-
-  // ✅ Auto-select today's date to show events
-  calendar.value = today; // Set the <calendar-date> selected value
-  showEvents(today); // Load today's events into the panel
-
-  // Manually trigger "change" event to simulate user selecting today
-  const event = new Event("change", { bubbles: true });
-  calendar.dispatchEvent(event);
-});
 
 function formatDateTime(dt) {
   if (!dt) return "";
@@ -272,6 +178,141 @@ function submitApplication() {
 
   alert("Application submitted successfully!");
   closeApplyModal();
+}
+// --- CALENDAR LOGIC ---
+const calendarRef = ref(null);
+const selectedDate = ref("");
+const events = ref({}); // Map of date → [events]
+const dayEvents = ref([]);
+
+// --- Handle day click ---
+function onDayClick(date) {
+  selectedDate.value = toISODate(date);
+  showEvents(selectedDate.value);
+}
+
+// --- Initialize calendar: fetch events & select today ---
+onMounted(async () => {
+  await fetchEvents();
+  onDayClick(new Date()); // select today automatically
+});
+// --- Check if a date is today ---
+function isToday(date) {
+  const d = new Date(date);
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+}
+// --- EVENTS LOGIC ---
+
+async function fetchEvents() {
+  try {
+    const user = JSON.parse(localStorage.getItem("user"));
+    const token = localStorage.getItem("token");
+
+    if (!user || !token) {
+      console.warn("⚠️ No user or token found in localStorage");
+      return;
+    }
+
+    const response = await axios.get(
+      `http://127.0.0.1:8000/api/calendar/${user.applicantID}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    const eventList = response.data.events || [];
+    console.log("✅ API Events Fetched:", eventList);
+
+    // Normalize all dates (ensure YYYY-MM-DD)
+    eventList.forEach((e) => {
+      e.date = new Date(e.date).toISOString().split("T")[0];
+    });
+
+    // Build events map
+    events.value = {};
+    eventList.forEach((event) => {
+      if (!events.value[event.date]) events.value[event.date] = [];
+      events.value[event.date].push(event);
+    });
+
+    console.log("📅 Events Map:", events.value);
+  } catch (error) {
+    console.error("❌ Error fetching events:", error);
+  }
+}
+
+function showEvents(date) {
+  selectedDate.value = date;
+  dayEvents.value = events.value[date] || [];
+  console.log("📅 Events for", date, ":", dayEvents.value);
+}
+
+// --- INITIALIZE CALENDAR ---
+onMounted(async () => {
+  await nextTick();
+  await fetchEvents();
+
+  const calendar = calendarRef.value;
+  if (!calendar) return;
+
+  const today = new Date().toISOString().split("T")[0];
+  showEvents(today);
+
+  // Highlight event days and today on render
+  const highlightDays = () => {
+    calendar.querySelectorAll("[data-date]").forEach((el) => {
+      const dateStr = el.getAttribute("data-date");
+      el.classList.remove("event-day", "today");
+
+      if (events.value[dateStr]) {
+        el.classList.add("event-day");
+      }
+
+      if (dateStr === today) {
+        el.classList.add("today"); // <-- Highlight today
+      }
+    });
+  };
+
+  const highlightToday = () => {
+    // Select all day elements
+    const dayEls = calendar.querySelectorAll("[data-date]");
+    if (!dayEls.length) return;
+
+    dayEls.forEach((el) => {
+      const dateStr = el.getAttribute("data-date");
+      el.classList.remove("today");
+
+      if (dateStr === today) {
+        el.classList.add("today"); // Add highlight to today
+      }
+    });
+  };
+
+  // Initial highlight
+  highlightDays();
+
+  // Optional: re-highlight on calendar render if your calendar library triggers it
+  calendar.addEventListener("render", highlightDays);
+
+  // Handle day clicks
+  calendar.addEventListener("change", (e) => {
+    const pickedDate = e.target.value;
+    showEvents(pickedDate);
+  });
+});
+
+// Format for comparisons / mapping
+function toISODate(d) {
+  if (!d) return "";
+  return new Date(d).toISOString().split("T")[0]; // YYYY-MM-DD
 }
 </script>
 
@@ -340,25 +381,35 @@ function submitApplication() {
             class="cally bg-base-100 border border-base-300 shadow rounded-box p-3 flex-shrink-0"
           >
             <calendar-month>
-              <template #day="{ date, label }">
+              <template #day="{ date }">
                 <div
-                  class="w-8 h-8 flex items-center justify-center rounded-full"
-                  :data-date="date"
+                  class="w-8 h-8 flex items-center justify-center rounded-full cursor-pointer"
+                  :class="{
+                    'border-2 border-blue-500 bg-blue-50':
+                      toISODate(date) === selectedDate, // today/selected
+                    'bg-blue-100 text-blue-700 font-semibold':
+                      events[toISODate(date)], // event day
+                    'bg-gray-200 text-gray-600': !events[toISODate(date)], // normal day
+                  }"
+                  @click="onDayClick(date)"
                 >
-                  {{ label }}
+                  {{ formatDate(date) }}
                 </div>
               </template>
             </calendar-month>
           </calendar-date>
 
-          <!-- Events -->
+          <!-- Events Panel -->
           <div class="bg-white w-full max-w-[250px] h-72 overflow-y-auto">
-            <h1 class="text-lg font-semibold">Upcoming Events</h1>
-            <h2 class="mb-2">
-              on <span>{{ selectedDate || "Select a date" }}</span>
+            <h1 class="text-lg font-semibold mb-1">Upcoming Events</h1>
+            <h2 class="mb-2 text-sm text-gray-600">
+              on
+              <span class="font-medium">{{
+                selectedDate || "Select a date"
+              }}</span>
             </h2>
 
-            <div v-if="dayEvents.length === 0" class="text-gray-700">
+            <div v-if="dayEvents.length === 0" class="text-gray-500 text-sm">
               No events scheduled
             </div>
 
@@ -366,25 +417,26 @@ function submitApplication() {
               <div
                 v-for="(event, i) in dayEvents"
                 :key="i"
-                @click="openModal(event)"
                 class="bg-gray-100 p-2 rounded-lg shadow-sm cursor-pointer hover:bg-gray-200 break-words flex justify-between items-center"
+                @click="openModal(event)"
               >
                 <div>
                   <h3 class="font-semibold text-sm">
-                    {{ isTraining(event) ? event.title : event.position }}
+                    {{ event.title }}
                   </h3>
                   <p class="text-xs text-gray-600">
-                    {{ organizations[event.organizationID] }}
+                    {{ event.organization }}
                   </p>
                 </div>
 
-                <!-- ✅ Badge -->
+                <!-- ✅ Event Type Badge -->
                 <span
-                  v-if="isRegisteredOrApplied(event)"
                   class="text-[10px] text-white px-2 py-1 rounded-full"
-                  :class="isTraining(event) ? 'bg-blue-500' : 'bg-green-500'"
+                  :class="
+                    event.type === 'training' ? 'bg-blue-500' : 'bg-green-500'
+                  "
                 >
-                  {{ isTraining(event) ? "Registered" : "Applied" }}
+                  {{ event.type === "training" ? "Training" : "Career" }}
                 </span>
               </div>
             </div>
@@ -392,6 +444,7 @@ function submitApplication() {
         </div>
       </aside>
 
+      <!-- Floating Calendar Button -->
       <button
         v-if="!isSidebarOpen"
         class="fixed bottom-6 right-6 bg-dark-slate text-white p-3 rounded-full shadow-lg z-50"
@@ -409,14 +462,88 @@ function submitApplication() {
             fill="white"
           />
           <path
-            d="M20 9.84003H4C3.45 9.84003 3 10.29 3 10.84V17C3 20 4.5 22 8 22H16C19.5 22 21 20 21 17V10.84C21 10.29 20.55 9.84003 20 9.84003ZM9.21 18.21C9.16 18.25 9.11 18.3 9.06 18.33C9 18.37 8.94 18.4 8.88 18.42C8.82 18.45 8.76 18.47 8.7 18.48C8.63 18.49 8.57 18.5 8.5 18.5C8.37 18.5 8.24 18.47 8.12 18.42C7.99 18.37 7.89 18.3 7.79 18.21C7.61 18.02 7.5 17.76 7.5 17.5C7.5 17.24 7.61 16.98 7.79 16.79C7.89 16.7 7.99 16.63 8.12 16.58C8.3 16.5 8.5 16.48 8.7 16.52C8.76 16.53 8.82 16.55 8.88 16.58C8.94 16.6 9 16.63 9.06 16.67C9.11 16.71 9.16 16.75 9.21 16.79C9.39 16.98 9.5 17.24 9.5 17.5C9.5 17.76 9.39 18.02 9.21 18.21ZM9.21 14.71C9.02 14.89 8.76 15 8.5 15C8.24 15 7.98 14.89 7.79 14.71C7.61 14.52 7.5 14.26 7.5 14C7.5 13.74 7.61 13.48 7.79 13.29C8.07 13.01 8.51 12.92 8.88 13.08C9.01 13.13 9.12 13.2 9.21 13.29C9.39 13.48 9.5 13.74 9.5 14C9.5 14.26 9.39 14.52 9.21 14.71ZM12.71 18.21C12.52 18.39 12.26 18.5 12 18.5C11.74 18.5 11.48 18.39 11.29 18.21C11.11 18.02 11 17.76 11 17.5C11 17.24 11.11 16.98 11.29 16.79C11.66 16.42 12.34 16.42 12.71 16.79C12.89 16.98 13 17.24 13 17.5C13 17.76 12.89 18.02 12.71 18.21ZM12.71 14.71C12.66 14.75 12.61 14.79 12.56 14.83C12.5 14.87 12.44 14.9 12.38 14.92C12.32 14.95 12.26 14.97 12.2 14.98C12.13 14.99 12.07 15 12 15C11.74 15 11.48 14.89 11.29 14.71C11.11 14.52 11 14.26 11 14C11 13.74 11.11 13.48 11.29 13.29C11.38 13.2 11.49 13.13 11.62 13.08C11.99 12.92 12.43 13.01 12.71 13.29C12.89 13.48 13 13.74 13 14C13 14.26 12.89 14.52 12.71 14.71ZM16.21 18.21C16.02 18.39 15.76 18.5 15.5 18.5C15.24 18.5 14.98 18.39 14.79 18.21C14.61 18.02 14.5 17.76 14.5 17.5C14.5 17.24 14.61 16.98 14.79 16.79C15.16 16.42 15.84 16.42 16.21 16.79C16.39 16.98 16.5 17.24 16.5 17.5C16.5 17.76 16.39 18.02 16.21 18.21ZM16.21 14.71C16.16 14.75 16.11 14.79 16.06 14.83C16 14.87 15.94 14.9 15.88 14.92C15.82 14.95 15.76 14.97 15.7 14.98C15.63 14.99 15.56 15 15.5 15C15.24 15 14.98 14.89 14.79 14.71C14.61 14.52 14.5 14.26 14.5 14C14.5 13.74 14.61 13.48 14.79 13.29C14.89 13.2 14.99 13.13 15.12 13.08C15.3 13 15.5 12.98 15.7 13.02C15.76 13.03 15.82 13.05 15.88 13.08C15.94 13.1 16 13.13 16.06 13.17C16.11 13.21 16.16 13.25 16.21 13.29C16.39 13.48 16.5 13.74 16.5 14C16.5 14.26 16.39 14.52 16.21 14.71Z"
+            d="M20 9.84003H4C3.45 9.84003 3 10.29 3 10.84V17C3 20 4.5 22 8 22H16C19.5 22 21 20 21 17V10.84C21 10.29 20.55 9.84003 20 9.84003ZM9.21 18.21C9.16 18.25 9.11 18.3 9.06 18.33C9 18.37 8.94 18.4 8.88 18.42C8.82 18.45 8.76 18.47 8.7 18.48C8.63 18.49 8.57 18.5 8.5 18.5C8.37 18.5 8.24 18.47 8.12 18.42C7.99 18.37 7.89 18.3 7.79 18.21C7.61 18.02 7.5 17.76 7.5 17.5C7.5 17.24 7.61 16.98 7.79 16.79C7.89 16.7 7.99 16.63 8.12 16.58C8.3 16.5 8.5 16.48 8.7 16.52C8.76 16.53 8.82 16.55 8.88 16.58C8.94 16.6 9 16.63 9.06 16.67C9.11 16.71 9.16 16.75 9.21 16.79C9.39 16.98 9.5 17.24 9.5 17.5C9.5 17.76 9.39 18.02 9.21 18.21ZM12.71 18.21C12.52 18.39 12.26 18.5 12 18.5C11.74 18.5 11.48 18.39 11.29 18.21C11.11 18.02 11 17.76 11 17.5C11 17.24 11.11 16.98 11.29 16.79C11.66 16.42 12.34 16.42 12.71 16.79C12.89 16.98 13 17.24 13 17.5C13 17.76 12.89 18.02 12.71 18.21ZM16.21 18.21C16.02 18.39 15.76 18.5 15.5 18.5C15.24 18.5 14.98 18.39 14.79 18.21C14.61 18.02 14.5 17.76 14.5 17.5C14.5 17.24 14.61 16.98 14.79 16.79C15.16 16.42 15.84 16.42 16.21 16.79C16.39 16.98 16.5 17.24 16.5 17.5C16.5 17.76 16.39 18.02 16.21 18.21Z"
             fill="white"
           />
         </svg>
       </button>
     </div>
 
-    <!-- Post Details Modal -->
+    <!-- 🟦 Training Modal -->
+    <dialog v-if="selectedTraining" open class="modal sm:modal-middle">
+      <div class="modal-box max-w-3xl relative font-poppins">
+        <!-- Close button -->
+        <button
+          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
+          @click="closeTrainingModal"
+        >
+          ✕
+        </button>
+
+        <!-- Training Details -->
+        <h2 class="text-xl font-bold mb-2">{{ selectedTraining.title }}</h2>
+        <p class="text-sm text-gray-600 mb-2">
+          Organization: {{ selectedTraining.organization }}
+        </p>
+
+        <!-- Buttons -->
+        <div class="my-4 flex justify-end gap-2">
+          <!-- Bookmark -->
+          <button
+            class="btn btn-outline btn-sm"
+            @click="toggleBookmark(selectedTraining)"
+          >
+            {{
+              bookmarkedPosts[selectedTraining.trainingID]
+                ? "Bookmarked"
+                : "Bookmark"
+            }}
+          </button>
+
+          <!-- Register / Unregister -->
+          <button
+            class="btn btn-sm text-white"
+            :class="
+              registeredPosts[selectedTraining.trainingID]
+                ? 'bg-gray-500'
+                : 'bg-customButton'
+            "
+            @click.stop="toggleRegister(selectedTraining)"
+          >
+            {{
+              registeredPosts[selectedTraining.trainingID]
+                ? "Unregister"
+                : "Register"
+            }}
+          </button>
+        </div>
+        <p><strong>Mode:</strong> {{ selectedTraining.Mode }}</p>
+        <!-- Description -->
+        <p><strong>Description: </strong>{{ selectedTraining.description }}</p>
+
+        <!-- Conditional display: Online or On-site -->
+        <p v-if="selectedTraining.Mode.toLowerCase() === 'online'">
+          <strong>Link:</strong>
+          <a
+            :href="selectedTraining.trainingLink"
+            target="_blank"
+            class="text-blue-500 underline"
+          >
+            {{ selectedTraining.trainingLink }}
+          </a>
+        </p>
+        <p v-else-if="selectedTraining.Mode.toLowerCase() === 'on-site'">
+          <strong>Location:</strong> {{ selectedTraining.location }}
+        </p>
+
+        <p>
+          <strong>Schedule:</strong>
+          {{ formatDate(selectedTraining.date) }} at {{ selectedTraining.time }}
+        </p>
+      </div>
+    </dialog>
+
+    <!-- 🟩 Career Modal -->
     <dialog v-if="selectedPost" open class="modal sm:modal-middle">
       <div class="modal-box max-w-3xl relative font-poppins">
         <!-- Close button -->
@@ -427,154 +554,118 @@ function submitApplication() {
           ✕
         </button>
 
-        <!-- ✅ Training -->
-        <div v-if="isTraining(selectedPost)">
-          <h2 class="text-xl font-bold mb-2">{{ selectedPost.title }}</h2>
-          <p class="text-sm text-gray-600 mb-2">
-            Organization: {{ organizations[selectedPost.organizationID] }}
-          </p>
+        <!-- Career Details -->
+        <h2 class="text-xl font-bold mb-2">{{ selectedPost.position }}</h2>
+        <p class="text-sm text-gray-600 mb-2">
+          Organization: {{ organizations[selectedPost.organizationID] }}
+        </p>
 
-          <div class="my-4 flex justify-end gap-2">
-            <!-- Bookmark -->
-            <button
-              class="btn btn-outline btn-sm"
-              @click="toggleBookmark(selectedPost)"
-            >
-              {{
-                bookmarkedPosts[
-                  selectedPost.trainingID || selectedPost.careerID
-                ]
-                  ? "Bookmarked"
-                  : "Bookmark"
-              }}
-            </button>
+        <!-- Buttons -->
+        <div class="my-4 flex justify-end gap-2">
+          <!-- Bookmark -->
+          <button
+            class="btn btn-outline btn-sm"
+            @click="toggleBookmark(selectedPost)"
+          >
+            {{
+              bookmarkedPosts[selectedPost.careerID] ? "Bookmarked" : "Bookmark"
+            }}
+          </button>
 
-            <!-- Register (for training only) -->
-            <button
-              v-if="isTraining(selectedPost)"
-              class="btn btn-sm text-white"
-              :class="
-                registeredPosts[selectedPost.trainingID]
-                  ? 'bg-gray-500'
-                  : 'bg-customButton'
-              "
-              @click="toggleRegister(selectedPost)"
-            >
-              {{
-                registeredPosts[selectedPost.trainingID]
-                  ? "Unregister"
-                  : "Register"
-              }}
-            </button>
+          <!-- Apply / Cancel -->
+          <button
+            v-if="!appliedPosts[selectedPost.careerID]"
+            class="btn btn-sm bg-customButton text-white"
+            @click="openApplyModal(selectedPost)"
+          >
+            Apply
+          </button>
 
-            <!-- Apply (for career posts only) -->
-            <button
-              v-if="!appliedPosts[selectedPost.careerID]"
-              class="btn btn-sm bg-customButton text-white"
-              @click="openApplyModal(selectedPost)"
-            >
-              Apply
-            </button>
-
-            <button
-              v-else
-              class="btn btn-sm bg-gray-500 text-white"
-              @click="cancelApplication(selectedPost)"
-            >
-              Cancel Application
-            </button>
-          </div>
-
-          <p>
-            <strong>Mode:</strong> {{ selectedPost.mode || "Not specified" }}
-          </p>
-          <p><strong>Description:</strong> {{ selectedPost.description }}</p>
-          <p>
-            <strong>Schedule:</strong>
-            {{ formatDateTime(selectedPost.schedule) }}
-          </p>
-          <p><strong>Location:</strong> {{ selectedPost.location }}</p>
+          <button
+            v-else
+            class="btn btn-sm bg-gray-500 text-white"
+            @click="cancelApplication(selectedPost)"
+          >
+            Cancel
+          </button>
         </div>
 
-        <!-- ✅ Career -->
-        <div v-else v-if="selectedCareerDetails">
-          <h2 class="text-xl font-bold mb-2">{{ selectedCareerDetails.position }}</h2>
-          <p class="text-sm text-gray-600 mb-2">
-            Organization: {{ selectedCareerDetails.organizationName }}
-          </p>
+        <!-- Career Info -->
+        <p>
+          <strong>Details:</strong> {{ selectedCareer.detailsAndInstructions }}
+        </p>
+        <p>
+          <strong>Qualifications:</strong> {{ selectedCareer.qualifications }}
+        </p>
+        <p><strong>Requirements:</strong> {{ selectedCareer.requirements }}</p>
+        <p>
+          <strong>Application Address:</strong>
+          {{ selectedCareer.applicationLetterAddress }}
+        </p>
+        <p>
+          <strong>Deadline:</strong>
+          {{ formatDate(selectedCareer.deadlineOfSubmission) }}
+        </p>
 
-          <!-- Buttons -->
-          <div class="my-4 flex justify-end gap-2">
-            <!-- Bookmark -->
-            <button
-              class="btn btn-outline btn-sm"
-              @click="toggleBookmark(selectedCareerDetails)"
-            >
-              {{
-                bookmarkedPosts[
-                selectedCareerDetails.trainingID || selectedCareerDetails.careerID
-                ]
-                  ? "Bookmarked"
-                  : "Bookmark"
-              }}
-            </button>
-            <!-- Apply / Cancel (for career posts only) -->
-            <button
-              v-if="!appliedPosts[selectedCareerDetails.careerID]"
-              class="btn btn-sm bg-customButton text-white"
-              @click="openApplyModal(selectedCareerDetails)"
-            >
-              Apply
-            </button>
+        <!-- Interview Schedule -->
+        <p v-if="selectedCareer.date && selectedCareer.time">
+          <strong>Interview Schedule:</strong>
+          {{ formatDate(selectedCareer.date) }} at
+          {{ formatTime(selectedCareer.time) }}
+        </p>
 
-            <button
-              v-else
-              class="btn btn-sm bg-gray-500 text-white"
-              @click="cancelApplication(selectedCareerDetails)"
-            >
-              Cancel Application
-            </button>
-          </div>
+        <!-- Interview Mode -->
+        <p v-if="selectedCareer.mode">
+          <strong>Mode:</strong> {{ selectedCareer.mode }}
+        </p>
 
-          <!-- Career Details -->
-          <p>
-            <strong>Details:</strong> {{ selectedCareerDetails.detailsAndInstructions }}
-          </p>
-          <p>
-            <strong>Qualifications:</strong> {{ selectedCareerDetails.qualifications }}
-          </p>
-          <p><strong>Requirements:</strong> {{ selectedCareerDetails.requirements }}</p>
-          <p>
-            <strong>Application Address:</strong>
-            {{ selectedCareerDetails.applicationLetterAddress }}
-          </p>
-          <p>
-            <strong>Deadline:</strong>
-            {{ formatDate(selectedCareerDetails.deadlineOfSubmission) }}
-          </p>
+        <!-- Conditional display based on mode -->
+        <p
+          v-if="
+            selectedCareer.mode &&
+            selectedCareer.mode.toLowerCase() === 'online' &&
+            selectedCareer.interviewLink
+          "
+        >
+          <strong>Link:</strong>
+          <a
+            :href="selectedCareer.interviewLink"
+            target="_blank"
+            class="text-blue-500 underline"
+          >
+            {{ selectedCareer.interviewLink }}
+          </a>
+        </p>
 
-          <!-- ✅ Recommended Trainings (career only) -->
-          <div class="mt-6">
-            <h3 class="text-base font-semibold mb-3">Recommended Trainings</h3>
+        <p
+          v-if="
+            selectedCareer.mode &&
+            selectedCareer.mode.toLowerCase() === 'on-site' &&
+            selectedCareer.interviewLocation
+          "
+        >
+          <strong>Location:</strong> {{ selectedCareer.interviewLocation }}
+        </p>
 
-            <!-- Scrollable container -->
+        <!-- Recommended Trainings -->
+        <div class="mt-6">
+          <h3 class="text-base font-semibold mb-3">Recommended Trainings</h3>
+          <div
+            class="flex overflow-x-auto space-x-3 pb-2 snap-x snap-mandatory"
+            style="scrollbar-width: thin"
+          >
             <div
-              class="flex overflow-x-auto space-x-3 pb-2 snap-x snap-mandatory"
-              style="scrollbar-width: thin"
+              v-for="post in posts.filter((p) => p.type === 'training')"
+              :key="post.trainingID"
+              class="snap-start w-[180px] flex-shrink-0 p-3 bg-blue-gray rounded-lg cursor-pointer hover:bg-gray-200 transition shadow-sm"
+              @click.stop="openModal(post)"
             >
-              <div
-                v-for="training in recommendedTrainings"
-                :key="training.trainingID"
-                class="snap-start w-[180px] flex-shrink-0 p-3 bg-blue-gray rounded-lg cursor-pointer hover:bg-gray-200 transition shadow-sm"
-                @click.stop="openTrainingModal(training)"
-              >
-                <h4 class="font-semibold text-sm leading-snug mb-1">
-                  {{ training.title }}
-                </h4>
-                <p class="text-[11px] text-gray-600 truncate">
-                  {{ training.provider }}
-                </p>
-              </div>
+              <h4 class="font-semibold text-sm leading-snug mb-1">
+                {{ post.title }}
+              </h4>
+              <p class="text-[11px] text-gray-600 truncate">
+                {{ organizations[post.organizationID] }}
+              </p>
             </div>
           </div>
         </div>
@@ -640,5 +731,11 @@ function submitApplication() {
   background-color: #3b82f6;
   color: white;
   border-radius: 9999px;
+}
+
+.today {
+  border: 2px solid #4caf50;
+  background-color: #e8f5e9;
+  border-radius: 50%;
 }
 </style>

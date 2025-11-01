@@ -15,7 +15,7 @@
           <keep-alive>
             <component :is="Component" />
           </keep-alive>
-        </router-view> 
+        </router-view>
       </main>
     </div>
   </div>

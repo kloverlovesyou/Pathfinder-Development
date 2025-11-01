@@ -20,6 +20,8 @@ import AuthLayout from "@/components/Layout/AuthLayout.vue";
 import OrgCalendar from "@/components/Organization/OrganizationCalendar.vue";
 import OrgProfile from "@/components/Organization/Profile.vue";
 import AdminHomePage from "@/components/Admin/AdminHomePage.vue";
+import AdminUpdateDelete from "@/components/Admin/AdminUpdateDelete.vue";
+import AdminLayout from "@/components/Layout/AdminLayout.vue";
 
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
@@ -126,9 +128,22 @@ const router = createRouter({
     // Admin Home Page - Public Access
     {
       path: "/admin",
-      name: "AdminHomePage",
-      component: AdminHomePage,
-      meta: { requiresAuth: false }, // public access
+      component: AdminLayout,
+      meta: { requiresAuth: false },
+      children: [
+        {
+          path: "adminhomepage",
+          name: "AdminHomePage",
+          component: AdminHomePage,
+        },
+
+        {
+          path: "/admin/adminupdatedelete",
+          name: "AdminUpdateDelete",
+          component: AdminUpdateDelete,
+          meta: { requiresAuth: false }, // public access
+        },
+      ],
     },
     // 🚨 Catch-all must always be last
     {
