@@ -444,6 +444,7 @@ function formatDate(d) {
             v-else
             class="btn btn-sm bg-gray-500 text-white"
             @click="addToast('Application already submitted', 'accent')"
+            :disabled="true"
           >
             Applied
           </button>

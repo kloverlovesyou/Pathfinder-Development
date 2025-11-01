@@ -16,6 +16,8 @@ const myRegistrations = ref(new Set());
 const toasts = ref([]);
 const upcomingCount = ref(0);
 const completedCount = ref(0);
+const applicationSubmitted = ref(false);
+const appliedCareers = ref(new Set()); // make sure this is also declared
 
 function addToast(message, type = "info") {
   toasts.value.push({ message, type });
@@ -28,6 +30,19 @@ function addToast(message, type = "info") {
 const selectedPost = ref(null);
 const applyModalOpen = ref(false);
 const uploadedFile = ref(null);
+
+const handleFileUpload = (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (file.type !== "application/pdf") {
+    addToast("Only PDF files are allowed", "error");
+    event.target.value = ""; // clear invalid file
+    return;
+  }
+
+  uploadedFile.value = file; // ✅ Set file for submission
+};
 
 // ✅ Handle Resize
 function handleResize() {
@@ -185,9 +200,13 @@ const closeModal = () => {
 const openApplyModal = (item) => {
   selectedPost.value = item;
   applyModalOpen.value = true;
+  applicationSubmitted.value = appliedCareers.value.has(item.careerID); // fixed ref
 };
 const closeApplyModal = () => {
   applyModalOpen.value = false;
+  uploadedFile.value = null;
+  applicationSubmitted.value = false; // reset for next open
+  selectedPost.value = null;
 };
 
 // ✅ Helpers
@@ -301,11 +320,73 @@ const registerTraining = async (training) => {
   }
 };
 
+// ✅ Application Submission
+const submitApplication = async () => {
+  if (!uploadedFile.value) {
+    return addToast("Please select a PDF", "error");
+  }
+
+  const token = localStorage.getItem("token");
+  if (!token) return addToast("You must be logged in", "error");
+
+  const formData = new FormData();
+  formData.append("file", uploadedFile.value);
+  formData.append("careerID", selectedPost.value.careerID);
+
+  try {
+    const response = await axios.post(
+      "http://127.0.0.1:8000/api/applications",
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    addToast("Application submitted!", "success");
+    appliedCareers.value.add(selectedPost.value.careerID); // ✅ mark applied
+    closeApplyModal();
+    uploadedFile.value = null;
+
+  } catch (error) {
+    if (error.response?.status === 409) {
+      addToast("Already applied", "info");
+      appliedCareers.value.add(selectedPost.value.careerID); // mark applied anyway
+    } else {
+      console.error("❌ Application error:", error.response?.data || error);
+      addToast("Failed to submit application", "error");
+    }
+  }
+};
+
+const userApplications = ref(new Set());
+
+// ✅ Load User Applications
+const loadApplications = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const { data } = await axios.get("http://127.0.0.1:8000/api/applications", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    // Save IDs of already applied careers
+    appliedCareers.value = new Set(data.map(app => app.career_id));
+  } catch (error) {
+    console.error("❌ Failed to load applications:", error.response?.data || error);
+  }
+};
+
 // ✅ Lifecycle
 onMounted(() => {
   fetchOrganizations();
   loadBookmarks();
   fetchTrainingCounters();
+  loadRegistrations();
+  loadApplications();
     const savedUser = localStorage.getItem("user");
   if (savedUser) {
     try {
@@ -631,8 +712,9 @@ onMounted(() => {
                       <button
                         class="btn btn-sm bg-customButton text-white"
                         @click="openApplyModal(selectedPost)"
+                        :disabled="appliedCareers.has(selectedPost?.careerID)"
                       >
-                        Apply
+                       {{ appliedCareers.has(selectedPost?.careerID) ? "Applied" : "Apply" }}
                       </button>
                     </div>
                     <p>
@@ -694,11 +776,13 @@ onMounted(() => {
                       >
                         Cancel
                       </button>
+                      <!-- ✅ Updated Apply Button -->
                       <button
                         type="submit"
                         class="btn bg-customButton hover:bg-dark-slate text-white btn-sm"
+                        :disabled="appliedCareers.has(selectedPost?.careerID)"
                       >
-                        Submit Application
+                        {{ appliedCareers.has(selectedPost?.careerID) ? "Applied" : "Submit Application" }}
                       </button>
                     </div>
                   </form>
