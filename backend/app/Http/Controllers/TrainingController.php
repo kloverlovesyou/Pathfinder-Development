@@ -17,24 +17,32 @@ class TrainingController extends Controller
      * QR stays valid for 30 minutes from creation.
      */
     public function autoGenerateQR(Training $training)
-    {
-        $now = now();
+{
+    $now = now();
 
-        // Clear QR if training has ended
-        if ($training->attendance_key && $now->greaterThanOrEqualTo($training->end_time)) {
-            $training->attendance_key = null;
-            $training->qr_generated_at = null;
-            $training->save();
-            return; // stop here
-        }
-
-        // Only generate QR if training has started and no QR exists
-        if ($now->greaterThanOrEqualTo($training->schedule) && !$training->attendance_key) {
-            $training->attendance_key = Str::random(16);
-            $training->qr_generated_at = $now;
-            $training->save();
-        }
+    // ✅ Clear QR if the training has ended
+    if ($training->attendance_key && $now->greaterThanOrEqualTo($training->end_time)) {
+        $training->attendance_key = null;
+        $training->qr_generated_at = null;
+        $training->attendance_expires_at = null;
+        $training->save();
+        return; // stop here
     }
+
+    // ✅ Generate QR if training has started and no QR exists yet
+    if ($now->greaterThanOrEqualTo($training->schedule) 
+        && !$training->attendance_key
+        && $now->lessThan($training->end_time)) 
+    {
+        $training->attendance_key = Str::random(16);
+        $training->qr_generated_at = $now;
+
+        // Optionally, set QR expiration to match end_time
+        $training->attendance_expires_at = $training->end_time;
+
+        $training->save();
+    }
+}
     /**
      * User attendance check-in via QR code
      */
