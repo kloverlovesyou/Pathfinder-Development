@@ -58,4 +58,51 @@ class EventController extends Controller
     return response()->json(['events' => $events]);
 }
 
+public function index(Request $request)
+{
+    $user = $request->user();
+
+    $query = Training::with('organization');
+
+    // Filter by organization if query param exists
+    if ($request->has('organizationID')) {
+        $query->where('organizationID', $request->organizationID);
+    }
+
+    $trainings = $query->get();
+
+    // Ensure QR is generated for each training
+    foreach ($trainings as $training) {
+        $this->autoGenerateQR($training);
+    }
+
+    return response()->json(
+        $trainings->map(function ($training) use ($user) {
+
+            // Check if the user is registered
+            $registered = $training->registrations()
+                ->where('applicant_id', $user->id)
+                ->exists();
+
+            return [
+                'trainingID' => $training->trainingID,
+                'title' => $training->title,
+                'description' => $training->description,
+                'schedule' => $training->schedule?->format('Y-m-d H:i'),
+                'mode' => $training->mode,
+                'location' => $training->location,
+                'trainingLink' => $training->trainingLink,
+                // Include attendance_key only if user is registered
+                'attendance_key' => $registered ? $training->attendance_key : null,
+                'attendance_expires_at' => $registered ? $training->attendance_expires_at : null,
+                'organizationID' => $training->organizationID,
+                'organization' => [
+                    'name' => optional($training->organization)->name ?? 'Unknown',
+                ],
+            ];
+        })
+    );
+}
+
+
 }
