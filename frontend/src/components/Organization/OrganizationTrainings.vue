@@ -852,6 +852,7 @@ closeTrainingPopup() {
 
   async saveCareer() {
     const token = localStorage.getItem("token");
+    console.log("🔹 Token being sent:", token);
     if (!token) {
       alert("Please log in to continue.");
       return;
