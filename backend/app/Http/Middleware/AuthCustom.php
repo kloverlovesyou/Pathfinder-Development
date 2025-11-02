@@ -12,6 +12,7 @@ class AuthCustom
 {
     public function handle(Request $request, Closure $next)
     {
+        \Log::info('🧾 FULL HEADER DUMP:', $request->headers->all());
         // ✅ Try different header names
         $token = $request->bearerToken();
 
