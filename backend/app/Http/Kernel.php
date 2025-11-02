@@ -2,9 +2,9 @@
 
 namespace App\Http;
 
-use Illuminate\Console\Scheduling\Schedule; // ✅ needed
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
-use Illuminate\Support\Str; // ✅ important
+use Illuminate\Support\Str;
 use App\Models\Training;
 
 class Kernel extends HttpKernel
@@ -29,7 +29,9 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
-            \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
+            // ✅ Add Sanctum middleware here
+            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
     ];
@@ -41,7 +43,7 @@ class Kernel extends HttpKernel
     ];
 
     // ✅ Auto-generate QR key 1 minute before or right at schedule
-        protected function schedule(Schedule $schedule)
+    protected function schedule(Schedule $schedule)
     {
         $schedule->call(function () {
             $now = now();
