@@ -42,10 +42,16 @@ class CareerController extends Controller
 
         return response()->json($careers);
     }
-    public function store(Request $request)
+        public function store(Request $request)
     {
-        \Log::info('INCOMING CAREER DATA:', $request->all());
+        // ✅ Use authenticated user from middleware
+        $user = $request->user();
 
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        // Validate request
         $validated = $request->validate([
             'position' => 'required|string|max:255',
             'details' => 'required|string|max:255',
@@ -53,22 +59,13 @@ class CareerController extends Controller
             'requirements' => 'required|string|max:255',
             'letterAddress' => 'required|string|max:255',
             'deadline' => 'required|date',
-            'Tags' => 'nullable|array', 
+            'Tags' => 'nullable|array',
             'Tags.*' => 'integer|exists:tag,TagID',
         ]);
 
         $deadline = Carbon::parse($validated['deadline'])->format('Y-m-d');
 
-        // ✅ Authenticate using Bearer token
-        $token = $request->bearerToken();
-        $user = \App\Models\Organization::where('api_token', $token)->first();
-
-        if (!$user) {
-            return response()->json(['message' => 'Unauthorized'], 401);
-        }
-
-        \Log::info('AUTHENTICATED USER:', ['user' => $user]);
-
+        // Create career linked to organization
         $career = Career::create([
             'position' => $validated['position'],
             'detailsAndInstructions' => $validated['details'],
@@ -76,9 +73,10 @@ class CareerController extends Controller
             'requirements' => $validated['requirements'],
             'applicationLetterAddress' => $validated['letterAddress'],
             'deadlineOfSubmission' => $deadline,
-            'organizationID' => $user->organizationID ?? $user->id, // use organization ID
+            'organizationID' => $user->organizationID ?? $user->id,
         ]);
 
+        // Attach tags if any
         if (!empty($validated['Tags'])) {
             $career->tags()->attach($validated['Tags']);
         }
@@ -86,7 +84,7 @@ class CareerController extends Controller
         return response()->json([
             'message' => 'CAREER POSTED SUCCESSFULLY!!!',
             'data' => $career,
-            'tags' => $validated['Tags'] 
+            'tags' => $validated['Tags'] ?? []
         ], 201);
     }
 }
