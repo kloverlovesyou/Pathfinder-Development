@@ -892,7 +892,7 @@ async saveTraining() {
       Tags: this.newTraining.Tags
     };
 
-    const response = await api.post("/trainings", payload, {
+    const response = await axios.post("/trainings", payload, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json"
