@@ -22,7 +22,6 @@ import OrgProfile from "@/components/Organization/Profile.vue";
 import AdminHomePage from "@/components/Admin/AdminHomePage.vue";
 import AdminUpdateDelete from "@/components/Admin/AdminUpdateDelete.vue";
 import AdminLayout from "@/components/Layout/AdminLayout.vue";
-
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 
