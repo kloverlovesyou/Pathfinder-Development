@@ -21,7 +21,7 @@ async function fetchMyApplications() {
   try {
     const token = localStorage.getItem("token");
     if (!token) return;
-    const res = await axios.get("http://127.0.0.1:8000/api/applications", {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/applications", {
       headers: { Authorization: `Bearer ${token}` },
     });
     myApplications.value = new Set(res.data.map((a) => a.careerID));
@@ -35,7 +35,7 @@ async function fetchCareerBookmarks() {
   try {
     const token = localStorage.getItem("token");
     if (!token) return;
-    const res = await axios.get("http://127.0.0.1:8000/api/career-bookmarks", {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/career-bookmarks", {
       headers: { Authorization: `Bearer ${token}` },
     });
     bookmarkedCareers.value = new Set(res.data.map((b) => b.careerID));
@@ -61,7 +61,7 @@ async function toggleCareerBookmark(careerId) {
     if (bookmarkedCareers.value.has(careerId)) {
       // Remove bookmark
       await axios.delete(
-        `http://127.0.0.1:8000/api/career-bookmarks/${careerId}`,
+        import.meta.env.VITE_API_BASE_URL + `/career-bookmarks/${careerId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -71,7 +71,7 @@ async function toggleCareerBookmark(careerId) {
     } else {
       // Add bookmark
       await axios.post(
-        "http://127.0.0.1:8000/api/career-bookmarks",
+        import.meta.env.VITE_API_BASE_URL +"/career-bookmarks",
         { careerID: careerId }, // <-- matches your backend
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -97,7 +97,7 @@ async function toggleCareerBookmark(careerId) {
 // ✅ Fetch careers
 onMounted(async () => {
   try {
-    const response = await axios.get("http://127.0.0.1:8000/api/careers");
+    const response = await axios.get(import.meta.env.VITE_API_BASE_URL +"/careers");
     careers.value = response.data;
   } catch (error) {
     console.error("Error fetching careers:", error);
@@ -163,7 +163,7 @@ async function submitApplication() {
       form.append("requirements", uploadedFile.value);
     }
 
-    await axios.post("http://127.0.0.1:8000/api/applications", form, {
+    await axios.post(import.meta.env.VITE_API_BASE_URL + "/applications", form, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "multipart/form-data",

@@ -13,7 +13,7 @@ async function fetchScheduledTrainings() {
   try {
     const token = localStorage.getItem("token"); // Adjust if you store token differently
 
-    const res = await axios.get("http://127.0.0.1:8000/api/trainings", {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/trainings", {
       headers: { Authorization: `Bearer ${token}` },
     });
 

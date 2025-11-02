@@ -134,7 +134,7 @@ function formatSchedule(dt) {
 // Fetch organizations from backend
 onMounted(async () => {
   try {
-    const res = await axios.get("https://pathfinder-development-production.up.railway.app/api/organization");
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/organization");
     // Map backend fields to frontend template
 
     // Map backend fields for frontend usage

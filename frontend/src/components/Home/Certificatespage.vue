@@ -48,7 +48,7 @@ async function fetchTrainingCounters() {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const response = await axios.get("http://127.0.0.1:8000/api/registrations", {
+    const response = await axios.get(import.meta.env.VITE_API_BASE_URL +"/registrations", {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -73,7 +73,7 @@ async function fetchCertificates(applicantID) {
   try {
     const token = localStorage.getItem("token");
     const response = await axios.get(
-      `http://127.0.0.1:8000/api/certificates/${applicantID}`,
+      import.meta.env.VITE_API_BASE_URL +`/certificates/${applicantID}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
@@ -113,7 +113,7 @@ async function uploadCertificate(cert, index) {
 
   try {
     const response = await axios.post(
-      "http://127.0.0.1:8000/api/certificates",
+      import.meta.env.VITE_API_BASE_URL + "/certificates",
       formData,
       {
         headers: {
@@ -155,7 +155,7 @@ async function deleteCertificateConfirmed() {
   const id = certToDelete.value.certificationID || certToDelete.value.id;
 
   try {
-    await axios.delete(`http://127.0.0.1:8000/api/certificates/${id}`, {
+    await axios.delete(import.meta.env.VITE_API_BASE_URL +`/certificates/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -181,7 +181,7 @@ async function toggleCertificateSelection(cert) {
   try {
     const id = cert.certificationID || cert.id;
     const response = await axios.patch(
-      `http://127.0.0.1:8000/api/certificates/${id}/toggle`,
+      import.meta.env.VITE_API_BASE_URL +`/certificates/${id}/toggle`,
       {},
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -264,7 +264,7 @@ const selectAllCertificates = async () => {
         if (!cert.IsSelected) {
           const id = cert.certificationID || cert.id;
           await axios.patch(
-            `http://127.0.0.1:8000/api/certificates/${id}/toggle`,
+            import.meta.env.VITE_API_BASE_URL + `/certificates/${id}/toggle`,
             {},
             { headers: { Authorization: `Bearer ${token}` } }
           );
@@ -292,7 +292,7 @@ const deselectAllCertificates = async () => {
         if (cert.IsSelected) {
           const id = cert.certificationID || cert.id;
           await axios.patch(
-            `http://127.0.0.1:8000/api/certificates/${id}/toggle`,
+            import.meta.env.VITE_API_BASE_URL + `/certificates/${id}/toggle`,
             {},
             { headers: { Authorization: `Bearer ${token}` } }
           );

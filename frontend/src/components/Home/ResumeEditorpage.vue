@@ -56,7 +56,7 @@ async function fetchTrainingCounters() {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const response = await axios.get("https://pathfinder-development-production.up.railway.app/api/registrations", {
+    const response = await axios.get(import.meta.env.VITE_API_BASE_URL +"/registrations", {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -81,7 +81,7 @@ async function saveResume() {
   try {
     const token = localStorage.getItem("token");
     const response = await axios.post(
-      "https://pathfinder-development-production.up.railway.app/api/resume",
+      import.meta.env.VITE_API_BASE_URL +"/resume",
       {
         summary: resume.summary,
         professionalLink: resume.url,
@@ -101,7 +101,7 @@ async function saveResume() {
 async function loadResume() {
   try {
     const token = localStorage.getItem("token");
-    const { data } = await axios.get("https://pathfinder-development-production.up.railway.app/api/resume", {
+    const { data } = await axios.get(import.meta.env.VITE_API_BASE_URL +"/resume", {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -112,7 +112,7 @@ async function loadResume() {
     }
 
     const { data: expData } = await axios.get(
-      "https://pathfinder-development-production.up.railway.app/api/experiences",
+      import.meta.env.VITE_API_BASE_URL +"/experiences",
       {
         headers: { Authorization: `Bearer ${token}` },
       }
@@ -129,7 +129,7 @@ async function loadResume() {
 async function deleteResume() {
   try {
     const token = localStorage.getItem("token");
-    await axios.delete("https://pathfinder-development-production.up.railway.app/api/resume", {
+    await axios.delete(import.meta.env.VITE_API_BASE_URL +"/resume", {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -149,7 +149,7 @@ async function addEducation() {
 
     if (!resume.resumeID) {
       const resumeRes = await axios.post(
-        "https://pathfinder-development-production.up.railway.app/api/resume",
+        import.meta.env.VITE_API_BASE_URL +"/resume",
         {
           summary: resume.summary || "",
           professionalLink: resume.url || "",
@@ -160,7 +160,7 @@ async function addEducation() {
     }
 
     const { data } = await axios.post(
-      "https://pathfinder-development-production.up.railway.app/api/education",
+      import.meta.env.VITE_API_BASE_URL +"/education",
       { ...newEducation, resumeID: resume.resumeID },
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -181,7 +181,7 @@ async function loadEducation() {
     const resumeID = resume.resumeID || localStorage.getItem("resumeID");
 
     const { data } = await axios.get(
-      `https://pathfinder-development-production.up.railway.app/api/education?resumeID=${resumeID}`,
+      import.meta.env.VITE_API_BASE_URL +`/education?resumeID=${resumeID}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
@@ -198,7 +198,7 @@ async function removeEducation(index) {
     const edu = resume.education[index];
     if (edu.educationID) {
       await axios.delete(
-        `https://pathfinder-development-production.up.railway.app/api/education/${edu.educationID}`,
+        import.meta.env.VITE_API_BASE_URL +`/education/${edu.educationID}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -227,7 +227,7 @@ async function addExperience() {
 
     if (!resume.resumeID) {
       const resumeRes = await axios.post(
-        "https://pathfinder-development-production.up.railway.app/api/resume",
+        import.meta.env.VITE_API_BASE_URL +"/resume",
         {
           summary: resume.summary || "",
           professionalLink: resume.url || "",
@@ -238,7 +238,7 @@ async function addExperience() {
     }
 
     const { data } = await axios.post(
-      "https://pathfinder-development-production.up.railway.app/api/experiences",
+      import.meta.env.VITE_API_BASE_URL +"/experiences",
       {
         ...newExperience,
         startYear: `${newExperience.startYear}-01-01`,
@@ -270,7 +270,7 @@ async function removeExperience(index) {
     const exp = resume.experience[index];
     if (exp.experienceID) {
       await axios.delete(
-        `https://pathfinder-development-production.up.railway.app/api/experiences/${exp.experienceID}`,
+        import.meta.env.VITE_API_BASE_URL +`/experiences/${exp.experienceID}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -288,7 +288,7 @@ async function loadSkills(resumeID) {
   try {
     const token = localStorage.getItem("token");
     const { data } = await axios.get(
-      `https://pathfinder-development-production.up.railway.app/api/skills/${resumeID}`,
+      import.meta.env.VITE_API_BASE_URL +`/skills/${resumeID}`,
       {
         headers: { Authorization: `Bearer ${token}` },
       }
@@ -311,7 +311,7 @@ async function addSkill() {
     }
 
     const { data } = await axios.post(
-      "https://pathfinder-development-production.up.railway.app/api/skills",
+      import.meta.env.VITE_API_BASE_URL +"/skills",
       { skillName: newSkill.value.trim(), resumeID: resume.resumeID },
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -328,7 +328,7 @@ async function removeSkill(index) {
     const token = localStorage.getItem("token");
     const skill = resume.skills[index];
     if (skill.skillID) {
-      await axios.delete(`https://pathfinder-development-production.up.railway.app/api/skills/${skill.skillID}`, {
+      await axios.delete(import.meta.env.VITE_API_BASE_URL +`/skills/${skill.skillID}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
     }
@@ -520,7 +520,7 @@ async function fetchSelectedCertificates() {
 
   try {
     const response = await axios.get(
-      `https://pathfinder-development-production.up.railway.app/api/certificates/${user.applicantID}/selected`,
+      import.meta.env.VITE_API_BASE_URL +`/certificates/${user.applicantID}/selected`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
