@@ -29,8 +29,7 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
-            // ✅ Correct way to apply the throttle middleware
-            'throttle:api',
+            'throttle:api', // ✅ Correct syntax
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
     ];
@@ -39,10 +38,11 @@ class Kernel extends HttpKernel
         'auth' => \App\Http\Middleware\Authenticate::class,
         'auth.custom' => \App\Http\Middleware\AuthCustom::class,
         'apitoken' => \App\Http\Middleware\ApiTokenAuth::class,
+        'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class, // ✅ Add this line
     ];
 
-    // ✅ Auto-generate QR key every minute if needed
-    protected function schedule(Schedule $schedule)
+    // ✅ Auto-generate QR key 1 minute before or right at schedule
+        protected function schedule(Schedule $schedule)
     {
         $schedule->call(function () {
             $now = now();
