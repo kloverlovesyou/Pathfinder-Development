@@ -587,7 +587,7 @@ export default {
   methods: {
     async fetchTags() {
       try {
-        const response = await axios.get('http://127.0.0.1:8000/api/tags');
+        const response = await axios.get('https://pathfinder-development-production.up.railway.app/api/tags');
         this.tagOptions = response.data; // Update tagOptions correctly
       } catch (error) {
         console.error('Error fetching tags:', error);
@@ -619,7 +619,7 @@ export default {
       if (newTag) {
         try {
           // Send the new tag to the backend
-          const response = await axios.post('http://127.0.0.1:8000/api/tags', {
+          const response = await axios.post('https://pathfinder-development-production.up.railway.app/api/tags', {
             TagName: newTag
           });
 
@@ -722,7 +722,7 @@ export default {
 
         // Fetch registrants from API
         const response = await axios.get(
-          `http://127.0.0.1:8000/api/trainings/${training.trainingID}/registrants`,
+          `https://pathfinder-development-production.up.railway.app/api/trainings/${training.trainingID}/registrants`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -817,7 +817,7 @@ export default {
 
     
     async fetchTrainings() {
-      const response = await axios.get("http://127.0.0.1:8000/api/trainings");
+      const response = await axios.get("https://pathfinder-development-production.up.railway.app/api/trainings");
       const newTrainings = response.data;
 
       newTrainings.forEach(training => {
@@ -892,7 +892,7 @@ async saveTraining() {
       Tags: this.newTraining.Tags
     };
 
-    const response = await axios.post("http://127.0.0.1:8000/api/trainings", payload, {
+    const response = await axios.post("https://pathfinder-development-production.up.railway.app/api/trainings", payload, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json"
@@ -963,13 +963,13 @@ async saveTraining() {
       try {
         const token = localStorage.getItem("token");
         const response = await axios.post(
-          "http://127.0.0.1:8000/api/trainings/generate-qr",
+          "https://pathfinder-development-production.up.railway.app/api/trainings/generate-qr",
           { trainingID: training.trainingID },
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
         // Assign QR data
-        this.qrCodeValue = `http://127.0.0.1:8000/api/attendance/checkin?trainingID=${training.trainingID}&key=${response.data.key}`;
+        this.qrCodeValue = `https://pathfinder-development-production.up.railway.app/api/attendance/checkin?trainingID=${training.trainingID}&key=${response.data.key}`;
         this.qrExpiresAt = new Date(response.data.expires_at); // make it a Date object
         this.activeTrainingId = training.trainingID;
 

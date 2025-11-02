@@ -452,7 +452,7 @@ import api from "@/api/axios";
 
 const fetchTags = async () => {
   try {
-    const response = await axios.get('http://127.0.0.1:8000/api/tags');
+    const response = await axios.get('https://pathfinder-development-production.up.railway.app/api/tags');
     console.log(response.data); // Log the API response
     this.tagOptions = response.data; // Update tagOptions
   } catch (error) {
@@ -605,7 +605,7 @@ export default {
 
       try {
         // Send the new tag to the backend
-        const response = await axios.post('http://127.0.0.1:8000/api/tags', {
+        const response = await axios.post('https://pathfinder-development-production.up.railway.app/api/tags', {
           TagName: this.newTagName
         }, {
           headers: {
@@ -655,7 +655,7 @@ export default {
 
     async fetchTags() {
       try {
-        const response = await axios.get('http://127.0.0.1:8000/api/tags');
+        const response = await axios.get('https://pathfinder-development-production.up.railway.app/api/tags');
         this.tagOptions = response.data; // Update tagOptions correctly
         console.log(this.tagOptions); // Log the tags to see if they are fetched correctly
       } catch (error) {
@@ -803,7 +803,7 @@ export default {
 
     async fetchCareers() {
       try {
-        const response = await axios.get("http://127.0.0.1:8000/api/careers");
+        const response = await axios.get("https://pathfinder-development-production.up.railway.app/api/careers");
         this.upcomingCareers = response.data;
       } catch (error) {
         console.error("ERROR FETCHING CAREERS:", error);
@@ -855,7 +855,7 @@ export default {
 
         // Send data to backend (including tags)
         const response = await api.post(
-          "http://127.0.0.1:8000/api/careers",
+          "https://pathfinder-development-production.up.railway.app/api/careers",
           {
             position: this.newCareer.position,
             details: this.newCareer.details,
