@@ -428,7 +428,7 @@ const handleSubmit = async () => {
 
   try {
     const { confirmPassword, ...payload } = form.value;
-    await axios.post("http://127.0.0.1:8000/api/organization", payload);
+    await axios.post("https://pathfinder-development-production.up.railway.app/api/organization", payload);
 
     // ✅ Show success modal instead of alert
     showSuccessModal.value = true;
