@@ -42,7 +42,6 @@ class CareerController extends Controller
 
         return response()->json($careers);
     }
-    
     public function store(Request $request)
     {
         \Log::info('INCOMING CAREER DATA:', $request->all());
@@ -60,9 +59,14 @@ class CareerController extends Controller
 
         $deadline = Carbon::parse($validated['deadline'])->format('Y-m-d');
 
-        $user = $request->user();
+        // ✅ Authenticate using Bearer token
+        $token = $request->bearerToken();
+        $user = \App\Models\Organization::where('api_token', $token)->first();
 
-        // optional log to verify
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
         \Log::info('AUTHENTICATED USER:', ['user' => $user]);
 
         $career = Career::create([
@@ -72,7 +76,7 @@ class CareerController extends Controller
             'requirements' => $validated['requirements'],
             'applicationLetterAddress' => $validated['letterAddress'],
             'deadlineOfSubmission' => $deadline,
-            'organizationID' => $user->organizationID ?? null, // safe access
+            'organizationID' => $user->organizationID ?? $user->id, // use organization ID
         ]);
 
         if (!empty($validated['Tags'])) {
