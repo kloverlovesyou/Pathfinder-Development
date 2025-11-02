@@ -9,24 +9,28 @@ use App\Models\Organization;
 
 class AuthCustom
 {
-    public function handle(Request $request, Closure $next)
-    {
-        // 🩹 Fix for missing Authorization header in some hosts (like Railway)
-        if (!$request->bearerToken() && isset($_SERVER['HTTP_AUTHORIZATION'])) {
-            $request->headers->set('Authorization', $_SERVER['HTTP_AUTHORIZATION']);
-        }
+    ublic function handle(Request $request, Closure $next)
+{
+    // 🚨 Debug: Log all headers for testing
+    \Log::info('Headers:', $request->headers->all());
 
-        $token = $request->bearerToken();
-
-        $user = \App\Models\Applicant::where('api_token', $token)->first()
-            ?? \App\Models\Organization::where('api_token', $token)->first();
-
-        if (!$user) {
-            return response()->json(['message' => 'Unauthorized'], 401);
-        }
-
-        $request->setUserResolver(fn() => $user);
-
-        return $next($request);
+    if (!$request->bearerToken() && isset($_SERVER['HTTP_AUTHORIZATION'])) {
+        $request->headers->set('Authorization', $_SERVER['HTTP_AUTHORIZATION']);
     }
+
+    $token = $request->bearerToken();
+
+    \Log::info('Bearer Token:', [$token]);
+
+    $user = \App\Models\Applicant::where('api_token', $token)->first()
+          ?? \App\Models\Organization::where('api_token', $token)->first();
+
+    if (!$user) {
+        \Log::warning('Unauthorized - token not found', [$token]);
+        return response()->json(['message' => 'Unauthorized'], 401);
+    }
+
+    $request->setUserResolver(fn() => $user);
+    return $next($request);
+}
 }
