@@ -429,7 +429,7 @@ const handleSubmit = async () => {
 
   try {
     const { confirmPassword, ...payload } = form.value;
-    await api.post("/organization", payload);
+   await axios.post(import.meta.env.VITE_API_BASE_URL + "/organization", payload);
 
     // ✅ Show success modal instead of alert
     showSuccessModal.value = true;
