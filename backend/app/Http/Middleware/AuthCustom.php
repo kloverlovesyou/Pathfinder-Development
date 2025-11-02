@@ -9,7 +9,7 @@ use App\Models\Organization;
 
 class AuthCustom
 {
-    ublic function handle(Request $request, Closure $next)
+    public function handle(Request $request, Closure $next)
 {
     // 🚨 Debug: Log all headers for testing
     \Log::info('Headers:', $request->headers->all());
