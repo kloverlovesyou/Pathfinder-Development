@@ -401,6 +401,7 @@
 import { ref } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
+import api from "../../composables/api.js";
 
 const router = useRouter();
 
@@ -428,7 +429,7 @@ const handleSubmit = async () => {
 
   try {
     const { confirmPassword, ...payload } = form.value;
-    await axios.post("https://pathfinder-development-production.up.railway.app/api/organization", payload);
+    await api.post("/organization", payload);
 
     // ✅ Show success modal instead of alert
     showSuccessModal.value = true;
