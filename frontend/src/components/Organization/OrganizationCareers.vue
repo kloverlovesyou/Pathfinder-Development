@@ -829,78 +829,79 @@ export default {
       this.openApplicantsModal();
     },
 
-    async saveCareer() {
-      const token = this.checkToken(); // Check token before proceeding
-      if (!token) return; // If token is invalid, exit
+   async saveCareer() {
+  // ✅ Debug token being sent
+  const token = this.checkToken();
+  console.log("🔹 Token being sent:", token); // 👈 Add this line here
 
-      try {
-        // Validate required fields
-        if (
-          !this.newCareer.position ||
-          !this.newCareer.details ||
-          !this.newCareer.qualifications ||
-          !this.newCareer.requirements ||
-          !this.newCareer.letterAddress ||
-          !this.newCareer.deadline
-        ) {
-          alert("PLEASE FILL OUT ALL FIELDS BEFORE SAVING!!!");
-          return;
-        }
+  if (!token) return; // If token is invalid, exit
 
-        // Optional check for tags
-        if (!this.newCareer.Tags || this.newCareer.Tags.length === 0) {
-          const proceed = confirm("No tags selected. Do you want to continue without tags?");
-          if (!proceed) return;
-        }
+  try {
+    // Validate required fields
+    if (
+      !this.newCareer.position ||
+      !this.newCareer.details ||
+      !this.newCareer.qualifications ||
+      !this.newCareer.requirements ||
+      !this.newCareer.letterAddress ||
+      !this.newCareer.deadline
+    ) {
+      alert("PLEASE FILL OUT ALL FIELDS BEFORE SAVING!!!");
+      return;
+    }
 
-        // Send data to backend (including tags)
-        const response = await api.post(
-          import.meta.env.VITE_API_BASE_URL +"/careers",
-          {
-            position: this.newCareer.position,
-            details: this.newCareer.details,
-            qualifications: this.newCareer.qualifications,
-            requirements: this.newCareer.requirements,
-            letterAddress: this.newCareer.letterAddress,
-            deadline: this.newCareer.deadline,
-            Tags: this.newCareer.Tags,
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+    // Optional check for tags
+    if (!this.newCareer.Tags || this.newCareer.Tags.length === 0) {
+      const proceed = confirm("No tags selected. Do you want to continue without tags?");
+      if (!proceed) return;
+    }
 
-        // Handle backend response
-        if (response.data.message === "Career already exists") {
-          alert("This career is already posted.");
-        } else {
-          alert("CAREER POSTED SUCCESSFULLY!!!");
-          this.upcomingCareers.push(response.data);
-          this.closeCareerPopup();
-          this.resetNewCareer();
-          await this.fetchCareers();
-        }
-      } catch (error) {
-        console.error("ERROR SAVING CAREER:", error);
-        // Handle specific errors
-        if (error.response) {
-          if (error.response.status === 401) {
-            alert("Unauthorized: Please log in again.");
-          } else if (error.response.status === 409) {
-            alert("This career already exists!");
-          } else if (error.response.status === 422) {
-            alert("Validation failed. Please check your inputs.");
-          } else {
-            alert("Something went wrong. Please try again.");
-          }
-        } else {
-          alert("Unable to connect to the server.");
-        }
+    // Send data to backend (including tags)
+    const response = await api.post(
+      import.meta.env.VITE_API_BASE_URL + "/careers",
+      {
+        position: this.newCareer.position,
+        details: this.newCareer.details,
+        qualifications: this.newCareer.qualifications,
+        requirements: this.newCareer.requirements,
+        letterAddress: this.newCareer.letterAddress,
+        deadline: this.newCareer.deadline,
+        Tags: this.newCareer.Tags,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       }
-    },
+    );
+
+    // Handle backend response
+    if (response.data.message === "Career already exists") {
+      alert("This career is already posted.");
+    } else {
+      alert("CAREER POSTED SUCCESSFULLY!!!");
+      this.upcomingCareers.push(response.data);
+      this.closeCareerPopup();
+      this.resetNewCareer();
+      await this.fetchCareers();
+    }
+  } catch (error) {
+    console.error("ERROR SAVING CAREER:", error);
+    if (error.response) {
+      if (error.response.status === 401) {
+        alert("Unauthorized: Please log in again.");
+      } else if (error.response.status === 409) {
+        alert("This career already exists!");
+      } else if (error.response.status === 422) {
+        alert("Validation failed. Please check your inputs.");
+      } else {
+        alert("Something went wrong. Please try again.");
+      }
+    } else {
+      alert("Unable to connect to the server.");
+    }
+  }
 
 
     resetNewCareer() {
