@@ -19,6 +19,9 @@ WORKDIR /var/www/html
 # Copy Laravel app from /backend to container working directory
 COPY backend/ /var/www/html/
 
+# ✅ Set Apache DocumentRoot to Laravel public folder
+RUN sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
+
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
