@@ -134,7 +134,7 @@ function formatSchedule(dt) {
 // Fetch organizations from backend
 onMounted(async () => {
   try {
-    const res = await axios.get("http://127.0.0.1:8000/api/organization");
+    const res = await axios.get("https://pathfinder-development-production.up.railway.app/api/organization");
     // Map backend fields to frontend template
 
     // Map backend fields for frontend usage

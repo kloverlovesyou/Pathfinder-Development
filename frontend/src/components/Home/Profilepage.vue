@@ -49,7 +49,7 @@ async function fetchMyActivities() {
   userName.value = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Guest";
 
   try {
-    const res = await axios.get(`http://127.0.0.1:8000/api/my-activities/${user.applicantID}`);
+    const res = await axios.get(`https://pathfinder-development-production.up.railway.app/api/my-activities/${user.applicantID}`);
     activities.value = res.data.activities || [];
 
     console.log("Raw activities data:", activities.value);

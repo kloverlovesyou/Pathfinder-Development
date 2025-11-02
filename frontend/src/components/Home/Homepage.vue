@@ -39,7 +39,7 @@ async function toggleRegister(training) {
       const registrationID =
         registeredPosts[training.trainingID].registrationID;
       await axios.delete(
-        `http://127.0.0.1:8000/api/registrations/${registrationID}`,
+        `https://pathfinder-development-production.up.railway.app/api/registrations/${registrationID}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -53,7 +53,7 @@ async function toggleRegister(training) {
   else {
     try {
       const res = await axios.post(
-        "http://127.0.0.1:8000/api/registrations",
+        "https://pathfinder-development-production.up.railway.app/api/registrations",
         { trainingID: training.trainingID },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -219,7 +219,7 @@ async function fetchEvents() {
     }
 
     const response = await axios.get(
-      `http://127.0.0.1:8000/api/calendar/${user.applicantID}`,
+      `https://pathfinder-development-production.up.railway.app/api/calendar/${user.applicantID}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
