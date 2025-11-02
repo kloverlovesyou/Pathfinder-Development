@@ -11,17 +11,20 @@ class AuthCustom
 {
     public function handle(Request $request, Closure $next)
     {
+        // 🩹 Fix for missing Authorization header in some hosts (like Railway)
+        if (!$request->bearerToken() && isset($_SERVER['HTTP_AUTHORIZATION'])) {
+            $request->headers->set('Authorization', $_SERVER['HTTP_AUTHORIZATION']);
+        }
+
         $token = $request->bearerToken();
 
-        // Try to match token to either Applicant or Organization
-        $user = Applicant::where('api_token', $token)->first()
-              ?? Organization::where('api_token', $token)->first();
+        $user = \App\Models\Applicant::where('api_token', $token)->first()
+            ?? \App\Models\Organization::where('api_token', $token)->first();
 
         if (!$user) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        // ✅ Attach authenticated user for $request->user()
         $request->setUserResolver(fn() => $user);
 
         return $next($request);
