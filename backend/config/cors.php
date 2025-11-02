@@ -6,7 +6,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://path.com','http://localhost:5173', 'https://portal.pathfinder.com', 'https://pathfinder-development-production.up.railway.app', 'https://your-frontend.up.railway.app'],
+    'allowed_origins' => ['*'],
 
     'allowed_origins_patterns' => [],
 
