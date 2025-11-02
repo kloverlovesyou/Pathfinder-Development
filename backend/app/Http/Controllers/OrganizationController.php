@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Organization;
 use Illuminate\Support\Facades\Hash;
-
+use Laravel\Sanctum\HasApiTokens;   
 class OrganizationController extends Controller
 {
 
@@ -61,9 +61,12 @@ class OrganizationController extends Controller
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
+        $token = $organization->createToken('api-token')->plainTextToken;
+
         return response()->json([
             'message' => 'Login successful',
             'organization' => $organization,
+            'token' => $token, // <- send this to frontend
         ]);
     }
 

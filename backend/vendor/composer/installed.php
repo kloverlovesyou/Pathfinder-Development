@@ -3,7 +3,7 @@
         'name' => 'laravel/laravel',
         'pretty_version' => 'dev-Option-2-QR-Attendance-with-links',
         'version' => 'dev-Option-2-QR-Attendance-with-links',
-        'reference' => 'f2256be04b48b5fd7f05d2e3262c378e9d7f88d4',
+        'reference' => 'feb5812b9c2c1704fa56e6b1518600dd373cd4a4',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -463,7 +463,7 @@
         'laravel/laravel' => array(
             'pretty_version' => 'dev-Option-2-QR-Attendance-with-links',
             'version' => 'dev-Option-2-QR-Attendance-with-links',
-            'reference' => 'f2256be04b48b5fd7f05d2e3262c378e9d7f88d4',
+            'reference' => 'feb5812b9c2c1704fa56e6b1518600dd373cd4a4',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
