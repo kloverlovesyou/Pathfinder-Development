@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Organization;
 use Illuminate\Support\Facades\Hash;
-use Laravel\Sanctum\HasApiTokens;   
+
 class OrganizationController extends Controller
 {
 
@@ -48,11 +48,11 @@ class OrganizationController extends Controller
     }
 
     // Login Organization
-   public function login(Request $request)
+    public function login(Request $request)
     {
         $request->validate([
             'emailAddress' => 'required|email',
-            'password'     => 'required|string|min:8',
+            'password' => 'required|string|min:8',
         ]);
 
         $organization = Organization::where('emailAddress', $request->emailAddress)->first();
@@ -61,13 +61,9 @@ class OrganizationController extends Controller
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
-        // ✅ Create a Sanctum token (make sure your Organization model uses HasApiTokens)
-        $token = $organization->createToken('organization-token')->plainTextToken;
-
         return response()->json([
             'message' => 'Login successful',
             'organization' => $organization,
-            'token' => $token,
         ]);
     }
 
