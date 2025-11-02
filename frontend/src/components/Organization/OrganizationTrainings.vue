@@ -850,88 +850,82 @@ closeTrainingPopup() {
   this.newTagName = ""; // optional: clear the tag input too
 },
 
-  async saveCareer() {
-    const token = localStorage.getItem("token");
-    console.log("🔹 Token being sent:", token);
-    if (!token) {
-      alert("Please log in to continue.");
+async saveTraining() {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    alert("Please log in to continue.");
+    return;
+  }
+
+  try {
+    // Validate required fields
+    if (
+      !this.newTraining.title ||
+      !this.newTraining.description ||
+      !this.newTraining.date ||
+      !this.newTraining.startTime ||
+      !this.newTraining.endTime ||
+      !this.newTraining.mode
+    ) {
+      alert("PLEASE FILL OUT ALL FIELDS BEFORE POSTING!!!");
       return;
     }
 
-    try {
-      // 1️⃣ Validate required fields
-      if (
-        !this.newCareer.position ||
-        !this.newCareer.details ||
-        !this.newCareer.qualifications ||
-        !this.newCareer.requirements ||
-        !this.newCareer.letterAddress ||
-        !this.newCareer.deadline
-      ) {
-        alert("PLEASE FILL OUT ALL FIELDS BEFORE SAVING!!!");
-        return;
-      }
+    // Combine date and time
+    const startSchedule = `${this.newTraining.date} ${this.newTraining.startTime}`;
+    const endSchedule = `${this.newTraining.date} ${this.newTraining.endTime}`;
 
-      // 2️⃣ Optional check for tags
-      if (!this.newCareer.Tags || this.newCareer.Tags.length === 0) {
-        const proceed = confirm("No tags selected. Do you want to continue without tags?");
-        if (!proceed) return;
-      }
-
-      // 3️⃣ Prepare payload
-      const payload = {
-        position: this.newCareer.position,
-        details: this.newCareer.details,
-        qualifications: this.newCareer.qualifications,
-        requirements: this.newCareer.requirements,
-        letterAddress: this.newCareer.letterAddress,
-        deadline: this.newCareer.deadline,
-        Tags: this.newCareer.Tags
-      };
-
-      // 4️⃣ Send POST request with Bearer token
-      const response = await axios.post(
-        import.meta.env.VITE_API_BASE_URL + "/careers",
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          }
-        }
-      );
-
-      // 5️⃣ Handle response
-      if (response && response.status >= 200 && response.status < 300 && response.data?.data) {
-        const newCareer = response.data.data;
-        this.upcomingCareers.push(newCareer);
-        alert("CAREER POSTED SUCCESSFULLY!!!");
-        this.closeCareerPopup();
-        this.resetNewCareer();
-        await this.fetchCareers();
-      } else {
-        console.error("Unexpected response:", response);
-        alert("Something went wrong while saving the career. Please try again.");
-      }
-
-    } catch (error) {
-      console.error("ERROR SAVING CAREER:", error);
-
-      if (error.response) {
-        if (error.response.status === 401) {
-          alert("Unauthorized: Please log in again.");
-        } else if (error.response.status === 422) {
-          alert("Validation failed. Please check your inputs.");
-        } else if (error.response.status === 409) {
-          alert("This career already exists!");
-        } else {
-          alert("Something went wrong. Please try again.");
-        }
-      } else {
-        alert("Unable to connect to the server.");
-      }
+    // Make sure endTime is after startTime
+    if (new Date(endSchedule) <= new Date(startSchedule)) {
+      alert("End time must be later than start time!");
+      return;
     }
-  },
+
+    const payload = {
+      title: this.newTraining.title,
+      description: this.newTraining.description,
+      schedule: startSchedule,
+      end_time: endSchedule, // 👈 NEW
+      mode: this.newTraining.mode,
+      location: this.newTraining.location || null,
+      training_link: this.newTraining.trainingLink || null,
+      Tags: this.newTraining.Tags
+    };
+
+    const response = await api.post("/trainings", payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    console.log("API Response:", response);
+
+    if (response && response.status >= 200 && response.status < 300 && response.data?.data) {
+      const newTraining = response.data.data;
+      this.upcomingtrainings.push(newTraining);
+      alert("TRAINING POSTED SUCCESSFULLY!!!");
+      this.closeTrainingPopup();
+    } else {
+      console.error("Unexpected response:", response);
+      alert("Something went wrong while saving the training. Please try again.");
+    }
+
+  } catch (error) {
+    console.error("ERROR SAVING TRAINING:", error);
+    if (error.response) {
+      if (error.response.status === 401) {
+        alert("Unauthorized: Please log in again.");
+      } else if (error.response.status === 422) {
+        alert("Validation failed. Please check your inputs.");
+      } else {
+        alert("Something went wrong. Please try again.");
+      }
+    } else {
+      alert("Unable to connect to the server.");
+    }
+  }
+},
 
     formatSchedule(schedule) {
       if (!schedule) return "No schedule set";
