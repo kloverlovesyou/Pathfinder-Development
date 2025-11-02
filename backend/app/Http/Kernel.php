@@ -29,8 +29,7 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
-            // ✅ Add Sanctum middleware here
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            // ✅ Correct way to apply the throttle middleware
             'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
@@ -42,7 +41,7 @@ class Kernel extends HttpKernel
         'apitoken' => \App\Http\Middleware\ApiTokenAuth::class,
     ];
 
-    // ✅ Auto-generate QR key 1 minute before or right at schedule
+    // ✅ Auto-generate QR key every minute if needed
     protected function schedule(Schedule $schedule)
     {
         $schedule->call(function () {
