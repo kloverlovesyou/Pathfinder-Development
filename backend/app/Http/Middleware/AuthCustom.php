@@ -6,31 +6,48 @@ use Closure;
 use Illuminate\Http\Request;
 use App\Models\Applicant;
 use App\Models\Organization;
+use Illuminate\Support\Facades\Log;
 
 class AuthCustom
 {
     public function handle(Request $request, Closure $next)
-{
-    // 🚨 Debug: Log all headers for testing
-    \Log::info('Headers:', $request->headers->all());
+    {
+        // 🧠 Railway sometimes renames or strips Authorization headers
+        $authHeader = $request->header('Authorization');
 
-    if (!$request->bearerToken() && isset($_SERVER['HTTP_AUTHORIZATION'])) {
-        $request->headers->set('Authorization', $_SERVER['HTTP_AUTHORIZATION']);
+        if (!$authHeader && isset($_SERVER['HTTP_AUTHORIZATION'])) {
+            $authHeader = $_SERVER['HTTP_AUTHORIZATION'];
+        } elseif (!$authHeader && isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+            $authHeader = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+        }
+
+        // ✅ Restore Authorization header if found
+        if ($authHeader && !$request->header('Authorization')) {
+            $request->headers->set('Authorization', $authHeader);
+        }
+
+        $token = $request->bearerToken();
+
+        Log::info('🔹 [AUTH CHECK]', [
+            'header' => $authHeader,
+            'token' => $token,
+        ]);
+
+        // ✅ Try to find user in either Applicants or Organizations
+        $user = Applicant::where('api_token', $token)->first()
+            ?? Organization::where('api_token', $token)->first();
+
+        if (!$user) {
+            Log::warning('🚫 Unauthorized - token not found or invalid', ['token' => $token]);
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        Log::info('✅ Authenticated', [
+            'type' => $user instanceof Organization ? 'Organization' : 'Applicant',
+            'id' => $user->organizationID ?? $user->applicantID ?? null,
+        ]);
+
+        $request->setUserResolver(fn() => $user);
+        return $next($request);
     }
-
-    $token = $request->bearerToken();
-
-    \Log::info('Bearer Token:', [$token]);
-
-    $user = \App\Models\Applicant::where('api_token', $token)->first()
-          ?? \App\Models\Organization::where('api_token', $token)->first();
-
-    if (!$user) {
-        \Log::warning('Unauthorized - token not found', [$token]);
-        return response()->json(['message' => 'Unauthorized'], 401);
-    }
-
-    $request->setUserResolver(fn() => $user);
-    return $next($request);
-}
 }
