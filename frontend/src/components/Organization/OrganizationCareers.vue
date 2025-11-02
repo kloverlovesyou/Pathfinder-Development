@@ -832,7 +832,7 @@ export default {
     async saveCareer() {
       try {
         // 🔹 0. Get token
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token")?.trim();
         console.log("🔹 Token from localStorage:", token);
 
         if (!token) {
