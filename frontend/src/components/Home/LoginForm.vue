@@ -173,26 +173,35 @@ const handleLogin = async () => {
   if (emailError.value || passwordError.value) return;
 
   try {
-    const response = await axios.post(import.meta.env.VITE_API_BASE_URL +"/login", {
-      emailAddress: email.value,
-      password: password.value,
-    });
+    // 1️⃣ Get CSRF cookie first
+    await axios.get(
+      import.meta.env.VITE_API_BASE_URL.replace("/api", "") + "/sanctum/csrf-cookie",
+      { withCredentials: true }
+    );
+
+    // 2️⃣ Send login request with credentials
+    const response = await axios.post(
+      import.meta.env.VITE_API_BASE_URL.replace("/api", "") + "/login",
+      {
+        email: email.value,
+        password: password.value,
+      },
+      { withCredentials: true } // ✅ Required for Sanctum
+    );
 
     const userData = response.data.user;
     const role = userData.role;
-    const token = response.data.token;
 
     let displayName = "";
     if (role === "organization") {
-      displayName =
-        userData.organizationName || userData.name || "Organization";
+      displayName = userData.organizationName || userData.name || "Organization";
     } else if (role === "admin") {
       displayName = userData.name || "Admin";
     } else {
       displayName = `${userData.firstName} ${userData.lastName}`;
     }
 
-    localStorage.setItem("token", token);
+    // 3️⃣ Store user info locally (no token needed)
     localStorage.setItem(
       "user",
       JSON.stringify({
@@ -202,7 +211,7 @@ const handleLogin = async () => {
       })
     );
 
-    // ✅ Redirect based on role
+    // 4️⃣ Redirect based on role
     if (role === "organization") {
       router.push("/organization");
     } else if (role === "admin") {
@@ -210,11 +219,14 @@ const handleLogin = async () => {
     } else {
       router.push("/app");
     }
+
+    console.log("✅ Logged in via Sanctum successfully");
   } catch (err) {
     console.error(err.response?.data || err.message);
     loginError.value = "Invalid credentials. Please try again.";
   }
 };
+
 </script>
 
 <style>
