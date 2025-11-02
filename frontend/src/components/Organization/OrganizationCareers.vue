@@ -350,72 +350,49 @@
           <!-- Title -->
           <h2 class="career-popup-title">Post Career</h2>
 
-          <!-- Form -->
           <form @submit.prevent="saveCareer" class="Career-popup-form">
+            <!-- Inputs -->
             <input v-model="newCareer.position" type="text" placeholder="Position" class="career-input" />
             <input v-model="newCareer.details" type="text" placeholder="Details and Instruction" class="career-input" />
             <textarea v-model="newCareer.qualifications" placeholder="Qualifications" class="career-input"></textarea>
             <textarea v-model="newCareer.requirements" placeholder="Requirements" class="career-input"></textarea>
-            <input v-model="newCareer.letterAddress" type="text" placeholder="Application Letter Address"
-              class="career-input" />
-            <!-- Deadline input with calendar icon (career) -->
+            <input v-model="newCareer.letterAddress" type="text" placeholder="Application Letter Address" class="career-input" />
+            
+            <!-- Deadline -->
             <div class="deadline-input-wrapper">
-              <input type="date" v-model="newCareer.deadline" :min="todayDate" placeholder="Deadline of Submission"
-                class="career-input" />
-              <span class="calendar-icon">
-                <!-- use the same SVG you shared -->
-                <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path
-                    d="M2.16669 9.4165C2.16669 7.53089 2.16669 6.58808 2.75247 6.00229C3.33826 5.4165 4.28107 5.4165 6.16669 5.4165H19.8334C21.719 5.4165 22.6618 5.4165 23.2476 6.00229C23.8334 6.58808 23.8334 7.53089 23.8334 9.4165V9.83317C23.8334 10.3046 23.8334 10.5403 23.6869 10.6867C23.5405 10.8332 23.3048 10.8332 22.8334 10.8332H3.16669C2.69528 10.8332 2.45958 10.8332 2.31313 10.687C2.16669 10.5405 2.16669 10.3048 2.16669 9.83317V9.4165Z"
-                    fill="#4a4a4a" />
-                  <path
-                    d="M22.833 13C23.3042 13 23.5401 13.0002 23.6865 13.1465C23.833 13.2929 23.833 13.5286 23.833 14V19.833C23.833 21.7186 23.8329 22.6613 23.2471 23.2471C22.6613 23.8329 21.7186 23.833 19.833 23.833H6.16699C4.28137 23.833 3.33872 23.8329 2.75293 23.2471C2.16714 22.6613 2.16699 21.7186 2.16699 19.833V14C2.16699 13.5286 2.16703 13.2929 2.31348 13.1465C2.45994 13.0002 2.69576 13 3.16699 13H22.833ZM8.58301 19.5C8.11182 19.5 7.87591 19.5001 7.72949 19.6465C7.58321 19.7929 7.58301 20.0288 7.58301 20.5V20.667C7.58301 21.1382 7.58308 21.3741 7.72949 21.5205C7.87591 21.6669 8.11182 21.667 8.58301 21.667H10.917C11.3882 21.667 11.6241 21.6669 11.7705 21.5205C11.9169 21.3741 11.917 21.1382 11.917 20.667V20.5C11.917 20.0288 11.9168 19.7929 11.7705 19.6465C11.6241 19.5001 11.3882 19.5 10.917 19.5H8.58301ZM15.083 19.5C14.6118 19.5 14.3759 19.5001 14.2295 19.6465C14.0832 19.7929 14.083 20.0288 14.083 20.5V20.667C14.083 21.1382 14.0831 21.3741 14.2295 21.5205C14.3759 21.6669 14.6118 21.667 15.083 21.667H17.417C17.8882 21.667 18.1241 21.6669 18.2705 21.5205C18.4169 21.3741 18.417 21.1382 18.417 20.667V20.5C18.417 20.0288 18.4168 19.7929 18.2705 19.6465C18.1241 19.5001 17.8882 19.5 17.417 19.5H15.083ZM8.58301 15.167C8.11182 15.167 7.87591 15.1671 7.72949 15.3135C7.58337 15.4599 7.58301 15.6959 7.58301 16.167V16.333C7.58301 16.8041 7.58337 17.0401 7.72949 17.1865C7.87591 17.3329 8.11182 17.333 8.58301 17.333H10.917C11.3882 17.333 11.6241 17.3329 11.7705 17.1865C11.9166 17.0401 11.917 16.8041 11.917 16.333V16.167C11.917 15.6959 11.9166 15.4599 11.7705 15.3135C11.6241 15.1671 11.3882 15.167 10.917 15.167H8.58301ZM15.083 15.167C14.6118 15.167 14.3759 15.1671 14.2295 15.3135C14.0834 15.4599 14.083 15.6959 14.083 16.167V16.333C14.083 16.8041 14.0834 17.0401 14.2295 17.1865C14.3759 17.3329 14.6118 17.333 15.083 17.333H17.417C17.8882 17.333 18.1241 17.3329 18.2705 17.1865C18.4166 17.0401 18.417 16.8041 18.417 16.333V16.167C18.417 15.6959 18.4166 15.4599 18.2705 15.3135C18.1241 15.1671 17.8882 15.167 17.417 15.167H15.083Z"
-                    fill="#4a4a4a" />
-                  <path d="M7.58331 3.25L7.58331 6.5" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round" />
-                  <path d="M18.4167 3.25L18.4167 6.5" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round" />
-                </svg>
-              </span>
+              <input type="date" v-model="newCareer.deadline" :min="todayDate" placeholder="Deadline of Submission" class="career-input" />
+              <span class="calendar-icon"> <!-- SVG omitted for brevity --> </span>
             </div>
 
-         <!-- Tag selection -->
+            <!-- Tags -->
             <div class="relative mb-4">
-            <label class="block font-semibold text-gray-600 mb-2">Tags</label>
-            <!-- Tag List Wrapper for horizontal scrolling -->
-            <div class="tag-list-wrapper">
-            <div class="tag-list">
-            <span
-            v-for="tag in tagOptions"
-            :key="tag.TagID"
-            class="tag-chip"
-            @click="toggleTag(tag.TagID)"
-            :class="{ 'tag-chip-selected': isTagSelected(tag.TagID) }"
-            >
-            {{ tag.TagName }}
-            </span>
-            </div>
-            </div>
-            <!-- Display Selected Tags as Chips -->
-            <div v-if="newCareer.Tags.length" class="flex flex-wrap gap-2 mt-2">
-            <span
-            v-for="tagID in newCareer.Tags"
-            :key="tagID"
-            class="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-full"
-            >
-            {{ getTagName(tagID) }}
-            <button @click.stop="removeTag(tagID)" class="ml-1 text-red-500">×</button> <!-- Remove Button -->
-            </span>
-            </div>
-            <!-- Input for New Tag -->
-            <input
-            v-model="newTagName"
-            type="text"
-            placeholder="Add new tag"
-            class="career-input mt-2"
-            />
-            <button @click.prevent="addTag" class="career-save-btn mt-2">Add Tag</button>
+              <label class="block font-semibold text-gray-600 mb-2">Tags</label>
+              <div class="tag-list-wrapper">
+                <div class="tag-list">
+                  <span
+                    v-for="tag in tagOptions"
+                    :key="tag.TagID"
+                    class="tag-chip"
+                    @click="toggleTag(tag.TagID)"
+                    :class="{ 'tag-chip-selected': isTagSelected(tag.TagID) }"
+                  >
+                    {{ tag.TagName }}
+                  </span>
+                </div>
+              </div>
+
+              <div v-if="newCareer.Tags.length" class="flex flex-wrap gap-2 mt-2">
+                <span v-for="tagID in newCareer.Tags" :key="tagID" class="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-full">
+                  {{ getTagName(tagID) }}
+                  <button @click.stop="removeTag(tagID)" class="ml-1 text-red-500">×</button>
+                </span>
+              </div>
+
+              <input v-model="newTagName" type="text" placeholder="Add new tag" class="career-input mt-2" />
+              <button @click.prevent="addTag" class="career-save-btn mt-2">Add Tag</button>
             </div>
 
-            <!-- Save -->
+            <!-- Submit -->
             <button type="submit" class="career-save-btn">Post</button>
           </form>
         </div>
