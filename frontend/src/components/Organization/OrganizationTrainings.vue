@@ -895,7 +895,7 @@ closeTrainingPopup() {
         payload,
         {
           headers: {
-            "X-Auth-Token": token,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json"
           }
         }
