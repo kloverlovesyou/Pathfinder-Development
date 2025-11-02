@@ -12,33 +12,36 @@ class AuthCustom
 {
     public function handle(Request $request, Closure $next)
     {
+        // 🧾 Log all headers for debugging (you'll see this in Railway logs)
         \Log::info('🧾 FULL HEADER DUMP:', $request->headers->all());
-        // ✅ Try different header names
+
+        // ✅ Try to get the token from "Authorization: Bearer"
         $token = $request->bearerToken();
 
+        // ✅ Fallback: support X-Auth-Token header (if frontend sends that)
         if (!$token && $request->hasHeader('X-Auth-Token')) {
             $token = $request->header('X-Auth-Token');
         }
 
-        // 🧠 Log for debugging
+        // 🧠 Log the token info to confirm what was received
         \Log::info('🔹 Incoming Token Check:', [
             'Authorization' => $request->header('Authorization'),
             'X-Auth-Token' => $request->header('X-Auth-Token'),
             'TokenUsed' => $token,
         ]);
 
-        // ✅ Check token in both tables
-        $user = \App\Models\Applicant::where('api_token', $token)->first()
-            ?? \App\Models\Organization::where('api_token', $token)->first();
+        // ✅ Try to match token from Applicant or Organization
+        $user = Applicant::where('api_token', $token)->first()
+            ?? Organization::where('api_token', $token)->first();
 
         if (!$user) {
             \Log::warning('🚫 Unauthorized', ['token' => $token]);
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        // ✅ Authenticated
+        // ✅ Authenticated successfully
         \Log::info('✅ Authenticated user', [
-            'type' => $user instanceof \App\Models\Organization ? 'Organization' : 'Applicant',
+            'type' => $user instanceof Organization ? 'Organization' : 'Applicant',
             'id' => $user->organizationID ?? $user->applicantID,
         ]);
 
