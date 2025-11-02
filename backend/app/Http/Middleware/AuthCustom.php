@@ -31,8 +31,8 @@ class AuthCustom
         ]);
 
         // ✅ Try to match token from Applicant or Organization
-        $user = Applicant::where('api_token', $token)->first()
-            ?? Organization::where('api_token', $token)->first();
+        $user = Applicant::whereRaw('BINARY api_token = ?', [trim($token)])->first()
+        ?? Organization::whereRaw('BINARY api_token = ?', [trim($token)])->first();
 
         if (!$user) {
             \Log::warning('🚫 Unauthorized', ['token' => $token]);
