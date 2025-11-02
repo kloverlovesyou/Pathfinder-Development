@@ -523,7 +523,7 @@
 import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
 import axios from "axios";
 import QrcodeVue from "qrcode.vue";
-
+import api from "@/composables/api.js";
 export default {
   components: { QrcodeVue }, // ✅ register component
   data() {
@@ -817,7 +817,7 @@ export default {
 
     
     async fetchTrainings() {
-      const response = await axios.get(import.meta.env.VITE_API_BASE_URL +"/trainings");
+      const response = await api.get("/trainings");
       const newTrainings = response.data;
 
       newTrainings.forEach(training => {
@@ -892,7 +892,7 @@ async saveTraining() {
       Tags: this.newTraining.Tags
     };
 
-    const response = await axios.post(import.meta.env.VITE_API_BASE_URL +"/trainings", payload, {
+    const response = await api.post("/trainings", payload, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json"
