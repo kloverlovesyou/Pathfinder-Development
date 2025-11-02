@@ -12,39 +12,33 @@ class AuthCustom
 {
     public function handle(Request $request, Closure $next)
     {
-        // 🧠 Railway sometimes renames or strips Authorization headers
-        $authHeader = $request->header('Authorization');
-
-        if (!$authHeader && isset($_SERVER['HTTP_AUTHORIZATION'])) {
-            $authHeader = $_SERVER['HTTP_AUTHORIZATION'];
-        } elseif (!$authHeader && isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
-            $authHeader = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
-        }
-
-        // ✅ Restore Authorization header if found
-        if ($authHeader && !$request->header('Authorization')) {
-            $request->headers->set('Authorization', $authHeader);
-        }
-
+        // ✅ Try different header names
         $token = $request->bearerToken();
 
-        Log::info('🔹 [AUTH CHECK]', [
-            'header' => $authHeader,
-            'token' => $token,
+        if (!$token && $request->hasHeader('X-Auth-Token')) {
+            $token = $request->header('X-Auth-Token');
+        }
+
+        // 🧠 Log for debugging
+        \Log::info('🔹 Incoming Token Check:', [
+            'Authorization' => $request->header('Authorization'),
+            'X-Auth-Token' => $request->header('X-Auth-Token'),
+            'TokenUsed' => $token,
         ]);
 
-        // ✅ Try to find user in either Applicants or Organizations
-        $user = Applicant::where('api_token', $token)->first()
-            ?? Organization::where('api_token', $token)->first();
+        // ✅ Check token in both tables
+        $user = \App\Models\Applicant::where('api_token', $token)->first()
+            ?? \App\Models\Organization::where('api_token', $token)->first();
 
         if (!$user) {
-            Log::warning('🚫 Unauthorized - token not found or invalid', ['token' => $token]);
+            \Log::warning('🚫 Unauthorized', ['token' => $token]);
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        Log::info('✅ Authenticated', [
-            'type' => $user instanceof Organization ? 'Organization' : 'Applicant',
-            'id' => $user->organizationID ?? $user->applicantID ?? null,
+        // ✅ Authenticated
+        \Log::info('✅ Authenticated user', [
+            'type' => $user instanceof \App\Models\Organization ? 'Organization' : 'Applicant',
+            'id' => $user->organizationID ?? $user->applicantID,
         ]);
 
         $request->setUserResolver(fn() => $user);
