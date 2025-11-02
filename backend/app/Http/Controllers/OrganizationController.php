@@ -61,9 +61,16 @@ class OrganizationController extends Controller
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
+        // Generate or reuse token
+        if (!$organization->api_token) {
+            $organization->api_token = Str::random(60);
+            $organization->save();
+        }
+
         return response()->json([
             'message' => 'Login successful',
             'organization' => $organization,
+            'token' => $organization->api_token,
         ]);
     }
 
