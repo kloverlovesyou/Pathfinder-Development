@@ -829,104 +829,107 @@ export default {
       this.openApplicantsModal();
     },
 
-    async saveCareer() {
-      try {
-        // 🔹 0. Get token
-        const token = localStorage.getItem("token")?.trim();
-        console.log("🔹 Token from localStorage:", token);
+   async saveCareer() {
+  try {
+    // 🔹 0. Get token and trim
+    const token = localStorage.getItem("token")?.trim();
+    console.log("🔹 Token from localStorage:", `"${token}"`); // quotes to detect spaces
 
-        if (!token) {
-          alert("Please log in to continue.");
-          return;
-        }
+    if (!token) {
+      alert("Please log in to continue.");
+      return;
+    }
 
-        // 🔹 1. Validate required fields
-        const requiredFields = [
-          "position",
-          "details",
-          "qualifications",
-          "requirements",
-          "letterAddress",
-          "deadline"
-        ];
+    // 🔹 1. Validate required fields
+    const requiredFields = [
+      "position",
+      "details",
+      "qualifications",
+      "requirements",
+      "letterAddress",
+      "deadline"
+    ];
 
-        for (const field of requiredFields) {
-          if (!this.newCareer[field]) {
-            alert(`Please fill out the field: ${field}`);
-            return;
-          }
-        }
+    for (const field of requiredFields) {
+      if (!this.newCareer[field]) {
+        alert(`Please fill out the field: ${field}`);
+        return;
+      }
+    }
 
-        // 🔹 2. Optional tags check
-        if (!this.newCareer.Tags || this.newCareer.Tags.length === 0) {
-          const proceed = confirm("No tags selected. Continue without tags?");
-          if (!proceed) return;
-        }
+    // 🔹 2. Optional tags check
+    if (!this.newCareer.Tags || this.newCareer.Tags.length === 0) {
+      const proceed = confirm("No tags selected. Continue without tags?");
+      if (!proceed) return;
+    }
 
-        // 🔹 3. Prepare payload
-        const payload = {
-          position: this.newCareer.position,
-          details: this.newCareer.details,
-          qualifications: this.newCareer.qualifications,
-          requirements: this.newCareer.requirements,
-          letterAddress: this.newCareer.letterAddress,
-          deadline: this.newCareer.deadline,
-          Tags: this.newCareer.Tags || []
-        };
+    // 🔹 3. Prepare payload
+    const payload = {
+      position: this.newCareer.position,
+      details: this.newCareer.details,
+      qualifications: this.newCareer.qualifications,
+      requirements: this.newCareer.requirements,
+      letterAddress: this.newCareer.letterAddress,
+      deadline: this.newCareer.deadline,
+      Tags: this.newCareer.Tags || []
+    };
 
-        console.log("🔹 Payload to be sent:", payload);
+    console.log("🔹 Payload to be sent:", payload);
 
-        // 🔹 4. Send POST request with Authorization header
-        const response = await axios.post(
-          import.meta.env.VITE_API_BASE_URL + "/careers",
-          payload,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json"
-            }
-          }
-        );
-
-        // 🔹 5. Handle success
-        if (response?.status >= 200 && response?.status < 300 && response?.data?.data) {
-          console.log("✅ Response received:", response.data);
-          const newCareer = response.data.data;
-          this.upcomingCareers.push(newCareer);
-          alert("Career posted successfully!");
-          this.closeCareerPopup();
-          this.resetNewCareer();
-          await this.fetchCareers();
-        } else {
-          console.warn("⚠️ Unexpected response:", response);
-          alert("Something went wrong while saving the career.");
-        }
-      } catch (error) {
-        console.error("❌ ERROR SAVING CAREER:", error);
-
-        // 🔹 Axios error handling
-        if (error.response) {
-          console.log("🔹 Server responded with:", error.response.data);
-          switch (error.response.status) {
-            case 401:
-              alert("Unauthorized: Please log in again.");
-              break;
-            case 422:
-              alert("Validation failed. Check your inputs.");
-              break;
-            case 409:
-              alert("This career already exists!");
-              break;
-            default:
-              alert("Server error: Please try again.");
-          }
-        } else if (error.request) {
-          alert("No response from server. Check your network or server.");
-        } else {
-          alert("Error: " + error.message);
+    // 🔹 4. Send POST request with Authorization header
+    const response = await axios.post(
+      import.meta.env.VITE_API_BASE_URL + "/careers",
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`, // use trimmed token
+          "Content-Type": "application/json"
         }
       }
-    },
+    );
+
+    // 🔹 5. Handle success
+    if (response?.status >= 200 && response?.status < 300 && response?.data?.data) {
+      console.log("✅ Response received:", response.data);
+      const newCareer = response.data.data;
+      this.upcomingCareers.push(newCareer);
+      alert("Career posted successfully!");
+      this.closeCareerPopup();
+      this.resetNewCareer();
+      await this.fetchCareers();
+    } else {
+      console.warn("⚠️ Unexpected response:", response);
+      alert("Something went wrong while saving the career.");
+    }
+
+  } catch (error) {
+    console.error("❌ ERROR SAVING CAREER:", error);
+
+    // 🔹 Axios error handling
+    if (error.response) {
+      console.log("🔹 Server responded with:", error.response.data);
+      switch (error.response.status) {
+        case 401:
+          alert(
+            "Unauthorized: Please check your token. Make sure your token matches the organization token exactly and has no extra spaces."
+          );
+          break;
+        case 422:
+          alert("Validation failed. Check your inputs.");
+          break;
+        case 409:
+          alert("This career already exists!");
+          break;
+        default:
+          alert("Server error: Please try again.");
+      }
+    } else if (error.request) {
+      alert("No response from server. Check your network or server.");
+    } else {
+      alert("Error: " + error.message);
+    }
+  }
+},
     resetNewCareer() {
       this.newCareer = {
         position: "",
