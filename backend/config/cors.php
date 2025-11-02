@@ -7,6 +7,7 @@ return [
     'allowed_methods' => ['*'],
 
     'allowed_origins' => ['https://ingenious-manifestation-production.up.railway.app'],
+    'supports_credentials' => true,
 
     'allowed_origins_patterns' => [],
 
