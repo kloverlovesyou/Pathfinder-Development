@@ -830,79 +830,76 @@ export default {
     },
 
    async saveCareer() {
-  // ✅ Debug token being sent
-      const token = this.checkToken();
-      console.log("🔹 Token being sent:", token); // 👈 Add this line here
+  try {
+    console.log("🟢 saveCareer called");
 
-      if (!token) return; // If token is invalid, exit
+    // 1️⃣ Get CSRF cookie first (Sanctum requirement)
+    await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/sanctum/csrf-cookie",
+      { withCredentials: true }
+    );
 
-      try {
-        // Validate required fields
-        if (
-          !this.newCareer.position ||
-          !this.newCareer.details ||
-          !this.newCareer.qualifications ||
-          !this.newCareer.requirements ||
-          !this.newCareer.letterAddress ||
-          !this.newCareer.deadline
-        ) {
-          alert("PLEASE FILL OUT ALL FIELDS BEFORE SAVING!!!");
-          return;
-        }
+    // 2️⃣ Validate required fields
+    if (
+      !this.newCareer.position ||
+      !this.newCareer.details ||
+      !this.newCareer.qualifications ||
+      !this.newCareer.requirements ||
+      !this.newCareer.letterAddress ||
+      !this.newCareer.deadline
+    ) {
+      alert("PLEASE FILL OUT ALL FIELDS BEFORE SAVING!!!");
+      return;
+    }
 
-        // Optional check for tags
-        if (!this.newCareer.Tags || this.newCareer.Tags.length === 0) {
-          const proceed = confirm("No tags selected. Do you want to continue without tags?");
-          if (!proceed) return;
-        }
+    // 3️⃣ Optional check for tags
+    if (!this.newCareer.Tags || this.newCareer.Tags.length === 0) {
+      const proceed = confirm("No tags selected. Do you want to continue without tags?");
+      if (!proceed) return;
+    }
 
-        // Send data to backend (including tags)
-        const response = await api.post(
-          import.meta.env.VITE_API_BASE_URL + "/careers",
-          {
-            position: this.newCareer.position,
-            details: this.newCareer.details,
-            qualifications: this.newCareer.qualifications,
-            requirements: this.newCareer.requirements,
-            letterAddress: this.newCareer.letterAddress,
-            deadline: this.newCareer.deadline,
-            Tags: this.newCareer.Tags,
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+    // 4️⃣ Send POST request to backend (cookies handle authentication)
+    const response = await axios.post(
+      import.meta.env.VITE_API_BASE_URL + "/careers",
+      {
+        position: this.newCareer.position,
+        details: this.newCareer.details,
+        qualifications: this.newCareer.qualifications,
+        requirements: this.newCareer.requirements,
+        letterAddress: this.newCareer.letterAddress,
+        deadline: this.newCareer.deadline,
+        Tags: this.newCareer.Tags,
+      },
+      { withCredentials: true } // ✅ important for Sanctum
+    );
 
-        // Handle backend response
-        if (response.data.message === "Career already exists") {
-          alert("This career is already posted.");
-        } else {
-          alert("CAREER POSTED SUCCESSFULLY!!!");
-          this.upcomingCareers.push(response.data);
-          this.closeCareerPopup();
-          this.resetNewCareer();
-          await this.fetchCareers();
-        }
-      } catch (error) {
-        console.error("ERROR SAVING CAREER:", error);
-        if (error.response) {
-          if (error.response.status === 401) {
-            alert("Unauthorized: Please log in again.");
-          } else if (error.response.status === 409) {
-            alert("This career already exists!");
-          } else if (error.response.status === 422) {
-            alert("Validation failed. Please check your inputs.");
-          } else {
-            alert("Something went wrong. Please try again.");
-          }
-        } else {
-          alert("Unable to connect to the server.");
-        }
+    // 5️⃣ Handle backend response
+    if (response.data.message === "Career already exists") {
+      alert("This career is already posted.");
+    } else {
+      alert("CAREER POSTED SUCCESSFULLY!!!");
+      this.upcomingCareers.push(response.data);
+      this.closeCareerPopup();
+      this.resetNewCareer();
+      await this.fetchCareers();
+    }
+  } catch (error) {
+    console.error("ERROR SAVING CAREER:", error);
+    if (error.response) {
+      if (error.response.status === 401) {
+        alert("Unauthorized: Please log in again.");
+      } else if (error.response.status === 409) {
+        alert("This career already exists!");
+      } else if (error.response.status === 422) {
+        alert("Validation failed. Please check your inputs.");
+      } else {
+        alert("Something went wrong. Please try again.");
       }
-    },
+    } else {
+      alert("Unable to connect to the server.");
+    }
+  }
+},
 
 
     resetNewCareer() {
