@@ -173,24 +173,18 @@ const handleLogin = async () => {
   if (emailError.value || passwordError.value) return;
 
   try {
-    // 1️⃣ Get CSRF cookie first
-    await axios.get(
-      import.meta.env.VITE_API_BASE_URL.replace("/api", "") + "/sanctum/csrf-cookie",
-      { withCredentials: true }
-    );
-
-    // 2️⃣ Send login request with credentials
+    // 1️⃣ Send login request
     const response = await axios.post(
-      import.meta.env.VITE_API_BASE_URL.replace("/api", "") + "/login",
+      import.meta.env.VITE_API_BASE_URL + "/login",
       {
-        email: email.value,
+        emailAddress: email.value,
         password: password.value,
-      },
-      { withCredentials: true } // ✅ Required for Sanctum
+      }
     );
 
-    const userData = response.data.user;
-    const role = userData.role;
+    const userData = response.data.user || response.data.organization;
+    const token = response.data.token; // api_token from backend
+    const role = userData.role || (userData.adminID ? "organization" : "applicant");
 
     let displayName = "";
     if (role === "organization") {
@@ -201,7 +195,8 @@ const handleLogin = async () => {
       displayName = `${userData.firstName} ${userData.lastName}`;
     }
 
-    // 3️⃣ Store user info locally (no token needed)
+    // 2️⃣ Store user info and token locally
+    localStorage.setItem("token", token);
     localStorage.setItem(
       "user",
       JSON.stringify({
@@ -211,7 +206,7 @@ const handleLogin = async () => {
       })
     );
 
-    // 4️⃣ Redirect based on role
+    // 3️⃣ Redirect based on role
     if (role === "organization") {
       router.push("/organization");
     } else if (role === "admin") {
@@ -220,7 +215,7 @@ const handleLogin = async () => {
       router.push("/app");
     }
 
-    console.log("✅ Logged in via Sanctum successfully");
+    console.log("✅ Logged in successfully with token");
   } catch (err) {
     console.error(err.response?.data || err.message);
     loginError.value = "Invalid credentials. Please try again.";

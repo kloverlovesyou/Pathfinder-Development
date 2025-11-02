@@ -47,26 +47,31 @@ class ApplicantController extends Controller
         ], 201);
     }
 
-public function login(Request $request)
-{
-    $request->validate([
-        'emailAddress' => 'required|email',
-        'password' => 'required|string|min:8',
-    ]);
+    public function login(Request $request)
+    {
+        $request->validate([
+            'emailAddress' => 'required|email',
+            'password' => 'required|string|min:8',
+        ]);
 
-    $applicant = Applicant::where('emailAddress', $request->emailAddress)->first();
+        $applicant = Applicant::where('emailAddress', $request->emailAddress)->first();
 
-    if (!$applicant || !Hash::check($request->password, $applicant->password)) {
-        return response()->json(['message' => 'Invalid credentials'], 401);
+        if (!$applicant || !Hash::check($request->password, $applicant->password)) {
+            return response()->json(['message' => 'Invalid credentials'], 401);
+        }
+
+        // Generate or reuse token
+        if (!$applicant->api_token) {
+            $applicant->api_token = Str::random(60);
+            $applicant->save();
+        }
+
+        return response()->json([
+            'message' => 'Login successful',
+            'user' => $applicant,
+            'token' => $applicant->api_token,
+        ]);
     }
-
-    // You can also generate a token here if needed (for Sanctum)
-    return response()->json([
-        'message' => 'Login successful',
-        'user' => $applicant,
-        'token' => $applicant->api_token, // send token to frontend
-    ]);
-}
 
  // Update applicant profile
     public function update(Request $request)
