@@ -13,7 +13,7 @@ async function fetchMyRegistrations() {
   if (!token) return;
 
   try {
-    const res = await axios.get("https://pathfinder-development-production.up.railway.app/api/registrations", {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/registrations", {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -50,7 +50,7 @@ async function toggleRegister(training) {
         registeredPosts[training.trainingID].registrationID;
 
       await axios.delete(
-        `https://pathfinder-development-production.up.railway.app/api/registrations/${registrationID}`,
+        import.meta.env.VITE_API_BASE_URL +`/registrations/${registrationID}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -65,7 +65,7 @@ async function toggleRegister(training) {
   else {
     try {
       const res = await axios.post(
-        "https://pathfinder-development-production.up.railway.app/api/registrations",
+        import.meta.env.VITE_API_BASE_URL +"/registrations",
         { trainingID: training.trainingID },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -93,7 +93,7 @@ async function fetchEvents() {
     }
 
     const response = await axios.get(
-      `https://pathfinder-development-production.up.railway.app/api/calendar/${user.applicantID}`,
+      import.meta.env.VITE_API_BASE_URL +`/calendar/${user.applicantID}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -321,7 +321,7 @@ async function fetchBookmarks() {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const { data } = await axios.get("https://pathfinder-development-production.up.railway.app/api/bookmarks", {
+    const { data } = await axios.get(import.meta.env.VITE_API_BASE_URL +"/bookmarks", {
       headers: { Authorization: `Bearer ${token}` },
     });
     bookmarkedTrainings.value = data;
@@ -332,7 +332,7 @@ async function fetchBookmarks() {
 
 async function fetchOrganizations() {
   try {
-    const res = await axios.get("https://pathfinder-development-production.up.railway.app/api/organization");
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/organization");
     organizations.value = res.data;
     console.log("✅ Organizations loaded:", organizations.value);
   } catch (error) {
@@ -351,7 +351,7 @@ async function toggleBookmark(trainingId) {
   // Remove bookmark
   if (isTrainingBookmarked(trainingId)) {
     try {
-      await axios.delete(`https://pathfinder-development-production.up.railway.app/api/bookmarks/${trainingId}`, {
+      await axios.delete(import.meta.env.VITE_API_BASE_URL +`/bookmarks/${trainingId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       bookmarkedTrainings.value = bookmarkedTrainings.value.filter(
@@ -370,7 +370,7 @@ async function toggleBookmark(trainingId) {
       console.log("Bookmarking training ID:", trainingId);
 
       await axios.post(
-        "https://pathfinder-development-production.up.railway.app/api/bookmarks",
+        import.meta.env.VITE_API_BASE_URL +"/bookmarks",
         { trainingID: trainingId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -412,7 +412,7 @@ async function toggleRegistration(training) {
   if (myRegistrations.value.has(training.trainingID)) {
     try {
       // Find registration ID of this user for this training
-      const res = await axios.get("https://pathfinder-development-production.up.railway.app/api/registrations", {
+      const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/registrations", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -427,7 +427,7 @@ async function toggleRegistration(training) {
 
       // Delete registration on backend
       await axios.delete(
-        `https://pathfinder-development-production.up.railway.app/api/registrations/${registration.registrationID}`,
+        import.meta.env.VITE_API_BASE_URL +`/registrations/${registration.registrationID}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -443,7 +443,7 @@ async function toggleRegistration(training) {
   else {
     try {
       await axios.post(
-        "https://pathfinder-development-production.up.railway.app/api/registrations",
+        import.meta.env.VITE_API_BASE_URL +"/registrations",
         { trainingID: training.trainingID },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -476,7 +476,7 @@ function addToast(message, type = "info") {
 // ============================
 async function fetchTrainings() {
   try {
-    const response = await axios.get("http://127.0.0.1:8000/api/trainings");
+    const response = await axios.get(import.meta.env.VITE_API_BASE_URL +"/trainings");
     trainings.value = response.data;
   } catch (error) {
     console.error("Error fetching trainings:", error);
@@ -519,7 +519,7 @@ function startQRCountdown(training) {
   const endTime = new Date(training.end_time || training.end_Time); // supports both snakeCase or camelCase
 
   // Generate QR (you can change this to your full URL if needed)
-  qrCodeValue.value = `https://pathfinder-development-production.up.railway.app/attendance/submit?trainingID=${training.trainingID}&key=${training.attendance_key}`;
+  qrCodeValue.value = import.meta.env.VITE_API_BASE_URL +`/attendance/submit?trainingID=${training.trainingID}&key=${training.attendance_key}`;
   qrExpiresAt.value = endTime;
   qrActiveTrainingId.value = training.trainingID;
 

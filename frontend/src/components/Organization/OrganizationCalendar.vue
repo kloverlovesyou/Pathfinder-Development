@@ -264,7 +264,7 @@ export default {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const res = await axios.get("https://pathfinder-development-production.up.railway.app/api/trainings", {
+      const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/trainings", {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       });
 
@@ -284,7 +284,7 @@ export default {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const res = await axios.get("https://pathfinder-development-production.up.railway.app/api/careers", {
+      const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/careers", {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       });
 

@@ -49,7 +49,7 @@ async function fetchMyActivities() {
   userName.value = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Guest";
 
   try {
-    const res = await axios.get(`https://pathfinder-development-production.up.railway.app/api/my-activities/${user.applicantID}`);
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL +`/my-activities/${user.applicantID}`);
     activities.value = res.data.activities || [];
 
     console.log("Raw activities data:", activities.value);
@@ -166,7 +166,7 @@ async function submitAttendance(activity) {
   }
 
   try {
-    const res = await axios.get("http://127.0.0.1:8000/api/attendance/checkin", {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/attendance/checkin", {
       headers: {
         Authorization: `Bearer ${token}`,
       },

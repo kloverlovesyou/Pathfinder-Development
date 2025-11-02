@@ -452,7 +452,7 @@ import api from "@/api/axios";
 
 const fetchTags = async () => {
   try {
-    const response = await axios.get('https://pathfinder-development-production.up.railway.app/api/tags');
+    const response = await axios.get(import.meta.env.VITE_API_BASE_URL +'/tags');
     console.log(response.data); // Log the API response
     this.tagOptions = response.data; // Update tagOptions
   } catch (error) {
@@ -605,7 +605,7 @@ export default {
 
       try {
         // Send the new tag to the backend
-        const response = await axios.post('https://pathfinder-development-production.up.railway.app/api/tags', {
+        const response = await axios.post(import.meta.env.VITE_API_BASE_URL +'/tags', {
           TagName: this.newTagName
         }, {
           headers: {
@@ -655,7 +655,7 @@ export default {
 
     async fetchTags() {
       try {
-        const response = await axios.get('https://pathfinder-development-production.up.railway.app/api/tags');
+        const response = await axios.get(import.meta.env.VITE_API_BASE_URL +'/tags');
         this.tagOptions = response.data; // Update tagOptions correctly
         console.log(this.tagOptions); // Log the tags to see if they are fetched correctly
       } catch (error) {
@@ -803,7 +803,7 @@ export default {
 
     async fetchCareers() {
       try {
-        const response = await axios.get("https://pathfinder-development-production.up.railway.app/api/careers");
+        const response = await axios.get(import.meta.env.VITE_API_BASE_URL +"/careers");
         this.upcomingCareers = response.data;
       } catch (error) {
         console.error("ERROR FETCHING CAREERS:", error);
@@ -855,7 +855,7 @@ export default {
 
         // Send data to backend (including tags)
         const response = await api.post(
-          "https://pathfinder-development-production.up.railway.app/api/careers",
+          import.meta.env.VITE_API_BASE_URL +"/careers",
           {
             position: this.newCareer.position,
             details: this.newCareer.details,

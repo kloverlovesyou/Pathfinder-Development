@@ -173,7 +173,7 @@ const handleLogin = async () => {
   if (emailError.value || passwordError.value) return;
 
   try {
-    const response = await axios.post("https://pathfinder-development-production.up.railway.app/api/login", {
+    const response = await axios.post(import.meta.env.VITE_API_BASE_URL +"/login", {
       emailAddress: email.value,
       password: password.value,
     });

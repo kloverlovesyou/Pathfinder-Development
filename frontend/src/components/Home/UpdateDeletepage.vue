@@ -342,7 +342,7 @@ onMounted(async () => {
   fetchTrainingCounters();
   try {
     // --- Fetch user from API ---
-    const res = await axios.get("https://pathfinder-development-production.up.railway.app/api/user", {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/user", {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
 
@@ -388,7 +388,7 @@ onMounted(async () => {
 
 function deleteAccount() {
   axios
-    .delete("https://pathfinder-development-production.up.railway.app/api/user", {
+    .delete(import.meta.env.VITE_API_BASE_URL +"/user", {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     })
     .then((res) => {
@@ -413,7 +413,7 @@ async function fetchTrainingCounters() {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const response = await axios.get("https://pathfinder-development-production.up.railway.app/api/registrations", {
+    const response = await axios.get(import.meta.env.VITE_API_BASE_URL +"/registrations", {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -440,7 +440,7 @@ const handleUpdate = async () => {
   }
 
   try {
-    await axios.put("https://pathfinder-development-production.up.railway.appapi/user", form.value, {
+    await axios.put(import.meta.env.VITE_API_BASE_URL +"/user", form.value, {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
     alert("Profile updated successfully!");
@@ -453,7 +453,7 @@ const handleUpdate = async () => {
 const handleDelete = async () => {
   try {
     isDeleting.value = true;
-    const res = await axios.delete("https://pathfinder-development-production.up.railway.app/api/user", {
+    const res = await axios.delete(import.meta.env.VITE_API_BASE_URL +"/user", {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       data: { currentPassword: form.value.currentPassword }, // send password for verification
     });

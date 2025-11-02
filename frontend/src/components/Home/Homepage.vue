@@ -9,7 +9,7 @@ async function fetchMyRegistrations() {
   if (!token) return;
 
   try {
-    const res = await axios.get("http://127.0.0.1:8000/api/registrations", {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/registrations", {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -39,7 +39,7 @@ async function toggleRegister(training) {
       const registrationID =
         registeredPosts[training.trainingID].registrationID;
       await axios.delete(
-        `https://pathfinder-development-production.up.railway.app/api/registrations/${registrationID}`,
+        import.meta.env.VITE_API_BASE_URL + `/registrations/${registrationID}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -53,7 +53,7 @@ async function toggleRegister(training) {
   else {
     try {
       const res = await axios.post(
-        "https://pathfinder-development-production.up.railway.app/api/registrations",
+        import.meta.env.VITE_API_BASE_URL +"/registrations",
         { trainingID: training.trainingID },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -219,7 +219,7 @@ async function fetchEvents() {
     }
 
     const response = await axios.get(
-      `https://pathfinder-development-production.up.railway.app/api/calendar/${user.applicantID}`,
+      import.meta.env.VITE_API_BASE_URL +`/calendar/${user.applicantID}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
