@@ -19,6 +19,7 @@ Route::get('/attendance/submit', function (Request $request, TrainingController 
 });
 
 // 🧩 Catch-all route for frontend — EXCEPT when URL starts with /api/
+// ✅ Serve Vue's index.html for all non-API routes
 Route::get('/{any}', function () {
-    return view('index');
+    return file_get_contents(public_path('index.html'));
 })->where('any', '^(?!api).*$');
