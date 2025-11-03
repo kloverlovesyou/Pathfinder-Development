@@ -59,6 +59,10 @@ public function login(Request $request)
     if (!$applicant || !Hash::check($request->password, $applicant->password)) {
         return response()->json(['message' => 'Invalid credentials'], 401);
     }
+      // Generate a new token
+    $token = Str::random(60);
+    $applicant->api_token = $token;
+    $applicant->save();
 
     // You can also generate a token here if needed (for Sanctum)
     return response()->json([
@@ -68,7 +72,7 @@ public function login(Request $request)
     ]);
 }
 
- // Update applicant profile
+  // 🧩 Update applicant profile
     public function update(Request $request)
     {
         $token = $request->bearerToken();
@@ -78,26 +82,30 @@ public function login(Request $request)
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        // Optional: Verify current password before allowing update
-        if (!Hash::check($request->currentPassword, $applicant->password)) {
-            return response()->json(['message' => 'Incorrect current password'], 403);
-        }
-
-        // Update fields
-        $applicant->update([
-            'firstName' => $request->firstName,
-            'middleName' => $request->middleName,
-            'lastName' => $request->lastName,
-            'address' => $request->address,
-            'emailAddress' => $request->emailAddress,
-            'phoneNumber' => $request->phoneNumber,
-            'password' => $request->newPassword ? Hash::make($request->newPassword) : $applicant->password,
+        // ✅ Validate input
+        $validated = $request->validate([
+            'firstName' => 'nullable|string|max:255',
+            'middleName' => 'nullable|string|max:255',
+            'lastName' => 'nullable|string|max:255',
+            'address' => 'nullable|string|max:255',
+            'emailAddress' => 'nullable|email|max:255',
+            'phoneNumber' => 'nullable|string|max:20',
         ]);
+
+        // ✅ Update profile fields
+        $applicant->fill([
+            'firstName' => $request->firstName ?? $applicant->firstName,
+            'middleName' => $request->middleName ?? $applicant->middleName,
+            'lastName' => $request->lastName ?? $applicant->lastName,
+            'address' => $request->address ?? $applicant->address,
+            'emailAddress' => $request->emailAddress ?? $applicant->emailAddress,
+            'phoneNumber' => $request->phoneNumber ?? $applicant->phoneNumber,
+        ]);
+
+        $applicant->save();
 
         return response()->json(['message' => 'Profile updated successfully']);
     }
-
-
 // Delete applicant account
    public function destroy(Request $request)
 {
@@ -118,4 +126,31 @@ public function login(Request $request)
     return response()->json(['message' => 'Account deleted successfully']);
 }
 
+   // 🧩 Update password separately
+    public function updatePassword(Request $request)
+    {
+        $token = $request->bearerToken();
+        $applicant = Applicant::where('api_token', $token)->first();
+
+        if (!$applicant) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        // ✅ Validate fields
+        $validated = $request->validate([
+            'currentPassword' => 'required|string',
+            'newPassword' => 'required|string|min:8|confirmed',
+        ]);
+
+        // ✅ Check if current password matches
+        if (!Hash::check($validated['currentPassword'], $applicant->password)) {
+            return response()->json(['message' => 'The current password is incorrect.'], 403);
+        }
+
+        // ✅ Update password
+        $applicant->password = Hash::make($validated['newPassword']);
+        $applicant->save();
+
+        return response()->json(['message' => 'Password updated successfully']);
+    }
 }

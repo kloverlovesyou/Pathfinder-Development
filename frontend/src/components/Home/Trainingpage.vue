@@ -38,50 +38,6 @@ async function fetchMyRegistrations() {
 
 onMounted(fetchMyRegistrations);
 
-// 🔹 Toggle registration
-async function toggleRegister(training) {
-  const token = localStorage.getItem("token");
-  if (!token) return alert("Please log in first.");
-
-  // If already registered → unregister
-  if (registeredPosts[training.trainingID]) {
-    try {
-      const registrationID =
-        registeredPosts[training.trainingID].registrationID;
-
-      await axios.delete(
-        `http://127.0.0.1:8000/api/registrations/${registrationID}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      delete registeredPosts[training.trainingID];
-      myRegistrations.value.delete(training.trainingID); // 🧩 keep in sync
-      console.log(`🗑 Unregistered from ${training.title}`);
-    } catch (err) {
-      console.error("❌ Failed to unregister:", err);
-    }
-  }
-  // Else register
-  else {
-    try {
-      const res = await axios.post(
-        "http://127.0.0.1:8000/api/registrations",
-        { trainingID: training.trainingID },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      registeredPosts[training.trainingID] = {
-        registrationID: res.data.registrationID,
-      };
-      myRegistrations.value.add(training.trainingID); // 🧩 sync for QR
-
-      console.log(`✅ Registered for ${training.title}`);
-    } catch (err) {
-      console.error("❌ Failed to register:", err);
-    }
-  }
-}
-
 // Date of PH
 const PH_TIME_OFFSET = 8 * 60; // +8 hours in minutes
 
@@ -143,6 +99,8 @@ function openTrainingModal(training) {
   };
 
   // Show the modal
+  selectedTraining.value = training;
+  showModal.value = true;
   isModalOpen.value = true;
 
   console.log("✅ Opening training modal:", selectedTraining.value);
@@ -250,70 +208,6 @@ function isTraining(post) {
 
 function closeTrainingModal() {
   selectedTraining.value = null;
-}
-// ============================
-// 📝 Registration Function
-// ============================
-
-async function toggleRegistration(training) {
-  if (!training) return;
-
-  const token = localStorage.getItem("token");
-  if (!token) {
-    addToast("PLEASE LOG IN FIRST", "accent");
-    return;
-  }
-
-  // ✅ If already registered → UNREGISTER
-  if (myRegistrations.value.has(training.trainingID)) {
-    try {
-      // Find registration ID of this user for this training
-      const res = await axios.get("http://127.0.0.1:8000/api/registrations", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const registration = res.data.find(
-        (r) => r.trainingID === training.trainingID
-      );
-
-      if (!registration) {
-        addToast("Registration not found", "error");
-        return;
-      }
-
-      // Delete registration on backend
-      await axios.delete(
-        `http://127.0.0.1:8000/api/registrations/${registration.registrationID}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      myRegistrations.value.delete(training.trainingID);
-      addToast("You have been unregistered", "info");
-    } catch (error) {
-      console.error(error);
-      addToast("Failed to unregister", "error");
-    }
-  }
-
-  // ✅ If not registered → REGISTER
-  else {
-    try {
-      await axios.post(
-        "http://127.0.0.1:8000/api/registrations",
-        { trainingID: training.trainingID },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      myRegistrations.value.add(training.trainingID);
-      addToast("Registered successfully!", "success");
-    } catch (error) {
-      if (error.response?.status === 409) {
-        addToast("Already registered", "accent");
-      } else {
-        addToast("Failed to register", "error");
-      }
-    }
-  }
 }
 
 // ============================
@@ -589,6 +483,33 @@ function openModalCalendar(event) {
   // Handle modal opening for training/career
   console.log("Event clicked:", event);
 }
+
+import TrainingModal from "@/components/Layout/TrainingModal.vue";
+
+const showModal = ref(false);
+
+// Toggle registration
+async function toggleRegister(training) {
+  const token = localStorage.getItem("token");
+  if (!token) return alert("Please log in first");
+
+  if (myRegistrations.value.has(training.trainingID)) {
+    await axios.delete(
+      `http://127.0.0.1:8000/api/registrations/${training.trainingID}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    myRegistrations.value.delete(training.trainingID);
+  } else {
+    await axios.post(
+      "http://127.0.0.1:8000/api/registrations",
+      { trainingID: training.trainingID },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    myRegistrations.value.add(training.trainingID);
+  }
+}
 </script>
 
 <template>
@@ -604,10 +525,10 @@ function openModalCalendar(event) {
       <!-- Training Cards -->
       <div class="space-y-4">
         <div
-          v-for="training in trainingsWithOrg"
+          v-for="training in trainings"
           :key="training.trainingID"
           class="p-4 bg-blue-gray rounded-lg hover:bg-gray-300 transition cursor-pointer flex justify-between items-center"
-          @click="openTrainingListModal(training)"
+          @click="openTrainingModal(training)"
         >
           <!-- Left: Training info -->
           <div>
@@ -644,136 +565,15 @@ function openModalCalendar(event) {
       @eventClick="openModalCalendar"
     />
 
-    <!--Training List Modal-->
-    <dialog v-if="selectedTrainingForList" open class="modal sm:modal-middle">
-      <div class="modal-box max-w-3xl relative font-poppins">
-        <!-- Close button -->
-        <button
-          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
-          @click="closeTrainingListModal"
-        >
-          ✕
-        </button>
-
-        <!-- Safety check wrapper -->
-        <template v-if="selectedTrainingForList">
-          <!-- Training Details -->
-          <h2 class="text-xl font-bold mb-2">
-            {{ selectedTrainingForList.title || "Untitled Training" }}
-          </h2>
-          <p class="text-sm text-gray-600 mb-2">
-            Organization:
-            {{
-              selectedTrainingForList.organization?.name ||
-              selectedTrainingForList.organizationName ||
-              "Unknown Organization"
-            }}
-          </p>
-
-          <!-- Buttons -->
-          <div
-            class="my-4 flex justify-end gap-2"
-            v-if="selectedTrainingForList.trainingID"
-          >
-            <!-- Bookmark -->
-            <button
-              class="btn btn-outline btn-sm"
-              @click="toggleBookmark(selectedTrainingForList.trainingID)"
-            >
-              {{
-                bookmarkedPosts?.[selectedTrainingForList.trainingID]
-                  ? "Bookmarked"
-                  : "Bookmark"
-              }}
-            </button>
-
-            <!-- Register / Unregister -->
-            <button
-              class="btn btn-sm text-white"
-              :class="
-                registeredPosts[selectedTrainingForList.trainingID]
-                  ? 'bg-gray-500'
-                  : 'bg-customButton'
-              "
-              @click.stop="toggleRegister(selectedTrainingForList)"
-            >
-              {{
-                registeredPosts[selectedTrainingForList.trainingID]
-                  ? "Unregister"
-                  : "Register"
-              }}
-            </button>
-          </div>
-
-          <!-- Basic Info -->
-          <p><strong>Mode:</strong> {{ selectedTrainingForList.mode }}</p>
-          <p>
-            <strong>Description:</strong>
-            {{ selectedTrainingForList.description }}
-          </p>
-
-          <!-- Conditional Display -->
-          <p v-if="selectedTrainingForList.mode?.toLowerCase() === 'online'">
-            <strong>Link:</strong>
-            <a
-              :href="selectedTrainingForList.trainingLink"
-              target="_blank"
-              class="text-blue-500 underline"
-            >
-              {{ selectedTrainingForList.trainingLink }}
-            </a>
-          </p>
-
-          <p
-            v-else-if="
-              selectedTrainingForList.mode?.toLowerCase() === 'on-site'
-            "
-          >
-            <strong>Location:</strong> {{ selectedTrainingForList.location }}
-          </p>
-
-          <p>
-            <strong>Schedule:</strong>
-            {{ formatDate(selectedTrainingForList.schedule) }}
-            <span v-if="selectedTrainingForList.schedule">
-              at {{ formatTime(selectedTrainingForList.schedule) }}
-            </span>
-          </p>
-
-          <!-- QR code if registered -->
-          <div
-            v-if="myRegistrations.has(selectedTrainingForList.trainingID)"
-            class="mt-4 text-center"
-          >
-            <div
-              v-if="
-                selectedTrainingForList.attendance_key &&
-                new Date(training.end_time) > new Date()
-              "
-              class="text-center flex flex-col items-center justify-center"
-            >
-              <qrcode-vue
-                :value="selectedTrainingForList.attendance_key"
-                :size="120"
-              />
-              <p class="text-sm text-gray-600 mt-1">
-                Expires in:
-                {{
-                  qrCountdowns[selectedTrainingForList.trainingID] ||
-                  formatDateTime(selectedTrainingForList.end_time)
-                }}
-              </p>
-            </div>
-            <div v-else>
-              <p class="text-sm text-gray-500">
-                QR code not yet generated or expired.
-              </p>
-            </div>
-          </div>
-        </template>
-      </div>
-    </dialog>
-
+    <TrainingModal
+      :isOpen="showModal"
+      :training="selectedTraining"
+      :isRegistered="myRegistrations.has(selectedTraining?.trainingID)"
+      :isBookmarked="bookmarkedTrainings.includes(selectedTraining?.trainingID)"
+      @close="showModal = false"
+      @toggle-register="toggleRegister"
+      @bookmark="toggleBookmark"
+    />
     <!-- Toast Notifications -->
     <div class="toast toast-end toast-top z-50">
       <div

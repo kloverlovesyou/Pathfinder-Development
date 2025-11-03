@@ -1,3 +1,180 @@
+<script setup>
+import { ref, onMounted, computed } from "vue";
+import axios from "axios";
+import { useRouter } from "vue-router";
+
+const router = useRouter();
+const upcomingCount = ref(0);
+const completedCount = ref(0);
+
+const form = ref({
+  firstName: "",
+  middleName: "",
+  lastName: "",
+  address: "",
+  emailAddress: "",
+  phoneNumber: "",
+  newPassword: "",
+  confirmPassword: "",
+  currentPassword: "",
+});
+
+const userName = ref("");
+
+// Computed property to check if passwords match
+const passwordsMatch = computed(() => {
+  if (!form.value.newPassword && !form.value.confirmPassword) return true; // no input yet
+  return form.value.newPassword === form.value.confirmPassword;
+});
+
+// Dynamic class for confirm password input
+const passwordMatchClass = computed(() =>
+  passwordsMatch.value ? "border-gray-300" : "border-red-500"
+);
+
+// Show mismatch message only if user typed something
+const showPasswordMismatch = computed(
+  () => form.value.confirmPassword && !passwordsMatch.value
+);
+
+onMounted(async () => {
+  fetchTrainingCounters();
+  try {
+    // --- Fetch user from API ---
+    const res = await axios.get("http://127.0.0.1:8000/api/user", {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
+
+    const user = res.data;
+    console.log(form.value.newPassword, form.value.confirmPassword);
+
+    // Update form (including middle name)
+    form.value = {
+      ...form.value,
+      firstName: user.firstName || user.first_name || "",
+      middleName: user.middleName || user.middle_name || "",
+      lastName: user.lastName || user.last_name || "",
+      emailAddress: user.emailAddress || user.email || "",
+      phoneNumber: user.phoneNumber || user.phone || "",
+      address: user.address || "",
+    };
+
+    // Set userName (display only first + last)
+    userName.value = `${form.value.firstName} ${form.value.lastName}`.trim();
+
+    // Save backup
+    localStorage.setItem("user", JSON.stringify(user));
+  } catch (err) {
+    console.error("API failed, fallback to localStorage:", err);
+
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+
+      form.value = {
+        ...form.value,
+        firstName: user.firstName || user.first_name || "",
+        middleName: user.middleName || user.middle_name || "",
+        lastName: user.lastName || user.last_name || "",
+        emailAddress: user.emailAddress || user.email || "",
+        phoneNumber: user.phoneNumber || user.phone || "",
+        address: user.address || "",
+      };
+
+      userName.value = `${form.value.firstName} ${form.value.lastName}`.trim();
+    }
+  }
+});
+
+// Fetch TrainingCounter
+async function fetchTrainingCounters() {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const response = await axios.get(
+      "http://127.0.0.1:8000/api/registrations",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    const trainings = response.data || [];
+
+    upcomingCount.value = trainings.filter(
+      (r) =>
+        r.registrationStatus?.toLowerCase() === "upcoming" ||
+        r.registrationStatus?.toLowerCase() === "registered"
+    ).length;
+
+    completedCount.value = trainings.filter(
+      (r) => r.registrationStatus?.toLowerCase() === "completed"
+    ).length;
+  } catch (error) {
+    console.error("❌ Error fetching training counters:", error);
+  }
+}
+
+const handleUpdate = async () => {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    alert("You are not logged in.");
+    return;
+  }
+
+  try {
+    // --- 1️⃣ Update user profile ---
+    await axios.put("http://127.0.0.1:8000/api/user", form.value, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (form.value.newPassword !== form.value.confirmPassword) {
+      alert("New password and confirmation do not match.");
+      return;
+    }
+
+    // --- 2️⃣ Update password only if fields are filled ---
+    if (
+      form.value.currentPassword &&
+      form.value.newPassword &&
+      form.value.confirmPassword
+    ) {
+      await axios.post(
+        "http://127.0.0.1:8000/api/update-password",
+        {
+          currentPassword: form.value.currentPassword,
+          newPassword: form.value.newPassword,
+          newPassword_confirmation: form.value.confirmPassword,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      alert("Password updated successfully!");
+      // ✅ Clear password fields
+      form.value.currentPassword = "";
+      form.value.newPassword = "";
+      form.value.confirmPassword = "";
+    }
+
+    alert("Profile updated successfully!");
+    form.value.currentPassword = "";
+  } catch (error) {
+    console.error("Error during update:", error);
+    alert(error.response?.data?.message || "Update failed.");
+  }
+};
+
+const logout = () => {
+  // Remove user data from localStorage
+  localStorage.removeItem("user");
+  // Redirect to login page
+  router.push({ name: "Login" });
+};
+</script>
+
 <template>
   <div class="min-h-screen p-3 rounded-lg font-poppins">
     <!--Large screen-->
@@ -236,18 +413,30 @@
 
             <!-- New & Confirm Password -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- New Password -->
               <input
                 type="password"
                 class="border border-gray-300 input w-full"
                 placeholder="New Password (optional)"
                 v-model="form.newPassword"
               />
-              <input
-                type="password"
-                class="border border-gray-300 input w-full"
-                placeholder="Confirm New Password"
-                v-model="form.confirmPassword"
-              />
+
+              <!-- Confirm Password -->
+              <div class="w-full">
+                <input
+                  type="password"
+                  class="border input w-full"
+                  :class="passwordMatchClass"
+                  placeholder="Confirm New Password"
+                  v-model="form.confirmPassword"
+                />
+                <p
+                  v-if="showPasswordMismatch"
+                  class="text-red-500 text-sm mt-1"
+                >
+                  Passwords do not match.
+                </p>
+              </div>
             </div>
 
             <!-- Divider for large screens -->
@@ -257,7 +446,7 @@
               <input
                 type="password"
                 class="border border-gray-300 input w-full"
-                placeholder="Confirm Password"
+                placeholder="Current Password"
                 v-model="form.currentPassword"
                 required
               />
@@ -276,203 +465,8 @@
               </button>
             </div>
           </form>
-
-          <!-- Delete Confirmation Modal -->
-          <div
-            v-if="showDeleteModal"
-            class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
-          >
-            <div class="bg-white p-6 rounded-lg max-w-sm w-full">
-              <h2 class="text-lg font-semibold mb-4">
-                Confirm Account Deletion
-              </h2>
-              <p class="mb-4 text-sm">
-                This action is irreversible. Are you sure you want to delete
-                your account?
-              </p>
-              <div class="flex justify-end gap-2">
-                <button
-                  class="btn btn-sm"
-                  @click="showDeleteModal = false"
-                  :disabled="isDeleting"
-                >
-                  Cancel
-                </button>
-                <button
-                  class="btn btn-error btn-sm text-white"
-                  @click="handleDelete"
-                  :disabled="isDeleting"
-                >
-                  {{ isDeleting ? "Deleting..." : "Delete" }}
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
   </div>
 </template>
-
-<script setup>
-import { ref, onMounted } from "vue";
-import axios from "axios";
-import { useRouter } from "vue-router";
-
-const router = useRouter();
-const showDeleteModal = ref(false);
-const isDeleting = ref(false);
-const upcomingCount = ref(0);
-const completedCount = ref(0);
-
-const form = ref({
-  firstName: "",
-  middleName: "",
-  lastName: "",
-  address: "",
-  emailAddress: "",
-  phoneNumber: "",
-  newPassword: "",
-  currentPassword: "",
-});
-
-const userName = ref("");
-
-onMounted(async () => {
-  fetchTrainingCounters();
-  try {
-    // --- Fetch user from API ---
-    const res = await axios.get("http://127.0.0.1:8000/api/user", {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
-
-    const user = res.data;
-
-    // Update form (including middle name)
-    form.value = {
-      ...form.value,
-      firstName: user.firstName || user.first_name || "",
-      middleName: user.middleName || user.middle_name || "",
-      lastName: user.lastName || user.last_name || "",
-      emailAddress: user.emailAddress || user.email || "",
-      phoneNumber: user.phoneNumber || user.phone || "",
-      address: user.address || "",
-    };
-
-    // Set userName (display only first + last)
-    userName.value = `${form.value.firstName} ${form.value.lastName}`.trim();
-
-    // Save backup
-    localStorage.setItem("user", JSON.stringify(user));
-  } catch (err) {
-    console.error("API failed, fallback to localStorage:", err);
-
-    const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      const user = JSON.parse(savedUser);
-
-      form.value = {
-        ...form.value,
-        firstName: user.firstName || user.first_name || "",
-        middleName: user.middleName || user.middle_name || "",
-        lastName: user.lastName || user.last_name || "",
-        emailAddress: user.emailAddress || user.email || "",
-        phoneNumber: user.phoneNumber || user.phone || "",
-        address: user.address || "",
-      };
-
-      userName.value = `${form.value.firstName} ${form.value.lastName}`.trim();
-    }
-  }
-});
-
-function deleteAccount() {
-  axios
-    .delete("http://127.0.0.1:8000/api/user", {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    })
-    .then((res) => {
-      alert(res.data.message);
-
-      // clear saved data
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-
-      // redirect to login
-      router.push("/loginform");
-    })
-    .catch((err) => {
-      console.error(err);
-      alert("Failed to delete account.");
-    });
-}
-
-// Fetch TrainingCounter
-async function fetchTrainingCounters() {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    const response = await axios.get("http://127.0.0.1:8000/api/registrations", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    const trainings = response.data || [];
-
-    upcomingCount.value = trainings.filter(
-      (r) =>
-        r.registrationStatus?.toLowerCase() === "upcoming" ||
-        r.registrationStatus?.toLowerCase() === "registered"
-    ).length;
-
-    completedCount.value = trainings.filter(
-      (r) => r.registrationStatus?.toLowerCase() === "completed"
-    ).length;
-  } catch (error) {
-    console.error("❌ Error fetching training counters:", error);
-  }
-}
-
-const handleUpdate = async () => {
-  if (!form.value.currentPassword) {
-    alert("You must enter your current password to save changes.");
-    return;
-  }
-
-  try {
-    await axios.put("http://127.0.0.1:8000/api/user", form.value, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
-    alert("Profile updated successfully!");
-    router.push("/homepage");
-  } catch (error) {
-    alert(error.response?.data?.message || "Update failed.");
-  }
-};
-
-const handleDelete = async () => {
-  try {
-    isDeleting.value = true;
-    const res = await axios.delete("http://127.0.0.1:8000/api/user", {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      data: { currentPassword: form.value.currentPassword }, // send password for verification
-    });
-    alert(res.data.message);
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    router.push("/auth/login");
-  } catch (error) {
-    alert(error.response?.data?.message || "Deletion failed.");
-  } finally {
-    isDeleting.value = false;
-    showDeleteModal.value = false;
-  }
-};
-
-const logout = () => {
-  // Remove user data from localStorage
-  localStorage.removeItem("user");
-  // Redirect to login page
-  router.push({ name: "Login" });
-};
-</script>
