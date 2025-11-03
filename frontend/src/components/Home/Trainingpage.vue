@@ -43,42 +43,10 @@ function addToast(message, type = "info") {
 // ---------------------------
 // Fetch Trainings & Orgs
 // ---------------------------
-async function fetchOrganizations() {
-  try {
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/organization");
-    organizations.value = res.data;
-  } catch (err) {
-    console.error("❌ Failed to load organizations", err);
-    addToast("Failed to load organizations", "error");
-  }
-}
-
-async function fetchTrainings() {
-  try {
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/trainings");
-    trainings.value = res.data;
-  } catch (err) {
-    console.error("❌ Failed to load trainings", err);
-    addToast("Failed to load trainings", "error");
-  }
-}
 
 // ---------------------------
 // Bookmarks
 // ---------------------------
-async function fetchBookmarks() {
-  const token = getToken();
-  if (!token) return;
-
-  try {
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/bookmarks", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    bookmarkedTrainings.value = res.data;
-  } catch (err) {
-    console.error("❌ Failed to fetch bookmarks", err);
-  }
-}
 
 // ---------------------------
 // Registrations
@@ -357,13 +325,6 @@ async function toggleRegistration(training) {
 // ============================
 // 🔔 Toast Function
 // ============================
-function addToast(message, type = "info") {
-  const id = Date.now();
-  toasts.value.push({ id, message, type });
-  setTimeout(() => {
-    toasts.value = toasts.value.filter((toast) => toast.id !== id);
-  }, 3000);
-}
 
 // ============================
 // 📡 API Fetch Functions
