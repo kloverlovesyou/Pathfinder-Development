@@ -212,14 +212,27 @@ async function fetchBookmarks() {
 
 async function fetchOrganizations() {
   try {
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/api/organization");
-    organizations.value = res.data;
+    const token = localStorage.getItem("token"); // or however you store it
+
+    const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/organization`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    organizations.value = res.data; // or res.data.data depending on your API
     console.log("✅ Organizations loaded:", organizations.value);
+
   } catch (error) {
-    console.error("❌ Error fetching organizations:", error);
+    if (error.response) {
+      console.error("❌ Server responded with:", error.response.status, error.response.data);
+    } else if (error.request) {
+      console.error("❌ No response received:", error.request);
+    } else {
+      console.error("❌ Axios error:", error.message);
+    }
   }
 }
-
 // Toggle bookmark
 async function toggleBookmark(trainingId) {
   const token = localStorage.getItem("token");
