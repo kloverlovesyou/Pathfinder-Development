@@ -7,14 +7,16 @@ return [
     'allowed_methods' => ['*'],
 
     'allowed_origins' => ['*'],
-    'supports_credentials' => true,
 
     'allowed_origins_patterns' => [],
 
+    // ✅ Allow all headers (including Authorization)
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    // ✅ Make Authorization visible to browser / pass through proxy
+    'exposed_headers' => ['Authorization'],
+
     'max_age' => 0,
+
     'supports_credentials' => true,
 ];
-
