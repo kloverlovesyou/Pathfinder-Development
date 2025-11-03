@@ -43,7 +43,7 @@ class CareerBookmarkController extends Controller
             return response()->json(['message' => 'Already bookmarked'], 409);
         }
 
-        $bookmark = CareerBookmark::create([
+        $bookmark = Careerbookmark::create([
             'applicantID' => $user->applicantID,
             'careerID' => $careerID,
         ]);
@@ -59,7 +59,7 @@ class CareerBookmarkController extends Controller
             return response()->json(['message' => 'Only applicants can remove bookmarks'], 403);
         }
 
-        $bookmark = CareerBookmark::where('applicantID', $user->applicantID)
+        $bookmark = Careerbookmark::where('applicantID', $user->applicantID)
             ->where('careerID', $careerID)
             ->first();
 
