@@ -332,26 +332,15 @@ async function toggleRegistration(training) {
 // ============================
 async function fetchTrainings() {
   try {
-    let token = localStorage.getItem("token");
-    if (token) {
-      token = token.trim().replace(/^"(.*)"$/, "$1");
-    }
-
-    const response = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + "/trainings",
-      {
-        headers: token
-          ? { Authorization: `Bearer ${token}` }
-          : {},
-      }
-    );
-
-    console.log("✅ Trainings API response:", response.data); // <---- ADD THIS
-
-    trainings.value = response.data; // make sure this matches your data structure
-  } catch (error) {
-    console.error("❌ Error fetching trainings:", error);
-    addToast("FAILED TO LOAD TRAININGS", "error");
+    const token = getToken();
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/trainings", {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    console.log("Trainings API response:", res.data);
+    trainings.value = res.data;
+  } catch (err) {
+    console.error("Failed to fetch trainings:", err);
+    addToast("Failed to load trainings", "error");
   }
 }
 
