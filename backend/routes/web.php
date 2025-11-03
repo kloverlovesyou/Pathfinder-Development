@@ -18,6 +18,6 @@ Route::get('/attendance/submit', function (Request $request, TrainingController 
     }
 });
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/{any}', function () {
+    return view('index'); // your Vue app’s entry point
+})->where('any', '.*');
