@@ -810,6 +810,7 @@ export default {
     try {
       // 🔹 0. Get token from localStorage
       let token = localStorage.getItem("token");
+      console.log("🔹 Raw token read from localStorage:", token);
       if (!token) {
         alert("🔒 Please log in to continue.");
         return;
