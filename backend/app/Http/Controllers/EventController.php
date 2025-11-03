@@ -9,7 +9,7 @@ class EventController extends Controller
 {
   public function getUserEvents($applicantID)
 {
-  $trainings = DB::table('Registration')
+$trainings = DB::table('Registration')
     ->join('Training', 'Registration.TrainingID', '=', 'Training.TrainingID')
     ->join('Organization', 'Training.OrganizationID', '=', 'Organization.OrganizationID')
     ->where('Registration.ApplicantID', $applicantID)
@@ -18,15 +18,22 @@ class EventController extends Controller
         'Training.TrainingID as trainingID',
         'Training.Title as title',
         'Training.Description as description',
-        DB::raw('DATE(Training.Schedule) as date'),          // Date part
-        DB::raw('TIME(Training.Schedule) as time'),          // Time part
+        DB::raw('DATE(Training.Schedule) as date'),   // Extract date
+        DB::raw('TIME(Training.Schedule) as time'),   // Extract time
         'Training.Mode',
         'Training.Location as location',
         'Training.TrainingLink as trainingLink',
         'Organization.Name as organization',
+
+        'Training.Attendance_Key as attendance_key',
+        'Training.End_Time as end_time',
+        'Training.QR_Generated_At as qr_generated_at',
+        'Training.Attendance_Expires_At as attendance_expires_at',
+
         DB::raw("'training' as type")
     )
     ->get();
+
 
 
 
