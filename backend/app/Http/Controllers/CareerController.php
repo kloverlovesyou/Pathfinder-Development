@@ -45,7 +45,8 @@ class CareerController extends Controller
         public function store(Request $request)
     {
         // ✅ Use authenticated user from middleware
-        $user = $request->user();
+         $token = $request->bearerToken();
+         $user = User::where('api_token', $token)->first();
 
         if (!$user) {
             return response()->json(['message' => 'Unauthorized'], 401);
