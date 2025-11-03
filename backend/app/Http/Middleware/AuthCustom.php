@@ -46,6 +46,7 @@ class AuthCustom
         ]);
 
         $request->setUserResolver(fn() => $user);
+        auth()->setUser($user); // ✅ Add this line
         return $next($request);
     }
 }
