@@ -5,6 +5,10 @@
 
     RewriteEngine On
 
+    # ✅ Preserve Authorization header for Laravel (important for API tokens)
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
     # Redirect Trailing Slashes...
     RewriteRule ^(.*)/$ /$1 [L,R=301]
 
