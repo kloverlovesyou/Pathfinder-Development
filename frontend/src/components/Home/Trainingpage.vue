@@ -44,6 +44,7 @@ function addToast(message, type = "info") {
 // Fetch Trainings & Orgs
 // ---------------------------
 
+
 // ---------------------------
 // Bookmarks
 // ---------------------------
@@ -331,11 +332,46 @@ async function toggleRegistration(training) {
 // ============================
 async function fetchTrainings() {
   try {
-    const response = await axios.get(import.meta.env.VITE_API_BASE_URL+"/trainings");
+    // 🔹 1. Get token from localStorage
+    let token = localStorage.getItem("token");
+    if (!token) {
+      console.warn("No token found — user may not be logged in.");
+      addToast("Please log in to continue", "error");
+      return;
+    }
+
+    // 🔹 2. Clean token (remove quotes if present)
+    token = token.trim().replace(/^"(.*)"$/, '$1');
+
+    // 🔹 3. Send request with Authorization header
+    const response = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/trainings",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    // 🔹 4. Handle success
     trainings.value = response.data;
+    console.log("✅ Trainings loaded:", response.data);
+
   } catch (error) {
-    console.error("Error fetching trainings:", error);
-    addToast("FAILED TO LOAD TRAININGS", "error");
+    console.error("❌ Error fetching trainings:", error);
+
+    if (error.response) {
+      console.log("🔹 Server response:", error.response.data);
+      if (error.response.status === 401) {
+        addToast("Unauthorized. Please log in again.", "error");
+        localStorage.removeItem("token"); // Optional: clear invalid token
+      } else {
+        addToast("FAILED TO LOAD TRAININGS", "error");
+      }
+    } else {
+      addToast("Network or server issue.", "error");
+    }
   }
 }
 
