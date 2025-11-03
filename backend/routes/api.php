@@ -124,6 +124,8 @@ Route::post('/skills', [SkillController::class, 'store']);
 Route::delete('/skills/{id}', [SkillController::class, 'destroy']);
 
 Route::delete('/user', [ApplicantController::class, 'destroy']);
+Route::post('/update-password', [ApplicantController::class, 'updatePassword']);
+Route::put('/user', [ApplicantController::class, 'update']);
 
 Route::get('/search', [SearchController::class, 'search']);
 Route::get('/training/{id}', [SearchController::class, 'getTraining']);
