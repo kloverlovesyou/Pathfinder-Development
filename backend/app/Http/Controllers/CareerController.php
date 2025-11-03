@@ -46,7 +46,9 @@ class CareerController extends Controller
     {
         // ✅ Use authenticated user from middleware
          $token = $request->bearerToken();
-         $user = User::where('api_token', $token)->first();
+         // Try both models since you have separate tables
+        $user = \App\Models\Organization::where('api_token', $token)->first()
+            ?? \App\Models\Applicant::where('api_token', $token)->first();
 
         if (!$user) {
             return response()->json(['message' => 'Unauthorized'], 401);
