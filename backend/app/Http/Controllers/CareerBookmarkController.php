@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\CareerBookmark;
+use App\Models\Careerbookmark;
 
 class CareerBookmarkController extends Controller
 {
