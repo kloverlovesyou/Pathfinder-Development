@@ -11,22 +11,26 @@ class AuthCustom
 {
     public function handle(Request $request, Closure $next)
     {
-        // ✅ Extract token safely using Laravel’s helper
-        $token = $request->bearerToken();
+        // ✅ Try multiple sources for the Authorization token
+        $header = $request->header('Authorization')
+                ?? $request->server('HTTP_AUTHORIZATION')
+                ?? $request->server('REDIRECT_HTTP_AUTHORIZATION');
 
-        if (!$token) {
-            return response()->json(['message' => 'Unauthorized - No Bearer token'], 401);
+        if (!$header || !str_starts_with($header, 'Bearer ')) {
+            return response()->json(['message' => 'Unauthorized - No Bearer token found in headers'], 401);
         }
 
-        // ✅ Search for either an Organization or Applicant by token
-        $user = \App\Models\Organization::whereRaw('BINARY api_token = ?', [$token])->first()
-            ?? \App\Models\Applicant::whereRaw('BINARY api_token = ?', [$token])->first();
+        $token = trim(str_replace('Bearer ', '', $header));
+
+        // 🔍 Check both Organization and Applicant
+        $user = Organization::whereRaw('BINARY api_token = ?', [$token])->first()
+              ?? Applicant::whereRaw('BINARY api_token = ?', [$token])->first();
 
         if (!$user) {
             return response()->json(['message' => 'Unauthorized - Invalid token'], 401);
         }
 
-        // ✅ Attach user to the request and Auth system
+        // ✅ Attach authenticated user
         $request->setUserResolver(fn() => $user);
         auth()->setUser($user);
 
