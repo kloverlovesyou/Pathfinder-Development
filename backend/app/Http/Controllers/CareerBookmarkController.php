@@ -24,15 +24,16 @@ class CareerBookmarkController extends Controller
     {
         $user = $request->user();
 
+        // Only applicants can bookmark careers
         if (!($user instanceof \App\Models\Applicant)) {
             return response()->json(['message' => 'Only applicants can bookmark careers'], 403);
         }
 
-        $request->validate([
+        $validated = $request->validate([
             'careerID' => 'required|integer|exists:careers,careerID',
         ]);
 
-        $careerID = $request->careerID;
+        $careerID = $validated['careerID'];
 
         $exists = CareerBookmark::where('applicantID', $user->applicantID)
             ->where('careerID', $careerID)
