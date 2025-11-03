@@ -214,7 +214,7 @@ async function fetchOrganizations() {
   try {
     const token = localStorage.getItem("token"); // or however you store it
 
-    const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/organization`, {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL +`/organization`, {
       headers: {
         Authorization: `Bearer ${token}`
       }
