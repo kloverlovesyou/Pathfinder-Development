@@ -1,9 +1,74 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch, reactive } from "vue";
 import axios from "axios";
 import { useRoute } from "vue-router";
-
 const route = useRoute();
+const registeredPosts = reactive({}); // stores registered trainings
+
+async function fetchMyRegistrations() {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+  try {
+    const res = await axios.get("http://127.0.0.1:8000/api/registrations", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    res.data.forEach((r) => {
+      // 👇 Make sure this matches your backend JSON fields
+      registeredPosts[r.trainingID] = { registrationID: r.registrationID };
+    });
+
+    console.log("✅ Registered trainings:", registeredPosts);
+  } catch (err) {
+    console.error("❌ Failed to fetch registrations:", err);
+  }
+}
+
+onMounted(fetchMyRegistrations);
+
+async function toggleRegister(training) {
+  const token = localStorage.getItem("token");
+  if (!token) return alert("Please log in first.");
+
+  const isRegistered = registeredPosts[training.trainingID];
+
+  // 🔹 Unregister
+  if (isRegistered) {
+    try {
+      await axios.delete(
+        `http://127.0.0.1:8000/api/registrations/${isRegistered.registrationID}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      delete registeredPosts[training.trainingID];
+      alert(`You have unregistered from ${training.title}`);
+    } catch (err) {
+      console.error(err);
+      alert("Unregister failed.");
+    }
+  }
+
+  // 🔹 Register
+  else {
+    try {
+      const res = await axios.post(
+        "http://127.0.0.1:8000/api/registrations",
+        { trainingID: training.trainingID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // 👇 Note: backend wraps registration in `data`
+      const reg = res.data.data;
+      registeredPosts[reg.trainingID] = { registrationID: reg.registrationID };
+      alert(`You have registered for ${training.title}`);
+    } catch (err) {
+      console.error(err);
+      alert("Registration failed.");
+    }
+  }
+}
+
 // --- State ---
 const showDropdown = ref(false);
 const activeMains = ref([]); // Training / Career / Organization
@@ -21,7 +86,6 @@ const isModalOpen = ref(false); // For org modal
 // --- Misc States ---
 const bookmarkedPosts = ref({});
 const appliedPosts = ref({});
-const registeredPosts = ref({});
 const organizations = ref({});
 const posts = ref([]);
 
@@ -45,9 +109,9 @@ function toggleExclusiveSub(sub) {
   if (activeSubs.value.includes(sub)) {
     activeSubs.value = [];
   } else {
-    if (["Online", "Onsite"].includes(sub)) {
+    if (["Online", "On-site"].includes(sub)) {
       activeSubs.value = activeSubs.value.filter(
-        (s) => !["Online", "Onsite"].includes(s)
+        (s) => !["Online", "On-site"].includes(s)
       );
     }
     activeSubs.value = [sub];
@@ -426,7 +490,7 @@ async function handleResultClick(item) {
               class="flex flex-wrap gap-2 justify-start"
             >
               <button
-                v-for="sub in ['Online', 'Onsite']"
+                v-for="sub in ['Online', 'On-site']"
                 :key="sub"
                 @mousedown.prevent="toggleExclusiveSub(sub)"
                 :class="[
