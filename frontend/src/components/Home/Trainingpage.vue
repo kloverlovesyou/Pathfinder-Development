@@ -203,13 +203,14 @@ function addToast(message, type = "info") {
 // ---------------------------
 async function fetchTrainings() {
   try {
-    const token = getToken();
+    const token = localStorage.getItem("token"); // Make sure this exists
     const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/trainings", {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
-    console.log("Trainings API response:", res.data);
+    console.log("✅ Trainings API response:", res.data);
     trainings.value = res.data;
-  } catch {
+  } catch (err) {
+    console.error("❌ fetchTrainings error:", err.response?.data || err);
     addToast("Failed to load trainings", "error");
   }
 }
@@ -309,7 +310,7 @@ async function toggleRegister(training) {
 
   if (myRegistrations.value.has(training.trainingID)) {
     await axios.delete(
-      import.meta.env.VITE_API_BASE_URL + `/api/registrations/${training.trainingID}`,
+      import.meta.env.VITE_API_BASE_URL + `/registrations/${training.trainingID}`,
       {
         headers: { Authorization: `Bearer ${token}` },
       }
