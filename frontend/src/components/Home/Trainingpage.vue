@@ -537,6 +537,10 @@ watch([trainings, myRegistrations], async () => {
   setupCalendarDOM();
 });
 
+
+watch(trainings, () => {
+  console.log("🔥 TRAININGS RECEIVED FROM API:", trainings.value);
+});
 function formatDateTime(dt) {
   if (!dt) return "";
   const date = new Date(dt);
