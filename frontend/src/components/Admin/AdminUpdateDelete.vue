@@ -235,7 +235,7 @@ async function fetchTrainingCounters() {
     if (!token) return;
 
     const response = await axios.get(
-      "http://127.0.0.1:8000/api/registrations",
+      "https://pathfinder-development-production.up.railway.app/api/registrations",
       {
         headers: { Authorization: `Bearer ${token}` },
       }
