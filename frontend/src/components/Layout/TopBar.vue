@@ -73,7 +73,7 @@ async function performSearch() {
   }
 
   try {
-    const response = await axios.get("http://127.0.0.1:8000/api/search", {
+    const response = await axios.get(import.meta.env.VITE_API_BASE_URL+"/search", {
       params: {
         search: searchInput.value,
         filterType: activeMains.value[0]?.toLowerCase() || "",
@@ -114,7 +114,7 @@ async function openOrganizationModal(orgItem) {
     };
 
     // Fetch related posts dynamically
-    const response = await axios.get(`/api/organization/${orgItem.ID}/posts`);
+    const response = await axios.get(import.meta.env.VITE_API_BASE_URL+`/organization/${orgItem.ID}/posts`);
     selectedOrg.value.careers = response.data.careers || [];
     selectedOrg.value.trainings = response.data.trainings || [];
   } catch (error) {
