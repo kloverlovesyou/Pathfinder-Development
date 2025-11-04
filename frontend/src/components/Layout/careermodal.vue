@@ -46,7 +46,7 @@ async function toggleBookmark() {
 
   try {
     if (isBookmarked.value) {
-      await axios.delete(`http://127.0.0.1:8000/api/career-bookmarks/${id}`, {
+      await axios.delete(import.meta.env.VITE_API_BASE_URL +`/career-bookmarks/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       props.bookmarkedCareers.delete(id);
@@ -54,7 +54,7 @@ async function toggleBookmark() {
       addToast("Bookmark removed", "success");
     } else {
       await axios.post(
-        "http://127.0.0.1:8000/api/career-bookmarks",
+        import.meta.env.VITE_API_BASE_URL +"/career-bookmarks",
         { careerID: id },
         { headers: { Authorization: `Bearer ${token}` } }
       );
