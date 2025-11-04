@@ -530,6 +530,8 @@ onMounted(async () => {
 // Modal
 const selectedPost = ref(null);
 watch([trainings, myRegistrations], async () => {
+  console.log("✅ Trainings updated:", trainings.value);
+
   buildEvents();
   await nextTick();
   setupCalendarDOM();
