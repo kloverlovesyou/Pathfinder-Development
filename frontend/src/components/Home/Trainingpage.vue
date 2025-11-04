@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, onMounted, nextTick } from "vue";
+import { ref, reactive, computed, onMounted, nextTick , watch} from "vue";
 import axios from "axios";
 import QrcodeVue from "qrcode.vue";
 
