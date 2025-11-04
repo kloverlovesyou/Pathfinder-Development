@@ -10,7 +10,7 @@ async function fetchMyRegistrations() {
   if (!token) return;
 
   try {
-    const res = await axios.get("http://127.0.0.1:8000/api/registrations", {
+    const res = await axios.get("/registrations", {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -37,7 +37,7 @@ async function toggleRegister(training) {
   if (isRegistered) {
     try {
       await axios.delete(
-        `http://127.0.0.1:8000/api/registrations/${isRegistered.registrationID}`,
+        import.meta.env.VITE_API_BASE_URL +`/registrations/${isRegistered.registrationID}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -53,7 +53,7 @@ async function toggleRegister(training) {
   else {
     try {
       const res = await axios.post(
-        "http://127.0.0.1:8000/api/registrations",
+        import.meta.env.VITE_API_BASE_URL + "/registrations",
         { trainingID: training.trainingID },
         { headers: { Authorization: `Bearer ${token}` } }
       );
