@@ -28,7 +28,10 @@ Route::get('/careers', [CareerController::class, 'index']);
 Route::get('/tags', [TagController::class, 'index']);
 Route::post('/tags', [TagController::class, 'store']);
 
-Route::get('/careers/{id}/details', [CareerRecommendationController::class, 'getCareerWithRecommendations']);
+//career-training recommendation
+Route::get('/careers', [CareerRecommendationController::class, 'index']);
+Route::get('/careers/{careerID}/recommended', [CareerRecommendationController::class, 'recommendedCareers']);
+Route::get('/careers/{careerID}/trainings', [CareerRecommendationController::class, 'recommendedTrainings']);
 
 //auth required
 Route::middleware('auth.custom')->group(function () {
