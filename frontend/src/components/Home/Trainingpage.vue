@@ -129,29 +129,7 @@ function closeModal() {
 // ============================
 
 // Fetch user's bookmarks
-async function fetchBookmarks() {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) return;
 
-    const { data } = await axios.get(import.meta.env.VITE_API_BASE_URL + "/bookmarks", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    bookmarkedTrainings.value = data;
-  } catch (error) {
-    console.error("Error fetching bookmarks:", error);
-  }
-}
-
-async function fetchOrganizations() {
-  try {
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL+"/organization");
-    organizations.value = res.data;
-    console.log("✅ Organizations loaded:", organizations.value);
-  } catch (error) {
-    console.error("❌ Error fetching organizations:", error);
-  }
-}
 
 // Toggle bookmark
 async function toggleBookmark(trainingId) {
@@ -255,23 +233,10 @@ async function fetchOrganizations() {
   } catch {}
 }
 
-async function fetchMyRegistrations() {
-  const token = getToken();
-  if (!token) return;
-  const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/registrations", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  myRegistrations.value.clear();
-  res.data.forEach((r) => myRegistrations.value.add(r.trainingID));
-}
-
 // ---------------------------
 // Bookmark
 // ---------------------------
-function isTrainingBookmarked(id) {
-  return bookmarkedTrainings.value.includes(id);
-}
+
 
 // ---------------------------
 // Training Modal

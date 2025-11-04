@@ -23,16 +23,6 @@ function addToast(message, type = "info") {
 }
 
 // ✅ Fetch user's applications
-async function fetchMyApplications() {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/applications", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    myApplications.value = new Set(res.data.map((a) => a.careerID));
-  } catch (_) {}
-}
 
 // ✅ Fetch user's bookmarked careers
 const bookmarkedCareers = ref(new Set());
@@ -270,7 +260,7 @@ function closeModal() {
 async function fetchMyApplications() {
   const token = localStorage.getItem("token");
   if (!token) return;
-  const res = await axios.get("http://127.0.0.1:8000/api/applications", {
+  const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/applications", {
     headers: { Authorization: `Bearer ${token}` },
   });
   myApplications.value = new Set(res.data.map((a) => a.careerID));
@@ -279,7 +269,7 @@ async function fetchMyApplications() {
 async function fetchBookmarks() {
   const token = localStorage.getItem("token");
   if (!token) return;
-  const res = await axios.get("http://127.0.0.1:8000/api/career-bookmarks", {
+  const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/career-bookmarks", {
     headers: { Authorization: `Bearer ${token}` },
   });
   bookmarkedCareers.value = new Set(res.data.map((b) => b.careerID));

@@ -41,7 +41,7 @@ onMounted(async () => {
   fetchTrainingCounters();
   try {
     // --- Fetch user from API ---
-    const res = await axios.get("http://127.0.0.1:8000/api/user", {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/user", {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
 
@@ -93,7 +93,7 @@ async function fetchTrainingCounters() {
     if (!token) return;
 
     const response = await axios.get(
-      "http://127.0.0.1:8000/api/registrations",
+      import.meta.env.VITE_API_BASE_URL +"/registrations",
       {
         headers: { Authorization: `Bearer ${token}` },
       }
@@ -125,7 +125,7 @@ const handleUpdate = async () => {
 
   try {
     // --- 1️⃣ Update user profile ---
-    await axios.put("http://127.0.0.1:8000/api/user", form.value, {
+    await axios.put(import.meta.env.VITE_API_BASE_URL +"/user", form.value, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -141,7 +141,7 @@ const handleUpdate = async () => {
       form.value.confirmPassword
     ) {
       await axios.post(
-        "http://127.0.0.1:8000/api/update-password",
+        import.meta.env.VITE_API_BASE_URL +"/update-password",
         {
           currentPassword: form.value.currentPassword,
           newPassword: form.value.newPassword,
@@ -471,165 +471,4 @@ const logout = () => {
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from "vue";
-import axios from "axios";
-import { useRouter } from "vue-router";
 
-const router = useRouter();
-const showDeleteModal = ref(false);
-const isDeleting = ref(false);
-const upcomingCount = ref(0);
-const completedCount = ref(0);
-
-const form = ref({
-  firstName: "",
-  middleName: "",
-  lastName: "",
-  address: "",
-  emailAddress: "",
-  phoneNumber: "",
-  newPassword: "",
-  currentPassword: "",
-});
-
-const userName = ref("");
-
-onMounted(async () => {
-  fetchTrainingCounters();
-  try {
-    // --- Fetch user from API ---
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/user", {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
-
-    const user = res.data;
-
-    // Update form (including middle name)
-    form.value = {
-      ...form.value,
-      firstName: user.firstName || user.first_name || "",
-      middleName: user.middleName || user.middle_name || "",
-      lastName: user.lastName || user.last_name || "",
-      emailAddress: user.emailAddress || user.email || "",
-      phoneNumber: user.phoneNumber || user.phone || "",
-      address: user.address || "",
-    };
-
-    // Set userName (display only first + last)
-    userName.value = `${form.value.firstName} ${form.value.lastName}`.trim();
-
-    // Save backup
-    localStorage.setItem("user", JSON.stringify(user));
-  } catch (err) {
-    console.error("API failed, fallback to localStorage:", err);
-
-    const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      const user = JSON.parse(savedUser);
-
-      form.value = {
-        ...form.value,
-        firstName: user.firstName || user.first_name || "",
-        middleName: user.middleName || user.middle_name || "",
-        lastName: user.lastName || user.last_name || "",
-        emailAddress: user.emailAddress || user.email || "",
-        phoneNumber: user.phoneNumber || user.phone || "",
-        address: user.address || "",
-      };
-
-      userName.value = `${form.value.firstName} ${form.value.lastName}`.trim();
-    }
-  }
-});
-
-function deleteAccount() {
-  axios
-    .delete(import.meta.env.VITE_API_BASE_URL +"/user", {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    })
-    .then((res) => {
-      alert(res.data.message);
-
-      // clear saved data
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-
-      // redirect to login
-      router.push("/loginform");
-    })
-    .catch((err) => {
-      console.error(err);
-      alert("Failed to delete account.");
-    });
-}
-
-// Fetch TrainingCounter
-async function fetchTrainingCounters() {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    const response = await axios.get(import.meta.env.VITE_API_BASE_URL +"/registrations", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    const trainings = response.data || [];
-
-    upcomingCount.value = trainings.filter(
-      (r) =>
-        r.registrationStatus?.toLowerCase() === "upcoming" ||
-        r.registrationStatus?.toLowerCase() === "registered"
-    ).length;
-
-    completedCount.value = trainings.filter(
-      (r) => r.registrationStatus?.toLowerCase() === "completed"
-    ).length;
-  } catch (error) {
-    console.error("❌ Error fetching training counters:", error);
-  }
-}
-
-const handleUpdate = async () => {
-  if (!form.value.currentPassword) {
-    alert("You must enter your current password to save changes.");
-    return;
-  }
-
-  try {
-    await axios.put(import.meta.env.VITE_API_BASE_URL +"/user", form.value, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
-    alert("Profile updated successfully!");
-    router.push("/homepage");
-  } catch (error) {
-    alert(error.response?.data?.message || "Update failed.");
-  }
-};
-
-const handleDelete = async () => {
-  try {
-    isDeleting.value = true;
-    const res = await axios.delete(import.meta.env.VITE_API_BASE_URL +"/user", {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      data: { currentPassword: form.value.currentPassword }, // send password for verification
-    });
-    alert(res.data.message);
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    router.push("/auth/login");
-  } catch (error) {
-    alert(error.response?.data?.message || "Deletion failed.");
-  } finally {
-    isDeleting.value = false;
-    showDeleteModal.value = false;
-  }
-};
-
-const logout = () => {
-  // Remove user data from localStorage
-  localStorage.removeItem("user");
-  // Redirect to login page
-  router.push({ name: "Login" });
-};
-</script>
