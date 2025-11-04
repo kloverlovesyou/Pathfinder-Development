@@ -11,7 +11,6 @@ function openModalCalendar(event) {
   console.log("Event clicked:", event);
 }
 
-const careers = ref([]);
 const toasts = ref([]);
 const myApplications = ref(new Set());
 
@@ -122,20 +121,9 @@ const careersWithOrg = computed(() =>
   }))
 );
 
-const showModal = ref(false);
 const showUploadModal = ref(false);
-const selectedCareer = ref(null);
+
 const uploadedFile = ref(null);
-
-function openModal(career) {
-  selectedCareer.value = career;
-  showModal.value = true;
-}
-
-function closeModal() {
-  showModal.value = false;
-  selectedCareer.value = null;
-}
 
 function openUploadModal() {
   showUploadModal.value = true;
@@ -262,6 +250,46 @@ function formatDateTime(dateStr) {
     hour12: true,
   });
 }
+
+import CareerModal from "@/components/Layout/CareerModal.vue";
+
+const careers = ref([]);
+const selectedCareer = ref(null);
+const showModal = ref(false);
+
+function openModal(career) {
+  selectedCareer.value = career;
+  showModal.value = true;
+}
+
+function closeModal() {
+  showModal.value = false;
+  selectedCareer.value = null;
+}
+
+async function fetchMyApplications() {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+  const res = await axios.get("http://127.0.0.1:8000/api/applications", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  myApplications.value = new Set(res.data.map((a) => a.careerID));
+}
+
+async function fetchBookmarks() {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+  const res = await axios.get("http://127.0.0.1:8000/api/career-bookmarks", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  bookmarkedCareers.value = new Set(res.data.map((b) => b.careerID));
+}
+
+onMounted(async () => {
+  await fetchCareers();
+  await fetchMyApplications();
+  await fetchBookmarks();
+});
 </script>
 
 <template>
@@ -278,13 +306,12 @@ function formatDateTime(dateStr) {
       <!-- Career Cards -->
       <div class="space-y-4">
         <div
-          v-for="career in careersWithOrg"
-          :key="career.id"
+          v-for="career in careers"
+          :key="career.careerID"
           class="p-4 bg-blue-gray rounded-lg relative hover:bg-gray-300 transition cursor-pointer"
           @click="openModal(career)"
         >
           <h3 class="font-semibold text-lg">{{ career.position }}</h3>
-
           <p class="text-gray-700 font-medium">
             {{ career.organizationName }}
           </p>
@@ -299,127 +326,15 @@ function formatDateTime(dateStr) {
       @eventClick="openModalCalendar"
     />
 
-    <!-- Career Details Modal -->
-    <dialog v-if="showModal" open class="modal sm:modal-middle">
-      <div class="modal-box max-w-3xl relative font-poppins">
-        <!-- Close button -->
-        <button
-          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
-          @click="closeModal"
-        >
-          ✕
-        </button>
-
-        <!-- ✅ Career Info -->
-        <h2 class="text-xl font-bold mb-2">{{ selectedCareer.position }}</h2>
-        <p class="text-sm text-gray-600 mb-2">
-          Organization: {{ selectedCareer.organizationName }}
-        </p>
-
-        <!-- Buttons -->
-        <div class="my-4 flex justify-end gap-2">
-          <!-- Bookmark -->
-          <button
-            class="btn btn-outline btn-sm"
-            @click="
-              toggleCareerBookmark(selectedCareer.careerID ?? selectedCareer.id)
-            "
-          >
-            {{
-              isCareerBookmarked(selectedCareer.careerID ?? selectedCareer.id)
-                ? "Bookmarked"
-                : "Bookmark"
-            }}
-          </button>
-
-          <!-- Apply / Cancel -->
-          <button
-            v-if="
-              !myApplications.has(
-                selectedCareer?.careerID ?? selectedCareer?.id
-              )
-            "
-            class="btn btn-sm bg-customButton text-white"
-            @click="openUploadModal"
-          >
-            Apply
-          </button>
-
-          <button
-            v-else
-            class="btn btn-sm bg-gray-500 text-white"
-            @click="addToast('Application already submitted', 'accent')"
-            :disabled="true"
-          >
-            Applied
-          </button>
-        </div>
-
-        <!-- Career Details -->
-        <p>
-          <strong>Details:</strong> {{ selectedCareer.detailsAndInstructions }}
-        </p>
-        <p>
-          <strong>Qualifications:</strong> {{ selectedCareer.qualifications }}
-        </p>
-        <p><strong>Requirements:</strong> {{ selectedCareer.requirements }}</p>
-        <p>
-          <strong>Application Address:</strong>
-          {{ selectedCareer.applicationLetterAddress }}
-        </p>
-        <p>
-          <strong>Deadline:</strong>
-          {{ formatDateTime(selectedCareer.deadlineOfSubmission) }}
-        </p>
-      </div>
-    </dialog>
-
-    <!-- Apply Modal -->
-    <dialog v-if="showUploadModal" open class="modal sm:modal-middle">
-      <div class="modal-box max-w-lg relative font-poppins">
-        <button
-          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
-          @click="closeUploadModal"
-        >
-          ✕
-        </button>
-
-        <h2 class="text-xl font-bold mb-4">
-          Apply for {{ selectedCareer?.position }}
-        </h2>
-
-        <form @submit.prevent="submitApplication">
-          <div class="mb-4">
-            <label class="block text-sm font-medium mb-1">
-              Upload PDF Requirements
-            </label>
-            <input
-              type="file"
-              accept="application/pdf"
-              @change="handleFileUpload"
-              required
-              class="file-input file-input-bordered w-full"
-            />
-          </div>
-
-          <div class="flex justify-end gap-2">
-            <button
-              type="button"
-              class="btn btn-outline btn-sm"
-              @click="closeUploadModal"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              class="btn bg-customButton hover:bg-dark-slate text-white btn-sm"
-            >
-              Submit
-            </button>
-          </div>
-        </form>
-      </div>
-    </dialog>
+    <CareerModal
+      :show="showModal"
+      :career="selectedCareer"
+      :myApplications="myApplications"
+      :bookmarkedCareers="bookmarkedCareers"
+      @close="closeModal"
+      @update-applications="myApplications = $event"
+      @update-bookmarks="bookmarkedCareers = $event"
+    />
     <div class="toast toast-end toast-top z-50">
       <div
         v-for="toast in toasts"

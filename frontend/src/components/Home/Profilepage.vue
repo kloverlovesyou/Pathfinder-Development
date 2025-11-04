@@ -46,7 +46,8 @@ async function fetchMyActivities() {
   if (!savedUser) return;
 
   const user = JSON.parse(savedUser);
-  userName.value = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Guest";
+  userName.value =
+    `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Guest";
 
   try {
     const res = await axios.get(import.meta.env.VITE_API_BASE_URL +`/my-activities/${user.applicantID}`);
@@ -54,12 +55,12 @@ async function fetchMyActivities() {
 
     console.log("Raw activities data:", activities.value);
     // ✅ Count by status
-    upcomingCount.value = activities.value.filter(a =>
+    upcomingCount.value = activities.value.filter((a) =>
       ["upcoming", "registered"].includes(a.status?.toLowerCase())
     ).length;
 
-    completedCount.value = activities.value.filter(a =>
-      a.status?.toLowerCase() === "completed"
+    completedCount.value = activities.value.filter(
+      (a) => a.status?.toLowerCase() === "completed"
     ).length;
 
     // ✅ Start QR countdown timers
@@ -76,7 +77,7 @@ const startAllQRCountdowns = () => {
   if (qrCountdownInterval) clearInterval(qrCountdownInterval);
 
   qrCountdownInterval = setInterval(() => {
-    activities.value.forEach(activity => {
+    activities.value.forEach((activity) => {
       if (activity.end_time) {
         const now = new Date().getTime();
         const expiry = new Date(activity.end_time).getTime();
@@ -102,10 +103,9 @@ function isTrainingPassed(activity) {
   return now >= scheduleDate;
 }
 
-
 function parseDate(dateStr) {
   if (!dateStr) return null;
-  return new Date(dateStr.replace(' ', 'T')); // ensure proper Date parsing
+  return new Date(dateStr.replace(" ", "T")); // ensure proper Date parsing
 }
 
 function isAttendanceEnabled(activity) {
@@ -126,11 +126,10 @@ function isAttendanceEnabled(activity) {
 
 // ✅ Determine if training has ended
 function isTrainingEnded(activity) {
-
   console.log("Submitting attendance:", {
-  trainingID: activity.trainingID,
-  key: activity.qrInput.trim(),
-});
+    trainingID: activity.trainingID,
+    key: activity.qrInput.trim(),
+  });
   if (!activity.end_time) return false; // If no end_time, assume not ended
   const now = new Date();
   const endTime = new Date(activity.end_time);
@@ -143,7 +142,9 @@ function isTrainingActive(activity) {
   const start = new Date(activity.schedule);
 
   // If end_time is missing, assume training lasts 2 hours
-  const end = activity.end_time ? new Date(activity.end_time) : new Date(start.getTime() + 2 * 60 * 60 * 1000);
+  const end = activity.end_time
+    ? new Date(activity.end_time)
+    : new Date(start.getTime() + 2 * 60 * 60 * 1000);
 
   // Validate dates
   if (isNaN(start) || isNaN(end)) return false;
@@ -180,7 +181,10 @@ async function submitAttendance(activity) {
     activity.qrInput = "";
     await fetchMyActivities();
   } catch (error) {
-    console.error("Attendance submission error:", error.response?.data || error);
+    console.error(
+      "Attendance submission error:",
+      error.response?.data || error
+    );
     alert(
       error.response?.data?.message ||
         "Failed to submit attendance. Please check the code."
@@ -292,7 +296,9 @@ onMounted(fetchMyActivities);
                     }}
                   </span>
                   {{
-                   activity.schedule ? formatDateTime(activity.schedule) : formatDateTime(activity.deadlineOfSubmission) || "—"
+                    activity.schedule
+                      ? formatDateTime(activity.schedule)
+                      : formatDateTime(activity.deadlineOfSubmission) || "—"
                   }}
                 </div>
 
@@ -353,99 +359,123 @@ onMounted(fetchMyActivities);
                 <!-- Attendance Input (Training only) Mobile View-->
                 <div v-if="activity.type === 'training'" class="mt-3">
                   <input
-                      v-model="activity.qrInput"
-                      type="text"
-                      placeholder="Enter attendance code"
-                      class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                      :disabled="!isAttendanceEnabled(activity)"
-                      @click.stop
-                    />
-                    <button
-                      class="mt-2 w-full text-white py-2 rounded"
-                      :class="isAttendanceEnabled(activity)
+                    v-model="activity.qrInput"
+                    type="text"
+                    placeholder="Enter attendance code"
+                    class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    :disabled="!isAttendanceEnabled(activity)"
+                    @click.stop
+                  />
+                  <button
+                    class="mt-2 w-full text-white py-2 rounded"
+                    :class="
+                      isAttendanceEnabled(activity)
                         ? 'bg-customButton hover:bg-dark-slate'
-                        : 'bg-gray-400 cursor-not-allowed'"
-                      :disabled="!isAttendanceEnabled(activity)"
-                      @click.stop="submitAttendance(activity)"
-                    >
-                      Submit Attendance
-                    </button>
+                        : 'bg-gray-400 cursor-not-allowed'
+                    "
+                    :disabled="!isAttendanceEnabled(activity)"
+                    @click.stop="submitAttendance(activity)"
+                  >
+                    Submit Attendance
+                  </button>
                 </div>
               </div>
             </div>
           </li>
         </ul>
       </div>
-<!-- 🟣 MODAL -->
-<div
-  v-if="showModal"
-  class="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-40"
->
-  <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg relative">
-    <button
-      @click="closeModal"
-      class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-xl"
-    >
-      ×
-    </button>
+      <!-- 🟣 MODAL -->
+      <div
+        v-if="showModal"
+        class="fixed inset-0 flex items-center justify-center z-50"
+      >
+        <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg relative">
+          <button
+            @click="closeModal"
+            class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-xl"
+          >
+            ×
+          </button>
 
-    <h3 class="text-xl font-semibold mb-2">
-      {{ selectedActivity.title }}
-    </h3>
-    <p class="text-sm text-gray-600 mb-4">
-      <strong>Organization:</strong>
-      {{ selectedActivity.organizationName }}
-    </p>
+          <h3 class="text-xl font-semibold mb-2">
+            {{ selectedActivity.title }}
+          </h3>
+          <p class="text-sm text-gray-600 mb-4">
+            <strong>Organization:</strong>
+            {{ selectedActivity.organizationName }}
+          </p>
 
-    <!-- TRAINING DETAILS -->
-    <div v-if="selectedActivity.type === 'training'">
-      <p><strong>Mode:</strong> {{ selectedActivity.mode }}</p>
-      <p><strong>Schedule:</strong> {{ formatDateTime(selectedActivity.schedule) }}</p>
-      <p><strong>Location:</strong> {{ selectedActivity.location }}</p>
-      <p v-if="selectedActivity.trainingLink">
-        <strong>Training Link:</strong>
-        <a
-          :href="selectedActivity.trainingLink"
-          target="_blank"
-          class="text-blue-600 underline"
-        >
-          {{ selectedActivity.trainingLink }}
-        </a>
-      </p>
-      <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
+          <!-- TRAINING DETAILS -->
+          <div v-if="selectedActivity.type === 'training'">
+            <p><strong>Mode:</strong> {{ selectedActivity.mode }}</p>
+            <p>
+              <strong>Schedule:</strong>
+              {{ formatDateTime(selectedActivity.schedule) }}
+            </p>
+            <p><strong>Location:</strong> {{ selectedActivity.location }}</p>
+            <p v-if="selectedActivity.trainingLink">
+              <strong>Training Link:</strong>
+              <a
+                :href="selectedActivity.trainingLink"
+                target="_blank"
+                class="text-blue-600 underline"
+              >
+                {{ selectedActivity.trainingLink }}
+              </a>
+            </p>
+            <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
 
-      <!-- QR Code Section -->
-      <div v-if="selectedActivity.attendance_key" class="mt-6 text-center border-t pt-4">
-        <p class="text-sm font-semibold mb-2">Scan this QR Code for Attendance</p>
+            <!-- QR Code Section -->
+            <div
+              v-if="selectedActivity.attendance_key"
+              class="mt-6 text-center border-t pt-4"
+            >
+              <p class="text-sm font-semibold mb-2">
+                Scan this QR Code for Attendance
+              </p>
 
-        <QrcodeVue
-          :value="`http://127.0.0.1:8000/attendance?trainingID=${selectedActivity.trainingID}&key=${selectedActivity.attendance_key}`"
-          :size="200"
-          level="H"
-          class="mx-auto"
-        />
+              <QrcodeVue
+                :value="`http://127.0.0.1:8000/attendance?trainingID=${selectedActivity.trainingID}&key=${selectedActivity.attendance_key}`"
+                :size="200"
+                level="H"
+                class="mx-auto"
+              />
 
-        <p class="text-gray-500 text-xs mt-2">
-          Expires at: {{ formatDateTime(selectedActivity.end_time) }}
-        </p>
+              <p class="text-gray-500 text-xs mt-2">
+                Expires at: {{ formatDateTime(selectedActivity.end_time) }}
+              </p>
+            </div>
+
+            <!-- No QR yet -->
+            <div v-else class="mt-6 text-center text-gray-400 border-t pt-4">
+              <p>
+                QR Code not available yet. It will appear once the training
+                starts.
+              </p>
+            </div>
+          </div>
+
+          <!-- CAREER DETAILS -->
+          <div v-else-if="selectedActivity.type === 'career'">
+            <p>
+              <strong>Details:</strong>
+              {{ selectedActivity.detailsAndInstructions }}
+            </p>
+            <p>
+              <strong>Qualifications:</strong>
+              {{ selectedActivity.qualifications }}
+            </p>
+            <p>
+              <strong>Requirements:</strong> {{ selectedActivity.requirements }}
+            </p>
+            <p>
+              <strong>Deadline:</strong>
+              {{ formatDateTime(selectedActivity.deadlineOfSubmission) }}
+            </p>
+            <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
+          </div>
+        </div>
       </div>
-
-      <!-- No QR yet -->
-      <div v-else class="mt-6 text-center text-gray-400 border-t pt-4">
-        <p>QR Code not available yet. It will appear once the training starts.</p>
-      </div>
-    </div>
-
-    <!-- CAREER DETAILS -->
-    <div v-else-if="selectedActivity.type === 'career'">
-      <p><strong>Details:</strong> {{ selectedActivity.detailsAndInstructions }}</p>
-      <p><strong>Qualifications:</strong> {{ selectedActivity.qualifications }}</p>
-      <p><strong>Requirements:</strong> {{ selectedActivity.requirements }}</p>
-      <p><strong>Deadline:</strong> {{ formatDateTime(selectedActivity.deadlineOfSubmission) }}</p>
-      <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
-    </div>
-  </div>
-</div>
     </div>
 
     <!--Large screen-->
@@ -481,7 +511,7 @@ onMounted(fetchMyActivities);
             <span
               class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
             >
-             {{ upcomingCount }}
+              {{ upcomingCount }}
             </span>
           </div>
 
@@ -665,10 +695,12 @@ onMounted(fetchMyActivities);
 
                   <td class="px-6 py-4 text-sm text-gray-700">
                     {{
-                      activity.schedule ? formatDateTime(activity.schedule) : formatDateTime(activity.deadlineOfSubmission) || "—"
+                      activity.schedule
+                        ? formatDateTime(activity.schedule)
+                        : formatDateTime(activity.deadlineOfSubmission) || "—"
                     }}
                   </td>
-                  
+
                   <td
                     class="px-6 py-4 text-sm font-medium"
                     :class="{
@@ -719,24 +751,24 @@ onMounted(fetchMyActivities);
                   <td class="px-6 py-4 whitespace-nowrap text-sm">
                     <div v-if="activity.type === 'training'" class="flex gap-2">
                       <input
-                          v-model="activity.qrInput"
-                          type="text"
-                          placeholder="Enter attendance code"
-                          class="w-full px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                          :disabled="!isAttendanceEnabled(activity)"
-                        />
-                        <button
-                          @click="submitAttendance(activity)"
-                          :class="[
-                            'px-3 py-1 text-white rounded',
-                            isAttendanceEnabled(activity)
-                              ? 'bg-customButton hover:bg-blue-600'
-                              : 'bg-gray-400 cursor-not-allowed'
-                          ]"
-                          :disabled="!isAttendanceEnabled(activity)"
-                        >
-                          Submit
-                        </button>
+                        v-model="activity.qrInput"
+                        type="text"
+                        placeholder="Enter attendance code"
+                        class="w-full px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        :disabled="!isAttendanceEnabled(activity)"
+                      />
+                      <button
+                        @click="submitAttendance(activity)"
+                        :class="[
+                          'px-3 py-1 text-white rounded',
+                          isAttendanceEnabled(activity)
+                            ? 'bg-customButton hover:bg-blue-600'
+                            : 'bg-gray-400 cursor-not-allowed',
+                        ]"
+                        :disabled="!isAttendanceEnabled(activity)"
+                      >
+                        Submit
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -765,10 +797,12 @@ onMounted(fetchMyActivities);
                   {{ selectedActivity.organizationName }}
                 </p>
 
+                <!-- TRAINING DETAILS -->
                 <div v-if="selectedActivity.type === 'training'">
                   <p><strong>Mode:</strong> {{ selectedActivity.mode }}</p>
                   <p>
-                     <strong>Schedule:</strong> {{ formatDateTime(selectedActivity.schedule) }}
+                    <strong>Schedule:</strong>
+                    {{ formatDateTime(selectedActivity.schedule) }}
                   </p>
                   <p>
                     <strong>Location:</strong> {{ selectedActivity.location }}
@@ -783,38 +817,40 @@ onMounted(fetchMyActivities);
                       {{ selectedActivity.trainingLink }}
                     </a>
                   </p>
-                  <p ><strong>Status:</strong> {{ selectedActivity.status }}</p>
-                  
-                  <p v-if="selectedActivity.certificate">
-                    <strong>Certificate:</strong>
-                    <a
-                      :href="selectedActivity.certificate"
-                      target="_blank"
-                      class="text-blue-600 underline"
-                    >
-                      View Certificate
-                    </a>
-                  </p>
-                </div>
-
-                <div v-else-if="selectedActivity.type === 'career'">
-                  <p>
-                    <strong>Details:</strong>
-                    {{ selectedActivity.detailsAndInstructions }}
-                  </p>
-                  <p>
-                    <strong>Qualifications:</strong>
-                    {{ selectedActivity.qualifications }}
-                  </p>
-                  <p>
-                    <strong>Requirements:</strong>
-                    {{ selectedActivity.requirements }}
-                  </p>
-                  <p>
-                    <strong>Deadline:</strong>
-                    {{ formatDateTime(selectedActivity.deadlineOfSubmission) }}
-                  </p>
                   <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
+
+                  <!-- QR Code Section -->
+                  <div
+                    v-if="selectedActivity.attendance_key"
+                    class="mt-6 text-center border-t pt-4"
+                  >
+                    <p class="text-sm font-semibold mb-2">
+                      Scan this QR Code for Attendance
+                    </p>
+
+                    <QrcodeVue
+                      :value="`http://127.0.0.1:8000/attendance?trainingID=${selectedActivity.trainingID}&key=${selectedActivity.attendance_key}`"
+                      :size="200"
+                      level="H"
+                      class="mx-auto"
+                    />
+
+                    <p class="text-gray-500 text-xs mt-2">
+                      Expires at:
+                      {{ formatDateTime(selectedActivity.end_time) }}
+                    </p>
+                  </div>
+
+                  <!-- No QR yet -->
+                  <div
+                    v-else
+                    class="mt-6 text-center text-gray-400 border-t pt-4"
+                  >
+                    <p>
+                      QR Code not available yet. It will appear once the
+                      training starts.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

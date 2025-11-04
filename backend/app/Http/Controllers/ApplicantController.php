@@ -47,33 +47,33 @@ class ApplicantController extends Controller
         ], 201);
     }
 
-    public function login(Request $request)
-    {
-        $request->validate([
-            'emailAddress' => 'required|email',
-            'password' => 'required|string|min:8',
-        ]);
+public function login(Request $request)
+{
+    $request->validate([
+        'emailAddress' => 'required|email',
+        'password' => 'required|string|min:8',
+    ]);
 
-        $applicant = Applicant::where('emailAddress', $request->emailAddress)->first();
+    $applicant = Applicant::where('emailAddress', $request->emailAddress)->first();
 
-        if (!$applicant || !Hash::check($request->password, $applicant->password)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
-        }
-
-        // Generate or reuse token
-        if (!$applicant->api_token) {
-            $applicant->api_token = Str::random(60);
-            $applicant->save();
-        }
-
-        return response()->json([
-            'message' => 'Login successful',
-            'user' => $applicant,
-            'token' => $applicant->api_token,
-        ]);
+    if (!$applicant || !Hash::check($request->password, $applicant->password)) {
+        return response()->json(['message' => 'Invalid credentials'], 401);
     }
 
- // Update applicant profile
+    // ✅ Only generate if missing
+    if (!$applicant->api_token) {
+        $applicant->api_token = Str::random(60);
+        $applicant->save();
+    }
+
+    return response()->json([
+        'message' => 'Login successful',
+        'user' => $applicant,
+        'token' => $applicant->api_token,
+    ]);
+}
+
+  // 🧩 Update applicant profile
     public function update(Request $request)
     {
         $token = $request->bearerToken();
@@ -83,26 +83,30 @@ class ApplicantController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        // Optional: Verify current password before allowing update
-        if (!Hash::check($request->currentPassword, $applicant->password)) {
-            return response()->json(['message' => 'Incorrect current password'], 403);
-        }
-
-        // Update fields
-        $applicant->update([
-            'firstName' => $request->firstName,
-            'middleName' => $request->middleName,
-            'lastName' => $request->lastName,
-            'address' => $request->address,
-            'emailAddress' => $request->emailAddress,
-            'phoneNumber' => $request->phoneNumber,
-            'password' => $request->newPassword ? Hash::make($request->newPassword) : $applicant->password,
+        // ✅ Validate input
+        $validated = $request->validate([
+            'firstName' => 'nullable|string|max:255',
+            'middleName' => 'nullable|string|max:255',
+            'lastName' => 'nullable|string|max:255',
+            'address' => 'nullable|string|max:255',
+            'emailAddress' => 'nullable|email|max:255',
+            'phoneNumber' => 'nullable|string|max:20',
         ]);
+
+        // ✅ Update profile fields
+        $applicant->fill([
+            'firstName' => $request->firstName ?? $applicant->firstName,
+            'middleName' => $request->middleName ?? $applicant->middleName,
+            'lastName' => $request->lastName ?? $applicant->lastName,
+            'address' => $request->address ?? $applicant->address,
+            'emailAddress' => $request->emailAddress ?? $applicant->emailAddress,
+            'phoneNumber' => $request->phoneNumber ?? $applicant->phoneNumber,
+        ]);
+
+        $applicant->save();
 
         return response()->json(['message' => 'Profile updated successfully']);
     }
-
-
 // Delete applicant account
    public function destroy(Request $request)
 {
@@ -123,4 +127,31 @@ class ApplicantController extends Controller
     return response()->json(['message' => 'Account deleted successfully']);
 }
 
+   // 🧩 Update password separately
+    public function updatePassword(Request $request)
+    {
+        $token = $request->bearerToken();
+        $applicant = Applicant::where('api_token', $token)->first();
+
+        if (!$applicant) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        // ✅ Validate fields
+        $validated = $request->validate([
+            'currentPassword' => 'required|string',
+            'newPassword' => 'required|string|min:8|confirmed',
+        ]);
+
+        // ✅ Check if current password matches
+        if (!Hash::check($validated['currentPassword'], $applicant->password)) {
+            return response()->json(['message' => 'The current password is incorrect.'], 403);
+        }
+
+        // ✅ Update password
+        $applicant->password = Hash::make($validated['newPassword']);
+        $applicant->save();
+
+        return response()->json(['message' => 'Password updated successfully']);
+    }
 }
