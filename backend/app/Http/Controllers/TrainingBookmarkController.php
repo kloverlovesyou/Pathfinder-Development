@@ -32,7 +32,7 @@ class TrainingBookmarkController extends Controller
         }
 
         $request->validate([
-            'trainingID' => 'required|exists:trainings,trainingID'
+            'trainingID' => 'required|exists:training,trainingID'
         ]);
 
         Trainingbookmark::create([
