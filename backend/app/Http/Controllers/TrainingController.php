@@ -42,7 +42,7 @@ class TrainingController extends Controller
             return null;
         }
 
-        // Generate QR key if schedule started and no key exists
+        // Generate QR key if schedule started
         if ($now->greaterThanOrEqualTo($training->schedule)
             && !$training->attendance_key
             && $now->lessThan($training->end_time)) 
@@ -53,8 +53,8 @@ class TrainingController extends Controller
             $training->save();
         }
 
-        // Return frontend attendance checking link
         if ($training->attendance_key) {
+            // ✅ Return a full link for QR scanning
             return env('FRONTEND_URL') . '/attendance/checkin?trainingID='
                 . $training->trainingID . '&key=' . $training->attendance_key;
         }
