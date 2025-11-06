@@ -10,20 +10,20 @@ class EventController extends Controller
   public function getUserEvents($applicantID)
 {
 $trainings = DB::table('registration')
-    ->join('Training', 'registration.TrainingID', '=', 'Training.TrainingID')
-    ->join('Organization', 'Training.OrganizationID', '=', 'Organization.OrganizationID')
+    ->join('training', 'registration.TrainingID', '=', 'training.TrainingID')
+    ->join('Organization', 'training.OrganizationID', '=', 'Organization.OrganizationID')
     ->where('registration.ApplicantID', $applicantID)
     ->where('registration.registrationStatus', 'Registered')
     ->select(
-        'Training.TrainingID as trainingID',
-        'Training.Title as title',
-        'Training.Description as description',
-        DB::raw('DATE(Training.Schedule) as date'),   // Extract date
-        DB::raw('TIME(Training.Schedule) as time'),   // Extract time
+        'training.TrainingID as trainingID',
+        'training.Title as title',
+        'training.Description as description',
+        DB::raw('DATE(training.schedule) as date'),   // Extract date
+        DB::raw('TIME(training.schedule) as time'),   // Extract time
         'Training.Mode',
         'Training.Location as location',
-        'Training.TrainingLink as trainingLink',
-        'Organization.Name as organization',
+        'Training.trainingLink as trainingLink',
+        'organization.name as organization',
 
         'Training.Attendance_Key as attendance_key',
         'Training.End_Time as end_time',
