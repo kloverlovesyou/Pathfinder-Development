@@ -139,42 +139,48 @@ async function toggleBookmark(trainingId) {
     return;
   }
 
-  // Remove bookmark
+  // ✅ If already bookmarked → REMOVE
   if (isTrainingBookmarked(trainingId)) {
     try {
-      await axios.delete(import.meta.env.VITE_API_BASE_URL+`/bookmarks/${trainingId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      bookmarkedTrainings.value = bookmarkedTrainings.value.filter(
-        (id) => id !== trainingId
+      await axios.delete(
+        import.meta.env.VITE_API_BASE_URL + `/bookmarks/${trainingId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
+
       addToast("Bookmark removed", "info");
+
+      // ✅ Refresh bookmark list so UI updates
+      await fetchBookmarks();
     } catch (error) {
       console.error("Error removing bookmark:", error);
       addToast("Failed to remove bookmark", "error");
     }
   }
-  // Add bookmark
+
+  // ✅ If NOT bookmarked → ADD
   else {
     try {
-      // <-- Added console.log here
-      console.log("Bookmarking training ID:", trainingId);
-
       await axios.post(
-        import.meta.env.VITE_API_BASE_URL+"/bookmarks",
+        import.meta.env.VITE_API_BASE_URL + "/bookmarks",
         { trainingID: trainingId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      bookmarkedTrainings.value.push(trainingId);
+
       addToast("Bookmarked!", "success");
+
+      // ✅ Refresh bookmark list
+      await fetchBookmarks();
     } catch (error) {
-      if (error.response?.status === 409)
+      if (error.response?.status === 409) {
         addToast("Already bookmarked", "accent");
-      else addToast("Failed to bookmark", "error");
+      } else {
+        addToast("Failed to bookmark", "error");
+      }
       console.error("Failed to toggle bookmark:", error);
     }
   }
 }
+
 function isTrainingBookmarked(trainingId) {
   return bookmarkedTrainings.value.includes(trainingId);
 }
@@ -213,6 +219,10 @@ async function fetchTrainings() {
     console.error("❌ fetchTrainings error:", err.response?.data || err);
     addToast("Failed to load trainings", "error");
   }
+}
+
+function getToken() {
+  return localStorage.getItem("token");
 }
 
 async function fetchBookmarks() {
