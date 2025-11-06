@@ -29,21 +29,21 @@ class TrainingController extends Controller
         return $key;
     }
 
-    public function autoGenerateQR(Training $training)
+    private function autoGenerateQR(Training $training)
     {
         $now = now();
 
-        // ✅ Clear QR if the training has ended
+        // Clear QR if training ended
         if ($training->attendance_key && $now->greaterThanOrEqualTo($training->end_time)) {
             $training->attendance_key = null;
             $training->qr_generated_at = null;
             $training->attendance_expires_at = null;
             $training->save();
-            return;
+            return null;
         }
 
-        // ✅ Generate QR using the safe key
-        if ($now->greaterThanOrEqualTo($training->schedule) 
+        // Generate QR key if schedule started and no key exists
+        if ($now->greaterThanOrEqualTo($training->schedule)
             && !$training->attendance_key
             && $now->lessThan($training->end_time)) 
         {
@@ -52,6 +52,14 @@ class TrainingController extends Controller
             $training->attendance_expires_at = $training->end_time;
             $training->save();
         }
+
+        // Return frontend attendance checking link
+        if ($training->attendance_key) {
+            return env('FRONTEND_URL') . '/attendance/checkin?trainingID='
+                . $training->trainingID . '&key=' . $training->attendance_key;
+        }
+
+        return null;
     }
     /**
      * User attendance check-in via QR code
@@ -110,14 +118,19 @@ class TrainingController extends Controller
             return response()->json(['message' => 'Training not found'], 404);
         }
 
-        // ✅ Generate with safe key
         if (now()->lessThan($training->end_time)) {
             $training->attendance_key = $this->generateSafeKey(16);
             $training->qr_generated_at = now();
+            $training->attendance_expires_at = $training->end_time;
             $training->save();
+
+            // ✅ Create full attendance URL
+            $attendanceUrl = env('FRONTEND_URL') . '/attendance/checkin?trainingID='
+                            . $training->trainingID . '&key=' . $training->attendance_key;
 
             return response()->json([
                 'key' => $training->attendance_key,
+                'attendance_link' => $attendanceUrl,
                 'expires_at' => $training->end_time,
             ]);
         }
@@ -129,40 +142,45 @@ class TrainingController extends Controller
      * List all trainings (QR auto-generated if schedule started)
      */
     public function index(Request $request)
-{
-    $query = Training::with('organization');
+    {
+        $query = Training::with('organization');
 
-    // Filter by organization if query param exists
-    if ($request->has('organizationID')) {
-        $query->where('organizationID', $request->organizationID);
+        if ($request->has('organizationID')) {
+            $query->where('organizationID', $request->organizationID);
+        }
+
+        $trainings = $query->get();
+
+        foreach ($trainings as $training) {
+            $this->autoGenerateQR($training);
+        }
+
+        return response()->json($trainings->map(function ($training) {
+            // ✅ Generate attendance link if key exists
+            $attendanceLink = $training->attendance_key
+                ? env('FRONTEND_URL') . '/attendance/checkin?trainingID='
+                . $training->trainingID . '&key=' . $training->attendance_key
+                : null;
+
+            return [
+                'trainingID' => $training->trainingID,
+                'title' => $training->title,
+                'description' => $training->description,
+                'schedule' => $training->schedule?->format('Y-m-d H:i'),
+                'end_time' => $training->end_time?->format('Y-m-d H:i'),
+                'mode' => $training->mode,
+                'location' => $training->location,
+                'trainingLink' => $training->trainingLink,
+                'attendance_key' => $training->attendance_key,
+                'attendance_link' => $attendanceLink, // ✅ here
+                'attendance_expires_at' => $training->attendance_expires_at,
+                'organizationID' => $training->organizationID,
+                'organization' => [
+                    'name' => optional($training->organization)->name ?? 'Unknown',
+                ],
+            ];
+        }));
     }
-
-    $trainings = $query->get();
-
-    foreach ($trainings as $training) {
-        $this->autoGenerateQR($training);
-    }
-
-    return response()->json($trainings->map(function ($training) {
-        return [
-            'trainingID' => $training->trainingID,
-            'title' => $training->title,
-            'description' => $training->description,
-            'schedule' => $training->schedule?->format('Y-m-d H:i'),
-            'end_time' => $training->end_time?->format('Y-m-d H:i'),
-            'mode' => $training->mode,
-            'location' => $training->location,
-            'trainingLink' => $training->trainingLink,
-            'attendance_key' => $training->attendance_key,
-            'attendance_expires_at' => $training->attendance_expires_at,
-            'organizationID' => $training->organizationID,
-            'organization' => [
-                'name' => optional($training->organization)->name ?? 'Unknown',
-            ],
-        ];
-    }));
-    }
-
     /**
      * Store new training
      */
