@@ -9,20 +9,22 @@ async function fetchMyRegistrations() {
   const token = localStorage.getItem("token");
   if (!token) return;
 
-  const res = await axios.get(
-    import.meta.env.VITE_API_BASE_URL + "/registrations",
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
+  try {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/registrations", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-  registeredPosts = {}; // clear first
+    // Fill registeredPosts (for quick lookup)
+    res.data.forEach((r) => {
+      registeredPosts[r.trainingID] = {
+        registrationID: r.registrationID,
+      };
+    });
 
-  res.data.forEach(r => {
-    registeredPosts[r.trainingID] = {
-      registrationID: r.registrationID
-    };
-  });
-
-  console.log("✅ Loaded registrations:", registeredPosts);
+    console.log("✅ Registered trainings loaded:", registeredPosts);
+  } catch (err) {
+    console.error("❌ Failed to fetch registrations:", err);
+  }
 }
 
 onMounted(fetchMyRegistrations);
@@ -33,49 +35,49 @@ function toggleBookmark(post) {
 }
 const bookmarkedPosts = ref({});
 
-  /// Toggle registration
-  async function toggleRegister(training) {
-    const token = localStorage.getItem("token");
-    if (!token) return alert("Please log in first.");
+/// Toggle registration
+async function toggleRegister(training) {
+  const token = localStorage.getItem("token");
+  if (!token) return alert("Please log in first.");
 
-    // If already registered -> unregister
-    if (registeredPosts[training.trainingID]) {
-      try {
-        const registrationID = registeredPosts[training.trainingID].registrationID;
+  // If already registered -> unregister
+  if (registeredPosts[training.trainingID]) {
+    try {
+      const registrationID = registeredPosts[training.trainingID].registrationID;
 
-        // ✅ Log the ID you're about to delete
-        console.log("Deleting registration ID:", registrationID);
+      // ✅ Log the ID you're about to delete
+      console.log("Deleting registration ID:", registrationID);
 
-        await axios.delete(
-          import.meta.env.VITE_API_BASE_URL + `/registrations/${registrationID}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+      await axios.delete(
+        import.meta.env.VITE_API_BASE_URL + `/registrations/${registrationID}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-        delete registeredPosts[training.trainingID];
-        console.log(`🗑 Unregistered from ${training.title}`);
-      } catch (err) {
-        console.error("❌ Failed to unregister:", err);
-      }
-    }
-    // Else register
-    else {
-      try {
-        const res = await axios.post(
-          import.meta.env.VITE_API_BASE_URL + "/registrations",
-          { trainingID: training.trainingID },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        // ✅ FIXED HERE
-        const regID = res.data.data.registrationID;
-        registeredPosts[training.trainingID] = { registrationID: regID };
-
-        console.log(`✅ Registered for ${training.title} with ID`, regID);
-      } catch (err) {
-        console.error("❌ Failed to register:", err);
-      }
+      delete registeredPosts[training.trainingID];
+      console.log(`🗑 Unregistered from ${training.title}`);
+    } catch (err) {
+      console.error("❌ Failed to unregister:", err);
     }
   }
+  // Else register
+  else {
+    try {
+      const res = await axios.post(
+        import.meta.env.VITE_API_BASE_URL + "/registrations",
+        { trainingID: training.trainingID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // ✅ FIXED HERE
+      const regID = res.data.data.registrationID;
+      registeredPosts[training.trainingID] = { registrationID: regID };
+
+      console.log(`✅ Registered for ${training.title} with ID`, regID);
+    } catch (err) {
+      console.error("❌ Failed to register:", err);
+    }
+  }
+}
 
 const props = defineProps({
   isOpen: { type: Boolean, required: true },
