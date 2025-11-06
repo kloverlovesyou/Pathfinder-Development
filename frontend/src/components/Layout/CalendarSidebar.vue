@@ -9,22 +9,20 @@ async function fetchMyRegistrations() {
   const token = localStorage.getItem("token");
   if (!token) return;
 
-  try {
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/registrations", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+  const res = await axios.get(
+    import.meta.env.VITE_API_BASE_URL + "/registrations",
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
 
-    // Fill registeredPosts (for quick lookup)
-    res.data.forEach((r) => {
-      registeredPosts[r.trainingID] = {
-        registrationID: r.registrationID,
-      };
-    });
+  registeredPosts = {}; // clear first
 
-    console.log("✅ Registered trainings loaded:", registeredPosts);
-  } catch (err) {
-    console.error("❌ Failed to fetch registrations:", err);
-  }
+  res.data.forEach(r => {
+    registeredPosts[r.trainingID] = {
+      registrationID: r.registrationID
+    };
+  });
+
+  console.log("✅ Loaded registrations:", registeredPosts);
 }
 
 onMounted(fetchMyRegistrations);
