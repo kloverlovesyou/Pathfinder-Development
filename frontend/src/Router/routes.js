@@ -20,6 +20,7 @@ import AuthLayout from "@/components/Layout/AuthLayout.vue";
 import OrgCalendar from "@/components/Organization/OrganizationCalendar.vue";
 import OrgProfile from "@/components/Organization/Profile.vue";
 import AdminHomePage from "@/components/Admin/AdminHomePage.vue";
+import AttendanceChecking from "src/components/Home/AttendanceChecking.vue";
 import AdminUpdateDelete from "@/components/Admin/AdminUpdateDelete.vue";
 import AdminLayout from "@/components/Layout/AdminLayout.vue";
 import { createRouter, createWebHistory } from "vue-router";
@@ -32,6 +33,12 @@ const router = createRouter({
     {
       path: "/",
       redirect: "/auth/login",
+    },
+        // ✅ Attendance scan route
+    {
+      path: "/attendance/checkin",
+      name: "AttendanceCheckin",
+      component: AttendanceCheckin,
     },
 
     // Auth pages
