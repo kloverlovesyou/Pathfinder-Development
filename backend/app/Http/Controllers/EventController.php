@@ -37,25 +37,25 @@ $trainings = DB::table('registration')
 
 
 
-    $careers = DB::table('Application')
-    ->join('Career', 'Application.CareerID', '=', 'Career.CareerID')
-    ->join('Organization', 'Career.OrganizationID', '=', 'Organization.OrganizationID')
-    ->where('Application.ApplicantID', $applicantID)
-    ->where('Application.ApplicationStatus', 'Scheduled for Interview')
+    $careers = DB::table('application')
+    ->join('career', 'application.careerID', '=', 'career.careerID')
+    ->join('organization', 'career.organizationID', '=', 'organization.organizationID')
+    ->where('application.applicantID', $applicantID)
+    ->where('application.applicationStatus', 'Scheduled for Interview')
     ->select(
-        'Career.CareerID as careerID',
-        'Career.Position as title',
-        'Career.DetailsAndInstructions as detailsAndInstructions',
-        'Career.Qualifications as qualifications',
-        'Career.Requirements as requirements',
-        'Career.ApplicationLetterAddress as applicationLetterAddress',
-        DB::raw('DATE(Application.InterviewSchedule) as date'),
-        DB::raw('TIME(Application.InterviewSchedule) as time'),
-        'Application.InterviewMode as mode',
-        'Application.InterviewLocation as interviewLocation',
-        'Application.InterviewLink as interviewLink',
-        'Career.DeadlineOfSubmission as deadlineOfSubmission',
-        'Organization.Name as organization',
+        'career.careerID as careerID',
+        'career.position as title',
+        'career.detailsAndInstructions as detailsAndInstructions',
+        'career.qualifications as qualifications',
+        'career.requirements as requirements',
+        'career.applicationLetterAddress as applicationLetterAddress',
+        DB::raw('DATE(application.interviewSchedule) as date'),
+        DB::raw('TIME(Application.interviewSchedule) as time'),
+        'application.interviewMode as mode',
+        'application.interviewLocation as interviewLocation',
+        'application.interviewLink as interviewLink',
+        'career.deadlineOfSubmission as deadlineOfSubmission',
+        'organization.name as organization',
         DB::raw("'career' as type")
     )
     ->get();
