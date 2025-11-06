@@ -66,46 +66,55 @@ class TrainingController extends Controller
      */
     public function attendanceCheckin(Request $request)
     {
+        // ✅ Validate the input
         $request->validate([
             'trainingID' => 'required|integer',
             'key' => 'required|string',
+            'first_name' => 'required|string',
+            'last_name' => 'required|string',
+            'email' => 'required|email',
+            'phone' => 'required|string',
         ]);
 
+        // Find the training with the QR key
         $training = DB::table('training')
             ->where('trainingID', $request->trainingID)
             ->where('attendance_key', $request->key)
             ->first();
 
         if (!$training) {
-            return response()->json(['message' => 'Invalid or Fake QR Code'], 400);
+            return response()->json(['message' => 'Invalid or fake QR code'], 400);
         }
 
         if (now()->greaterThanOrEqualTo($training->end_time)) {
             return response()->json(['message' => 'QR Code Expired'], 400);
         }
 
-        $user = $request->user();
-        if (!$user) {
-            return response()->json(['message' => 'QR Valid — Please Login to Record Attendance'], 401);
+        // Look up registration by name, email, and phone
+        $registration = DB::table('registration')
+            ->join('applicant', 'registration.applicantID', '=', 'applicant.applicantID')
+            ->where('registration.trainingID', $request->trainingID)
+            ->where('applicant.first_name', $request->first_name)
+            ->where('applicant.last_name', $request->last_name)
+            ->where('applicant.email', $request->email)
+            ->where('applicant.phone', $request->phone)
+            ->select('registration.*')
+            ->first();
+
+        if (!$registration) {
+            return response()->json(['message' => '⚠️ No matching registration found'], 404);
         }
 
-        // ✅ Directly use applicantID from logged-in user
-        $applicantID = $user->applicantID;
-
-        $updated = DB::table('registration')
-            ->where('applicantID', $applicantID)
-            ->where('trainingID', $training->trainingID)
+        // Update attendance
+        DB::table('registration')
+            ->where('registrationID', $registration->registrationID)
             ->update([
                 'checked_in_at' => now(),
                 'registrationStatus' => 'Attended',
-                'certTrackingID' => $request->key,
+                'certTrackingID' => $request->key
             ]);
 
-        if ($updated) {
-            return response()->json(['message' => '✅ Attendance Recorded Successfully']);
-        } else {
-            return response()->json(['message' => '⚠️ No registration record found for this user'], 404);
-        }
+        return response()->json(['message' => '✅ Attendance Recorded Successfully']);
     }
     /**
      * Manually generate QR (optional)
