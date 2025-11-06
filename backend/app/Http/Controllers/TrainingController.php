@@ -70,10 +70,10 @@ class TrainingController extends Controller
         $request->validate([
             'trainingID' => 'required|integer',
             'key' => 'required|string',
-            'first_name' => 'required|string',
-            'last_name' => 'required|string',
-            'email' => 'required|email',
-            'phone' => 'required|string',
+            'firstName' => 'required|string',
+            'lastName' => 'required|string',
+            'emailAddress' => 'required|email',
+            'phoneNumber' => 'required|string',
         ]);
 
         // Find the training with the QR key
@@ -94,10 +94,10 @@ class TrainingController extends Controller
         $registration = DB::table('registration')
             ->join('applicant', 'registration.applicantID', '=', 'applicant.applicantID')
             ->where('registration.trainingID', $request->trainingID)
-            ->where('applicant.first_name', $request->first_name)
-            ->where('applicant.last_name', $request->last_name)
-            ->where('applicant.email', $request->email)
-            ->where('applicant.phone', $request->phone)
+            ->where('applicant.firstName', $request->first_name)
+            ->where('applicant.lastName', $request->last_name)
+            ->where('applicant.emailAddress', $request->email)
+            ->where('applicant.phoneNumber', $request->phone)
             ->select('registration.*')
             ->first();
 
