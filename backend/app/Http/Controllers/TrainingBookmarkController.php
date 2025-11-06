@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\TrainingBookmark;
+use App\Models\Trainingbookmark;
 use App\Models\Training;
 
 class TrainingBookmarkController extends Controller
