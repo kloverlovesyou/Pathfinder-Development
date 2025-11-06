@@ -17,7 +17,7 @@ class TrainingBookmarkController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $bookmarks = TrainingBookmark::where('applicantID', $user->applicantID)
+        $bookmarks = Trainingbookmark::where('applicantID', $user->applicantID)
             ->pluck('trainingID'); // returns just an array of IDs
 
         return response()->json($bookmarks);
@@ -35,7 +35,7 @@ class TrainingBookmarkController extends Controller
             'trainingID' => 'required|exists:trainings,trainingID'
         ]);
 
-        TrainingBookmark::create([
+        Trainingbookmark::create([
             'applicantID' => $user->applicantID,
             'trainingID' => $request->trainingID
         ]);
@@ -52,7 +52,7 @@ class TrainingBookmarkController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $bookmark = TrainingBookmark::where('applicantID', $user->applicantID)
+        $bookmark = Trainingbookmark::where('applicantID', $user->applicantID)
             ->where('trainingID', $trainingID)
             ->first();
 
