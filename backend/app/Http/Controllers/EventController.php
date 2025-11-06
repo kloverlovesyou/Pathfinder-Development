@@ -50,7 +50,7 @@ $trainings = DB::table('registration')
         'career.requirements as requirements',
         'career.applicationLetterAddress as applicationLetterAddress',
         DB::raw('DATE(application.interviewSchedule) as date'),
-        DB::raw('TIME(Application.interviewSchedule) as time'),
+        DB::raw('TIME(application.interviewSchedule) as time'),
         'application.interviewMode as mode',
         'application.interviewLocation as interviewLocation',
         'application.interviewLink as interviewLink',
