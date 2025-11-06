@@ -27,30 +27,18 @@ class TrainingBookmarkController extends Controller
     public function store(Request $request)
     {
         $user = $request->user();
-
         if (!$user) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $trainingID = $request->input('trainingID'); // ✅ use input()
+        $request->validate([
+            'trainingID' => 'required|exists:trainings,trainingID'
+        ]);
 
-        if (!$trainingID) {
-            return response()->json(['message' => 'trainingID is required'], 400);
-        }
-
-        // Prevent duplicates
-        $exists = TrainingBookmark::where('applicantID', $user->applicantID)
-            ->where('trainingID', $trainingID)
-            ->exists();
-
-        if ($exists) {
-            return response()->json(['message' => 'Already bookmarked'], 409);
-        }
-
-        $bookmark = new TrainingBookmark();
-        $bookmark->applicantID = $user->applicantID;
-        $bookmark->trainingID = $trainingID;
-        $bookmark->save();
+        TrainingBookmark::create([
+            'applicantID' => $user->applicantID,
+            'trainingID' => $request->trainingID
+        ]);
 
         return response()->json(['message' => 'Bookmarked successfully'], 201);
     }
