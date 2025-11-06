@@ -30,7 +30,7 @@ class CareerBookmarkController extends Controller
         }
 
         $validated = $request->validate([
-            'careerID' => 'required|integer|exists:careers,careerID',
+            'careerID' => 'required|integer|exists:career,careerID',
         ]);
 
         $careerID = $validated['careerID'];
