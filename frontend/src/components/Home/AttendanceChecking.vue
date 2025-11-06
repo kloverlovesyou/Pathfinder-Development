@@ -25,11 +25,23 @@ onMounted(async () => {
     return;
   }
 
+  // ✅ Get the token stored after login
+  const token = localStorage.getItem("token"); // make sure login stores it
+
+  if (!token) {
+    message.value = "⚠️ You must be logged in to check in.";
+    loading.value = false;
+    return;
+  }
+
   try {
     const response = await axios.post(
       `${import.meta.env.VITE_API_BASE_URL}/attendance/checkin`,
       { trainingID, key },
-      { withCredentials: true }
+      {
+        headers: { Authorization: `Bearer ${token}` }, // ✅ send token
+        withCredentials: true,
+      }
     );
     message.value = response.data.message;
   } catch (error) {
