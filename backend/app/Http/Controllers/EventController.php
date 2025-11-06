@@ -20,15 +20,15 @@ $trainings = DB::table('registration')
         'training.Description as description',
         DB::raw('DATE(training.schedule) as date'),   // Extract date
         DB::raw('TIME(training.schedule) as time'),   // Extract time
-        'Training.Mode',
-        'Training.Location as location',
-        'Training.trainingLink as trainingLink',
+        'training.mode as mode',
+        'training.location as location',
+        'training.trainingLink as trainingLink',
         'organization.name as organization',
 
-        'Training.Attendance_Key as attendance_key',
-        'Training.End_Time as end_time',
-        'Training.QR_Generated_At as qr_generated_at',
-        'Training.Attendance_Expires_At as attendance_expires_at',
+        'training.Attendance_Key as attendance_key',
+        'training.End_Time as end_time',
+        'training.QR_Generated_At as qr_generated_at',
+        'training.Attendance_Expires_At as attendance_expires_at',
 
         DB::raw("'training' as type")
     )
