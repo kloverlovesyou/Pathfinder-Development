@@ -10,8 +10,8 @@ class EventController extends Controller
   public function getUserEvents($applicantID)
 {
 $trainings = DB::table('registration')
-    ->join('training', 'registration.TrainingID', '=', 'training.TrainingID')
-    ->join('Organization', 'training.OrganizationID', '=', 'Organization.OrganizationID')
+    ->join('training', 'registration.trainingID', '=', 'training.trainingID')
+    ->join('organization', 'training.organizationID', '=', 'organization.organizationID')
     ->where('registration.ApplicantID', $applicantID)
     ->where('registration.registrationStatus', 'Registered')
     ->select(
