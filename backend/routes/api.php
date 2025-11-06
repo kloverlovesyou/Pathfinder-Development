@@ -30,6 +30,7 @@ use App\Http\Controllers\{
 Route::get('/trainings', [TrainingController::class, 'index']);
 Route::get('/careers', [CareerController::class, 'index']);
 Route::get('/organization', [OrganizationController::class, 'index']);
+Route::post('/attendance/checkin', [TrainingController::class, 'attendanceCheckin']);
 
 // Tags
 Route::get('/tags', [TagController::class, 'index']);
@@ -71,7 +72,7 @@ Route::middleware('auth.custom')->group(function () {
     // Trainings
     Route::post('/trainings', [TrainingController::class, 'store']);
     Route::post('/trainings/generate-qr', [TrainingController::class, 'generateQRCode']);
-    Route::post('/attendance/checkin', [TrainingController::class, 'attendanceCheckin']);
+    
     
     // Careers
     Route::post('/careers', [CareerController::class, 'store']);
