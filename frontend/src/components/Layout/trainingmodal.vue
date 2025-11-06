@@ -150,7 +150,7 @@ function formatTime(datetime) {
             v-if="training.attendance_key && !qrExpired"
             class="flex flex-col items-center"
           >
-            <qrcode-vue :value="training.attendance_key" :size="120" />
+            <qrcode-vue :value="training.attendance_link" :size="120" />
             <p class="text-sm text-gray-600 mt-1">
               Expires in: {{ countdown }}
             </p>

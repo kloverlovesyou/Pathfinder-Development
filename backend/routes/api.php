@@ -71,7 +71,7 @@ Route::middleware('auth.custom')->group(function () {
     // Trainings
     Route::post('/trainings', [TrainingController::class, 'store']);
     Route::post('/trainings/generate-qr', [TrainingController::class, 'generateQRCode']);
-    Route::get('/attendance/checkin', [TrainingController::class, 'attendanceCheckin']);
+    Route::post('/attendance/checkin', [TrainingController::class, 'attendanceCheckin']);
     
     // Careers
     Route::post('/careers', [CareerController::class, 'store']);
