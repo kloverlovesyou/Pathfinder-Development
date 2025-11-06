@@ -35,7 +35,7 @@ function toggleBookmark(post) {
 }
 const bookmarkedPosts = ref({});
 
-/// Toggle registration
+// Toggle registration
 async function toggleRegister(training) {
   const token = localStorage.getItem("token");
   if (!token) return alert("Please log in first.");
@@ -43,13 +43,10 @@ async function toggleRegister(training) {
   // If already registered -> unregister
   if (registeredPosts[training.trainingID]) {
     try {
-      const registrationID = registeredPosts[training.trainingID].registrationID;
-
-      // ✅ Log the ID you're about to delete
-      console.log("Deleting registration ID:", registrationID);
-
+      const registrationID =
+        registeredPosts[training.trainingID].registrationID;
       await axios.delete(
-        import.meta.env.VITE_API_BASE_URL + `/registrations/${registrationID}`,
+        import.meta.env.VITE_API_BASE_URL +`/registrations/${registrationID}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -68,11 +65,11 @@ async function toggleRegister(training) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // ✅ FIXED HERE
-      const regID = res.data.data.registrationID;
-      registeredPosts[training.trainingID] = { registrationID: regID };
+      registeredPosts[training.trainingID] = {
+        registrationID: res.data.registrationID,
+      };
 
-      console.log(`✅ Registered for ${training.title} with ID`, regID);
+      console.log(`✅ Registered for ${training.title}`);
     } catch (err) {
       console.error("❌ Failed to register:", err);
     }

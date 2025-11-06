@@ -172,7 +172,7 @@ async function submitAttendance(activity) {
         Authorization: `Bearer ${token}`,
       },
       params: {
-        trainingID: activity.trainingID, // ✅ use registrationID instead
+        trainingID: activity.registrationID, // ✅ use registrationID instead
         key: activity.qrInput.trim(),
       },
     });
