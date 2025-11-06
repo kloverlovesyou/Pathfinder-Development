@@ -371,7 +371,7 @@ async function toggleRegister(training) {
                 new Date(training.end_time) > new Date()
               "
             >
-              <qrcode-vue :value="training.attendance_key" :size="80" />
+              <qrcode-vue :value="training.attendance_link" :size="80" />
             </div>
             <div v-else>
               <p class="text-sm text-gray-500 text-center">
