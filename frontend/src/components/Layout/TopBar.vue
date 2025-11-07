@@ -2,18 +2,20 @@
 import { ref, onMounted, onBeforeUnmount, watch, reactive } from "vue";
 import axios from "axios";
 import { useRoute } from "vue-router";
-const route = useRoute();
-const registeredPosts = reactive({}); // stores registered trainings
 
+const route = useRoute();
+const registeredPosts = reactive({});
+
+// ✅ Fetch user's registered trainings
 async function fetchMyRegistrations() {
   const token = localStorage.getItem("token");
   if (!token) return;
 
   try {
     const res = await axios.get(
-  import.meta.env.VITE_API_BASE_URL + "/registrations",
-  { headers: { Authorization: `Bearer ${token}` } }
-);
+      import.meta.env.VITE_API_BASE_URL + "/registrations",
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
     res.data.data.forEach((r) => {
       registeredPosts[String(r.trainingID)] = { registrationID: r.registrationID };
@@ -24,14 +26,14 @@ async function fetchMyRegistrations() {
     console.error("❌ Failed to fetch registrations:", err);
   }
 }
-
 onMounted(fetchMyRegistrations);
 
+// ✅ Register / Unregister training
 async function toggleRegister(training) {
   const token = localStorage.getItem("token");
   if (!token) return alert("Please log in first.");
 
-  const trainingID = String(training.trainingID || training.TrainingID);
+  const trainingID = Number(training.trainingID || training.TrainingID);
   const isRegistered = registeredPosts[trainingID];
 
   // 🔹 Unregister
@@ -42,7 +44,7 @@ async function toggleRegister(training) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      delete registeredPosts[trainingID];  // ✅ Now updates instantly
+      delete registeredPosts[trainingID];
       alert(`You have unregistered from ${training.title}`);
     } catch (err) {
       console.error(err);
@@ -68,34 +70,87 @@ async function toggleRegister(training) {
   }
 }
 
-// --- State ---
+// ✅ LOGOUT
+function logout() {
+  localStorage.removeItem("token");
+  window.location.href = "/auth/login";
+}
+
+// ✅ BOOKMARKING (local only)
+const bookmarkedPosts = ref({});
+function toggleBookmark(post) {
+  const id = post.TrainingID || post.CareerID || post.ID;
+  if (bookmarkedPosts.value[id]) {
+    delete bookmarkedPosts.value[id];
+  } else {
+    bookmarkedPosts.value[id] = true;
+  }
+}
+
+// ✅ CAREER APPLICATION CANCEL
+function cancelApplication(post) {
+  const id = post.ID;
+  delete appliedPosts.value[id];
+  alert("Application cancelled.");
+}
+
+const uploadedFile = ref(null);
+function handleFileUpload(event) {
+  uploadedFile.value = event.target.files[0];
+}
+
+// ✅ APPLICATION SUBMIT
+async function submitApplication() {
+  if (!uploadedFile.value) return alert("Please attach a file.");
+
+  const form = new FormData();
+  form.append("careerID", selectedPost.value.ID);
+  form.append("file", uploadedFile.value);
+
+  const token = localStorage.getItem("token");
+
+  try {
+    const res = await axios.post(
+      import.meta.env.VITE_API_BASE_URL + "/apply",
+      form,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    appliedPosts.value[selectedPost.value.ID] = true;
+    alert("Application submitted!");
+    closeApplyModal();
+  } catch (err) {
+    console.error(err);
+    alert("Submission failed.");
+  }
+}
+
+// ✅ DROPDOWNS, SEARCH, FILTERING
 const showDropdown = ref(false);
-const activeMains = ref([]); // Training / Career / Organization
-const activeSubs = ref([]); // Online / Onsite
+const activeMains = ref([]);
+const activeSubs = ref([]);
 const searchContainer = ref(null);
 const mainFilters = ["Training", "Career", "Organization"];
-const searchInput = ref(""); // User's search text
-const results = ref([]); // Results from backend
-
-// --- Modal States ---
+const searchInput = ref("");
+const results = ref([]);
 
 const applyModalOpen = ref(false);
-const isModalOpen = ref(false); // For org modal
-
-// --- Misc States ---
-const bookmarkedPosts = ref({});
+const isModalOpen = ref(false);
 const appliedPosts = ref({});
 const organizations = ref({});
 const posts = ref([]);
 
-// --- Filter Toggles ---
 function toggleMainFilter(main) {
   if (activeMains.value.includes(main)) {
     activeMains.value = activeMains.value.filter((m) => m !== main);
     if (main === "Training" || main === "Career") activeSubs.value = [];
   } else {
     if (main === "Training" || main === "Career") {
-      // Mutually exclusive
       activeMains.value = activeMains.value.filter(
         (m) => m !== (main === "Training" ? "Career" : "Training")
       );
@@ -117,7 +172,6 @@ function toggleExclusiveSub(sub) {
   }
 }
 
-// --- Click outside to close dropdown ---
 function handleClickOutside(event) {
   if (searchContainer.value && !searchContainer.value.contains(event.target)) {
     showDropdown.value = false;
@@ -128,7 +182,7 @@ onBeforeUnmount(() =>
   document.removeEventListener("click", handleClickOutside)
 );
 
-// --- Perform Search (calls Laravel backend + stored procedure) ---
+// ✅ SEARCH stored procedure
 async function performSearch() {
   if (!searchInput.value.trim()) {
     results.value = [];
@@ -136,7 +190,7 @@ async function performSearch() {
   }
 
   try {
-    const response = await axios.get(import.meta.env.VITE_API_BASE_URL+"/search", {
+    const response = await axios.get(import.meta.env.VITE_API_BASE_URL + "/search", {
       params: {
         search: searchInput.value,
         filterType: activeMains.value[0]?.toLowerCase() || "",
@@ -152,7 +206,7 @@ async function performSearch() {
 }
 watch([searchInput, activeMains, activeSubs], performSearch);
 
-// --- Type Checkers ---
+// ✅ POST TYPE CHECK
 function isTraining(post) {
   return post.Type?.toLowerCase().includes("training");
 }
@@ -163,28 +217,7 @@ function isOrganization(post) {
   return post.Type?.toLowerCase().includes("organization");
 }
 
-async function openOrganizationModal(orgItem) {
-  resetModals();
-  try {
-    isModalOpen.value = true;
-    selectedOrg.value = {
-      name: orgItem.Name || orgItem.OrganizationName,
-      location: orgItem.Location || "",
-      website: orgItem.Website || "",
-      logo: orgItem.Logo || "",
-      careers: [],
-      trainings: [],
-    };
-
-    // Fetch related posts dynamically
-    const response = await axios.get(import.meta.env.VITE_API_BASE_URL+`/organization/${orgItem.ID}/posts`);
-    selectedOrg.value.careers = response.data.careers || [];
-    selectedOrg.value.trainings = response.data.trainings || [];
-  } catch (error) {
-    console.error("Failed to fetch organization details:", error);
-  }
-}
-
+// ✅ MODALS
 function resetModals() {
   selectedPost.value = null;
   isModalOpen.value = false;
@@ -199,86 +232,53 @@ const isOrgModalOpen = ref(false);
 const selectedPost = ref({});
 const selectedOrg = ref({});
 
-// 🟦 TRAINING MODAL
 function openTrainingModal(post) {
   selectedPost.value = post;
   isTrainingModalOpen.value = true;
 }
-
 function closeTrainingModal() {
   selectedPost.value = {};
   isTrainingModalOpen.value = false;
 }
 
-// 🟩 CAREER MODAL
 function openCareerModal(post) {
   selectedPost.value = post;
   isCareerModalOpen.value = true;
 }
-
 function closeCareerModal() {
   selectedPost.value = {};
   isCareerModalOpen.value = false;
 }
 
-// 🧩 APPLY MODAL
 function openApplyModal(post) {
   selectedPost.value = post;
   applyModalOpen.value = true;
 }
-
 function closeApplyModal() {
   applyModalOpen.value = false;
   selectedPost.value = {};
 }
 
-// 🟧 ORG MODAL
 function openOrgModal(org) {
   selectedOrg.value = org;
   isOrgModalOpen.value = true;
 }
-
 function closeOrgModal() {
   isOrgModalOpen.value = false;
   selectedOrg.value = {};
 }
 
-// Handles result click depending on Type
+// ✅ CLICK RESULT HANDLER
 async function handleResultClick(item) {
-  if (item.Type === "Training" || item.Type.includes("Training")) {
-    // 🎯 Training modal
+  if (item.Type.includes("Training")) {
     selectedPost.value = item;
     isTrainingModalOpen.value = true;
-  } else if (item.Type === "Career" || item.Type.includes("Career")) {
-    // 🎯 Career modal
+  } else if (item.Type.includes("Career")) {
     selectedPost.value = item;
     isCareerModalOpen.value = true;
-  } else if (item.Type === "Organization") {
-    // 🎯 Organization modal (fetch org info + its posts)
-    selectedOrg.value = {
-      ...item,
-      careers: [],
-      trainings: [],
-    };
+  } else if (item.Type.includes("Organization")) {
+    selectedOrg.value = item;
     isOrgModalOpen.value = true;
-
-    try {
-      const response = await axios.get(
-        `/api/search?search=${encodeURIComponent(
-          item.Title
-        )}&filterType=organization`
-      );
-      const results = response.data.results || [];
-
-      selectedOrg.value.careers = results.filter((r) =>
-        r.Type.includes("Career")
-      );
-      selectedOrg.value.trainings = results.filter((r) =>
-        r.Type.includes("Training")
-      );
-    } catch (error) {
-      console.error("Error fetching organization posts:", error);
-    }
   }
 }
 </script>
@@ -559,9 +559,9 @@ async function handleResultClick(item) {
         >
           ✕
         </button>
-        <h2 class="text-xl font-bold mb-2">{{ selectedPost.Title }}</h2>
+        <h2 class="text-xl font-bold mb-2">{{ selectedPost.title }}</h2>
         <p class="text-sm text-gray-600 mb-2">
-          Organization: {{ selectedPost.OrganizationName }}
+          Organization: {{ selectedPost.name }}
         </p>
 
         <!-- Buttons -->
@@ -572,7 +572,7 @@ async function handleResultClick(item) {
             @click="toggleBookmark(selectedPost)"
           >
             {{
-              bookmarkedPosts[selectedPost.TrainingID || selectedPost.CareerID]
+              bookmarkedPosts[selectedPost.trainingID || selectedPost.careerID]
                 ? "Bookmarked"
                 : "Bookmark"
             }}
@@ -590,7 +590,7 @@ async function handleResultClick(item) {
             @click="toggleRegister(selectedPost)"
           >
             {{
-              registeredPosts[selectedPost.TrainingID]
+              registeredPosts[selectedPost.trainingID]
                 ? "Unregister"
                 : "Register"
             }}
@@ -598,10 +598,10 @@ async function handleResultClick(item) {
         </div>
 
         <!-- Training Info -->
-        <p><strong>Mode:</strong> {{ selectedPost.Mode || "Not specified" }}</p>
-        <p><strong>Description:</strong> {{ selectedPost.Description }}</p>
-        <p><strong>Schedule:</strong> {{ selectedPost.Schedule }}</p>
-        <p><strong>Location:</strong> {{ selectedPost.Location }}</p>
+        <p><strong>Mode:</strong> {{ selectedPost.mode || "Not specified" }}</p>
+        <p><strong>Description:</strong> {{ selectedPost.description }}</p>
+        <p><strong>Schedule:</strong> {{ selectedPost.schedule }}</p>
+        <p><strong>Location:</strong> {{ selectedPost.location }}</p>
       </div>
     </dialog>
 
@@ -615,11 +615,11 @@ async function handleResultClick(item) {
           ✕
         </button>
         <h2 class="text-xl font-bold mb-2">
-          {{ selectedPost.Title || selectedPost.Position }}
+          {{ selectedPost.title || selectedPost.position }}
         </h2>
 
         <p class="text-sm text-gray-600 mb-2">
-          Organization: {{ selectedPost.OrganizationName }}
+          Organization: {{ selectedPost.name }}
         </p>
 
         <!-- Buttons -->
@@ -630,7 +630,7 @@ async function handleResultClick(item) {
             @click="toggleBookmark(selectedPost)"
           >
             {{
-              bookmarkedPosts[selectedPost.TrainingID || selectedPost.CareerID]
+              bookmarkedPosts[selectedPost.trainingID || selectedPost.careerID]
                 ? "Bookmarked"
                 : "Bookmark"
             }}
@@ -657,18 +657,18 @@ async function handleResultClick(item) {
         <!-- Career Info -->
         <p>
           <strong>Details:</strong>
-          {{ selectedPost.Description || selectedPost.DetailsandInstructions }}
+          {{ selectedPost.description || selectedPost.detailsAndInstructions }}
         </p>
         <p>
-          <strong>Qualifications:</strong> {{ selectedPost.Qualifications }}
+          <strong>Qualifications:</strong> {{ selectedPost.qualifications }}
         </p>
-        <p><strong>Requirements:</strong> {{ selectedPost.Requirements }}</p>
+        <p><strong>Requirements:</strong> {{ selectedPost.requirements }}</p>
         <p>
           <strong>Application Address:</strong>
-          {{ selectedPost.ApplicationLetterAddress }}
+          {{ selectedPost.applicationLetterAddress }}
         </p>
         <p>
-          <strong>Deadline:</strong> {{ selectedPost.DeadlineofSubmission }}
+          <strong>Deadline:</strong> {{ selectedPost.deadlineOfSubmission }}
         </p>
 
         <!-- Recommended Trainings -->
@@ -688,7 +688,7 @@ async function handleResultClick(item) {
                 {{ post.Title }}
               </h4>
               <p class="text-[11px] text-gray-600 truncate">
-                {{ organizations[post.OrganizationID] }}
+                {{ organizations[post.organizationID] }}
               </p>
             </div>
           </div>
@@ -707,7 +707,7 @@ async function handleResultClick(item) {
         </button>
 
         <h2 class="text-xl font-bold mb-4">
-          Apply for {{ selectedPost?.Position || selectedPost?.Title }}
+          Apply for {{ selectedPost?.position || selectedPost?.title }}
         </h2>
 
         <form @submit.prevent="submitApplication">
@@ -763,10 +763,10 @@ async function handleResultClick(item) {
           />
           <div>
             <h2 class="text-xl font-bold">
-              {{ selectedOrg.Title || selectedOrg.OrganizationName }}
+              {{ selectedOrg.title || selectedOrg.name }}
             </h2>
             <p class="text-sm text-gray-600">
-              {{ selectedOrg.Description || selectedOrg.OrganizationLocation }}
+              {{ selectedOrg.description || selectedOrg.location }}
             </p>
           </div>
         </div>
@@ -778,7 +778,7 @@ async function handleResultClick(item) {
             target="_blank"
             class="text-blue-600 underline break-all"
           >
-            {{ selectedOrg.Website }}
+            {{ selectedOrg.websiteURL }}
           </a>
         </p>
 
@@ -799,10 +799,10 @@ async function handleResultClick(item) {
               @click="handleResultClick(career)"
             >
               <h4 class="font-semibold text-sm leading-snug mb-1">
-                {{ career.Title }}
+                {{ career.title }}
               </h4>
               <p class="text-[11px] text-gray-600 truncate">
-                Deadline: {{ career.DeadlineOfSubmission || "N/A" }}
+                Deadline: {{ career.deadlineOfSubmission || "N/A" }}
               </p>
             </div>
           </div>
@@ -825,10 +825,10 @@ async function handleResultClick(item) {
               @click="handleResultClick(training)"
             >
               <h4 class="font-semibold text-sm leading-snug mb-1">
-                {{ training.Title }}
+                {{ training.title }}
               </h4>
               <p class="text-[11px] text-gray-600 truncate">
-                Schedule: {{ training.Schedule || "Not specified" }}
+                Schedule: {{ training.schedule || "Not specified" }}
               </p>
             </div>
           </div>
