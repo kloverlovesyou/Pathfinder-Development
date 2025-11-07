@@ -150,27 +150,38 @@ const isBookmarked = (post) => {
   }
 };
 
-// Fetch TrainingCounter
 async function fetchTrainingCounters() {
   try {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const response = await axios.get(import.meta.env.VITE_API_BASE_URL + "/registrations", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/registrations",
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
     const trainings = response.data || [];
 
-    upcomingCount.value = trainings.filter(
-      (r) =>
-        r.registrationStatus?.toLowerCase() === "upcoming" ||
-        r.registrationStatus?.toLowerCase() === "registered"
-    ).length;
+    let newUpcoming = 0;
+    let newCompleted = 0;
+    const now = new Date().getTime();
 
-    completedCount.value = trainings.filter(
-      (r) => r.registrationStatus?.toLowerCase() === "completed"
-    ).length;
+    trainings.forEach((r) => {
+      const statusLower = (r.registrationStatus || "").toLowerCase();
+      const endTimePassed = r.end_time
+        ? now > new Date(r.end_time).getTime()
+        : false;
+
+      // Mark as completed if end_time passed or status is completed
+      if (statusLower === "completed" || endTimePassed) {
+        newCompleted++;
+      } else if (["upcoming", "registered"].includes(statusLower)) {
+        newUpcoming++;
+      }
+    });
+
+    upcomingCount.value = newUpcoming;
+    completedCount.value = newCompleted;
   } catch (error) {
     console.error("❌ Error fetching training counters:", error);
   }
