@@ -13,7 +13,7 @@
       <h2 class="text-xl font-semibold mb-1">{{ training.title }}</h2>
       <p class="mb-1">{{ training.description }}</p>
       <p class="text-sm text-gray-600 mb-1">
-        <strong>Schedule:</strong> {{ training.schedule }} to {{ training.end_time }}
+        <strong>Schedule:</strong> {{ formatToPHT(training.schedule) }} to {{formatToPHT(training.end_time) }}
       </p>
       <p class="text-sm text-gray-600 mb-1"><strong>Mode:</strong> {{ training.mode }}</p>
       <p class="text-sm text-gray-600 mb-1" v-if="training.location"><strong>Location:</strong> {{ training.location }}</p>
@@ -104,6 +104,20 @@ onMounted(async () => {
     loading.value = false;
   }
 });
+
+function formatToPHT(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleString('en-PH', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
 
 async function submitAttendance() {
   if (!first_name.value || !last_name.value || !email.value || !phone.value) {
