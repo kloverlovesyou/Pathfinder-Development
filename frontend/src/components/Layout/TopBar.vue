@@ -11,11 +11,12 @@ async function fetchMyRegistrations() {
 
   try {
     const res = await axios.get(
-  import.meta.env.VITE_API_BASE_URL + "/registrations",
-  { headers: { Authorization: `Bearer ${token}` } }
-);
+      import.meta.env.VITE_API_BASE_URL + "/registrations",
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-    res.data.data.forEach((r) => {
+    // ✅ FIX HERE
+    res.data.forEach((r) => {
       registeredPosts[String(r.trainingID)] = { registrationID: r.registrationID };
     });
 
@@ -31,10 +32,11 @@ async function toggleRegister(training) {
   const token = localStorage.getItem("token");
   if (!token) return alert("Please log in first.");
 
-  const trainingID = String(training.trainingID || training.TrainingID);
+  const trainingID = Number(training.trainingID || training.TrainingID);
   const isRegistered = registeredPosts[trainingID];
 
-  // 🔹 Unregister
+   console.log("Sending trainingID:", trainingID, typeof trainingID);
+  // Unregister
   if (isRegistered) {
     try {
       await axios.delete(
@@ -42,7 +44,7 @@ async function toggleRegister(training) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      delete registeredPosts[trainingID];  // ✅ Now updates instantly
+      delete registeredPosts[trainingID];
       alert(`You have unregistered from ${training.title}`);
     } catch (err) {
       console.error(err);
@@ -51,11 +53,11 @@ async function toggleRegister(training) {
     return;
   }
 
-  // 🔹 Register
+  // Register
   try {
     const res = await axios.post(
       import.meta.env.VITE_API_BASE_URL + "/registrations",
-      { trainingID },
+      { trainingID }, // ✅ Integer now
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
@@ -63,7 +65,7 @@ async function toggleRegister(training) {
     registeredPosts[trainingID] = { registrationID: reg.registrationID };
     alert(`You have registered for ${training.title}`);
   } catch (err) {
-    console.error(err);
+    console.error(err.response.data);
     alert("Registration failed.");
   }
 }
