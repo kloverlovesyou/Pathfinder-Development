@@ -37,71 +37,68 @@ async function fetchMyRegistrations() {
 
 onMounted(fetchMyRegistrations);
 
-async function toggleRegister(training) {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    showToast("Please log in first.", "error");
-    return;
-  }
+  async function toggleRegister(training) {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      showToast("Please log in first.", "error");
+      return;
+    }
 
-  console.log("TRAINING OBJECT:", training);
+    // ✅ SAFEST way to get training ID
+    const trainingID = Number(
+      training.trainingID ||
+      training.TrainingID ||
+      training.ID ||
+      training.id ||
+      training.training_id ||
+      training.training?.trainingID ||
+      training.TrainingId
+    );
 
-  const trainingID = Number(
-    training.trainingID ??
-    training.TrainingID ??
-    training.id ??
-    training.ID ??
-    training.TrainingId ??
-    training.training?.trainingID
-  );
+    if (!trainingID || isNaN(trainingID)) {
+      console.error("❌ Invalid trainingID:", training);
+      showToast("Error: Training ID missing.", "error");
+      return;
+    }
 
-  console.log("Sending trainingID:", trainingID, typeof trainingID);
+    console.log("➡ Sending trainingID:", trainingID);
 
-  const isRegistered = registeredPosts[trainingID];
+    const isRegistered = registeredPosts[trainingID];
 
-  // Get a safe title
-  const title =
-    training.title ??
-    training.TrainingTitle ??
-    training.name ??
-    training.trainingName ??
-    "this training";
+    // ✅ Unregister
+    if (isRegistered) {
+      try {
+        await axios.delete(
+          `${import.meta.env.VITE_API_BASE_URL}/registrations/${isRegistered.registrationID}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-  // ✅ UNREGISTER
-  if (isRegistered) {
+        delete registeredPosts[trainingID];
+        showToast("Unregistered successfully!", "success");
+      } catch (err) {
+        console.error(err);
+        showToast("Unregister failed.", "error");
+      }
+      return;
+    }
+
+    // ✅ Register
     try {
-      await axios.delete(
-        import.meta.env.VITE_API_BASE_URL + `/registrations/${isRegistered.registrationID}`,
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/registrations`,
+        { trainingID },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      delete registeredPosts[trainingID];
+      const reg = res.data.data;
+      registeredPosts[trainingID] = { registrationID: reg.registrationID };
 
-      showToast(`You have unregistered from ${title}`, "success");
+      showToast("Registered successfully!", "success");
     } catch (err) {
       console.error(err);
-      showToast("Unregister failed.", "error");
+      showToast("Registration failed.", "error");
     }
-    return;
   }
-
-  // ✅ REGISTER
-  try {
-    const res = await axios.post(
-      import.meta.env.VITE_API_BASE_URL + "/registrations",
-      { trainingID },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    const reg = res.data.data;
-    registeredPosts[trainingID] = { registrationID: reg.registrationID };
-
-    showToast(`You have registered for ${title}`, "success");
-  } catch (err) {
-    console.error(err.response?.data || err);
-    showToast("Registration failed.", "error");
-  }
-}
 
 // --- State ---
 const showDropdown = ref(false);
