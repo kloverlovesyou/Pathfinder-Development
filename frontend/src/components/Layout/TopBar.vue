@@ -4,6 +4,15 @@ import axios from "axios";
 import { useRoute } from "vue-router";
 const route = useRoute();
 const registeredPosts = reactive({}); // stores registered trainings
+const loadingRegister = reactive({});
+
+function showToast(message, type = "info") {
+  toasts.value.push({ message, type });
+
+  setTimeout(() => {
+    toasts.value.shift();
+  }, 3000);
+}
 
 async function fetchMyRegistrations() {
   const token = localStorage.getItem("token");
@@ -30,38 +39,51 @@ onMounted(fetchMyRegistrations);
 
 async function toggleRegister(training) {
   const token = localStorage.getItem("token");
-  if (!token) return alert("Please log in first.");
+  if (!token) {
+    showToast("Please log in first.", "error");
+    return;
+  }
 
-  // ✅ Log full training object so we see what fields exist
-  console.log("TRAINING OBJECT:", training);
-
-  // ✅ More reliable way to detect trainingID
   const trainingID = Number(
     training.trainingID ??
-    training.TrainingID ??
-    training.id ??
-    training.ID ??
-    training.TrainingId ??
-    training.training?.trainingID
+      training.TrainingID ??
+      training.id ??
+      training.ID ??
+      training.TrainingId ??
+      training.training?.trainingID
   );
 
-  console.log("Sending trainingID:", trainingID, typeof trainingID);
-
   const isRegistered = registeredPosts[trainingID];
+
+  const title =
+    training.title ??
+    training.TrainingTitle ??
+    training.name ??
+    training.trainingName ??
+    "this training";
+
+  // ✅ Prevent double click
+  if (loadingRegister[trainingID]) return;
+
+  // ✅ Set loading state
+  loadingRegister[trainingID] = true;
 
   // ✅ UNREGISTER
   if (isRegistered) {
     try {
       await axios.delete(
-        import.meta.env.VITE_API_BASE_URL + `/registrations/${isRegistered.registrationID}`,
+        import.meta.env.VITE_API_BASE_URL +
+          `/registrations/${isRegistered.registrationID}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       delete registeredPosts[trainingID];
-      alert(`You have unregistered from ${training.title}`);
+      showToast(`You have unregistered from ${title}`, "success");
     } catch (err) {
       console.error(err);
-      alert("Unregister failed.");
+      showToast("Unregister failed.", "error");
+    } finally {
+      loadingRegister[trainingID] = false;
     }
     return;
   }
@@ -70,16 +92,19 @@ async function toggleRegister(training) {
   try {
     const res = await axios.post(
       import.meta.env.VITE_API_BASE_URL + "/registrations",
-      { trainingID }, 
+      { trainingID },
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
     const reg = res.data.data;
     registeredPosts[trainingID] = { registrationID: reg.registrationID };
-    alert(`You have registered for ${training.title}`);
+
+    showToast(`You have registered for ${title}`, "success");
   } catch (err) {
     console.error(err.response?.data || err);
-    alert("Registration failed.");
+    showToast("Registration failed.", "error");
+  } finally {
+    loadingRegister[trainingID] = false;
   }
 }
 
@@ -597,25 +622,29 @@ async function handleResultClick(item) {
           <button
             v-if="isTraining(selectedPost)"
             class="btn btn-sm text-white"
+            :disabled="loadingRegister[
+              Number(selectedPost.TrainingID || selectedPost.trainingID)
+            ]"
             :class="
-              registeredPosts[
-                selectedPost.trainingID ??
-                selectedPost.TrainingID ??
-                selectedPost.id ??
-                selectedPost.ID
+              loadingRegister[
+                Number(selectedPost.TrainingID || selectedPost.trainingID)
               ]
+                ? 'bg-gray-400 cursor-not-allowed'
+                : registeredPosts[String(selectedPost.TrainingID || selectedPost.trainingID)]
                 ? 'bg-gray-500'
                 : 'bg-customButton'
             "
             @click="toggleRegister(selectedPost)"
           >
+            <!-- ✅ Show loading text -->
             {{
-              registeredPosts[
-                selectedPost.trainingID ??
-                selectedPost.TrainingID ??
-                selectedPost.id ??
-                selectedPost.ID
+              loadingRegister[
+                Number(selectedPost.TrainingID || selectedPost.trainingID)
               ]
+                ? 'Processing...'
+                : registeredPosts[
+                    String(selectedPost.TrainingID || selectedPost.trainingID)
+                  ]
                 ? 'Unregister'
                 : 'Register'
             }}
