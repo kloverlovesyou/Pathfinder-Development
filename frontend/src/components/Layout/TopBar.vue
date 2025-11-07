@@ -598,16 +598,26 @@ async function handleResultClick(item) {
             v-if="isTraining(selectedPost)"
             class="btn btn-sm text-white"
             :class="
-              registeredPosts[String(selectedPost.TrainingID || selectedPost.trainingID)]
+              registeredPosts[
+                selectedPost.trainingID ??
+                selectedPost.TrainingID ??
+                selectedPost.id ??
+                selectedPost.ID
+              ]
                 ? 'bg-gray-500'
                 : 'bg-customButton'
             "
             @click="toggleRegister(selectedPost)"
           >
             {{
-              registeredPosts[selectedPost.TrainingID]
-                ? "Unregister"
-                : "Register"
+              registeredPosts[
+                selectedPost.trainingID ??
+                selectedPost.TrainingID ??
+                selectedPost.id ??
+                selectedPost.ID
+              ]
+                ? 'Unregister'
+                : 'Register'
             }}
           </button>
         </div>
