@@ -6,6 +6,7 @@ import QrcodeVue from "qrcode.vue";
 const registeredPosts = reactive({}); // stores registered trainings
 const myRegistrations = ref(new Set()); // used for QR display
 const bookmarkLoading = reactive({});
+const registerLoading = reactive({});
 
 // 🔹 Fetch user's registered trainings
 async function fetchMyRegistrations() {
@@ -310,23 +311,36 @@ async function toggleRegister(training) {
   const token = localStorage.getItem("token");
   if (!token) return alert("Please log in first");
 
-  if (myRegistrations.value.has(training.trainingID)) {
-    await axios.delete(
-      import.meta.env.VITE_API_BASE_URL + `/registrations/${training.trainingID}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    myRegistrations.value.delete(training.trainingID);
-  } else {
-    await axios.post(
-      import.meta.env.VITE_API_BASE_URL + "/registrations",
-      { trainingID: training.trainingID },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    myRegistrations.value.add(training.trainingID);
+  const id = training.trainingID;
+  registerLoading[id] = true; // ✅ set loading
+
+  try {
+    if (myRegistrations.value.has(id)) {
+      await axios.delete(
+        import.meta.env.VITE_API_BASE_URL + `/registrations/${id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      myRegistrations.value.delete(id);
+      addToast("Unregistered successfully", "info");
+    } else {
+      await axios.post(
+        import.meta.env.VITE_API_BASE_URL + "/registrations",
+        { trainingID: id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      myRegistrations.value.add(id);
+      addToast("Registered successfully", "success");
+    }
+  } catch (error) {
+    console.error("Failed to toggle registration:", error);
+    addToast("Failed to update registration", "error");
+  } finally {
+    registerLoading[id] = false; // ✅ stop loading
   }
 }
+
 </script>
 
 <template>
@@ -388,6 +402,7 @@ async function toggleRegister(training) {
     :isRegistered="myRegistrations.has(selectedTraining?.trainingID)"
     :isBookmarked="bookmarkedTrainings.includes(selectedTraining?.trainingID)"
     :bookmarkLoading="bookmarkLoading[selectedTraining?.trainingID]"
+    :registerLoading="registerLoading[selectedTraining?.trainingID]"  
     @close="showModal = false"
     @toggle-register="toggleRegister"
     @bookmark="toggleBookmark"
