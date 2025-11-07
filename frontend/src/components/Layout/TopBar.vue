@@ -792,7 +792,7 @@ async function handleResultClick(item) {
       <div
         v-for="(t, i) in toasts"
         :key="i"
-        class="px-4 py-2 rounded text-white shadow-lg"
+        class="px-4 py-2 rounded text-white shadow-md"
         :class="{
           'bg-green-600': t.type === 'success',
           'bg-red-600': t.type === 'error',
