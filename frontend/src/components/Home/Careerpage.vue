@@ -5,6 +5,7 @@ import axios from "axios";
 import CalendarSidebar from "@/components/Layout/CalendarSidebar.vue";
 
 const calendarOpen = ref(false);
+const careerBookmarkLoading = ref(false);
 
 function openModalCalendar(event) {
   // Handle modal opening for training/career
@@ -53,26 +54,19 @@ async function toggleCareerBookmark(careerId) {
     return;
   }
 
+  careerBookmarkLoading.value = true;
+
   try {
     if (bookmarkedCareers.value.has(careerId)) {
-      // Remove bookmark
-      await axios.delete(
-        import.meta.env.VITE_API_BASE_URL + `/career-bookmarks/${careerId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await axios.delete(import.meta.env.VITE_API_BASE_URL + `/career-bookmarks/${careerId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       bookmarkedCareers.value.delete(careerId);
       addToast("Bookmark removed", "success");
     } else {
-      // Add bookmark
-      await axios.post(
-        import.meta.env.VITE_API_BASE_URL +"/career-bookmarks",
-        { careerID: careerId }, // <-- matches your backend
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await axios.post(import.meta.env.VITE_API_BASE_URL + "/career-bookmarks", { careerID: careerId }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       bookmarkedCareers.value.add(careerId);
       addToast("Bookmark added", "success");
     }
@@ -85,8 +79,10 @@ async function toggleCareerBookmark(careerId) {
       addToast("Unauthorized. Please log in again", "accent");
     } else {
       addToast("Error toggling career bookmark", "accent");
-      console.error("Error toggling career bookmark:", error);
+      console.error(error);
     }
+  } finally {
+    careerBookmarkLoading.value = false;
   }
 }
 
@@ -321,6 +317,7 @@ onMounted(async () => {
       :career="selectedCareer"
       :myApplications="myApplications"
       :bookmarkedCareers="bookmarkedCareers"
+      :careerBookmarkLoading="careerBookmarkLoading"
       @close="closeModal"
       @update-applications="myApplications = $event"
       @update-bookmarks="bookmarkedCareers = $event"
