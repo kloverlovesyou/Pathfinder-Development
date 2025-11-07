@@ -2,12 +2,12 @@
   <div class="flex flex-col items-center justify-center min-h-screen text-center px-4">
     <h1 class="text-2xl font-bold mb-4">Attendance Check-In</h1>
 
-    <!-- Loading message while QR params or training info are being read -->
+    <!-- Loading message -->
     <p v-if="loading">Checking QR code and loading training...</p>
 
-    <!-- Invalid QR -->
+    <!-- Invalid QR or fetch errors -->
     <p v-if="invalidQR" class="text-red-600 font-semibold">{{ invalidQR }}</p>
-    
+
     <!-- Training info -->
     <div v-if="training && !loading" class="mb-4 p-4 border rounded w-full max-w-md bg-gray-50 text-left">
       <h2 class="text-xl font-semibold mb-1">{{ training.title }}</h2>
@@ -15,12 +15,8 @@
       <p class="text-sm text-gray-600 mb-1">
         <strong>Schedule:</strong> {{ training.schedule }} to {{ training.end_time }}
       </p>
-      <p class="text-sm text-gray-600 mb-1">
-        <strong>Mode:</strong> {{ training.mode }}
-      </p>
-      <p class="text-sm text-gray-600 mb-1" v-if="training.location">
-        <strong>Location:</strong> {{ training.location }}
-      </p>
+      <p class="text-sm text-gray-600 mb-1"><strong>Mode:</strong> {{ training.mode }}</p>
+      <p class="text-sm text-gray-600 mb-1" v-if="training.location"><strong>Location:</strong> {{ training.location }}</p>
       <p class="text-sm text-gray-600 mb-1" v-if="training.trainingLink">
         <strong>Training Link:</strong> 
         <a :href="training.trainingLink" target="_blank" class="underline text-blue-600">{{ training.trainingLink }}</a>
@@ -30,9 +26,7 @@
       </p>
       <p class="text-sm text-gray-600 mt-1" v-if="training.attendance_link">
         <strong>Attendance Link:</strong> 
-        <a :href="training.attendance_link" target="_blank" class="underline text-blue-600">
-          {{ training.attendance_link }}
-        </a>
+        <a :href="training.attendance_link" target="_blank" class="underline text-blue-600">{{ training.attendance_link }}</a>
       </p>
     </div>
 
@@ -45,7 +39,9 @@
       <input v-model="email" type="email" placeholder="Email" class="w-full p-2 border rounded" required />
       <input v-model="phone" type="text" placeholder="Phone Number" class="w-full p-2 border rounded" required />
 
-      <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Submit Attendance</button>
+      <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700" :disabled="loading">
+        Submit Attendance
+      </button>
     </form>
 
     <!-- Success or error message -->
@@ -64,7 +60,6 @@ const route = useRoute();
 
 const trainingID = ref(null);
 const key = ref(null);
-
 const training = ref(null);
 
 const first_name = ref("");
@@ -79,9 +74,11 @@ const submitted = ref(false);
 const submittedSuccess = ref(false);
 
 onMounted(async () => {
-  // Read QR parameters from URL
+  // Read QR code query params
   trainingID.value = route.query.trainingID;
   key.value = route.query.key;
+
+  console.log("TrainingID:", trainingID.value, "Key:", key.value);
 
   if (!trainingID.value || !key.value) {
     invalidQR.value = "❌ Invalid or incomplete QR code.";
@@ -89,12 +86,20 @@ onMounted(async () => {
     return;
   }
 
-  // Fetch training info from API
+  // Fetch training details
   try {
     const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/training/${trainingID.value}`);
+    console.log("Training Response:", res.data);
     training.value = res.data;
+
+    // Optional: check if the QR key matches the fetched training's key
+    if (training.value.attendance_key && training.value.attendance_key !== key.value) {
+      invalidQR.value = "❌ QR code key does not match this training.";
+    }
+
   } catch (error) {
-    invalidQR.value = "❌ Failed to load training information.";
+    console.error(error);
+    invalidQR.value = "❌ Failed to load training information. Please check the link or try again.";
   } finally {
     loading.value = false;
   }
@@ -122,6 +127,7 @@ async function submitAttendance() {
     submittedSuccess.value = true;
     submitted.value = true;
   } catch (error) {
+    console.error(error);
     message.value = error.response?.data?.message || "⚠️ Attendance submission failed.";
     submittedSuccess.value = false;
     submitted.value = true;
