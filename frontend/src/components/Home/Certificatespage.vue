@@ -14,6 +14,7 @@ const selectedImage = ref(null);
 const selectedTitle = ref(null);
 const upcomingCount = ref(0);
 const completedCount = ref(0);
+let trainingCounterInterval = null;
 
 // ➤ Add a new upload entry
 function addCertificate() {
@@ -27,6 +28,17 @@ function addCertificate() {
 // ➤ Remove an upload entry
 function removeCertificate(index) {
   certificates.value.splice(index, 1);
+}
+
+function startTrainingCounterUpdater() {
+  fetchTrainingCounters(); // initial fetch
+  // Update every 60 seconds
+  trainingCounterInterval = setInterval(fetchTrainingCounters, 60 * 1000);
+}
+
+// Stop interval if needed (optional)
+function stopTrainingCounterUpdater() {
+  if (trainingCounterInterval) clearInterval(trainingCounterInterval);
 }
 
 // ➤ File preview handler
@@ -247,6 +259,7 @@ onMounted(async () => {
   } else {
     userName.value = "Guest";
   }
+  startTrainingCounterUpdater();
   await fetchTrainingCounters();
 });
 
