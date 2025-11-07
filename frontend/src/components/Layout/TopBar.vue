@@ -4,6 +4,7 @@ import axios from "axios";
 import { useRoute } from "vue-router";
 const route = useRoute();
 const registeredPosts = reactive({}); // stores registered trainings
+const toasts = ref([]);
 
 function showToast(message, type = "info") {
   toasts.value.push({ message, type });
