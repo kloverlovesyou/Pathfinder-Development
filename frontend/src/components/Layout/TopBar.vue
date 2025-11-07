@@ -33,19 +33,26 @@ async function toggleRegister(training) {
   const token = localStorage.getItem("token");
   if (!token) return alert("Please log in first.");
 
-  const trainingID = Number(training.trainingID || training.TrainingID);
+  // ✅ Always get correct training ID, regardless of capitalization
+  const trainingID = Number(training.TrainingID ?? training.trainingID);
+
+  if (!trainingID) {
+    console.error("❌ No trainingID found in:", training);
+    alert("Training ID missing — backend will reject.");
+    return;
+  }
+
   const isRegistered = registeredPosts[trainingID];
 
-  // 🔹 Unregister
+  // ✅ UNREGISTER
   if (isRegistered) {
     try {
       await axios.delete(
-        import.meta.env.VITE_API_BASE_URL + `/registrations/${isRegistered.registrationID}`,
+        `${import.meta.env.VITE_API_BASE_URL}/registrations/${isRegistered.registrationID}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
       delete registeredPosts[trainingID];
-      alert(`You have unregistered from ${training.title}`);
+      alert(`Unregistered from ${training.title}`);
     } catch (err) {
       console.error(err);
       alert("Unregister failed.");
@@ -53,19 +60,18 @@ async function toggleRegister(training) {
     return;
   }
 
-  // 🔹 Register
+  // ✅ REGISTER
   try {
     const res = await axios.post(
       import.meta.env.VITE_API_BASE_URL + "/registrations",
-      { trainingID },
+      { trainingID }, // ✅ ALWAYS CORRECT NOW
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    const reg = res.data.data;
-    registeredPosts[trainingID] = { registrationID: reg.registrationID };
-    alert(`You have registered for ${training.title}`);
+    registeredPosts[trainingID] = { registrationID: res.data.data.registrationID };
+    alert(`Registered for ${training.title}`);
   } catch (err) {
-    console.error(err);
+    console.error("REGISTER ERR:", err);
     alert("Registration failed.");
   }
 }
@@ -590,7 +596,7 @@ async function handleResultClick(item) {
             @click="toggleRegister(selectedPost)"
           >
             {{
-              registeredPosts[selectedPost.trainingID]
+              registeredPosts[selectedPost.TrainingID || selectedPost.trainingID]
                 ? "Unregister"
                 : "Register"
             }}
