@@ -47,39 +47,49 @@ function isCareerBookmarked(careerId) {
 }
 
 // ✅ Toggle bookmark with backend sync
-  async function toggleCareerBookmark(careerId) {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      addToast("PLEASE LOG IN FIRST", "accent");
-      return;
+async function toggleCareerBookmark(careerId) {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    addToast("PLEASE LOG IN FIRST", "accent");
+    return;
+  }
+
+  try {
+    if (bookmarkedCareers.value.has(careerId)) {
+      // Remove bookmark
+      await axios.delete(
+        import.meta.env.VITE_API_BASE_URL + `/career-bookmarks/${careerId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      bookmarkedCareers.value.delete(careerId);
+      addToast("Bookmark removed", "success");
+    } else {
+      // Add bookmark
+      await axios.post(
+        import.meta.env.VITE_API_BASE_URL +"/career-bookmarks",
+        { careerID: careerId }, // <-- matches your backend
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      bookmarkedCareers.value.add(careerId);
+      addToast("Bookmark added", "success");
     }
-
-    careerBookmarkLoading[careerId] = true; // ✅ start loading
-
-    try {
-      if (bookmarkedCareers.value.has(careerId)) {
-        await axios.delete(
-          import.meta.env.VITE_API_BASE_URL + `/career-bookmarks/${careerId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        bookmarkedCareers.value.delete(careerId);
-        addToast("Bookmark removed", "success");
-      } else {
-        await axios.post(
-          import.meta.env.VITE_API_BASE_URL + "/career-bookmarks",
-          { careerID: careerId },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        bookmarkedCareers.value.add(careerId);
-        addToast("Bookmark added", "success");
-      }
-    } catch (error) {
+  } catch (error) {
+    if (error.response?.status === 409) {
+      addToast("Already bookmarked", "accent");
+    } else if (error.response?.status === 422) {
+      addToast("careerID is required", "accent");
+    } else if (error.response?.status === 401) {
+      addToast("Unauthorized. Please log in again", "accent");
+    } else {
+      addToast("Error toggling career bookmark", "accent");
       console.error("Error toggling career bookmark:", error);
-      addToast("Failed to toggle bookmark", "error");
-    } finally {
-      careerBookmarkLoading[careerId] = false; // ✅ stop loading
     }
   }
+}
 
 // ✅ Fetch careers
 onMounted(async () => {
@@ -312,7 +322,6 @@ onMounted(async () => {
       :career="selectedCareer"
       :myApplications="myApplications"
       :bookmarkedCareers="bookmarkedCareers"
-      :careerBookmarkLoading="careerBookmarkLoading[selectedCareer?.careerID]"
       @close="closeModal"
       @update-applications="myApplications = $event"
       @update-bookmarks="bookmarkedCareers = $event"
