@@ -73,10 +73,10 @@ async function submitAttendance() {
     const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/attendance/checkin`, {
       trainingID: trainingID.value,
       key: key.value,
-      first_name: first_name.value.trim(),
-      last_name: last_name.value.trim(),
-      email: email.value.trim(),
-      phone: phone.value.trim(),
+        firstName: first_name.value,
+        lastName: last_name.value,
+        emailAddress: email.value,
+        phoneNumber: phone.value,
     });
 
     message.value = res.data.message || "✅ Attendance Recorded Successfully";

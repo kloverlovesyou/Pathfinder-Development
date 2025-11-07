@@ -94,10 +94,10 @@ class TrainingController extends Controller
         $registration = DB::table('registration')
             ->join('applicant', 'registration.applicantID', '=', 'applicant.applicantID')
             ->where('registration.trainingID', $request->trainingID)
-            ->where('applicant.firstName', $request->first_name)
-            ->where('applicant.lastName', $request->last_name)
-            ->where('applicant.emailAddress', $request->email)
-            ->where('applicant.phoneNumber', $request->phone)
+            ->where('applicant.firstName', $request->firstName)
+            ->where('applicant.lastName', $request->lastName)
+            ->where('applicant.emailAddress', $request->emailAddress)
+            ->where('applicant.phoneNumber', $request->phoneNumber)
             ->select('registration.*')
             ->first();
 
