@@ -2,11 +2,39 @@
   <div class="flex flex-col items-center justify-center min-h-screen text-center px-4">
     <h1 class="text-2xl font-bold mb-4">Attendance Check-In</h1>
 
-    <!-- Loading message while QR params are being read -->
-    <p v-if="loading">Checking QR code...</p>
+    <!-- Loading message while QR params or training info are being read -->
+    <p v-if="loading">Checking QR code and loading training...</p>
 
     <!-- Invalid QR -->
     <p v-if="invalidQR" class="text-red-600 font-semibold">{{ invalidQR }}</p>
+    
+    <!-- Training info -->
+    <div v-if="training && !loading" class="mb-4 p-4 border rounded w-full max-w-md bg-gray-50 text-left">
+      <h2 class="text-xl font-semibold mb-1">{{ training.title }}</h2>
+      <p class="mb-1">{{ training.description }}</p>
+      <p class="text-sm text-gray-600 mb-1">
+        <strong>Schedule:</strong> {{ training.schedule }} to {{ training.end_time }}
+      </p>
+      <p class="text-sm text-gray-600 mb-1">
+        <strong>Mode:</strong> {{ training.mode }}
+      </p>
+      <p class="text-sm text-gray-600 mb-1" v-if="training.location">
+        <strong>Location:</strong> {{ training.location }}
+      </p>
+      <p class="text-sm text-gray-600 mb-1" v-if="training.trainingLink">
+        <strong>Training Link:</strong> 
+        <a :href="training.trainingLink" target="_blank" class="underline text-blue-600">{{ training.trainingLink }}</a>
+      </p>
+      <p class="text-sm text-gray-600">
+        <strong>Organization:</strong> {{ training.organization?.name || 'Unknown' }}
+      </p>
+      <p class="text-sm text-gray-600 mt-1" v-if="training.attendance_link">
+        <strong>Attendance Link:</strong> 
+        <a :href="training.attendance_link" target="_blank" class="underline text-blue-600">
+          {{ training.attendance_link }}
+        </a>
+      </p>
+    </div>
 
     <!-- Attendance Form -->
     <form v-if="!loading && !submitted && !invalidQR" @submit.prevent="submitAttendance" class="space-y-3 w-full max-w-md">
@@ -37,6 +65,8 @@ const route = useRoute();
 const trainingID = ref(null);
 const key = ref(null);
 
+const training = ref(null);
+
 const first_name = ref("");
 const last_name = ref("");
 const email = ref("");
@@ -48,20 +78,29 @@ const invalidQR = ref("");
 const submitted = ref(false);
 const submittedSuccess = ref(false);
 
-onMounted(() => {
+onMounted(async () => {
   // Read QR parameters from URL
   trainingID.value = route.query.trainingID;
   key.value = route.query.key;
 
   if (!trainingID.value || !key.value) {
     invalidQR.value = "❌ Invalid or incomplete QR code.";
+    loading.value = false;
+    return;
   }
 
-  loading.value = false;
+  // Fetch training info from API
+  try {
+    const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/training/${trainingID.value}`);
+    training.value = res.data;
+  } catch (error) {
+    invalidQR.value = "❌ Failed to load training information.";
+  } finally {
+    loading.value = false;
+  }
 });
 
 async function submitAttendance() {
-  // Validate frontend fields
   if (!first_name.value || !last_name.value || !email.value || !phone.value) {
     message.value = "⚠️ All fields are required.";
     submittedSuccess.value = false;
@@ -73,10 +112,10 @@ async function submitAttendance() {
     const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/attendance/checkin`, {
       trainingID: trainingID.value,
       key: key.value,
-        firstName: first_name.value,
-        lastName: last_name.value,
-        emailAddress: email.value,
-        phoneNumber: phone.value,
+      firstName: first_name.value,
+      lastName: last_name.value,
+      emailAddress: email.value,
+      phoneNumber: phone.value,
     });
 
     message.value = res.data.message || "✅ Attendance Recorded Successfully";
