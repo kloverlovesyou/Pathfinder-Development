@@ -15,6 +15,7 @@ const emits = defineEmits(["close", "update-applications", "update-bookmarks"]);
 const showUploadModal = ref(false);
 const uploadedFile = ref(null);
 const toasts = ref([]);
+const bookmarkLoading = ref(false);
 
 // --- Toast Helper ---
 function addToast(message, type = "info") {
@@ -34,39 +35,40 @@ const isApplied = computed(() =>
   props.myApplications.has(props.career?.careerID ?? props.career?.id)
 );
 
-// --- Toggle Bookmark ---
-async function toggleBookmark() {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    addToast("PLEASE LOG IN FIRST", "accent");
-    return;
-  }
-
-  const id = props.career?.careerID ?? props.career?.id;
-
-  try {
-    if (isBookmarked.value) {
-      await axios.delete(import.meta.env.VITE_API_BASE_URL +`/career-bookmarks/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      props.bookmarkedCareers.delete(id);
-      emits("update-bookmarks", new Set(props.bookmarkedCareers));
-      addToast("Bookmark removed", "success");
-    } else {
-      await axios.post(
-        import.meta.env.VITE_API_BASE_URL +"/career-bookmarks",
-        { careerID: id },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      props.bookmarkedCareers.add(id);
-      emits("update-bookmarks", new Set(props.bookmarkedCareers));
-      addToast("Bookmark added", "success");
+  // --- Toggle Bookmark ---
+  async function toggleBookmark() {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      addToast("PLEASE LOG IN FIRST", "accent");
+      return;
     }
-  } catch (error) {
-    console.error(error);
-    addToast("Error toggling bookmark", "accent");
+
+    const id = props.career?.careerID ?? props.career?.id;
+    bookmarkLoading.value = true;
+
+    try {
+      if (isBookmarked.value) {
+        await axios.delete(import.meta.env.VITE_API_BASE_URL + `/career-bookmarks/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        props.bookmarkedCareers.delete(id);
+        emits("update-bookmarks", new Set(props.bookmarkedCareers));
+        addToast("Bookmark removed", "success");
+      } else {
+        await axios.post(import.meta.env.VITE_API_BASE_URL + "/career-bookmarks", { careerID: id }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        props.bookmarkedCareers.add(id);
+        emits("update-bookmarks", new Set(props.bookmarkedCareers));
+        addToast("Bookmark added", "success");
+      }
+    } catch (error) {
+      console.error(error);
+      addToast("Error toggling bookmark", "accent");
+    } finally {
+      bookmarkLoading.value = false;
+    }
   }
-}
 
 // --- Apply Modal Handlers ---
 function openUploadModal() {
@@ -157,8 +159,13 @@ function formatDateTime(dateStr) {
 
         <!-- Buttons -->
         <div class="my-4 flex justify-end gap-2">
-          <button class="btn btn-outline btn-sm" @click="toggleBookmark">
-            {{ isBookmarked ? "Bookmarked" : "Bookmark" }}
+          <button 
+            class="btn btn-outline btn-sm" 
+            @click="toggleBookmark" 
+            :disabled="bookmarkLoading"
+          >
+            <span v-if="bookmarkLoading" class="loading loading-spinner loading-sm"></span>
+            <span v-else>{{ isBookmarked ? "Bookmarked" : "Bookmark" }}</span>
           </button>
 
           <button
