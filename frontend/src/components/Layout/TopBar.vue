@@ -2,20 +2,18 @@
 import { ref, onMounted, onBeforeUnmount, watch, reactive } from "vue";
 import axios from "axios";
 import { useRoute } from "vue-router";
-
 const route = useRoute();
-const registeredPosts = reactive({});
+const registeredPosts = reactive({}); // stores registered trainings
 
-// ✅ Fetch user's registered trainings
 async function fetchMyRegistrations() {
   const token = localStorage.getItem("token");
   if (!token) return;
 
   try {
     const res = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + "/registrations",
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+  import.meta.env.VITE_API_BASE_URL + "/registrations",
+  { headers: { Authorization: `Bearer ${token}` } }
+);
 
     res.data.data.forEach((r) => {
       registeredPosts[String(r.trainingID)] = { registrationID: r.registrationID };
@@ -26,33 +24,26 @@ async function fetchMyRegistrations() {
     console.error("❌ Failed to fetch registrations:", err);
   }
 }
+
 onMounted(fetchMyRegistrations);
 
-// ✅ Register / Unregister training
 async function toggleRegister(training) {
   const token = localStorage.getItem("token");
   if (!token) return alert("Please log in first.");
 
-  // ✅ Always get correct training ID, regardless of capitalization
-  const trainingID = Number(training.TrainingID ?? training.trainingID);
-
-  if (!trainingID) {
-    console.error("❌ No trainingID found in:", training);
-    alert("Training ID missing — backend will reject.");
-    return;
-  }
-
+  const trainingID = String(training.trainingID || training.TrainingID);
   const isRegistered = registeredPosts[trainingID];
 
-  // ✅ UNREGISTER
+  // 🔹 Unregister
   if (isRegistered) {
     try {
       await axios.delete(
-        `${import.meta.env.VITE_API_BASE_URL}/registrations/${isRegistered.registrationID}`,
+        import.meta.env.VITE_API_BASE_URL + `/registrations/${isRegistered.registrationID}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      delete registeredPosts[trainingID];
-      alert(`Unregistered from ${training.title}`);
+
+      delete registeredPosts[trainingID];  // ✅ Now updates instantly
+      alert(`You have unregistered from ${training.title}`);
     } catch (err) {
       console.error(err);
       alert("Unregister failed.");
@@ -60,103 +51,51 @@ async function toggleRegister(training) {
     return;
   }
 
-  // ✅ REGISTER
+  // 🔹 Register
   try {
     const res = await axios.post(
       import.meta.env.VITE_API_BASE_URL + "/registrations",
-      { trainingID }, // ✅ ALWAYS CORRECT NOW
+      { trainingID },
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    registeredPosts[trainingID] = { registrationID: res.data.data.registrationID };
-    alert(`Registered for ${training.title}`);
+    const reg = res.data.data;
+    registeredPosts[trainingID] = { registrationID: reg.registrationID };
+    alert(`You have registered for ${training.title}`);
   } catch (err) {
-    console.error("REGISTER ERR:", err);
+    console.error(err);
     alert("Registration failed.");
   }
 }
 
-// ✅ LOGOUT
-function logout() {
-  localStorage.removeItem("token");
-  window.location.href = "/auth/login";
-}
-
-// ✅ BOOKMARKING (local only)
-const bookmarkedPosts = ref({});
-function toggleBookmark(post) {
-  const id = post.TrainingID || post.CareerID || post.ID;
-  if (bookmarkedPosts.value[id]) {
-    delete bookmarkedPosts.value[id];
-  } else {
-    bookmarkedPosts.value[id] = true;
-  }
-}
-
-// ✅ CAREER APPLICATION CANCEL
-function cancelApplication(post) {
-  const id = post.ID;
-  delete appliedPosts.value[id];
-  alert("Application cancelled.");
-}
-
-const uploadedFile = ref(null);
-function handleFileUpload(event) {
-  uploadedFile.value = event.target.files[0];
-}
-
-// ✅ APPLICATION SUBMIT
-async function submitApplication() {
-  if (!uploadedFile.value) return alert("Please attach a file.");
-
-  const form = new FormData();
-  form.append("careerID", selectedPost.value.ID);
-  form.append("file", uploadedFile.value);
-
-  const token = localStorage.getItem("token");
-
-  try {
-    const res = await axios.post(
-      import.meta.env.VITE_API_BASE_URL + "/apply",
-      form,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
-
-    appliedPosts.value[selectedPost.value.ID] = true;
-    alert("Application submitted!");
-    closeApplyModal();
-  } catch (err) {
-    console.error(err);
-    alert("Submission failed.");
-  }
-}
-
-// ✅ DROPDOWNS, SEARCH, FILTERING
+// --- State ---
 const showDropdown = ref(false);
-const activeMains = ref([]);
-const activeSubs = ref([]);
+const activeMains = ref([]); // Training / Career / Organization
+const activeSubs = ref([]); // Online / Onsite
 const searchContainer = ref(null);
 const mainFilters = ["Training", "Career", "Organization"];
-const searchInput = ref("");
-const results = ref([]);
+const searchInput = ref(""); // User's search text
+const results = ref([]); // Results from backend
+
+// --- Modal States ---
 
 const applyModalOpen = ref(false);
-const isModalOpen = ref(false);
+const isModalOpen = ref(false); // For org modal
+
+// --- Misc States ---
+const bookmarkedPosts = ref({});
 const appliedPosts = ref({});
 const organizations = ref({});
 const posts = ref([]);
 
+// --- Filter Toggles ---
 function toggleMainFilter(main) {
   if (activeMains.value.includes(main)) {
     activeMains.value = activeMains.value.filter((m) => m !== main);
     if (main === "Training" || main === "Career") activeSubs.value = [];
   } else {
     if (main === "Training" || main === "Career") {
+      // Mutually exclusive
       activeMains.value = activeMains.value.filter(
         (m) => m !== (main === "Training" ? "Career" : "Training")
       );
@@ -178,6 +117,7 @@ function toggleExclusiveSub(sub) {
   }
 }
 
+// --- Click outside to close dropdown ---
 function handleClickOutside(event) {
   if (searchContainer.value && !searchContainer.value.contains(event.target)) {
     showDropdown.value = false;
@@ -188,7 +128,7 @@ onBeforeUnmount(() =>
   document.removeEventListener("click", handleClickOutside)
 );
 
-// ✅ SEARCH stored procedure
+// --- Perform Search (calls Laravel backend + stored procedure) ---
 async function performSearch() {
   if (!searchInput.value.trim()) {
     results.value = [];
@@ -196,7 +136,7 @@ async function performSearch() {
   }
 
   try {
-    const response = await axios.get(import.meta.env.VITE_API_BASE_URL + "/search", {
+    const response = await axios.get(import.meta.env.VITE_API_BASE_URL+"/search", {
       params: {
         search: searchInput.value,
         filterType: activeMains.value[0]?.toLowerCase() || "",
@@ -212,7 +152,7 @@ async function performSearch() {
 }
 watch([searchInput, activeMains, activeSubs], performSearch);
 
-// ✅ POST TYPE CHECK
+// --- Type Checkers ---
 function isTraining(post) {
   return post.Type?.toLowerCase().includes("training");
 }
@@ -223,7 +163,28 @@ function isOrganization(post) {
   return post.Type?.toLowerCase().includes("organization");
 }
 
-// ✅ MODALS
+async function openOrganizationModal(orgItem) {
+  resetModals();
+  try {
+    isModalOpen.value = true;
+    selectedOrg.value = {
+      name: orgItem.Name || orgItem.OrganizationName,
+      location: orgItem.Location || "",
+      website: orgItem.Website || "",
+      logo: orgItem.Logo || "",
+      careers: [],
+      trainings: [],
+    };
+
+    // Fetch related posts dynamically
+    const response = await axios.get(import.meta.env.VITE_API_BASE_URL+`/organization/${orgItem.ID}/posts`);
+    selectedOrg.value.careers = response.data.careers || [];
+    selectedOrg.value.trainings = response.data.trainings || [];
+  } catch (error) {
+    console.error("Failed to fetch organization details:", error);
+  }
+}
+
 function resetModals() {
   selectedPost.value = null;
   isModalOpen.value = false;
@@ -238,53 +199,86 @@ const isOrgModalOpen = ref(false);
 const selectedPost = ref({});
 const selectedOrg = ref({});
 
+// 🟦 TRAINING MODAL
 function openTrainingModal(post) {
   selectedPost.value = post;
   isTrainingModalOpen.value = true;
 }
+
 function closeTrainingModal() {
   selectedPost.value = {};
   isTrainingModalOpen.value = false;
 }
 
+// 🟩 CAREER MODAL
 function openCareerModal(post) {
   selectedPost.value = post;
   isCareerModalOpen.value = true;
 }
+
 function closeCareerModal() {
   selectedPost.value = {};
   isCareerModalOpen.value = false;
 }
 
+// 🧩 APPLY MODAL
 function openApplyModal(post) {
   selectedPost.value = post;
   applyModalOpen.value = true;
 }
+
 function closeApplyModal() {
   applyModalOpen.value = false;
   selectedPost.value = {};
 }
 
+// 🟧 ORG MODAL
 function openOrgModal(org) {
   selectedOrg.value = org;
   isOrgModalOpen.value = true;
 }
+
 function closeOrgModal() {
   isOrgModalOpen.value = false;
   selectedOrg.value = {};
 }
 
-// ✅ CLICK RESULT HANDLER
+// Handles result click depending on Type
 async function handleResultClick(item) {
-  if (item.Type.includes("Training")) {
+  if (item.Type === "Training" || item.Type.includes("Training")) {
+    // 🎯 Training modal
     selectedPost.value = item;
     isTrainingModalOpen.value = true;
-  } else if (item.Type.includes("Career")) {
+  } else if (item.Type === "Career" || item.Type.includes("Career")) {
+    // 🎯 Career modal
     selectedPost.value = item;
     isCareerModalOpen.value = true;
-  } else if (item.Type.includes("Organization")) {
-    selectedOrg.value = item;
+  } else if (item.Type === "Organization") {
+    // 🎯 Organization modal (fetch org info + its posts)
+    selectedOrg.value = {
+      ...item,
+      careers: [],
+      trainings: [],
+    };
     isOrgModalOpen.value = true;
+
+    try {
+      const response = await axios.get(
+        `/api/search?search=${encodeURIComponent(
+          item.Title
+        )}&filterType=organization`
+      );
+      const results = response.data.results || [];
+
+      selectedOrg.value.careers = results.filter((r) =>
+        r.Type.includes("Career")
+      );
+      selectedOrg.value.trainings = results.filter((r) =>
+        r.Type.includes("Training")
+      );
+    } catch (error) {
+      console.error("Error fetching organization posts:", error);
+    }
   }
 }
 </script>
@@ -565,9 +559,9 @@ async function handleResultClick(item) {
         >
           ✕
         </button>
-        <h2 class="text-xl font-bold mb-2">{{ selectedPost.title }}</h2>
+        <h2 class="text-xl font-bold mb-2">{{ selectedPost.Title }}</h2>
         <p class="text-sm text-gray-600 mb-2">
-          Organization: {{ selectedPost.name }}
+          Organization: {{ selectedPost.OrganizationName }}
         </p>
 
         <!-- Buttons -->
@@ -578,7 +572,7 @@ async function handleResultClick(item) {
             @click="toggleBookmark(selectedPost)"
           >
             {{
-              bookmarkedPosts[selectedPost.trainingID || selectedPost.careerID]
+              bookmarkedPosts[selectedPost.TrainingID || selectedPost.CareerID]
                 ? "Bookmarked"
                 : "Bookmark"
             }}
@@ -596,7 +590,7 @@ async function handleResultClick(item) {
             @click="toggleRegister(selectedPost)"
           >
             {{
-              registeredPosts[selectedPost.TrainingID || selectedPost.trainingID]
+              registeredPosts[selectedPost.TrainingID]
                 ? "Unregister"
                 : "Register"
             }}
@@ -604,10 +598,10 @@ async function handleResultClick(item) {
         </div>
 
         <!-- Training Info -->
-        <p><strong>Mode:</strong> {{ selectedPost.mode || "Not specified" }}</p>
-        <p><strong>Description:</strong> {{ selectedPost.description }}</p>
-        <p><strong>Schedule:</strong> {{ selectedPost.schedule }}</p>
-        <p><strong>Location:</strong> {{ selectedPost.location }}</p>
+        <p><strong>Mode:</strong> {{ selectedPost.Mode || "Not specified" }}</p>
+        <p><strong>Description:</strong> {{ selectedPost.Description }}</p>
+        <p><strong>Schedule:</strong> {{ selectedPost.Schedule }}</p>
+        <p><strong>Location:</strong> {{ selectedPost.Location }}</p>
       </div>
     </dialog>
 
@@ -621,11 +615,11 @@ async function handleResultClick(item) {
           ✕
         </button>
         <h2 class="text-xl font-bold mb-2">
-          {{ selectedPost.title || selectedPost.position }}
+          {{ selectedPost.Title || selectedPost.Position }}
         </h2>
 
         <p class="text-sm text-gray-600 mb-2">
-          Organization: {{ selectedPost.name }}
+          Organization: {{ selectedPost.OrganizationName }}
         </p>
 
         <!-- Buttons -->
@@ -636,7 +630,7 @@ async function handleResultClick(item) {
             @click="toggleBookmark(selectedPost)"
           >
             {{
-              bookmarkedPosts[selectedPost.trainingID || selectedPost.careerID]
+              bookmarkedPosts[selectedPost.TrainingID || selectedPost.CareerID]
                 ? "Bookmarked"
                 : "Bookmark"
             }}
@@ -663,18 +657,18 @@ async function handleResultClick(item) {
         <!-- Career Info -->
         <p>
           <strong>Details:</strong>
-          {{ selectedPost.description || selectedPost.detailsAndInstructions }}
+          {{ selectedPost.Description || selectedPost.DetailsandInstructions }}
         </p>
         <p>
-          <strong>Qualifications:</strong> {{ selectedPost.qualifications }}
+          <strong>Qualifications:</strong> {{ selectedPost.Qualifications }}
         </p>
-        <p><strong>Requirements:</strong> {{ selectedPost.requirements }}</p>
+        <p><strong>Requirements:</strong> {{ selectedPost.Requirements }}</p>
         <p>
           <strong>Application Address:</strong>
-          {{ selectedPost.applicationLetterAddress }}
+          {{ selectedPost.ApplicationLetterAddress }}
         </p>
         <p>
-          <strong>Deadline:</strong> {{ selectedPost.deadlineOfSubmission }}
+          <strong>Deadline:</strong> {{ selectedPost.DeadlineofSubmission }}
         </p>
 
         <!-- Recommended Trainings -->
@@ -694,7 +688,7 @@ async function handleResultClick(item) {
                 {{ post.Title }}
               </h4>
               <p class="text-[11px] text-gray-600 truncate">
-                {{ organizations[post.organizationID] }}
+                {{ organizations[post.OrganizationID] }}
               </p>
             </div>
           </div>
@@ -713,7 +707,7 @@ async function handleResultClick(item) {
         </button>
 
         <h2 class="text-xl font-bold mb-4">
-          Apply for {{ selectedPost?.position || selectedPost?.title }}
+          Apply for {{ selectedPost?.Position || selectedPost?.Title }}
         </h2>
 
         <form @submit.prevent="submitApplication">
@@ -769,10 +763,10 @@ async function handleResultClick(item) {
           />
           <div>
             <h2 class="text-xl font-bold">
-              {{ selectedOrg.title || selectedOrg.name }}
+              {{ selectedOrg.Title || selectedOrg.OrganizationName }}
             </h2>
             <p class="text-sm text-gray-600">
-              {{ selectedOrg.description || selectedOrg.location }}
+              {{ selectedOrg.Description || selectedOrg.OrganizationLocation }}
             </p>
           </div>
         </div>
@@ -784,7 +778,7 @@ async function handleResultClick(item) {
             target="_blank"
             class="text-blue-600 underline break-all"
           >
-            {{ selectedOrg.websiteURL }}
+            {{ selectedOrg.Website }}
           </a>
         </p>
 
@@ -805,10 +799,10 @@ async function handleResultClick(item) {
               @click="handleResultClick(career)"
             >
               <h4 class="font-semibold text-sm leading-snug mb-1">
-                {{ career.title }}
+                {{ career.Title }}
               </h4>
               <p class="text-[11px] text-gray-600 truncate">
-                Deadline: {{ career.deadlineOfSubmission || "N/A" }}
+                Deadline: {{ career.DeadlineOfSubmission || "N/A" }}
               </p>
             </div>
           </div>
@@ -831,10 +825,10 @@ async function handleResultClick(item) {
               @click="handleResultClick(training)"
             >
               <h4 class="font-semibold text-sm leading-snug mb-1">
-                {{ training.title }}
+                {{ training.Title }}
               </h4>
               <p class="text-[11px] text-gray-600 truncate">
-                Schedule: {{ training.schedule || "Not specified" }}
+                Schedule: {{ training.Schedule || "Not specified" }}
               </p>
             </div>
           </div>
