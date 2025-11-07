@@ -45,16 +45,27 @@
     </form>
 
     <!-- Success or error message -->
-    <p v-if="submitted" class="mt-4 text-lg font-semibold" :class="submittedSuccess ? 'text-green-600' : 'text-red-600'">
-      {{ message }}
-    </p>
+   <div v-if="submitted" :class="messageBoxClass" class="mt-4 w-full max-w-md p-3 rounded shadow flex items-center space-x-2">
+      <span class="text-xl">{{ messageIcon }}</span>
+      <span class="font-medium">{{ message }}</span>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import axios from "axios";
 import { useRoute } from "vue-router";
+
+const messageBoxClass = computed(() =>
+  submittedSuccess.value
+    ? 'bg-green-100 text-green-800 border border-green-400'
+    : 'bg-red-100 text-red-800 border border-red-400'
+);
+
+const messageIcon = computed(() =>
+  submittedSuccess.value ? '✅' : '⚠️'
+);
 
 const route = useRoute();
 
