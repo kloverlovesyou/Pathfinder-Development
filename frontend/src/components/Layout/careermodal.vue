@@ -8,7 +8,6 @@ const props = defineProps({
   career: Object, // Selected career data
   myApplications: Set, // Set of user's applied careerIDs
   bookmarkedCareers: Set, // Set of bookmarked careerIDs
-  careerBookmarkLoading: Boolean, 
 });
 
 const emits = defineEmits(["close", "update-applications", "update-bookmarks"]);
@@ -157,54 +156,23 @@ function formatDateTime(dateStr) {
         </p>
 
         <!-- Buttons -->
-        <!-- Buttons -->
-      <div class="my-4 flex justify-end gap-2">
-        <button
-          class="btn btn-outline btn-sm flex items-center justify-center space-x-2"
-          @click="toggleBookmark"
-          :disabled="careerBookmarkLoading"
-        >
-          <!-- Spinner -->
-          <svg
-            v-if="careerBookmarkLoading"
-            class="animate-spin h-4 w-4 text-gray-600"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            ></circle>
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
-            ></path>
-          </svg>
-
-          <!-- Text -->
-          <span v-else>
+        <div class="my-4 flex justify-end gap-2">
+          <button class="btn btn-outline btn-sm" @click="toggleBookmark">
             {{ isBookmarked ? "Bookmarked" : "Bookmark" }}
-          </span>
-        </button>
+          </button>
 
-        <button
-          v-if="!isApplied"
-          class="btn btn-sm bg-customButton text-white"
-          @click="openUploadModal"
-        >
-          Apply
-        </button>
+          <button
+            v-if="!isApplied"
+            class="btn btn-sm bg-customButton text-white"
+            @click="openUploadModal"
+          >
+            Apply
+          </button>
 
-        <button v-else class="btn btn-sm bg-gray-500 text-white" disabled>
-          Applied
-        </button>
-      </div>
+          <button v-else class="btn btn-sm bg-gray-500 text-white" disabled>
+            Applied
+          </button>
+        </div>
 
         <!-- Career Details -->
         <p><strong>Details:</strong> {{ career.detailsAndInstructions }}</p>
