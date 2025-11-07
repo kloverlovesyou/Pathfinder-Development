@@ -5,6 +5,7 @@ import QrcodeVue from "qrcode.vue";
 
 const registeredPosts = reactive({}); // stores registered trainings
 const myRegistrations = ref(new Set()); // used for QR display
+const bookmarkLoading = reactive({});
 
 // 🔹 Fetch user's registered trainings
 async function fetchMyRegistrations() {
@@ -139,45 +140,36 @@ async function toggleBookmark(trainingId) {
     return;
   }
 
-  // ✅ If already bookmarked → REMOVE
-  if (isTrainingBookmarked(trainingId)) {
-    try {
+  // ✅ Set loading true
+  bookmarkLoading[trainingId] = true;
+
+  try {
+    // If already bookmarked → REMOVE
+    if (isTrainingBookmarked(trainingId)) {
       await axios.delete(
         import.meta.env.VITE_API_BASE_URL + `/bookmarks/${trainingId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
       addToast("Bookmark removed", "info");
-
-      // ✅ Refresh bookmark list so UI updates
-      await fetchBookmarks();
-    } catch (error) {
-      console.error("Error removing bookmark:", error);
-      addToast("Failed to remove bookmark", "error");
-    }
-  }
-
-  // ✅ If NOT bookmarked → ADD
-  else {
-    try {
+    } 
+    // If NOT bookmarked → ADD
+    else {
       await axios.post(
         import.meta.env.VITE_API_BASE_URL + "/bookmarks",
         { trainingID: trainingId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
       addToast("Bookmarked!", "success");
-
-      // ✅ Refresh bookmark list
-      await fetchBookmarks();
-    } catch (error) {
-      if (error.response?.status === 409) {
-        addToast("Already bookmarked", "accent");
-      } else {
-        addToast("Failed to bookmark", "error");
-      }
-      console.error("Failed to toggle bookmark:", error);
     }
+
+    // Refresh bookmark list so UI updates
+    await fetchBookmarks();
+  } catch (error) {
+    console.error("Failed to toggle bookmark:", error);
+    addToast("Failed to toggle bookmark", "error");
+  } finally {
+    // ✅ Stop loading
+    bookmarkLoading[trainingId] = false;
   }
 }
 
@@ -391,13 +383,14 @@ async function toggleRegister(training) {
     />
 
     <TrainingModal
-      :isOpen="showModal"
-      :training="selectedTraining"
-      :isRegistered="myRegistrations.has(selectedTraining?.trainingID)"
-      :isBookmarked="bookmarkedTrainings.includes(selectedTraining?.trainingID)"
-      @close="showModal = false"
-      @toggle-register="toggleRegister"
-      @bookmark="toggleBookmark"
+    :isOpen="showModal"
+    :training="selectedTraining"
+    :isRegistered="myRegistrations.has(selectedTraining?.trainingID)"
+    :isBookmarked="bookmarkedTrainings.includes(selectedTraining?.trainingID)"
+    :bookmarkLoading="bookmarkLoading[selectedTraining?.trainingID]"
+    @close="showModal = false"
+    @toggle-register="toggleRegister"
+    @bookmark="toggleBookmark"
     />
     <!-- Toast Notifications -->
     <div class="toast toast-end toast-top z-50">
