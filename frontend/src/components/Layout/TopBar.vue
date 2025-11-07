@@ -10,13 +10,13 @@ async function fetchMyRegistrations() {
   if (!token) return;
 
   try {
-    const res = await axios.get("/registrations", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await axios.get(
+  import.meta.env.VITE_API_BASE_URL + "/registrations",
+  { headers: { Authorization: `Bearer ${token}` } }
+);
 
-    res.data.forEach((r) => {
-      // 👇 Make sure this matches your backend JSON fields
-      registeredPosts[r.trainingID] = { registrationID: r.registrationID };
+    res.data.data.forEach((r) => {
+      registeredPosts[String(r.trainingID)] = { registrationID: r.registrationID };
     });
 
     console.log("✅ Registered trainings:", registeredPosts);
@@ -31,41 +31,40 @@ async function toggleRegister(training) {
   const token = localStorage.getItem("token");
   if (!token) return alert("Please log in first.");
 
-  const isRegistered = registeredPosts[training.trainingID];
+  const trainingID = String(training.trainingID || training.TrainingID);
+  const isRegistered = registeredPosts[trainingID];
 
   // 🔹 Unregister
   if (isRegistered) {
     try {
       await axios.delete(
-        import.meta.env.VITE_API_BASE_URL +`/registrations/${isRegistered.registrationID}`,
+        import.meta.env.VITE_API_BASE_URL + `/registrations/${isRegistered.registrationID}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      delete registeredPosts[training.trainingID];
+      delete registeredPosts[trainingID];  // ✅ Now updates instantly
       alert(`You have unregistered from ${training.title}`);
     } catch (err) {
       console.error(err);
       alert("Unregister failed.");
     }
+    return;
   }
 
   // 🔹 Register
-  else {
-    try {
-      const res = await axios.post(
-        import.meta.env.VITE_API_BASE_URL + "/registrations",
-        { trainingID: training.trainingID },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+  try {
+    const res = await axios.post(
+      import.meta.env.VITE_API_BASE_URL + "/registrations",
+      { trainingID },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-      // 👇 Note: backend wraps registration in `data`
-      const reg = res.data.data;
-      registeredPosts[reg.trainingID] = { registrationID: reg.registrationID };
-      alert(`You have registered for ${training.title}`);
-    } catch (err) {
-      console.error(err);
-      alert("Registration failed.");
-    }
+    const reg = res.data.data;
+    registeredPosts[trainingID] = { registrationID: reg.registrationID };
+    alert(`You have registered for ${training.title}`);
+  } catch (err) {
+    console.error(err);
+    alert("Registration failed.");
   }
 }
 
@@ -584,7 +583,7 @@ async function handleResultClick(item) {
             v-if="isTraining(selectedPost)"
             class="btn btn-sm text-white"
             :class="
-              registeredPosts[selectedPost.TrainingID]
+              registeredPosts[String(selectedPost.TrainingID || selectedPost.trainingID)]
                 ? 'bg-gray-500'
                 : 'bg-customButton'
             "
