@@ -90,24 +90,31 @@ class TrainingController extends Controller
             return response()->json(['message' => 'QR Code Expired'], 400);
         }
 
-        // Look up registration by name, email, and phone
-        $registration = DB::table('registration')
-            ->join('applicant', 'registration.applicantID', '=', 'applicant.applicantID')
+        // ✅ Step 1: find applicant by email and training
+        $applicant = DB::table('applicant')
+            ->join('registration', 'registration.applicantID', '=', 'applicant.applicantID')
             ->where('registration.trainingID', $request->trainingID)
-            ->where('applicant.firstName', $request->firstName)
-            ->where('applicant.lastName', $request->lastName)
             ->where('applicant.emailAddress', $request->emailAddress)
-            ->where('applicant.phoneNumber', $request->phoneNumber)
-            ->select('registration.*')
+            ->select('applicant.*', 'registration.registrationID')
             ->first();
 
-        if (!$registration) {
-            return response()->json(['message' => '⚠️ No matching registration found'], 404);
+        if (!$applicant) {
+            return response()->json(['message' => '⚠️ No registration found with this email.'], 404);
         }
 
-        // Update attendance
+        // ✅ Step 2: check first/last name
+        if ($applicant->firstName !== $request->firstName || $applicant->lastName !== $request->lastName) {
+            return response()->json(['message' => '⚠️ Name does not match our records.'], 400);
+        }
+
+        // ✅ Step 3: check phone number
+        if ($applicant->phoneNumber !== $request->phoneNumber) {
+            return response()->json(['message' => '⚠️ Phone number does not match our records.'], 400);
+        }
+
+        // ✅ Step 4: update attendance
         DB::table('registration')
-            ->where('registrationID', $registration->registrationID)
+            ->where('registrationID', $applicant->registrationID)
             ->update([
                 'checked_in_at' => now(),
                 'registrationStatus' => 'Attended',
