@@ -15,6 +15,12 @@ function showToast(message, type = "info") {
 }
 
 async function fetchMyRegistrations() {
+  // ✅ Load cached data first
+  const cached = localStorage.getItem("registeredPosts");
+  if (cached) {
+    Object.assign(registeredPosts, JSON.parse(cached));
+  }
+
   const token = localStorage.getItem("token");
   if (!token) return;
 
@@ -26,8 +32,13 @@ async function fetchMyRegistrations() {
 
     // ✅ FIX HERE
     res.data.forEach((r) => {
-      registeredPosts[String(r.trainingID)] = { registrationID: r.registrationID };
+      registeredPosts[r.trainingID] = {
+        registrationID: r.registrationID,
+      };
     });
+
+    // ✅ Save to cache
+    localStorage.setItem("registeredPosts", JSON.stringify(registeredPosts));
 
     console.log("✅ Registered trainings:", registeredPosts);
   } catch (err) {
@@ -44,28 +55,13 @@ onMounted(fetchMyRegistrations);
       return;
     }
 
-    // ✅ SAFEST way to get training ID
     const trainingID = Number(
-      training.trainingID ||
-      training.TrainingID ||
-      training.ID ||
-      training.id ||
-      training.training_id ||
-      training.training?.trainingID ||
-      training.TrainingId
+      training.trainingID || training.TrainingID || training.id || training.ID
     );
-
-    if (!trainingID || isNaN(trainingID)) {
-      console.error("❌ Invalid trainingID:", training);
-      showToast("Error: Training ID missing.", "error");
-      return;
-    }
-
-    console.log("➡ Sending trainingID:", trainingID);
 
     const isRegistered = registeredPosts[trainingID];
 
-    // ✅ Unregister
+    // ✅ UNREGISTER
     if (isRegistered) {
       try {
         await axios.delete(
@@ -74,6 +70,8 @@ onMounted(fetchMyRegistrations);
         );
 
         delete registeredPosts[trainingID];
+        localStorage.setItem("registeredPosts", JSON.stringify(registeredPosts));
+
         showToast("Unregistered successfully!", "success");
       } catch (err) {
         console.error(err);
@@ -82,7 +80,7 @@ onMounted(fetchMyRegistrations);
       return;
     }
 
-    // ✅ Register
+    // ✅ REGISTER
     try {
       const res = await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/registrations`,
@@ -92,6 +90,9 @@ onMounted(fetchMyRegistrations);
 
       const reg = res.data.data;
       registeredPosts[trainingID] = { registrationID: reg.registrationID };
+
+      // ✅ Save to cache
+      localStorage.setItem("registeredPosts", JSON.stringify(registeredPosts));
 
       showToast("Registered successfully!", "success");
     } catch (err) {

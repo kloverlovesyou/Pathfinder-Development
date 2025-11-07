@@ -289,6 +289,14 @@ function startAllQRCountdowns() {
 // Lifecycle
 // ---------------------------
 onMounted(async () => {
+
+    // ✅ Load cached data first (UI updates instantly)
+  const cached = localStorage.getItem("registeredPosts");
+  if (cached) {
+    Object.assign(registeredPosts, JSON.parse(cached));
+    myRegistrations.value = new Set(Object.keys(registeredPosts).map(Number));
+  }
+
   await fetchOrganizations();
   await fetchTrainings();
   await fetchBookmarks();
@@ -307,39 +315,60 @@ import TrainingModal from "@/components/Layout/TrainingModal.vue";
 const showModal = ref(false);
 
 // Toggle registration
-async function toggleRegister(training) {
-  const token = localStorage.getItem("token");
-  if (!token) return alert("Please log in first");
+  async function toggleRegister(training) {
+    const token = localStorage.getItem("token");
+    if (!token) return alert("Please log in first");
 
-  const id = training.trainingID;
-  registerLoading[id] = true; // ✅ set loading
+    const id = training.trainingID;
+    registerLoading[id] = true;
 
-  try {
-    if (myRegistrations.value.has(id)) {
-      await axios.delete(
-        import.meta.env.VITE_API_BASE_URL + `/registrations/${id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+    try {
+      // ✅ UNREGISTER
+      if (myRegistrations.value.has(id)) {
+        await axios.delete(
+          import.meta.env.VITE_API_BASE_URL + `/registrations/${id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        // ✅ Update local cache instantly
+        myRegistrations.value.delete(id);
+        delete registeredPosts[id]; // <-- IMPORTANT cache update
+
+        addToast("Unregistered successfully", "info");
+      }
+
+      // ✅ REGISTER
+      else {
+        const res = await axios.post(
+          import.meta.env.VITE_API_BASE_URL + "/registrations",
+          { trainingID: id },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        const reg = res.data.data;
+
+        // ✅ Update cache instantly
+        myRegistrations.value.add(id);
+        registeredPosts[id] = { registrationID: reg.registrationID }; // <-- save ID locally
+
+        addToast("Registered successfully", "success");
+      }
+
+      // ✅ Optional: save cache to localStorage so it persists even after refresh
+      localStorage.setItem(
+        "registeredPosts",
+        JSON.stringify(registeredPosts)
       );
-      myRegistrations.value.delete(id);
-      addToast("Unregistered successfully", "info");
-    } else {
-      await axios.post(
-        import.meta.env.VITE_API_BASE_URL + "/registrations",
-        { trainingID: id },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      myRegistrations.value.add(id);
-      addToast("Registered successfully", "success");
+
+    } catch (error) {
+      console.error("Failed to toggle registration:", error);
+      addToast("Failed to update registration", "error");
+    } finally {
+      registerLoading[id] = false;
     }
-  } catch (error) {
-    console.error("Failed to toggle registration:", error);
-    addToast("Failed to update registration", "error");
-  } finally {
-    registerLoading[id] = false; // ✅ stop loading
   }
-}
 
 </script>
 
