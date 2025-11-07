@@ -32,11 +32,24 @@ async function toggleRegister(training) {
   const token = localStorage.getItem("token");
   if (!token) return alert("Please log in first.");
 
-  const trainingID = Number(training.trainingID || training.TrainingID);
+  // ✅ Log full training object so we see what fields exist
+  console.log("TRAINING OBJECT:", training);
+
+  // ✅ More reliable way to detect trainingID
+  const trainingID = Number(
+    training.trainingID ??
+    training.TrainingID ??
+    training.id ??
+    training.ID ??
+    training.TrainingId ??
+    training.training?.trainingID
+  );
+
+  console.log("Sending trainingID:", trainingID, typeof trainingID);
+
   const isRegistered = registeredPosts[trainingID];
 
-   console.log("Sending trainingID:", trainingID, typeof trainingID);
-  // Unregister
+  // ✅ UNREGISTER
   if (isRegistered) {
     try {
       await axios.delete(
@@ -53,11 +66,11 @@ async function toggleRegister(training) {
     return;
   }
 
-  // Register
+  // ✅ REGISTER
   try {
     const res = await axios.post(
       import.meta.env.VITE_API_BASE_URL + "/registrations",
-      { trainingID }, // ✅ Integer now
+      { trainingID }, 
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
@@ -65,7 +78,7 @@ async function toggleRegister(training) {
     registeredPosts[trainingID] = { registrationID: reg.registrationID };
     alert(`You have registered for ${training.title}`);
   } catch (err) {
-    console.error(err.response.data);
+    console.error(err.response?.data || err);
     alert("Registration failed.");
   }
 }
