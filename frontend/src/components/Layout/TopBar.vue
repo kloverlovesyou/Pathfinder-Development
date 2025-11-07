@@ -4,7 +4,6 @@ import axios from "axios";
 import { useRoute } from "vue-router";
 const route = useRoute();
 const registeredPosts = reactive({}); // stores registered trainings
-const loadingRegister = reactive({});
 
 function showToast(message, type = "info") {
   toasts.value.push({ message, type });
@@ -44,17 +43,22 @@ async function toggleRegister(training) {
     return;
   }
 
+  console.log("TRAINING OBJECT:", training);
+
   const trainingID = Number(
     training.trainingID ??
-      training.TrainingID ??
-      training.id ??
-      training.ID ??
-      training.TrainingId ??
-      training.training?.trainingID
+    training.TrainingID ??
+    training.id ??
+    training.ID ??
+    training.TrainingId ??
+    training.training?.trainingID
   );
+
+  console.log("Sending trainingID:", trainingID, typeof trainingID);
 
   const isRegistered = registeredPosts[trainingID];
 
+  // Get a safe title
   const title =
     training.title ??
     training.TrainingTitle ??
@@ -62,28 +66,20 @@ async function toggleRegister(training) {
     training.trainingName ??
     "this training";
 
-  // ✅ Prevent double click
-  if (loadingRegister[trainingID]) return;
-
-  // ✅ Set loading state
-  loadingRegister[trainingID] = true;
-
   // ✅ UNREGISTER
   if (isRegistered) {
     try {
       await axios.delete(
-        import.meta.env.VITE_API_BASE_URL +
-          `/registrations/${isRegistered.registrationID}`,
+        import.meta.env.VITE_API_BASE_URL + `/registrations/${isRegistered.registrationID}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       delete registeredPosts[trainingID];
+
       showToast(`You have unregistered from ${title}`, "success");
     } catch (err) {
       console.error(err);
       showToast("Unregister failed.", "error");
-    } finally {
-      loadingRegister[trainingID] = false;
     }
     return;
   }
@@ -103,8 +99,6 @@ async function toggleRegister(training) {
   } catch (err) {
     console.error(err.response?.data || err);
     showToast("Registration failed.", "error");
-  } finally {
-    loadingRegister[trainingID] = false;
   }
 }
 
@@ -622,29 +616,25 @@ async function handleResultClick(item) {
           <button
             v-if="isTraining(selectedPost)"
             class="btn btn-sm text-white"
-            :disabled="loadingRegister[
-              Number(selectedPost.TrainingID || selectedPost.trainingID)
-            ]"
             :class="
-              loadingRegister[
-                Number(selectedPost.TrainingID || selectedPost.trainingID)
+              registeredPosts[
+                selectedPost.trainingID ??
+                selectedPost.TrainingID ??
+                selectedPost.id ??
+                selectedPost.ID
               ]
-                ? 'bg-gray-400 cursor-not-allowed'
-                : registeredPosts[String(selectedPost.TrainingID || selectedPost.trainingID)]
                 ? 'bg-gray-500'
                 : 'bg-customButton'
             "
             @click="toggleRegister(selectedPost)"
           >
-            <!-- ✅ Show loading text -->
             {{
-              loadingRegister[
-                Number(selectedPost.TrainingID || selectedPost.trainingID)
+              registeredPosts[
+                selectedPost.trainingID ??
+                selectedPost.TrainingID ??
+                selectedPost.id ??
+                selectedPost.ID
               ]
-                ? 'Processing...'
-                : registeredPosts[
-                    String(selectedPost.TrainingID || selectedPost.trainingID)
-                  ]
                 ? 'Unregister'
                 : 'Register'
             }}
@@ -796,6 +786,21 @@ async function handleResultClick(item) {
         </form>
       </div>
     </dialog>
+
+    <div class="fixed top-4 right-4 space-y-2 z-50">
+      <div
+        v-for="(t, i) in toasts"
+        :key="i"
+        class="px-4 py-2 rounded text-white shadow-lg"
+        :class="{
+          'bg-green-600': t.type === 'success',
+          'bg-red-600': t.type === 'error',
+          'bg-blue-600': t.type === 'info'
+        }"
+      >
+        {{ t.message }}
+      </div>
+    </div>
     <!--  ORGANIZATION MODAL -->
     <dialog v-if="isOrgModalOpen" open class="modal sm:modal-middle">
       <div class="modal-box max-w-2xl relative font-poppins">
