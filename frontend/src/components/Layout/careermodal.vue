@@ -140,70 +140,71 @@ function formatDateTime(dateStr) {
 </script>
 
 <template>
-    <div>
-      <!-- Career Modal -->
-      <dialog v-if="show" open class="modal sm:modal-middle">
-        <div class="modal-box max-w-3xl relative font-poppins">
-          <button
-            class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
-            @click="$emit('close')"
+  <div>
+    <!-- Career Modal -->
+    <dialog v-if="show" open class="modal sm:modal-middle">
+      <div class="modal-box max-w-3xl relative font-poppins">
+        <button
+          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
+          @click="$emit('close')"
+        >
+          ✕
+        </button>
+
+        <h2 class="text-xl font-bold mb-2">{{ career.position }}</h2>
+        <p class="text-sm text-gray-600 mb-2">
+          Organization: {{ career.organizationName }}
+        </p>
+
+        <!-- Buttons -->
+        <!-- Buttons -->
+      <div class="my-4 flex justify-end gap-2">
+        <button
+          class="btn btn-outline btn-sm flex items-center justify-center space-x-2"
+          @click="toggleBookmark"
+          :disabled="careerBookmarkLoading"
+        >
+          <!-- Spinner -->
+          <svg
+            v-if="careerBookmarkLoading"
+            class="animate-spin h-4 w-4 text-gray-600"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
           >
-            ✕
-          </button>
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
+            ></path>
+          </svg>
 
-          <h2 class="text-xl font-bold mb-2">{{ career.position }}</h2>
-          <p class="text-sm text-gray-600 mb-2">
-            Organization: {{ career.organizationName }}
-          </p>
+          <!-- Text -->
+          <span v-else>
+            {{ isBookmarked ? "Bookmarked" : "Bookmark" }}
+          </span>
+        </button>
 
-          <!-- Buttons -->
-          <div class="my-4 flex justify-end gap-2">
-    <button
-      class="btn btn-outline btn-sm flex items-center justify-center space-x-2"
-      @click="toggleBookmark"
-      :disabled="careerBookmarkLoading"
-    >
-      <!-- Spinner -->
-      <svg
-        v-if="careerBookmarkLoading"
-        class="animate-spin h-4 w-4 text-gray-600"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle
-          class="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          stroke-width="4"
-        ></circle>
-        <path
-          class="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
-        ></path>
-      </svg>
+        <button
+          v-if="!isApplied"
+          class="btn btn-sm bg-customButton text-white"
+          @click="openUploadModal"
+        >
+          Apply
+        </button>
 
-      <!-- Text -->
-      <span v-else>
-        {{ isBookmarked ? "Bookmarked" : "Bookmark" }}
-      </span>
-    </button>
-
-    <button
-      v-if="!isApplied"
-      class="btn btn-sm bg-customButton text-white"
-      @click="openUploadModal"
-    >
-      Apply
-    </button>
-
-    <button v-else class="btn btn-sm bg-gray-500 text-white" disabled>
-      Applied
-    </button>
-  </div>
+        <button v-else class="btn btn-sm bg-gray-500 text-white" disabled>
+          Applied
+        </button>
+      </div>
 
         <!-- Career Details -->
         <p><strong>Details:</strong> {{ career.detailsAndInstructions }}</p>
