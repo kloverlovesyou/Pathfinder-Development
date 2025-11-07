@@ -77,9 +77,13 @@ const startAllQRCountdowns = () => {
   if (qrCountdownInterval) clearInterval(qrCountdownInterval);
 
   qrCountdownInterval = setInterval(() => {
+    const now = new Date().getTime();
+    let newUpcoming = 0;
+    let newCompleted = 0;
+
     activities.value.forEach((activity) => {
+      // --- QR Countdown ---
       if (activity.end_time) {
-        const now = new Date().getTime();
         const expiry = new Date(activity.end_time).getTime();
         const diff = expiry - now;
 
@@ -91,7 +95,25 @@ const startAllQRCountdowns = () => {
           qrCountdowns[activity.id] = "Expired";
         }
       }
+
+      // --- Update counters dynamically ---
+      const statusLower = (activity.status || "").toLowerCase();
+      const endTimePassed = activity.end_time
+        ? now > new Date(activity.end_time).getTime()
+        : false;
+
+      // Completed if end_time passed or status is completed
+      if (statusLower === "completed" || endTimePassed) {
+        newCompleted++;
+      } else if (["upcoming", "registered", "scheduled"].includes(statusLower)) {
+        newUpcoming++;
+      }
     });
+
+    // Assign updated counters
+    upcomingCount.value = newUpcoming;
+    completedCount.value = newCompleted;
+
   }, 1000);
 };
 
