@@ -5,7 +5,6 @@ import axios from "axios";
 import CalendarSidebar from "@/components/Layout/CalendarSidebar.vue";
 
 const calendarOpen = ref(false);
-const careerBookmarkLoading = reactive({});
 
 function openModalCalendar(event) {
   // Handle modal opening for training/career
