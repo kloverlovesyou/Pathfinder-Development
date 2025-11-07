@@ -32,6 +32,7 @@ function removeCertificate(index) {
 
 function startTrainingCounterUpdater() {
   fetchTrainingCounters(); // initial fetch
+  console.log("upcoming:", upcomingCount.value, "completed:", completedCount.value);
   // Update every 60 seconds
   trainingCounterInterval = setInterval(fetchTrainingCounters, 60 * 1000);
 }
@@ -72,9 +73,11 @@ async function fetchTrainingCounters() {
     const now = new Date().getTime();
 
     trainings.forEach((r) => {
+    console.log("end_time:", r.end_time, "parsed:", Date.parse(r.end_time));
+
       const statusLower = (r.registrationStatus || "").toLowerCase();
       const endTimePassed = r.end_time
-        ? now > new Date(r.end_time).getTime()
+        ? now > Date.parse(r.end_time)
         : false;
 
       // Mark as completed if end_time passed or status is completed
