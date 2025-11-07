@@ -130,6 +130,7 @@ Route::put('/user', [ApplicantController::class, 'update']);
 
 Route::get('/search', [SearchController::class, 'search']);
 Route::get('/training/{id}', [SearchController::class, 'getTraining']);
+Route::get('/training/{id}', [TrainingController::class, 'show']);
 Route::get('/career/{id}', [SearchController::class, 'getCareer']);
 Route::get('/organization/{id}', [SearchController::class, 'getOrganization']);
 

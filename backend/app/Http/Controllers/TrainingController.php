@@ -236,4 +236,36 @@ class TrainingController extends Controller
             'data' => $training->load('organization')
         ], 201);
     }
+
+    public function show($id)
+    {
+        $training = Training::with('organization')->find($id);
+
+        if (!$training) {
+            return response()->json(['message' => 'Training not found'], 404);
+        }
+
+        // Optional: generate attendance link if key exists
+        $attendanceLink = $training->attendance_key
+            ? env('FRONTEND_URL') . '/attendance/checkin?trainingID='
+            . $training->trainingID . '&key=' . $training->attendance_key
+            : null;
+
+        return response()->json([
+            'trainingID' => $training->trainingID,
+            'title' => $training->title,
+            'description' => $training->description,
+            'schedule' => $training->schedule?->format('Y-m-d H:i'),
+            'end_time' => $training->end_time?->format('Y-m-d H:i'),
+            'mode' => $training->mode,
+            'location' => $training->location,
+            'trainingLink' => $training->trainingLink,
+            'attendance_key' => $training->attendance_key,
+            'attendance_link' => $attendanceLink,
+            'organizationID' => $training->organizationID,
+            'organization' => [
+                'name' => optional($training->organization)->name ?? 'Unknown',
+            ],
+        ]);
+    }
 }
