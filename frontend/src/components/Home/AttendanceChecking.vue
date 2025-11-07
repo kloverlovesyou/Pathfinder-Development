@@ -31,21 +31,42 @@
     </div>
 
     <!-- Attendance Form -->
-    <form v-if="!loading && !submitted && !invalidQR" @submit.prevent="submitAttendance" class="space-y-3 w-full max-w-md">
-      <p class="mb-2">Please enter your details to record attendance:</p>
+    <form v-if="!loading && !submitted && !invalidQR" @submit.prevent="submitAttendance" class="space-y-4 w-full max-w-md">
+      <p class="mb-2 text-left font-medium">Please enter your details to record attendance:</p>
 
-      <input v-model="first_name" type="text" placeholder="First Name" class="w-full p-2 border rounded" required />
-      <input v-model="last_name" type="text" placeholder="Last Name" class="w-full p-2 border rounded" required />
-      <input v-model="email" type="email" placeholder="Email" class="w-full p-2 border rounded" required />
-      <input v-model="phone" type="text" placeholder="Phone Number" class="w-full p-2 border rounded" required />
+      <div class="form-control">
+        <input v-model="first_name" type="text" placeholder="First Name"
+               class="input w-full bg-gray-100 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+               required />
+      </div>
 
-      <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700" :disabled="loading">
+      <div class="form-control">
+        <input v-model="last_name" type="text" placeholder="Last Name"
+               class="input w-full bg-gray-100 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+               required />
+      </div>
+
+      <div class="form-control">
+        <input v-model="email" type="email" placeholder="Email"
+               class="input w-full bg-gray-100 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+               required />
+      </div>
+
+      <div class="form-control">
+        <input v-model="phone" type="text" placeholder="Phone Number"
+               class="input w-full bg-gray-100 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+               required />
+      </div>
+
+      <button type="submit"
+              class="btn w-full bg-customButton hover:bg-dark-slate text-white rounded-lg py-2"
+              :disabled="loading">
         Submit Attendance
       </button>
     </form>
 
     <!-- Success or error message -->
-   <div v-if="submitted" :class="messageBoxClass" class="mt-4 w-full max-w-md p-3 rounded shadow flex items-center space-x-2">
+    <div v-if="submitted" :class="messageBoxClass" class="mt-4 w-full max-w-md p-3 rounded shadow flex items-center space-x-2">
       <span class="text-xl">{{ messageIcon }}</span>
       <span class="font-medium">{{ message }}</span>
     </div>
@@ -56,16 +77,6 @@
 import { ref, onMounted, computed } from "vue";
 import axios from "axios";
 import { useRoute } from "vue-router";
-
-const messageBoxClass = computed(() =>
-  submittedSuccess.value
-    ? 'bg-green-100 text-green-800 border border-green-400'
-    : 'bg-red-100 text-red-800 border border-red-400'
-);
-
-const messageIcon = computed(() =>
-  submittedSuccess.value ? '✅' : '⚠️'
-);
 
 const route = useRoute();
 
@@ -84,12 +95,19 @@ const invalidQR = ref("");
 const submitted = ref(false);
 const submittedSuccess = ref(false);
 
+const messageBoxClass = computed(() =>
+  submittedSuccess.value
+    ? 'bg-green-100 text-green-800 border border-green-400'
+    : 'bg-red-100 text-red-800 border border-red-400'
+);
+
+const messageIcon = computed(() =>
+  submittedSuccess.value ? '✅' : '⚠️'
+);
+
 onMounted(async () => {
-  // Read QR code query params
   trainingID.value = route.query.trainingID;
   key.value = route.query.key;
-
-  console.log("TrainingID:", trainingID.value, "Key:", key.value);
 
   if (!trainingID.value || !key.value) {
     invalidQR.value = "❌ Invalid or incomplete QR code.";
@@ -97,19 +115,14 @@ onMounted(async () => {
     return;
   }
 
-  // Fetch training details
   try {
     const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/training/${trainingID.value}`);
-    console.log("Training Response:", res.data);
     training.value = res.data;
 
-    // Optional: check if the QR key matches the fetched training's key
     if (training.value.attendance_key && training.value.attendance_key !== key.value) {
       invalidQR.value = "❌ QR code key does not match this training.";
     }
-
   } catch (error) {
-    console.error(error);
     invalidQR.value = "❌ Failed to load training information. Please check the link or try again.";
   } finally {
     loading.value = false;
@@ -152,7 +165,6 @@ async function submitAttendance() {
     submittedSuccess.value = true;
     submitted.value = true;
   } catch (error) {
-    console.error(error);
     message.value = error.response?.data?.message || "⚠️ Attendance submission failed.";
     submittedSuccess.value = false;
     submitted.value = true;
