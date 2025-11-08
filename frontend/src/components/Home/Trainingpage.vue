@@ -276,7 +276,7 @@ const showModal = ref(false);
     :isRegistered="myRegistrations.has(selectedTraining?.trainingID)"
     :isBookmarked="bookmarkedTrainings.includes(selectedTraining?.trainingID)"
     :bookmarkLoading="bookmarkLoading[selectedTraining?.trainingID]"
-    :registerLoading="registerLoading[selectedTraining?.trainingID]"  
+    :registerLoading="regStore.loading[selectedTraining?.trainingID]" 
     @close="showModal = false"
     @toggle-register="toggleRegister"
     @bookmark="toggleBookmark"
