@@ -84,10 +84,29 @@ class CareerController extends Controller
             $career->tags()->attach($validated['Tags']);
         }
 
-        return response()->json([
-            'message' => 'CAREER POSTED SUCCESSFULLY!!!',
-            'data' => $career,
-            'tags' => $validated['Tags'] ?? []
-        ], 201);
-    }
+    return response()->json([
+        'message' => 'CAREER POSTED SUCCESSFULLY!!!',
+        'data' => $career
+    ], 201);
+}
+
+//This is for Total numbers of career
+public function total() {
+    $totalCareers = \App\Models\Career::count();
+    return response()->json(['totalCareers' => $totalCareers]);
+}
+
+//This is for numbers of on-going and filled out career
+public function countsPartial()
+{
+    $now = now(); // current date & time
+
+    $ongoing = \App\Models\Career::where('deadlineOfSubmission', '>', $now)->count();
+    $filled = \App\Models\Career::where('deadlineOfSubmission', '<=', $now)->count();
+
+    return response()->json([
+        'ongoing' => $ongoing,
+        'filled' => $filled,
+    ]);
+}
 }
