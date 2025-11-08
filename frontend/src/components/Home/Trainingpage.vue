@@ -5,41 +5,21 @@ import QrcodeVue from "qrcode.vue";
 import { useRegistrationStore } from "@/stores/registrationStore";
 const regStore = useRegistrationStore();
 
-const registeredPosts = reactive({}); // stores registered trainings
-const myRegistrations = ref(new Set()); // used for QR display
+// Remove this local reactive store
+// const registeredPosts = reactive({});
+const myRegistrations = ref(new Set()); // still used for QR display
 const bookmarkLoading = reactive({});
 const registerLoading = reactive({});
 
-// 🔹 Fetch user's registered trainings
-async function fetchMyRegistrations() {
-  const token = localStorage.getItem("token");
-  if (!token) return;
-
-  try {
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL+ "/registrations", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    // Clear previous data
-    Object.keys(registeredPosts).forEach((k) => delete registeredPosts[k]);
-    myRegistrations.value.clear();
-
-    // Fill both structures
-    res.data.forEach((r) => {
-      registeredPosts[r.trainingID] = {
-        registrationID: r.registrationID,
-      };
-      myRegistrations.value.add(r.trainingID); // ✅ for QR logic
-    });
-
-    console.log("✅ Registered trainings loaded:", registeredPosts);
-    console.log("✅ myRegistrations set:", Array.from(myRegistrations.value));
-  } catch (err) {
-    console.error("❌ Failed to fetch registrations:", err);
-  }
-}
-
-onMounted(fetchMyRegistrations);
+// ---------------------------
+// 🔹 Use store for registrations
+// ---------------------------
+onMounted(() => {
+  regStore.loadMyRegistrations().then(() => {
+    // Update local QR logic set
+    myRegistrations.value = new Set(Object.keys(regStore.registeredPosts).map(Number));
+  });
+});
 
 // Date of PH
 const PH_TIME_OFFSET = 8 * 60; // +8 hours in minutes
@@ -65,7 +45,7 @@ const trainingsWithOrg = computed(() =>
   trainings.value.map((t) => {
     const org = organizations.value.find(
       (o) => o.organizationID === t.organizationID
-    ); // <-- fix here
+    );
     return {
       ...t,
       organizationName: org ? org.name : "Unknown",
@@ -78,48 +58,14 @@ const trainingsWithOrg = computed(() =>
 // 📌 Modal Controls
 // ============================
 function openTrainingModal(training) {
-  // Format schedule nicely
-  const formattedSchedule = training.schedule
-    ? new Date(training.schedule).toLocaleString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "N/A";
-
-  // Build a clean, safe version of the training data
-  selectedTraining.value = {
-    ...training,
-    organizationName:
-      training.organizationName || training.organization?.name || "N/A",
-    mode: training.mode || training.Mode || "N/A",
-    location: training.location || "N/A",
-    trainingLink: training.trainingLink || null,
-    formattedSchedule,
-  };
-
-  // Show the modal
   selectedTraining.value = training;
   showModal.value = true;
   isModalOpen.value = true;
 
-  console.log("✅ Opening training modal:", selectedTraining.value);
-  console.log("Attendance key:", training.attendance_key);
-  console.log("Expires at:", training.attendance_expires_at);
-
   // Start QR countdown if registered
-  if (myRegistrations.has(training.trainingID)) {
+  if (regStore.registeredPosts[training.trainingID]) {
     startModalQRCountdown(training);
   }
-
-  if (!myRegistrations.has(training.trainingID) && training.registered) {
-    myRegistrations.value.add(training.trainingID);
-  }
-
-  selectedTraining.value = training;
 }
 
 function closeModal() {
@@ -132,10 +78,6 @@ function closeModal() {
 // 🔖 Bookmark Functions
 // ============================
 
-// Fetch user's bookmarks
-
-
-// Toggle bookmark
 async function toggleBookmark(trainingId) {
   const token = localStorage.getItem("token");
   if (!token) {
@@ -143,20 +85,16 @@ async function toggleBookmark(trainingId) {
     return;
   }
 
-  // ✅ Set loading true
   bookmarkLoading[trainingId] = true;
 
   try {
-    // If already bookmarked → REMOVE
     if (isTrainingBookmarked(trainingId)) {
       await axios.delete(
         import.meta.env.VITE_API_BASE_URL + `/bookmarks/${trainingId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       addToast("Bookmark removed", "info");
-    } 
-    // If NOT bookmarked → ADD
-    else {
+    } else {
       await axios.post(
         import.meta.env.VITE_API_BASE_URL + "/bookmarks",
         { trainingID: trainingId },
@@ -164,14 +102,11 @@ async function toggleBookmark(trainingId) {
       );
       addToast("Bookmarked!", "success");
     }
-
-    // Refresh bookmark list so UI updates
     await fetchBookmarks();
   } catch (error) {
     console.error("Failed to toggle bookmark:", error);
     addToast("Failed to toggle bookmark", "error");
   } finally {
-    // ✅ Stop loading
     bookmarkLoading[trainingId] = false;
   }
 }
@@ -200,15 +135,14 @@ function addToast(message, type = "info") {
 }
 
 // ---------------------------
-// Fetch
+// Fetch APIs
 // ---------------------------
 async function fetchTrainings() {
   try {
-    const token = localStorage.getItem("token"); // Make sure this exists
+    const token = localStorage.getItem("token");
     const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/trainings", {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
-    console.log("✅ Trainings API response:", res.data);
     trainings.value = res.data;
   } catch (err) {
     console.error("❌ fetchTrainings error:", err.response?.data || err);
@@ -216,12 +150,8 @@ async function fetchTrainings() {
   }
 }
 
-function getToken() {
-  return localStorage.getItem("token");
-}
-
 async function fetchBookmarks() {
-  const token = getToken();
+  const token = localStorage.getItem("token");
   if (!token) return;
   const { data } = await axios.get(import.meta.env.VITE_API_BASE_URL + "/bookmarks", {
     headers: { Authorization: `Bearer ${token}` },
@@ -231,18 +161,13 @@ async function fetchBookmarks() {
 
 async function fetchOrganizations() {
   try {
-    const token = getToken();
+    const token = localStorage.getItem("token");
     const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/organization", {
       headers: { Authorization: `Bearer ${token}` },
     });
     organizations.value = res.data;
   } catch {}
 }
-
-// ---------------------------
-// Bookmark
-// ---------------------------
-
 
 // ---------------------------
 // Training Modal
@@ -256,122 +181,39 @@ function closeTrainingListModal() {
 }
 
 // ---------------------------
-// Computed
+// Toggle Registration using store
 // ---------------------------
-// ✅ FIXED — only *one* function
-function startAllQRCountdowns() {
-  Object.values(qrIntervals).forEach(clearInterval);
-  qrIntervals = {};
+async function toggleRegister(training) {
+  await regStore.toggleRegister(training.trainingID);
 
-  trainingsWithOrg.value.forEach((training) => {
-    if (!myRegistrations.value.has(training.trainingID) || !training.attendance_expires_at) return;
-
-    const id = training.trainingID;
-    const expires = new Date(training.attendance_expires_at);
-
-    const update = () => {
-      const diff = expires - new Date();
-      if (diff <= 0) {
-        qrCountdowns[id] = "00:00";
-        clearInterval(qrIntervals[id]);
-      } else {
-        const m = Math.floor(diff / 60000).toString().padStart(2, "0");
-        const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, "0");
-        qrCountdowns[id] = `${m}:${s}`;
-      }
-    };
-
-    qrCountdowns[id] = "loading...";
-    update();
-    qrIntervals[id] = setInterval(update, 1000);
-  });
+  // Sync local QR set immediately
+  if (regStore.registeredPosts[training.trainingID]) {
+    myRegistrations.value.add(training.trainingID);
+  } else {
+    myRegistrations.value.delete(training.trainingID);
+  }
 }
 
 // ---------------------------
 // Lifecycle
 // ---------------------------
 onMounted(async () => {
-
-    // ✅ Load cached data first (UI updates instantly)
-  const cached = localStorage.getItem("registeredPosts");
-  if (cached) {
-    Object.assign(registeredPosts, JSON.parse(cached));
-    myRegistrations.value = new Set(Object.keys(registeredPosts).map(Number));
-  }
-
   await fetchOrganizations();
   await fetchTrainings();
   await fetchBookmarks();
-  await fetchMyRegistrations();
+
+  // Load registrations via store
+  await regStore.loadMyRegistrations();
+  myRegistrations.value = new Set(Object.keys(regStore.registeredPosts).map(Number));
 });
 
 const calendarOpen = ref(false);
-
 function openModalCalendar(event) {
-  // Handle modal opening for training/career
   console.log("Event clicked:", event);
 }
 
 import TrainingModal from "@/components/Layout/TrainingModal.vue";
-
 const showModal = ref(false);
-
-// Toggle registration
-  async function toggleRegister(training) {
-    regStore.toggleRegister(training.trainingID);
-    const token = localStorage.getItem("token");
-    if (!token) return alert("Please log in first");
-
-    const id = training.trainingID;
-    registerLoading[id] = true;
-
-    try {
-      // ✅ UNREGISTER
-      if (myRegistrations.value.has(id)) {
-        await axios.delete(
-          import.meta.env.VITE_API_BASE_URL + `/registrations/${id}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        // ✅ Update local cache instantly
-        myRegistrations.value.delete(id);
-        delete registeredPosts[id]; // <-- IMPORTANT cache update
-
-        addToast("Unregistered successfully", "info");
-      }
-
-      // ✅ REGISTER
-      else {
-        const res = await axios.post(
-          import.meta.env.VITE_API_BASE_URL + "/registrations",
-          { trainingID: id },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        const reg = res.data.data;
-
-        // ✅ Update cache instantly
-        myRegistrations.value.add(id);
-        registeredPosts[id] = { registrationID: reg.registrationID }; // <-- save ID locally
-
-        addToast("Registered successfully", "success");
-      }
-
-      // ✅ Optional: save cache to localStorage so it persists even after refresh
-      localStorage.setItem(
-        "registeredPosts",
-        JSON.stringify(registeredPosts)
-      );
-
-    } catch (error) {
-      console.error("Failed to toggle registration:", error);
-      addToast("Failed to update registration", "error");
-    } finally {
-      registerLoading[id] = false;
-    }
-  }
 
 </script>
 
