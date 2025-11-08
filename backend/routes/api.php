@@ -23,7 +23,7 @@ use App\Http\Controllers\CareerRecommendationController;
 
 //no auth required
 Route::get('/trainings', [TrainingController::class, 'index']);
-Route::get('/careers', [CareerController::class, 'index']);
+
 //tags
 Route::get('/tags', [TagController::class, 'index']);
 Route::post('/tags', [TagController::class, 'store']);
@@ -32,6 +32,7 @@ Route::post('/tags', [TagController::class, 'store']);
 Route::get('/careers', [CareerRecommendationController::class, 'index']);
 Route::get('/careers/{careerID}/recommended', [CareerRecommendationController::class, 'recommendedCareers']);
 Route::get('/careers/{careerID}/trainings', [CareerRecommendationController::class, 'recommendedTrainings']);
+Route::get('/careers/{careerID}/details', [CareerRecommendationController::class, 'careerDetails']);
 
 //auth required
 Route::middleware('auth.custom')->group(function () {
