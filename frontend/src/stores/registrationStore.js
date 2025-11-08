@@ -5,7 +5,11 @@ import axios from "axios";
 export const useRegistrationStore = defineStore("regStore", () => {
   const registeredPosts = reactive({});
   const myRegistrations = ref(new Set());
-  const loading = reactive({}); // 🔹 Loading states per trainingID
+  const loading = ref({}); // 🔹 use ref instead of reactive
+
+  function setLoading(trainingID, value) {
+    loading.value = { ...loading.value, [trainingID]: value }; // triggers reactivity
+  }
 
   // Fetch user's registrations
   async function fetchMyRegistrations() {
@@ -18,13 +22,11 @@ export const useRegistrationStore = defineStore("regStore", () => {
     );
 
     myRegistrations.value.clear();
-    Object.keys(registeredPosts).forEach(k => delete registeredPosts[k]);
+    Object.keys(registeredPosts).forEach((k) => delete registeredPosts[k]);
 
     res.data.forEach((r) => {
       myRegistrations.value.add(r.trainingID);
-      registeredPosts[r.trainingID] = {
-        registrationID: r.registrationID,
-      };
+      registeredPosts[r.trainingID] = { registrationID: r.registrationID };
     });
 
     localStorage.setItem("registeredPosts", JSON.stringify(registeredPosts));
@@ -35,7 +37,7 @@ export const useRegistrationStore = defineStore("regStore", () => {
     const token = localStorage.getItem("token");
     if (!token) return alert("Please log in first");
 
-    loading[trainingID] = true;
+    setLoading(trainingID, true);
 
     try {
       if (myRegistrations.value.has(trainingID)) {
@@ -54,25 +56,22 @@ export const useRegistrationStore = defineStore("regStore", () => {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         myRegistrations.value.add(trainingID);
-        registeredPosts[trainingID] = {
-          registrationID: res.data.data.registrationID,
-        };
+        registeredPosts[trainingID] = { registrationID: res.data.data.registrationID };
       }
 
-      // Update local cache
       localStorage.setItem("registeredPosts", JSON.stringify(registeredPosts));
     } catch (err) {
       console.error("Failed to toggle registration:", err);
-      throw err; // optional: let UI handle toast
+      throw err;
     } finally {
-      loading[trainingID] = false; // 🔹 Reset loading
+      setLoading(trainingID, false);
     }
   }
 
   return {
     registeredPosts,
     myRegistrations,
-    loading, // 🔹 expose loading
+    loading, // 🔹 now reactive
     fetchMyRegistrations,
     toggleRegister,
   };
