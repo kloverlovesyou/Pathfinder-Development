@@ -208,7 +208,7 @@ const handleLogin = async () => {
       })
     );
 
-    await regStore.fetchMyRegistration(); // 🔹 ensures myRegistrations is populated
+    await regStore.fetchMyRegistrations(); // 🔹 ensures myRegistrations is populated
 
     // 3️⃣ Redirect based on role
     if (role === "organization") {
