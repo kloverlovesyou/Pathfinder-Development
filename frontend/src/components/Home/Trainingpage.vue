@@ -4,7 +4,7 @@ import axios from "axios";
 import QrcodeVue from "qrcode.vue";
 import { useRegistrationStore } from "@/stores/registrationStore";
 const regStore = useRegistrationStore();
-
+const myRegistrations = computed(() => regStore.myRegistrations);
 // Remove this local reactive store
 // const registeredPosts = reactive({});
 const bookmarkLoading = reactive({});
@@ -15,8 +15,7 @@ const registerLoading = reactive({});
 // ---------------------------
 onMounted(() => {
   regStore.loadMyRegistrations().then(() => {
-    // Update local QR logic set
-    myRegistrations.value = new Set(Object.keys(regStore.registeredPosts).map(Number));
+    // Update local QR logic se
   });
 });
 
@@ -237,7 +236,7 @@ const showModal = ref(false);
           </div>
 
           <!-- Right: QR code if registered -->
-          <div v-if="regStore.myRegistrations.has(training.trainingID)">
+          <div v-if="myRegistrations.has(training.trainingID)">
             <div
               v-if="
                 training.attendance_key &&
