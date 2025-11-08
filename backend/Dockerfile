@@ -24,6 +24,9 @@ RUN composer install --no-dev --optimize-autoloader && \
     php artisan route:cache && \
     php artisan view:cache
 
+# Ensure storage/logs is writable for scheduler
+RUN chown -R www-data:www-data /var/www/html/storage
+
 # Copy supervisor config
 COPY ./supervisor/scheduler.conf /etc/supervisor/conf.d/scheduler.conf
 
