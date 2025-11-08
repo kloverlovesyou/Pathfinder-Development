@@ -275,4 +275,24 @@ class TrainingController extends Controller
             ],
         ]);
     }
+//This is for Total numbers of trainings
+public function total() {
+    $totalTrainings = \App\Models\Training::count();
+    return response()->json(['totalTrainings' => $totalTrainings]);
+}
+
+//This is for numbers of upcoming and completed trainings
+public function countsPartial()
+{
+    // Ensure timezone matches your data
+    $now = now('Asia/Manila'); // Philippine Standard Time
+
+    $upcoming = \App\Models\Training::where('schedule', '>', $now)->count();
+    $completed = \App\Models\Training::where('schedule', '<=', $now)->count();
+
+    return response()->json([
+        'upcoming' => $upcoming,
+        'completed' => $completed,
+    ]);
+}
 }

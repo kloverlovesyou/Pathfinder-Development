@@ -107,6 +107,14 @@
         </div>
       </header>
 
+      <!-- ✅ GLOBAL SEARCH -->
+      <section class="global-search-section">
+        <div class="flex justify-center my-6 px-4">
+          <input type="text" v-model="globalSearchQuery" placeholder="Search trainings..."
+            class="global-search-bar text-black px-4 py-2 border rounded-lg w-full sm:w-3/4 md:w-1/2 lg:w-1/3" />
+        </div>
+      </section>
+
       <!-- ✅ Upcoming Trainings Section -->
       <section class="upcoming">
         <div class="flex items-center justify-between">
@@ -120,7 +128,7 @@
 
         <!-- ✅ Grid Layout -->
         <div class="trainings-grid">
-          <div v-for="training in visibleUpcomingTrainings" :key="training.trainingID" class="training-card"
+          <div v-for="training in visibleFilteredUpcoming" :key="training.trainingID" class="training-card"
             @click="openTrainingDetails(training)">
             <div class="training-right" @click="openTrainingDetails(training)">
               <h3 class="training-title">{{ training.title }}</h3>
@@ -160,7 +168,7 @@
 
         <!-- ✅ Grid Layout -->
         <div class="trainings-grid">
-          <div v-for="training in visibleCompletedTrainings" :key="training.trainingID" class="training-card"
+          <div v-for="training in visibleFilteredCompleted" :key="training.trainingID" class="training-card"
             @click="openTrainingDetails(training)">
             <div class="training-right" @click="openTrainingDetails(training)">
               <h3 class="training-title">{{ training.title }}</h3>
@@ -529,6 +537,7 @@ export default {
   data() {
     return {
       dictLogo,
+      globalSearchQuery: '',
       showAllUpcoming: false,
       showAllCompleted: false,
       qrCodeValue: null,
@@ -1017,14 +1026,61 @@ async saveTraining() {
   },
 
   computed: {
-  todayDate() {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`; // format: YYYY-MM-DD
-  },
+    todayDate() {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, "0");
+      const day = String(today.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`; // format: YYYY-MM-DD
+    },
+    visibleUpcomingTrainings() {
+      const list = this.sortedUpcomingTrainings;
+      return this.showAllUpcoming ? list : list.slice(0, 4);
+    },
 
+    visibleCompletedTrainings() {
+      const list = this.sortedCompletedTrainings;
+      return this.showAllCompleted ? list : list.slice(0, 4);
+    },
+
+    sortedUpcomingTrainings() {
+      const now = new Date();
+      return this.upcomingtrainings
+        .filter(t => new Date(t.schedule) >= now)
+        .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
+    },
+
+    sortedCompletedTrainings() {
+      const now = new Date();
+      return this.upcomingtrainings
+        .filter(t => new Date(t.schedule) < now)
+        .sort((a, b) => new Date(b.schedule) - new Date(a.schedule));
+    },
+    filteredUpcoming() {
+      const query = this.globalSearchQuery.toLowerCase();
+      if (!query) return this.sortedUpcomingTrainings;
+      return this.sortedUpcomingTrainings.filter(training =>
+        training.title.toLowerCase().startsWith(query) // 🔹 only matches if letters typed are in order from the start
+      );
+    },
+    filteredCompleted() {
+      const query = this.globalSearchQuery.toLowerCase();
+      if (!query) return this.sortedCompletedTrainings;
+      return this.sortedCompletedTrainings.filter(training =>
+        training.title.toLowerCase().startsWith(query)
+      );
+    },
+    visibleFilteredUpcoming() {
+      return this.showAllUpcoming
+        ? this.filteredUpcoming
+        : this.filteredUpcoming.slice(0, 4);
+    },
+    visibleFilteredCompleted() {
+      return this.showAllCompleted
+        ? this.filteredCompleted
+        : this.filteredCompleted.slice(0, 4);
+    },
+  
   visibleUpcomingTrainings() {
     const orgId = this.currentOrganizationId;
     const list = this.sortedUpcomingTrainings.filter(
@@ -1383,15 +1439,10 @@ const logout = () => {
 /* Training and Job Offer Area*/
 
 .training-slider {
-  display: flex;
-  flex-direction: column;
-  /* ✅ vertical */
-  overflow-y: auto;
-  /* ✅ vertical scroll */
-  max-height: 400px;
-  /* adjust as needed */
-  gap: 1rem;
-  /* spacing between cards */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
 }
 
 .upcoming {
@@ -1419,9 +1470,48 @@ const logout = () => {
 
 .trainings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  /* 4 per row if enough space */
-  gap: 1rem;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  overflow: hidden;
+  transition: max-height 0.4s ease;
+}
+
+/* Collapsed view */
+.trainings-grid.collapsed {
+  max-height: 600px;
+  /* adjust depending on your card height */
+}
+
+/* Expanded view */
+.trainings-grid.expanded {
+  max-height: 2000px;
+  overflow: visible;
+}
+
+/* Default - Large screens (4 per row) */
+.trainings-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Medium screens (3 per row) */
+@media (max-width: 1200px) {
+  .trainings-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Small screens (2 per row) */
+@media (max-width: 900px) {
+  .trainings-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Extra small screens (1 per row) */
+@media (max-width: 600px) {
+  .trainings-grid {
+    grid-template-columns: repeat(1, 1fr);
+  }
 }
 
 .training-card {
@@ -2422,5 +2512,28 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   width: 26px;
   height: 26px;
   cursor: pointer;
+}
+
+/* Search Bar CSS*/
+.global-search-bar {
+  width: 600px;
+  padding: 10px 14px;
+  border: 1px solid #aaaaaa;
+  border-radius: 8px;
+  background-color: #fff;
+  outline: none;
+  transition: all 0.2s ease;
+  color: #000;
+}
+
+.global-search-bar::placeholder {
+  color: #9ca3af;       /* same as Tailwind’s text-gray-400 */
+  font-style: italic;   /* optional — match whatever Training uses */
+  opacity: 1;           /* ensures consistent rendering */
+}
+
+.global-search-bar:focus {
+  border-color: #44576d;
+  box-shadow: 0 0 5px rgba(68, 87, 109, 0.2);
 }
 </style>
