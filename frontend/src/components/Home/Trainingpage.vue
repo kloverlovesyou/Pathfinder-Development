@@ -14,7 +14,7 @@ const registerLoading = reactive({});
 // 🔹 Use store for registrations
 // ---------------------------
 onMounted(() => {
-  regStore.loadMyRegistrations().then(() => {
+  regStore.fetchMyRegistrations().then(() => {
     // Update local QR logic se
   });
 });
@@ -195,7 +195,7 @@ onMounted(async () => {
   await fetchBookmarks();
 
   // Load registrations via store
-  await regStore.loadMyRegistrations();
+  await regStore.fetchMyRegistrations();
   
 });
 
