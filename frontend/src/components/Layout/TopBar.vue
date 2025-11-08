@@ -10,6 +10,18 @@ const route = useRoute();
 const toasts = ref([]);
 const regStore = useRegistrationStore(); // ✅ Pinia store
 
+async function fetchQRCode(trainingID) {
+  try {
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + `/training/${trainingID}/qrcode`
+    );
+    qrCodeUrl.value = res.data.qr_url || null;
+  } catch (err) {
+    console.error("Failed to fetch QR code:", err);
+    qrCodeUrl.value = null;
+  }
+}
+
 function showToast(message, type = "info") {
   toasts.value.push({ message, type });
 
@@ -26,26 +38,34 @@ onMounted(() => {
 // ✅ Toggle using store
 async function toggleRegister(training) {
   const token = localStorage.getItem("token");
-  if (!token) {
-    showToast("Please log in first.", "error");
-    return;
-  }
+  if (!token) return showToast("Please log in first.", "error");
+
+  const trainingID = training.trainingID || training.TrainingID || training.ID;
 
   try {
-    await regStore.toggleRegister(training);
+    await regStore.toggleRegister(training); // ✅ store handles registration
 
-    const trainingID =
-      training.trainingID ||
-      training.TrainingID ||
-      training.id ||
-      training.ID;
-
-    const isRegistered = regStore.registeredPosts[trainingID];
+    const isRegistered = !!regStore.registeredPosts[trainingID];
 
     showToast(
       isRegistered ? "Registered successfully!" : "Unregistered successfully!",
       "success"
     );
+
+    // Fetch QR code only if registered
+    if (isRegistered) {
+      try {
+        const res = await axios.get(
+          import.meta.env.VITE_API_BASE_URL + `/training/${trainingID}/qrcode`
+        );
+        qrCodeUrl.value = res.data.qr_url || null;
+      } catch (err) {
+        console.error("Failed to fetch QR code:", err);
+        qrCodeUrl.value = null;
+      }
+    } else {
+      qrCodeUrl.value = null; // clear QR on unregister
+    }
   } catch (err) {
     showToast("Action failed.", "error");
     console.error(err);
@@ -166,6 +186,8 @@ async function openOrganizationModal(orgItem) {
   }
 }
 
+
+
 function resetModals() {
   selectedPost.value = null;
   isModalOpen.value = false;
@@ -184,18 +206,16 @@ async function openTrainingModal(post) {
   selectedPost.value = post;
   isTrainingModalOpen.value = true;
 
-  try {
-    const trainingID = post.trainingID || post.TrainingID || post.ID;
-    const res = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + `/training/${trainingID}/qrcode`
-    );
+  const trainingID = post.trainingID || post.TrainingID || post.ID;
 
-    qrCodeUrl.value = res.data.qr_url;
-  } catch (err) {
-    console.error("Failed to fetch QR code:", err);
+  // Only fetch QR if user is already registered
+  if (regStore.registeredPosts[trainingID]) {
+    await fetchQRCode(trainingID);
+  } else {
     qrCodeUrl.value = null;
   }
 }
+
 
 function closeTrainingModal() {
   selectedPost.value = {};
