@@ -7,9 +7,6 @@ const regStore = useRegistrationStore();
 
 // Remove this local reactive store
 // const registeredPosts = reactive({});
-const myRegistrations = computed(() =>
-  new Set(Object.keys(regStore.registeredPosts).map(Number))
-); // still used for QR display
 const bookmarkLoading = reactive({});
 const registerLoading = reactive({});
 
@@ -188,12 +185,6 @@ function closeTrainingListModal() {
 async function toggleRegister(training) {
   await regStore.toggleRegister(training.trainingID);
 
-  // Sync local QR set immediately
-  if (regStore.registeredPosts[training.trainingID]) {
-    myRegistrations.value.add(training.trainingID);
-  } else {
-    myRegistrations.value.delete(training.trainingID);
-  }
 }
 
 // ---------------------------
@@ -206,7 +197,7 @@ onMounted(async () => {
 
   // Load registrations via store
   await regStore.loadMyRegistrations();
-  myRegistrations.value = new Set(Object.keys(regStore.registeredPosts).map(Number));
+  
 });
 
 const calendarOpen = ref(false);
@@ -246,7 +237,7 @@ const showModal = ref(false);
           </div>
 
           <!-- Right: QR code if registered -->
-          <div v-if="myRegistrations.has(training.trainingID)">
+          <div v-if="regStore.myRegistrations.has(training.trainingID)">
             <div
               v-if="
                 training.attendance_key &&
