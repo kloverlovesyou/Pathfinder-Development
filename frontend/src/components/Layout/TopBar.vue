@@ -18,7 +18,7 @@ function showToast(message, type = "info") {
 
 // ✅ Use store instead of local registeredPosts
 onMounted(() => {
-  regStore.loadMyRegistrations();
+  regStore.fetchMyRegistrations();
 });
 
 // ✅ Toggle using store
