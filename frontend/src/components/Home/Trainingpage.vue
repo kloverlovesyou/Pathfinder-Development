@@ -249,11 +249,7 @@ const showModal = ref(false);
                 new Date(training.end_time) > new Date()
               "
             >
-              <qrcode-vue 
-                  v-if="isRegistered && training"
-                  :value="regStore.registeredPosts[training.trainingID]?.attendance_link || ''"
-                  :size="120"
-                />
+              <qrcode-vue :value="training.attendance_link" :size="80" />
             </div>
             <div v-else>
               <p class="text-sm text-gray-500 text-center">
