@@ -613,38 +613,22 @@ async function handleResultClick(item) {
 
             <!-- Register (training only) -->
             <button
-              v-if="isTraining(selectedPost)"
-              class="btn btn-sm text-white"
-              :class="
-                regStore.registeredPosts[
-                  selectedPost.trainingID ??
-                  selectedPost.TrainingID ??
-                  selectedPost.id ??
-                  selectedPost.ID
-                ]
-                  ? 'bg-gray-500'
-                  : 'bg-customButton'
-              "
-              @click="
-                regStore.toggleRegister(
-                  selectedPost.trainingID ??
-                  selectedPost.TrainingID ??
-                  selectedPost.id ??
-                  selectedPost.ID
-                )
-              "
-            >
-              {{
-                regStore.registeredPosts[
-                  selectedPost.trainingID ??
-                  selectedPost.TrainingID ??
-                  selectedPost.id ??
-                  selectedPost.ID
-                ]
-                  ? 'Unregister'
-                  : 'Register'
-              }}
-            </button>
+                v-if="isTraining(selectedPost)"
+                class="btn btn-sm text-white flex items-center justify-center gap-2"
+                :class="regStore.registeredPosts[selectedPost.trainingID ?? selectedPost.TrainingID ?? selectedPost.id ?? selectedPost.ID] ? 'bg-gray-500' : 'bg-customButton'"
+                :disabled="regStore.loadingPosts[selectedPost.trainingID ?? selectedPost.TrainingID ?? selectedPost.id ?? selectedPost.ID]"
+                @click="toggleRegister(selectedPost)"
+              >
+                <template v-if="regStore.loadingPosts[selectedPost.trainingID ?? selectedPost.TrainingID ?? selectedPost.id ?? selectedPost.ID]">
+                  <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                  </svg>
+                </template>
+                <template v-else>
+                  {{ regStore.registeredPosts[selectedPost.trainingID ?? selectedPost.TrainingID ?? selectedPost.id ?? selectedPost.ID] ? 'Unregister' : 'Register' }}
+                </template>
+              </button>
           </div>
 
         <!-- Career Info -->
