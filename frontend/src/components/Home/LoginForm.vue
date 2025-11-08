@@ -153,20 +153,23 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
+import { useRegistrationStore } from "@/stores/registrationStore";
 
 const router = useRouter();
+const regStore = useRegistrationStore();
+
 const showPassword = ref(false);
 const email = ref("");
 const password = ref("");
 const emailError = ref(false);
 const passwordError = ref(false);
-
 const loginError = ref(""); // just show as text now
 
 const validateEmail = (emailVal) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
 const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
 
 const handleLogin = async () => {
+  // Validate input
   emailError.value = !validateEmail(email.value);
   passwordError.value = !validatePassword(password.value);
   loginError.value = "";
@@ -206,22 +209,24 @@ const handleLogin = async () => {
       })
     );
 
+    // 2️⃣.1 Load user registrations immediately into Pinia
+    await regStore.loadMyRegistrations(); // 🔹 ensures myRegistrations is populated
+
     // 3️⃣ Redirect based on role
     if (role === "organization") {
       router.push("/organization");
     } else if (role === "admin") {
       router.push("/admin");
     } else {
-      router.push("/app");
+      router.push("/app"); // your training page will now have correct QR/registration
     }
 
-    console.log("✅ Logged in successfully with token");
+    console.log("✅ Logged in successfully with token and registrations loaded");
   } catch (err) {
     console.error(err.response?.data || err.message);
     loginError.value = "Invalid credentials. Please try again.";
   }
 };
-
 </script>
 
 <style>
