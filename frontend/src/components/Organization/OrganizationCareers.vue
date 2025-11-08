@@ -2047,18 +2047,6 @@ input[type="text"] {
   /* make sure it’s not faded */
 }
 
-@keyframes fadeIn {
-  from {
-    transform: scale(0.95);
-    opacity: 0;
-  }
-
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
 /* Show more css */
 .show-more-btn {
   background-color: #374151;
