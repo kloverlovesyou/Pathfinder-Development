@@ -7,7 +7,9 @@ const regStore = useRegistrationStore();
 
 // Remove this local reactive store
 // const registeredPosts = reactive({});
-const myRegistrations = ref(new Set()); // still used for QR display
+const myRegistrations = computed(() =>
+  new Set(Object.keys(regStore.registeredPosts).map(Number))
+); // still used for QR display
 const bookmarkLoading = reactive({});
 const registerLoading = reactive({});
 
@@ -186,12 +188,6 @@ function closeTrainingListModal() {
 async function toggleRegister(training) {
   await regStore.toggleRegister(training.trainingID);
 
-  // Sync local QR set immediately
-  if (regStore.registeredPosts[training.trainingID]) {
-    myRegistrations.value.add(training.trainingID);
-  } else {
-    myRegistrations.value.delete(training.trainingID);
-  }
 }
 
 // ---------------------------
