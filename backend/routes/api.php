@@ -36,6 +36,16 @@ Route::get('/careers/{careerID}/details', [CareerRecommendationController::class
 
 //auth required
 Route::middleware('auth.custom')->group(function () {
+    // Certificate issuance
+    Route::put('/registrations/{registrationID}/certificate', [RegistrationController::class, 'updateCertificate']);
+    Route::post('/trainings/{trainingID}/certificates/bulk', [RegistrationController::class, 'issueBulkCertificates']);
+
+    // Applicant monitoring
+    Route::get('/careers/{careerID}/applicants', [ApplicationController::class, 'getApplicantsByCareer']);
+    Route::put('/applications/{applicationID}/status', [ApplicationController::class, 'updateStatus']);
+    Route::put('/applications/{applicationID}/interview', [ApplicationController::class, 'updateInterview']);
+    Route::get('/applications/{applicationID}/requirements', [ApplicationController::class, 'getRequirements']);
+
     // Careers & Trainings
     Route::post('/trainings', [TrainingController::class, 'store']);
     Route::post('/careers', [CareerController::class, 'store']);
