@@ -40,10 +40,10 @@ async function toggleRegister(training) {
   const token = localStorage.getItem("token");
   if (!token) return showToast("Please log in first.", "error");
 
-  const trainingID = training.trainingID || training.TrainingID || training.ID;
+  const trainingID = training.trainingID ?? training.TrainingID ?? training.ID ?? training.id;
 
   try {
-    await regStore.toggleRegister(training); // ✅ store handles registration
+    await regStore.toggleRegister(training);
 
     const isRegistered = !!regStore.registeredPosts[trainingID];
 
@@ -52,19 +52,11 @@ async function toggleRegister(training) {
       "success"
     );
 
-    // Fetch QR code only if registered
+    // ✅ Fetch QR if registered
     if (isRegistered) {
-      try {
-        const res = await axios.get(
-          import.meta.env.VITE_API_BASE_URL + `/training/${trainingID}/qrcode`
-        );
-        qrCodeUrl.value = res.data.qr_url || null;
-      } catch (err) {
-        console.error("Failed to fetch QR code:", err);
-        qrCodeUrl.value = null;
-      }
+      await fetchQRCode(trainingID);
     } else {
-      qrCodeUrl.value = null; // clear QR on unregister
+      qrCodeUrl.value = null;
     }
   } catch (err) {
     showToast("Action failed.", "error");
@@ -206,9 +198,12 @@ async function openTrainingModal(post) {
   selectedPost.value = post;
   isTrainingModalOpen.value = true;
 
-  const trainingID = post.trainingID || post.TrainingID || post.ID;
+  const trainingID = post.trainingID ?? post.TrainingID ?? post.ID ?? post.id;
 
-  // Only fetch QR if user is already registered
+  // Ensure latest registrations
+  await regStore.fetchMyRegistrations();
+
+  // If already registered, fetch QR
   if (regStore.registeredPosts[trainingID]) {
     await fetchQRCode(trainingID);
   } else {
