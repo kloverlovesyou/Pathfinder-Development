@@ -29,7 +29,7 @@ class TrainingController extends Controller
         return $key;
     }
 
-    private function autoGenerateQR(Training $training)
+    public function autoGenerateQR(Training $training)
     {
         $now = now();
 
