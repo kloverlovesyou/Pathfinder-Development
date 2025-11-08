@@ -153,6 +153,8 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
+import { useRegistrationStore } from "@/stores/registrationStore"; 
+const regStore = useRegistrationStore();
 
 const router = useRouter();
 const showPassword = ref(false);
