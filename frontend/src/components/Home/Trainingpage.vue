@@ -9,7 +9,7 @@ const regStore = useRegistrationStore();
 // const registeredPosts = reactive({});
 const bookmarkLoading = reactive({});
 const registerLoading = reactive({});
-
+const myRegistrations = computed(() => regStore.myRegistrations);
 // ---------------------------
 // 🔹 Use store for registrations
 // ---------------------------
@@ -237,7 +237,7 @@ const showModal = ref(false);
           </div>
 
           <!-- Right: QR code if registered -->
-          <div v-if="regStore.myRegistrations.has(training.trainingID)">
+          <div v-if="myRegistrations.value.has(training.trainingID)">
             <div
               v-if="
                 training.attendance_key &&
