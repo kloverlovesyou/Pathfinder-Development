@@ -186,17 +186,17 @@ async function openTrainingModal(post) {
 
   try {
     const trainingID = post.trainingID || post.TrainingID || post.ID;
-
     const res = await axios.get(
       import.meta.env.VITE_API_BASE_URL + `/training/${trainingID}/qrcode`
     );
 
-    qrCodeUrl.value = res.data.qr_url; // ✅ backend should return a URL
+    qrCodeUrl.value = res.data.qr_url;
   } catch (err) {
     console.error("Failed to fetch QR code:", err);
     qrCodeUrl.value = null;
   }
 }
+
 function closeTrainingModal() {
   selectedPost.value = {};
   isTrainingModalOpen.value = false;
