@@ -55,16 +55,22 @@ const trainingsWithOrg = computed(() =>
 // ============================
 // 📌 Modal Controls
 // ============================
-function openTrainingModal(training) {
+async function openTrainingModal(training) {
   selectedTraining.value = training;
   showModal.value = true;
   isModalOpen.value = true;
 
   // Start QR countdown if registered
   if (regStore.registeredPosts[training.trainingID]) {
+    // If attendance_link is missing, fetch it
+    if (!regStore.registeredPosts[training.trainingID].attendance_link) {
+      await regStore.fetchTrainingQRCode(training.trainingID);
+    }
+
     startModalQRCountdown(training);
   }
 }
+
 
 function closeModal() {
   isModalOpen.value = false;
@@ -243,7 +249,11 @@ const showModal = ref(false);
                 new Date(training.end_time) > new Date()
               "
             >
-              <qrcode-vue :value="training.attendance_link" :size="80" />
+              <qrcode-vue 
+                  v-if="isRegistered && training"
+                  :value="regStore.registeredPosts[training.trainingID]?.attendance_link || ''"
+                  :size="120"
+                />
             </div>
             <div v-else>
               <p class="text-sm text-gray-500 text-center">
