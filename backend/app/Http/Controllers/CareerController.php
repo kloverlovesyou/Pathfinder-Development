@@ -69,4 +69,24 @@ class CareerController extends Controller
         'data' => $career
     ], 201);
 }
+
+//This is for Total numbers of career
+public function total() {
+    $totalCareers = \App\Models\Career::count();
+    return response()->json(['totalCareers' => $totalCareers]);
+}
+
+//This is for numbers of on-going and filled out career
+public function countsPartial()
+{
+    $now = now(); // current date & time
+
+    $ongoing = \App\Models\Career::where('deadlineOfSubmission', '>', $now)->count();
+    $filled = \App\Models\Career::where('deadlineOfSubmission', '<=', $now)->count();
+
+    return response()->json([
+        'ongoing' => $ongoing,
+        'filled' => $filled,
+    ]);
+}
 }

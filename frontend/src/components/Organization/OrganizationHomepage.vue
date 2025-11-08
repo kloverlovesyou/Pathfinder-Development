@@ -107,32 +107,47 @@
         </div>
       </header>
 
-      <!-- Chart Section -->
-      <section class="chart-section">
-        <h2 class="chart-title">General Statistics</h2>
-        <canvas id="applicantChart"></canvas>
-        <div class="legend">
-          <span><span class="dot blue"></span> Training Applicants</span>
-          <span><span class="dot purple"></span> Job Applicants</span>
+      <!-- 🧾 Summary Cards -->
+      <section class="cards-container">
+          <div class="card">
+            <h4 class="cards-title">Total Trainings</h4>
+            <span class="cards-counter">{{ totalTrainings }}</span>
+          </div>
+        <div class="card">
+          <h4 class="cards-title">Upcoming Trainings</h4>
+          <span class="cards-counter">{{ upcomingTrainings }}</span>
         </div>
+        <div class="card">
+          <h4 class="cards-title">Completed Trainings</h4>
+          <span class="cards-counter">{{ completedTrainings }}</span>
+        </div>
+        <div class="card">
+          <h4 class="cards-title">Total Careers</h4>
+          <span class="cards-counter">{{ totalCareers }}</span>
+        </div>
+        <div class="card">
+          <h4 class="cards-title">Open Careers</h4>
+          <span class="cards-counter">{{ ongoingCareers }}</span>
+        </div>
+          <div class="card">
+            <h4 class="cards-title">Closed Careers</h4>
+            <span class="cards-counter">{{ filledOutCareers }}</span>
+          </div>
       </section>
 
-      <!-- Training Statistics Summary -->
-      <section class="chart-section">
-        <h2 class="chart-title">Training Statistics Summary</h2>
-        <canvas id="trainingSummaryChart"></canvas>
-      </section>
+      <!-- Chart Section -->
+      <section class="charts-container">
+        <div class="main-chart">
+          <canvas :id="activeChart.id"></canvas>
+          <h3>{{ activeChart.title }}</h3>
+        </div>
 
-      <!-- Applicant Engagement -->
-      <section class="chart-section">
-        <h2 class="chart-title">Applicant Engagement</h2>
-        <canvas id="engagementChart"></canvas>
-      </section>
-
-      <!-- Trending Insights -->
-      <section class="chart-section">
-        <h2 class="chart-title">Trending Insights</h2>
-        <canvas id="trendingChart"></canvas>
+        <div class="side-charts">
+          <div v-for="chart in sideCharts" :key="chart.id" class="side-chart" @click="swapChart(chart)">
+            <canvas :id="chart.id"></canvas>
+            <h4>{{ chart.title }}</h4>
+          </div>
+        </div>
       </section>
     </main>
   </div>
@@ -171,14 +186,67 @@ export default {
 
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, nextTick, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Chart from 'chart.js/auto';
+import axios from 'axios'
+
 
 const router = useRouter();
 const isSidebarOpen = ref(true);
 const organizationName = ref('');
 
+// reactive totals
+const totalTrainings = ref(0);
+const totalCareers = ref(0);
+
+// reactive count
+const upcomingTrainings = ref(0)
+const completedTrainings = ref(0)
+const ongoingCareers = ref(0)
+const filledOutCareers = ref(0)
+
+// Helper to compare dates ignoring time
+function isFuture(dateStr) {
+  const today = new Date();
+  const d = new Date(dateStr);
+  today.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+  return d >= today;
+}
+
+function isPast(dateStr) {
+  const today = new Date();
+  const d = new Date(dateStr);
+  today.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+  return d < today;
+}
+
+const fetchTotals = async () => {
+  try {
+    const trainingsResp = await axios.get('/api/trainings/total')
+    const careersResp = await axios.get('/api/careers/total')
+
+    totalTrainings.value = trainingsResp.data.totalTrainings
+    totalCareers.value = careersResp.data.totalCareers
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+// fetch totals when component mounts
+onMounted(async () => {
+  try {
+    const trainingsRes = await axios.get("http://localhost:8000/api/trainings/total");
+    const careersRes = await axios.get("http://localhost:8000/api/careers/total");
+
+    totalTrainings.value = trainingsRes.data.totalTrainings;
+    totalCareers.value = careersRes.data.totalCareers;
+  } catch (error) {
+    console.error("Failed to fetch totals:", error);
+  }
+});
 
 // Sidebar navigation functions
 const goToProfile = () => router.push('/profile');
@@ -192,130 +260,136 @@ const navigateTo = (route) => {
   router.push(route);
 }
 
-onMounted(() => {
-  // 1️⃣ Hardcoded Data
-  const summary = {
-    upcoming: 5,
-    completed: 3,
-    bookmarked: 2,
-  };
+// For Charts
+const activeChart = ref({ id: "chart1", title: "General Overview" });
+const sideCharts = ref([
+  { id: "chart2", title: "Training Summary" },
+  { id: "chart3", title: "Applicant Engagement" },
+  { id: "chart4", title: "Career Insights" },
+]);
 
-  const engagement = [
-    { title: "Cybersecurity Training", applicants_count: 30, bookmarks_count: 10 },
-    { title: "AI Bootcamp", applicants_count: 25, bookmarks_count: 15 },
-    { title: "Project Management 101", applicants_count: 40, bookmarks_count: 8 },
-  ];
+const charts = ref({});
 
-  const trending = {
-    mostAttended: [
-      { title: "AI Bootcamp", applicants_count: 45 },
-      { title: "Leadership Seminar", applicants_count: 38 },
-      { title: "Cloud Computing Basics", applicants_count: 32 },
-    ],
-    mostBookmarked: [
-      { title: "Digital Marketing 101", bookmarks_count: 20 },
-      { title: "AI Bootcamp", bookmarks_count: 18 },
-      { title: "UI/UX Fundamentals", bookmarks_count: 15 },
-    ],
-  };
-
-  // 2️⃣ Training Statistics Summary (Pie)
-  const ctx1 = document.getElementById("trainingSummaryChart");
-  new Chart(ctx1, {
+const chartConfigs = {
+  chart1: {
+    type: "line",
+    data: {
+      labels: ["Jan", "Feb", "Mar", "Apr", "May"],
+      datasets: [
+        {
+          label: "Training Registrants",
+          data: [120, 200, 180, 250, 300],
+          borderColor: "#44576D",
+          backgroundColor: "rgba(68, 87, 109, 0.2)",
+          tension: 0.3,
+          fill: true,
+        },
+        {
+          label: "Career Applicants",
+          data: [80, 140, 110, 350, 400],
+          borderColor: "#A7B1C2",
+          backgroundColor: "rgba(68, 87, 109, 0.2)",
+          tension: 0.3,
+          fill: true,
+        },
+      ],
+    },
+  },
+  chart2: {
     type: "pie",
     data: {
-      labels: ["Upcoming", "Completed", "Bookmarked"],
+      labels: ["Onsite", "Online", "Hybrid"],
       datasets: [
         {
-          data: [summary.upcoming, summary.completed, summary.bookmarked],
-          backgroundColor: ["#36A2EB", "#4BC0C0", "#9966FF"],
+          label: "Training Types",
+          data: [40, 35, 25],
+          backgroundColor: ["#44576D", "#A7B1C2", "#DFE3EA"],
         },
       ],
     },
-    options: {
-      responsive: true,
-      plugins: {
-        title: {
-          display: true,
-          text: "Training Statistics Summary",
-          font: { size: 18 },
-        },
-        legend: { position: "bottom" },
-      },
-    },
-  });
-
-  // 3️⃣ Applicant Engagement (Bar)
-  const ctx2 = document.getElementById("engagementChart");
-  new Chart(ctx2, {
+  },
+  chart3: {
     type: "bar",
     data: {
-      labels: engagement.map((t) => t.title),
+      labels: ["Internships", "Jobs", "Trainings"],
       datasets: [
         {
-          label: "Applicants",
-          data: engagement.map((t) => t.applicants_count || 0),
-          backgroundColor: "#36A2EB",
-        },
-        {
-          label: "Bookmarks",
-          data: engagement.map((t) => t.bookmarks_count || 0),
-          backgroundColor: "#9966FF",
+          label: "Applications",
+          data: [300, 500, 200],
+          backgroundColor: "#44576D",
         },
       ],
     },
-    options: {
-      responsive: true,
-      plugins: {
-        title: {
-          display: true,
-          text: "Applicant Engagement",
-          font: { size: 18 },
-        },
-        legend: { position: "bottom" },
-      },
-      scales: {
-        y: { beginAtZero: true },
-      },
-    },
-  });
-
-  // 4️⃣ Trending Insights (Horizontal Bar)
-  const ctx3 = document.getElementById("trendingChart");
-  new Chart(ctx3, {
-    type: "bar",
+  },
+  chart4: {
+    type: "doughnut",
     data: {
-      labels: trending.mostAttended.map((t) => t.title),
+      labels: ["Accepted", "Pending", "Rejected"],
       datasets: [
         {
-          label: "Most Attended",
-          data: trending.mostAttended.map((t) => t.applicants_count || 0),
-          backgroundColor: "#4BC0C0",
-        },
-        {
-          label: "Most Bookmarked",
-          data: trending.mostBookmarked.map((t) => t.bookmarks_count || 0),
-          backgroundColor: "#FF6384",
+          label: "Career Outcomes",
+          data: [60, 25, 15],
+          backgroundColor: ["#44576D", "#A7B1C2", "#DFE3EA"],
         },
       ],
     },
-    options: {
-      indexAxis: "y",
-      responsive: true,
-      plugins: {
-        title: {
-          display: true,
-          text: "Trending Insights",
-          font: { size: 18 },
-        },
-        legend: { position: "bottom" },
-      },
-      scales: {
-        x: { beginAtZero: true },
-      },
-    },
-  });
+  },
+};
+
+const fetchCounts = async () => {
+  try {
+    // Trainings counts
+    const { data: trainingCounts } = await axios.get("http://localhost:8000/api/trainings/counts-partial");
+    upcomingTrainings.value = trainingCounts.upcoming;
+    completedTrainings.value = trainingCounts.completed;
+
+    // Careers counts
+    const { data: careerCounts } = await axios.get("http://localhost:8000/api/careers/counts-partial");
+    ongoingCareers.value = careerCounts.ongoing;
+    filledOutCareers.value = careerCounts.filled;
+
+    console.log("Training counts:", trainingCounts);
+    console.log("Career counts:", careerCounts);
+  } catch (error) {
+    console.error("Error fetching counts:", error);
+  }
+};
+
+onMounted(() => {
+  fetchCounts();
 });
+
+// For total cards counter
+onMounted(async () => {
+  await trainingStore.fetchTrainings();
+  await careerStore.fetchCareers();
+});
+
+function renderChart(id) {
+  const ctx = document.getElementById(id);
+  if (ctx) charts.value[id] = new Chart(ctx, chartConfigs[id]);
+}
+
+onMounted(async () => {
+  await nextTick();
+  renderChart(activeChart.value.id);
+  sideCharts.value.forEach((chart) => renderChart(chart.id));
+});
+
+function swapChart(clickedChart) {
+  const oldMain = { ...activeChart.value };
+  activeChart.value = clickedChart;
+  sideCharts.value = sideCharts.value.map((chart) =>
+    chart.id === clickedChart.id ? oldMain : chart
+  );
+
+  nextTick(() => {
+    Object.values(charts.value).forEach((chart) => chart.destroy());
+    charts.value = {};
+    renderChart(activeChart.value.id);
+    sideCharts.value.forEach((chart) => renderChart(chart.id));
+  });
+}
 
 onMounted(() => {
   const storedUser = localStorage.getItem("user");
@@ -856,5 +930,225 @@ const logout = () => {
 .hamburger.shifted {
   transform: translateX(140px);
   /* Adjust this to your sidebar width */
+}
+
+/* 🧩 Base Layout */
+.charts-container {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  align-items: stretch;
+  /* ✅ Ensures both columns are equal height */
+  box-sizing: border-box;
+}
+
+/* 🟦 Main Chart */
+.main-chart {
+  flex: 3;
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+
+  height: 70vh;
+  max-height: 700px;
+  min-height: 500px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+/* 🟨 Side Charts Container */
+.side-charts {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  height: 70vh;
+  /* ✅ Exactly same height as main */
+  max-height: 700px;
+  min-height: 500px;
+  gap: 15px;
+  /* ✅ Controlled spacing between side charts */
+  box-sizing: border-box;
+}
+
+/* 🟩 Each Side Chart */
+.side-chart {
+  background: white;
+  border-radius: 12px;
+  padding: 15px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+
+  /* ✅ Flex math: each chart + gaps = full container height */
+  flex: 1 1 0;
+  min-height: 0;
+  /* avoids overflow */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.side-chart:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* 🧭 Chart canvases */
+canvas {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
+}
+
+/* 🏷️ Titles */
+.main-chart h3,
+.side-chart h4 {
+  margin-top: 10px;
+  color: #44576d;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+/* 📱 Responsive Adjustments */
+
+/* Medium Screens (Tablets, Laptops < 1200px) */
+@media (max-width: 1200px) {
+  .charts-container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .main-chart {
+    flex: none;
+    width: 100%;
+    height: 550px;
+  }
+
+  .side-charts {
+    flex: none;
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .side-chart {
+    flex: 1;
+    height: 250px;
+  }
+}
+
+/* Small Screens (Tablets < 768px) */
+@media (max-width: 768px) {
+  .charts-container {
+    flex-direction: column;
+    padding: 15px;
+    gap: 15px;
+  }
+
+  .main-chart {
+    height: 400px;
+    padding: 20px;
+  }
+
+  .side-charts {
+    flex-direction: column;
+    gap: 15px;
+    height: auto;
+  }
+
+  .side-chart {
+    height: 220px;
+  }
+}
+
+/* Extra Small Screens (Phones < 480px) */
+@media (max-width: 480px) {
+  .charts-container {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .main-chart {
+    height: 350px;
+    padding: 15px;
+  }
+
+  .side-chart {
+    height: 200px;
+    padding: 12px;
+  }
+
+  .main-chart h3,
+  .side-chart h4 {
+    font-size: 0.9rem;
+  }
+}
+
+/* 🧾 Summary Cards Container */
+.cards-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 20px;
+  margin: 20px;
+  flex-wrap: wrap;
+  margin-bottom: -15px;
+  /* responsive wrap for smaller screens */
+}
+
+/* 🏷️ Titles & Text */
+.cards-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.cards-counter {
+  font-size: 30px;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.cards-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch; /* 🔹 important for equal height */
+  margin: 20px;
+  gap: 20px;
+  flex-wrap: nowrap; /* keep left/right alignment */
+}
+
+.card {
+  flex: 1;
+  background: white;
+  border-radius: 12px;
+  padding: 18px;
+  text-align: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+
+/* 📱 Responsive */
+@media (max-width: 768px) {
+  .cards-container {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .summary-card {
+    width: 100%;
+  }
 }
 </style>

@@ -108,18 +108,26 @@
         </div>
       </header>
 
+      <!-- ✅ GLOBAL SEARCH -->
+      <section class="global-search-section">
+        <div class="flex justify-center my-6 px-4">
+          <input type="text" v-model="globalSearchQuery" placeholder=" Search careers..."
+            class="global-search-bar text-black px-4 py-2 rounded-lg w-full sm:w-3/4 md:w-1/2 lg:w-1/3" />
+        </div>
+      </section>
+
       <!-- UPCOMING CAREERS -->
       <section class="upcoming">
         <div class="flex items-center justify-between">
           <h2 class="section-title flex items-center gap-1">
-            Upcoming Careers
+            Open Careers
             <span class="count-badge">{{ sortedUpcomingCareers.length }}</span>
           </h2>
           <button class="plus-btn-text" @click="openCareerPopup">+</button>
         </div>
 
         <div class="career-grid">
-          <div class="career-card" v-for="career in visibleUpcomingCareers" :key="career.careerID || career.id"
+          <div class="career-card" v-for="career in visibleFilteredUpcoming" :key="career.careerID || career.id"
             @click="openCareerDetails(career)">
             <div class="career-right">
               <h3 class="career-title">{{ career.position }}</h3>
@@ -139,7 +147,7 @@
 
         <button v-if="sortedUpcomingCareers.length > 4" class="show-more-btn"
           @click="showAllUpcoming = !showAllUpcoming">
-          {{ showMoreUpcoming ? 'Show Less' : 'Show More' }}
+          {{ showAllUpcoming ? 'Show Less' : 'Show More' }}
         </button>
       </section>
 
@@ -147,13 +155,13 @@
       <section class="completed">
         <div class="flex items-center justify-between">
           <h2 class="section-title flex items-center gap-1">
-            Completed Careers
+            Closed Careers
             <span class="count-badge">{{ sortedCompletedCareers.length }}</span>
           </h2>
         </div>
 
         <div class="career-grid">
-          <div class="career-card" v-for="career in visibleCompletedCareers" :key="career.careerID || career.id"
+          <div class="career-card" v-for="career in visibleFilteredCompleted" :key="career.careerID || career.id"
             @click="openCareerDetails(career)">
             <div class="career-right">
               <h3 class="career-title">{{ career.title || career.position }}</h3>
@@ -415,6 +423,7 @@ export default {
   data() {
     return {
       dictLogo,
+      globalSearchQuery: '',
       openUpcomingMenu: null,
       openCompletedMenu: null,
 
@@ -780,7 +789,6 @@ export default {
       const list = this.sortedCompletedCareers;
       return this.showAllCompleted ? list : list.slice(0, 4);
     },
-
     sortedUpcomingCareers() {
       const now = new Date();
       const list = Array.isArray(this.upcomingCareers) ? this.upcomingCareers : [];
@@ -803,6 +811,42 @@ export default {
           return d < now; // only past deadlines
         })
         .sort((a, b) => new Date(b.deadlineOfSubmission) - new Date(a.deadlineOfSubmission));
+    },
+    filteredUpcomingCareers() {
+      const query = this.globalSearchQuery.toLowerCase();
+      return this.sortedUpcomingCareers.filter(career =>
+        career.position.toLowerCase().includes(query)
+      );
+    },
+    // 🔹 Filter upcoming careers (real-time, from start of string)
+    filteredUpcomingCareers() {
+      const query = this.globalSearchQuery.toLowerCase();
+      if (!query) return this.sortedUpcomingCareers;
+      return this.sortedUpcomingCareers.filter(career =>
+        career.position.toLowerCase().startsWith(query)
+      );
+    },
+
+    // 🔹 Filter completed careers (real-time, from start of string)
+    filteredCompletedCareers() {
+      const query = this.globalSearchQuery.toLowerCase();
+      if (!query) return this.sortedCompletedCareers;
+      return this.sortedCompletedCareers.filter(career =>
+        (career.position || "").toLowerCase().startsWith(query)
+      );
+    },
+
+    // 🔹 Respect “View More / View Less” logic
+    visibleFilteredUpcoming() {
+      return this.showAllUpcoming
+        ? this.filteredUpcomingCareers
+        : this.filteredUpcomingCareers.slice(0, 4);
+    },
+
+    visibleFilteredCompleted() {
+      return this.showAllCompleted
+        ? this.filteredCompletedCareers
+        : this.filteredCompletedCareers.slice(0, 4);
     },
   },
 
@@ -1121,22 +1165,60 @@ const logout = () => {
 }
 
 /* Training and Job Offer Area*/
-
 .career-slider {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  /* 4 per row on large screens */
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.5rem;
-  /* space between cards */
   margin-top: 1rem;
 }
 
 .career-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  /* 4 per row if enough space */
-  gap: 1rem;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  overflow: hidden;
+  transition: max-height 0.4s ease;
 }
+
+/* Collapsed view */
+.career-grid.collapsed {
+  max-height: 600px;
+  /* adjust depending on your card height */
+}
+
+/* Expanded view */
+.career-grid.expanded {
+  max-height: 2000px;
+  /* or something large enough */
+  overflow: visible;
+}
+
+/* Default - Large screens (4 per row) */
+.career-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Medium screens (3 per row) */
+@media (max-width: 1200px) {
+  .career-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Small screens (2 per row) */
+@media (max-width: 900px) {
+  .career-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Extra small screens (1 per row) */
+@media (max-width: 600px) {
+  .career-grid {
+    grid-template-columns: repeat(1, 1fr);
+  }
+}
+
 
 .upcoming {
   background: white;
@@ -1172,6 +1254,7 @@ const logout = () => {
   position: relative;
   transition: transform 0.2s ease;
 }
+
 
 .career-card:hover {
   transform: translateY(-4px);
@@ -2070,5 +2153,38 @@ input[type="text"] {
 
 .show-more-btn:active {
   transform: scale(0.97);
+}
+
+/* Search Bar CSS*/
+.global-search-bar {
+  width: 100%;
+  /* container controls width */
+  max-width: 600px;
+  /* optional */
+  height: 46px;
+  /* ✅ explicitly sets height */
+  padding: 0 14px;
+  /* horizontal padding only */
+  border: 1px solid #aaaaaa !important;
+  border-radius: 8px;
+  background-color: #fff;
+  outline: none;
+  transition: all 0.2s ease;
+  color: #000;
+}
+
+.global-search-bar::placeholder {
+  color: #9ca3af;
+  /* same as Tailwind’s text-gray-400 */
+  font-style: italic;
+  /* optional — match whatever Training uses */
+  opacity: 1;
+  /* ensures consistent rendering */
+  font-size: 16px;
+}
+
+.global-search-bar:focus {
+  border-color: #44576d;
+  box-shadow: 0 0 5px rgba(68, 87, 109, 0.2);
 }
 </style>
