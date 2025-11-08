@@ -182,7 +182,7 @@
 
           <h3 class="modal-title">Applicants for {{ selectedCareer.title }}</h3>
 
-          <div class="applicants-table-container">
+         <!-- <div class="applicants-table-container">
             <table>
               <thead>
                 <tr>
@@ -211,7 +211,7 @@
                     {{ person.status }}
                   </td>
 
-                  <!-- Requirements -->
+                
                   <td class="requirements-col">
                     <div v-if="person.requirementsSubmitted">
                       <button class="view-btn" @click="viewRequirements(person)">View</button>
@@ -222,26 +222,26 @@
                     </div>
                   </td>
 
-                  <!-- Interview Scheduling -->
+                  
                   <td>
-                    <!-- For Review -->
+                  
                     <button v-if="person.status === 'For Review'" class="schedule-btn"
                       @click="openScheduleModal(person)">
                       Schedule
                     </button>
 
-                    <!-- Interview Scheduled -->
+                    
                     <button v-else-if="person.status === 'Interview Scheduled'" class="schedule-btn view"
                       @click="openViewScheduleModal(person)">
                       View Schedule
                     </button>
 
-                    <!-- Hired -->
+                    
                     <button v-else-if="person.status === 'Hired'" class="schedule-btn hired" disabled>
                       Hired
                     </button>
 
-                    <!-- Rejected -->
+                
                     <button v-else-if="person.status === 'Rejected'" class="schedule-btn rejected" disabled>
                       Rejected
                     </button>
@@ -249,9 +249,113 @@
                 </tr>
               </tbody>
             </table>
+          </div> -->
+
+          <div class="applicants-table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>FULL NAME</th>
+                    <th>DATE SUBMITTED</th>
+                    <th>APPLICATION STATUS</th>
+                    <th>REQUIREMENTS</th>
+                    <th>INTERVIEW SCHEDULING</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="person in applicantsList" :key="person.id">
+                    <td>
+                      <p class="applicant-name">{{ person.name }}</p>
+                    </td>
+                    <td>
+                      <p class="application-date">{{ person.dateSubmitted }}</p>
+                    </td>
+                    <td>
+                      <select 
+                        v-model="person.status" 
+                        @change="updateApplicationStatus(person)"
+                        class="status-dropdown"
+                      >
+                        <option value="submitted">Submitted</option>
+                        <option value="in review">In Review</option>
+                        <option value="for interview">For Interview</option>
+                        <option value="accepted">Accepted</option>
+                        <option value="rejected">Rejected</option>
+                      </select>
+                    </td>
+                    <td class="requirements-col">
+                      <button 
+                        v-if="person.status === 'in review' && person.requirements" 
+                        class="view-btn" 
+                        @click="viewRequirements(person)"
+                      >
+                        View Requirements
+                      </button>
+                      <span v-else-if="!person.requirements">No requirements</span>
+                      <span v-else>-</span>
+                    </td>
+                    <td>
+                      <button 
+                        v-if="person.status === 'for interview' && !person.interviewSchedule" 
+                        class="schedule-btn"
+                        @click="openScheduleModal(person)"
+                      >
+                        Schedule
+                      </button>
+                      <button 
+                        v-else-if="person.status === 'for interview' && person.interviewSchedule" 
+                        class="schedule-btn view"
+                        @click="openViewScheduleModal(person)"
+                      >
+                        View Schedule
+                      </button>
+                      <button 
+                        v-else-if="person.status === 'accepted'" 
+                        class="schedule-btn hired" 
+                        disabled
+                      >
+                        Accepted
+                      </button>
+                      <button 
+                        v-else-if="person.status === 'rejected'" 
+                        class="schedule-btn rejected" 
+                        disabled
+                      >
+                        Rejected
+                      </button>
+                      <span v-else>-</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+
+        </div>
+      </div>
+
+      <!-- Requirements View Modal -->
+      <div v-if="showRequirementsModal" class="modal-overlay" @click.self="closeRequirementsModal">
+        <div class="modal-box requirements-modal">
+          <button class="modal-close-btn" @click="closeRequirementsModal">✕</button>
+          <h3>Requirements for {{ selectedPerson?.name }}</h3>
+          
+          <div class="requirements-viewer">
+            <iframe 
+              :src="requirementsUrl" 
+              class="pdf-viewer"
+              v-if="requirementsUrl"
+            ></iframe>
+            <p v-else>Loading requirements...</p>
+          </div>
+          
+          <div class="modal-actions">
+            <button class="confirm-btn" @click="printRequirements">Print</button>
+            <button class="cancel-btn" @click="closeRequirementsModal">Close</button>
           </div>
         </div>
       </div>
+
 
       <!-- Schedule Modal -->
       <div v-if="showScheduleModal" class="modal-overlay" @click.self="closeScheduleModal">
@@ -460,6 +564,9 @@ const fetchTags = async () => {
 export default {
   data() {
     return {
+      showRequirementsModal: false,
+      requirementsUrl: null,
+      selectedCareer: { title: '', careerID: null },
       newTagName: '',
       dictLogo,
       openUpcomingMenu: null,
@@ -608,6 +715,190 @@ export default {
   
 
   methods: {
+    async openApplicantsModal(career) {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please log in to continue.");
+        return;
+      }
+      
+      try {
+        this.selectedCareer = career;
+        const response = await axios.get(
+          `http://127.0.0.1:8000/api/careers/${career.careerID}/applicants`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+            },
+          }
+        );
+        
+        this.applicantsList = response.data.map(app => ({
+          ...app,
+          status: app.status || 'submitted' // Default status
+        }));
+        
+        this.showApplicantsModal = true;
+      } catch (error) {
+        console.error("Error fetching applicants:", error);
+        if (error.response) {
+          alert(error.response.data.message || "Failed to fetch applicants.");
+        } else {
+          alert("An error occurred while fetching applicants.");
+        }
+      }
+    },
+
+    async updateApplicationStatus(person) {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please log in to continue.");
+        return;
+      }
+      
+      try {
+        const response = await axios.put(
+          `http://127.0.0.1:8000/api/applications/${person.id}/status`,
+          { status: person.status },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        
+        // Update local state
+        const index = this.applicantsList.findIndex(a => a.id === person.id);
+        if (index !== -1) {
+          this.applicantsList[index] = { ...this.applicantsList[index], ...response.data.data };
+        }
+      } catch (error) {
+        console.error("Error updating status:", error);
+        alert("Failed to update application status.");
+        // Revert status change
+        await this.openApplicantsModal(this.selectedCareer);
+      }
+    },
+
+    async viewRequirements(person) {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please log in to continue.");
+        return;
+      }
+      
+      try {
+        this.selectedPerson = person;
+        // Create a blob URL for the PDF
+        const response = await axios.get(
+          `http://127.0.0.1:8000/api/applications/${person.id}/requirements`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            responseType: 'blob'
+          }
+        );
+        
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        this.requirementsUrl = URL.createObjectURL(blob);
+        this.showRequirementsModal = true;
+      } catch (error) {
+        console.error("Error fetching requirements:", error);
+        alert("Failed to load requirements.");
+      }
+    },
+
+    closeRequirementsModal() {
+      this.showRequirementsModal = false;
+      if (this.requirementsUrl) {
+        URL.revokeObjectURL(this.requirementsUrl);
+        this.requirementsUrl = null;
+      }
+    },
+
+    printRequirements() {
+      if (this.requirementsUrl) {
+        const printWindow = window.open(this.requirementsUrl);
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+      }
+    },
+
+    async confirmSchedule() {
+      if (!this.scheduleData.date) {
+        alert("Please select a date and time.");
+        return;
+      }
+      
+      if (!this.scheduleData.mode) {
+        alert("Please select interview mode (On-Site or Online).");
+        return;
+      }
+      
+      if (!this.scheduleData.detail) {
+        alert(
+          this.scheduleData.mode === "onSite"
+            ? "Please enter the interview location."
+            : "Please enter the interview link."
+        );
+        return;
+      }
+      
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please log in to continue.");
+        return;
+      }
+      
+      try {
+        const payload = {
+          interviewSchedule: this.scheduleData.date,
+          interviewMode: this.scheduleData.mode === "onSite" ? "On-Site" : "Online",
+        };
+        
+        if (this.scheduleData.mode === "onSite") {
+          payload.interviewLocation = this.scheduleData.detail;
+        } else {
+          payload.interviewLink = this.scheduleData.detail;
+        }
+        
+        const response = await axios.put(
+          `http://127.0.0.1:8000/api/applications/${this.selectedPerson.id}/interview`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        
+        // Update local state
+        const index = this.applicantsList.findIndex(a => a.id === this.selectedPerson.id);
+        if (index !== -1) {
+          this.applicantsList[index] = {
+            ...this.applicantsList[index],
+            ...response.data.data,
+            status: 'for interview',
+            interviewSchedule: payload.interviewSchedule,
+            interviewMode: payload.interviewMode,
+            interviewLocation: payload.interviewLocation,
+            interviewLink: payload.interviewLink,
+          };
+        }
+        
+        this.closeScheduleModal();
+        alert("Interview scheduled successfully!");
+      } catch (error) {
+        console.error("Error scheduling interview:", error);
+        alert("Failed to schedule interview.");
+      }
+    },
+
     checkToken() {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -1016,6 +1307,31 @@ const logout = () => {
 
 
 <style scoped>
+.status-dropdown {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background-color: white;
+  cursor: pointer;
+}
+
+.requirements-modal {
+  max-width: 800px;
+  width: 90%;
+}
+
+.pdf-viewer {
+  width: 100%;
+  height: 600px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  margin: 15px 0;
+}
+
+.requirements-viewer {
+  margin: 20px 0;
+}
 
 .tag-list-wrapper {
   overflow-x: auto; 

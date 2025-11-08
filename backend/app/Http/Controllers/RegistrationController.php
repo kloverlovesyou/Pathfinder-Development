@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Registration;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 class RegistrationController extends Controller
 {
@@ -132,4 +133,105 @@ class RegistrationController extends Controller
 
         return response()->json($registrants);
     }
+
+
+    public function updateCertificate(Request $request, $registrationID)
+    {
+        $user = $request->user();
+        
+        if (!$user || !isset($user->organizationID)) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+        
+        $registration = Registration::find($registrationID);
+        if (!$registration) {
+            return response()->json(['message' => 'Registration not found'], 404);
+        }
+        
+        // Verify training belongs to organization
+        $training = \App\Models\Training::where('trainingID', $registration->trainingID)
+            ->where('organizationID', $user->organizationID)
+            ->first();
+        
+        if (!$training) {
+            return response()->json(['message' => 'Access denied'], 403);
+        }
+        
+        $validated = $request->validate([
+            'certTrackingID' => 'required|string',
+            'certGivenDate' => 'required|date',
+            'certificate' => 'required|file|mimes:png|max:5120', // 5MB max
+        ]);
+        
+        // Store certificate file
+        $certificatePath = $request->file('certificate')->store('certificates', 'public');
+        
+        $registration->update([
+            'certTrackingID' => $validated['certTrackingID'],
+            'certGivenDate' => $validated['certGivenDate'],
+            'certificate' => $certificatePath,
+        ]);
+        
+        return response()->json([
+            'message' => 'Certificate issued successfully',
+            'data' => $registration,
+        ]);
+    }
+
+    public function issueBulkCertificates(Request $request, $trainingID)
+    {
+        $user = $request->user();
+        
+        if (!$user || !isset($user->organizationID)) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+        
+        // Verify training belongs to organization
+        $training = \App\Models\Training::where('trainingID', $trainingID)
+            ->where('organizationID', $user->organizationID)
+            ->first();
+        
+        if (!$training) {
+            return response()->json(['message' => 'Training not found or access denied'], 404);
+        }
+        
+        $validated = $request->validate([
+            'baseTrackingID' => 'required|string',
+            'certGivenDate' => 'required|date',
+            'certificates' => 'required|array',
+            'certificates.*' => 'required|file|mimes:png|max:5120',
+        ]);
+        
+        $registrations = Registration::where('trainingID', $trainingID)
+            ->whereNull('certTrackingID') // Only those without certificates
+            ->get();
+        
+        if ($registrations->count() !== count($validated['certificates'])) {
+            return response()->json([
+                'message' => 'Number of certificates does not match number of registrants without certificates'
+            ], 400);
+        }
+        
+        $baseID = $validated['baseTrackingID'];
+        $results = [];
+        
+        foreach ($registrations as $index => $registration) {
+            $certificatePath = $validated['certificates'][$index]->store('certificates', 'public');
+            $trackingID = $baseID . '-' . str_pad($index + 1, 3, '0', STR_PAD_LEFT); // e.g., BASE-001
+            
+            $registration->update([
+                'certTrackingID' => $trackingID,
+                'certGivenDate' => $validated['certGivenDate'],
+                'certificate' => $certificatePath,
+            ]);
+            
+            $results[] = $registration;
+        }
+        
+        return response()->json([
+            'message' => 'Certificates issued successfully',
+            'data' => $results,
+        ]);
+    }
+
 }
