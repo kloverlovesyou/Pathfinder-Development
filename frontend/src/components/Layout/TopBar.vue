@@ -4,6 +4,8 @@ import axios from "axios";
 import { useRoute } from "vue-router";
 import { useRegistrationStore } from "@/stores/registrationStore";
 
+const qrCodeUrl = ref(null);
+
 const route = useRoute();
 const toasts = ref([]);
 const regStore = useRegistrationStore(); // ✅ Pinia store
@@ -178,9 +180,22 @@ const isOrgModalOpen = ref(false);
 const selectedPost = ref({});
 const selectedOrg = ref({});
 
-function openTrainingModal(post) {
+async function openTrainingModal(post) {
   selectedPost.value = post;
   isTrainingModalOpen.value = true;
+
+  try {
+    const trainingID = post.trainingID || post.TrainingID || post.ID;
+
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + `/training/${trainingID}/qrcode`
+    );
+
+    qrCodeUrl.value = res.data.qr_url; // ✅ backend should return a URL
+  } catch (err) {
+    console.error("Failed to fetch QR code:", err);
+    qrCodeUrl.value = null;
+  }
 }
 function closeTrainingModal() {
   selectedPost.value = {};
@@ -523,6 +538,7 @@ async function handleResultClick(item) {
         >
           ✕
         </button>
+
         <h2 class="text-xl font-bold mb-2">{{ selectedPost.Title }}</h2>
         <p class="text-sm text-gray-600 mb-2">
           Organization: {{ selectedPost.OrganizationName }}
@@ -530,6 +546,7 @@ async function handleResultClick(item) {
 
         <!-- Buttons -->
         <div class="my-4 flex justify-end gap-2">
+
           <!-- Bookmark -->
           <button
             class="btn btn-outline btn-sm"
@@ -542,7 +559,7 @@ async function handleResultClick(item) {
             }}
           </button>
 
-          <!-- Register (training only) -->
+          <!-- Register -->
           <button
             v-if="isTraining(selectedPost)"
             class="btn btn-sm text-white"
@@ -571,6 +588,24 @@ async function handleResultClick(item) {
           </button>
 
         </div>
+
+        <!-- ✅ ✅ QR CODE SECTION -->
+        <div class="flex justify-center my-4">
+          <template v-if="qrCodeUrl">
+            <img
+              :src="qrCodeUrl"
+              alt="Training QR"
+              class="w-40 h-40 border rounded shadow-md"
+            />
+          </template>
+
+          <template v-else>
+            <p class="text-center text-gray-500 text-sm">
+              QR code will appear once registered.
+            </p>
+          </template>
+        </div>
+        <!-- ✅ ✅ END QR SECTION -->
 
         <!-- Training Info -->
         <p><strong>Mode:</strong> {{ selectedPost.Mode || "Not specified" }}</p>
