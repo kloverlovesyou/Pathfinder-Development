@@ -238,8 +238,8 @@ const fetchTotals = async () => {
 // fetch totals when component mounts
 onMounted(async () => {
   try {
-    const trainingsRes = await axios.get("http://localhost:8000/api/trainings/total");
-    const careersRes = await axios.get("http://localhost:8000/api/careers/total");
+    const trainingsRes = await axios.get(import.meta.env.VITE_API_BASE_URL +"/trainings/total");
+    const careersRes = await axios.get(import.meta.env.VITE_API_BASE_URL +"/careers/total");
 
     totalTrainings.value = trainingsRes.data.totalTrainings;
     totalCareers.value = careersRes.data.totalCareers;
@@ -339,12 +339,12 @@ const chartConfigs = {
 const fetchCounts = async () => {
   try {
     // Trainings counts
-    const { data: trainingCounts } = await axios.get("http://localhost:8000/api/trainings/counts-partial");
+    const { data: trainingCounts } = await axios.get(import.meta.env.VITE_API_BASE_URL +"/trainings/counts-partial");
     upcomingTrainings.value = trainingCounts.upcoming;
     completedTrainings.value = trainingCounts.completed;
 
     // Careers counts
-    const { data: careerCounts } = await axios.get("http://localhost:8000/api/careers/counts-partial");
+    const { data: careerCounts } = await axios.get(import.meta.env.VITE_API_BASE_URL +"/careers/counts-partial");
     ongoingCareers.value = careerCounts.ongoing;
     filledOutCareers.value = careerCounts.filled;
 
