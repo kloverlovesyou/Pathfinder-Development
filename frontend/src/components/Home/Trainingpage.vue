@@ -2,6 +2,8 @@
 import { ref, reactive, computed, onMounted, nextTick, watch } from "vue";
 import axios from "axios";
 import QrcodeVue from "qrcode.vue";
+import { useRegistrationStore } from "@/stores/registrationStore";
+const regStore = useRegistrationStore();
 
 const registeredPosts = reactive({}); // stores registered trainings
 const myRegistrations = ref(new Set()); // used for QR display
@@ -316,6 +318,7 @@ const showModal = ref(false);
 
 // Toggle registration
   async function toggleRegister(training) {
+    regStore.toggleRegister(training.trainingID);
     const token = localStorage.getItem("token");
     if (!token) return alert("Please log in first");
 

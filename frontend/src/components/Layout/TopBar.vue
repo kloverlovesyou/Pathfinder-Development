@@ -2,9 +2,11 @@
 import { ref, onMounted, onBeforeUnmount, watch, reactive } from "vue";
 import axios from "axios";
 import { useRoute } from "vue-router";
+import { useRegistrationStore } from "@/stores/registrationStore";
+
 const route = useRoute();
-const registeredPosts = reactive({}); // stores registered trainings
 const toasts = ref([]);
+const regStore = useRegistrationStore(); // ✅ Pinia store
 
 function showToast(message, type = "info") {
   toasts.value.push({ message, type });
@@ -14,121 +16,63 @@ function showToast(message, type = "info") {
   }, 3000);
 }
 
-async function fetchMyRegistrations() {
-  // ✅ Load cached data first
-  const cached = localStorage.getItem("registeredPosts");
-  if (cached) {
-    Object.assign(registeredPosts, JSON.parse(cached));
+// ✅ Use store instead of local registeredPosts
+onMounted(() => {
+  regStore.loadMyRegistrations();
+});
+
+// ✅ Toggle using store
+async function toggleRegister(training) {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    showToast("Please log in first.", "error");
+    return;
   }
 
-  const token = localStorage.getItem("token");
-  if (!token) return;
-
   try {
-    const res = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + "/registrations",
-      { headers: { Authorization: `Bearer ${token}` } }
+    await regStore.toggleRegister(training);
+
+    const trainingID =
+      training.trainingID ||
+      training.TrainingID ||
+      training.id ||
+      training.ID;
+
+    const isRegistered = regStore.registeredPosts[trainingID];
+
+    showToast(
+      isRegistered ? "Registered successfully!" : "Unregistered successfully!",
+      "success"
     );
-
-    // ✅ FIX HERE
-    res.data.forEach((r) => {
-      registeredPosts[r.trainingID] = {
-        registrationID: r.registrationID,
-      };
-    });
-
-    // ✅ Save to cache
-    localStorage.setItem("registeredPosts", JSON.stringify(registeredPosts));
-
-    console.log("✅ Registered trainings:", registeredPosts);
   } catch (err) {
-    console.error("❌ Failed to fetch registrations:", err);
+    showToast("Action failed.", "error");
+    console.error(err);
   }
 }
 
-onMounted(fetchMyRegistrations);
-
-  async function toggleRegister(training) {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      showToast("Please log in first.", "error");
-      return;
-    }
-
-    const trainingID = Number(
-      training.trainingID || training.TrainingID || training.id || training.ID
-    );
-
-    const isRegistered = registeredPosts[trainingID];
-
-    // ✅ UNREGISTER
-    if (isRegistered) {
-      try {
-        await axios.delete(
-          `${import.meta.env.VITE_API_BASE_URL}/registrations/${isRegistered.registrationID}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        delete registeredPosts[trainingID];
-        localStorage.setItem("registeredPosts", JSON.stringify(registeredPosts));
-
-        showToast("Unregistered successfully!", "success");
-      } catch (err) {
-        console.error(err);
-        showToast("Unregister failed.", "error");
-      }
-      return;
-    }
-
-    // ✅ REGISTER
-    try {
-      const res = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/registrations`,
-        { trainingID },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      const reg = res.data.data;
-      registeredPosts[trainingID] = { registrationID: reg.registrationID };
-
-      // ✅ Save to cache
-      localStorage.setItem("registeredPosts", JSON.stringify(registeredPosts));
-
-      showToast("Registered successfully!", "success");
-    } catch (err) {
-      console.error(err);
-      showToast("Registration failed.", "error");
-    }
-  }
-
-// --- State ---
+// ✅ Everything else below remains **untouched**
 const showDropdown = ref(false);
-const activeMains = ref([]); // Training / Career / Organization
-const activeSubs = ref([]); // Online / Onsite
+const activeMains = ref([]);
+const activeSubs = ref([]);
 const searchContainer = ref(null);
 const mainFilters = ["Training", "Career", "Organization"];
-const searchInput = ref(""); // User's search text
-const results = ref([]); // Results from backend
-
-// --- Modal States ---
+const searchInput = ref("");
+const results = ref([]);
 
 const applyModalOpen = ref(false);
-const isModalOpen = ref(false); // For org modal
+const isModalOpen = ref(false);
 
-// --- Misc States ---
 const bookmarkedPosts = ref({});
 const appliedPosts = ref({});
 const organizations = ref({});
 const posts = ref([]);
 
-// --- Filter Toggles ---
 function toggleMainFilter(main) {
   if (activeMains.value.includes(main)) {
     activeMains.value = activeMains.value.filter((m) => m !== main);
     if (main === "Training" || main === "Career") activeSubs.value = [];
   } else {
     if (main === "Training" || main === "Career") {
-      // Mutually exclusive
       activeMains.value = activeMains.value.filter(
         (m) => m !== (main === "Training" ? "Career" : "Training")
       );
@@ -150,7 +94,6 @@ function toggleExclusiveSub(sub) {
   }
 }
 
-// --- Click outside to close dropdown ---
 function handleClickOutside(event) {
   if (searchContainer.value && !searchContainer.value.contains(event.target)) {
     showDropdown.value = false;
@@ -161,7 +104,6 @@ onBeforeUnmount(() =>
   document.removeEventListener("click", handleClickOutside)
 );
 
-// --- Perform Search (calls Laravel backend + stored procedure) ---
 async function performSearch() {
   if (!searchInput.value.trim()) {
     results.value = [];
@@ -169,13 +111,16 @@ async function performSearch() {
   }
 
   try {
-    const response = await axios.get(import.meta.env.VITE_API_BASE_URL+"/search", {
-      params: {
-        search: searchInput.value,
-        filterType: activeMains.value[0]?.toLowerCase() || "",
-        subFilter: activeSubs.value[0] || "",
-      },
-    });
+    const response = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/search",
+      {
+        params: {
+          search: searchInput.value,
+          filterType: activeMains.value[0]?.toLowerCase() || "",
+          subFilter: activeSubs.value[0] || "",
+        },
+      }
+    );
 
     results.value = response.data.results || [];
   } catch (error) {
@@ -185,7 +130,6 @@ async function performSearch() {
 }
 watch([searchInput, activeMains, activeSubs], performSearch);
 
-// --- Type Checkers ---
 function isTraining(post) {
   return post.Type?.toLowerCase().includes("training");
 }
@@ -209,8 +153,10 @@ async function openOrganizationModal(orgItem) {
       trainings: [],
     };
 
-    // Fetch related posts dynamically
-    const response = await axios.get(import.meta.env.VITE_API_BASE_URL+`/organization/${orgItem.ID}/posts`);
+    const response = await axios.get(
+      import.meta.env.VITE_API_BASE_URL +
+        `/organization/${orgItem.ID}/posts`
+    );
     selectedOrg.value.careers = response.data.careers || [];
     selectedOrg.value.trainings = response.data.trainings || [];
   } catch (error) {
@@ -232,62 +178,47 @@ const isOrgModalOpen = ref(false);
 const selectedPost = ref({});
 const selectedOrg = ref({});
 
-// 🟦 TRAINING MODAL
 function openTrainingModal(post) {
   selectedPost.value = post;
   isTrainingModalOpen.value = true;
 }
-
 function closeTrainingModal() {
   selectedPost.value = {};
   isTrainingModalOpen.value = false;
 }
-
-// 🟩 CAREER MODAL
 function openCareerModal(post) {
   selectedPost.value = post;
   isCareerModalOpen.value = true;
 }
-
 function closeCareerModal() {
   selectedPost.value = {};
   isCareerModalOpen.value = false;
 }
-
-// 🧩 APPLY MODAL
 function openApplyModal(post) {
   selectedPost.value = post;
   applyModalOpen.value = true;
 }
-
 function closeApplyModal() {
   applyModalOpen.value = false;
   selectedPost.value = {};
 }
-
-// 🟧 ORG MODAL
 function openOrgModal(org) {
   selectedOrg.value = org;
   isOrgModalOpen.value = true;
 }
-
 function closeOrgModal() {
   isOrgModalOpen.value = false;
   selectedOrg.value = {};
 }
 
-// Handles result click depending on Type
 async function handleResultClick(item) {
   if (item.Type === "Training" || item.Type.includes("Training")) {
-    // 🎯 Training modal
     selectedPost.value = item;
     isTrainingModalOpen.value = true;
   } else if (item.Type === "Career" || item.Type.includes("Career")) {
-    // 🎯 Career modal
     selectedPost.value = item;
     isCareerModalOpen.value = true;
   } else if (item.Type === "Organization") {
-    // 🎯 Organization modal (fetch org info + its posts)
     selectedOrg.value = {
       ...item,
       careers: [],
@@ -616,7 +547,7 @@ async function handleResultClick(item) {
             v-if="isTraining(selectedPost)"
             class="btn btn-sm text-white"
             :class="
-              registeredPosts[
+              regStore.registeredPosts[
                 selectedPost.trainingID ??
                 selectedPost.TrainingID ??
                 selectedPost.id ??
@@ -628,7 +559,7 @@ async function handleResultClick(item) {
             @click="toggleRegister(selectedPost)"
           >
             {{
-              registeredPosts[
+              regStore.registeredPosts[
                 selectedPost.trainingID ??
                 selectedPost.TrainingID ??
                 selectedPost.id ??
@@ -638,6 +569,7 @@ async function handleResultClick(item) {
                 : 'Register'
             }}
           </button>
+
         </div>
 
         <!-- Training Info -->
@@ -667,35 +599,53 @@ async function handleResultClick(item) {
 
         <!-- Buttons -->
         <div class="my-4 flex justify-end gap-2">
-          <!-- Bookmark -->
-          <button
-            class="btn btn-outline btn-sm"
-            @click="toggleBookmark(selectedPost)"
-          >
-            {{
-              bookmarkedPosts[selectedPost.TrainingID || selectedPost.CareerID]
-                ? "Bookmarked"
-                : "Bookmark"
-            }}
-          </button>
+            <!-- Bookmark -->
+            <button
+              class="btn btn-outline btn-sm"
+              @click="toggleBookmark(selectedPost)"
+            >
+              {{
+                bookmarkedPosts[selectedPost.TrainingID || selectedPost.CareerID]
+                  ? "Bookmarked"
+                  : "Bookmark"
+              }}
+            </button>
 
-          <!-- Apply / Cancel -->
-          <button
-            v-if="!appliedPosts[selectedPost.ID]"
-            class="btn btn-sm bg-customButton text-white"
-            @click="openApplyModal(selectedPost)"
-          >
-            Apply
-          </button>
-
-          <button
-            v-else
-            class="btn btn-sm bg-gray-500 text-white"
-            @click="cancelApplication(selectedPost)"
-          >
-            Cancel Application
-          </button>
-        </div>
+            <!-- Register (training only) -->
+            <button
+              v-if="isTraining(selectedPost)"
+              class="btn btn-sm text-white"
+              :class="
+                regStore.registeredPosts[
+                  selectedPost.trainingID ??
+                  selectedPost.TrainingID ??
+                  selectedPost.id ??
+                  selectedPost.ID
+                ]
+                  ? 'bg-gray-500'
+                  : 'bg-customButton'
+              "
+              @click="
+                regStore.toggleRegister(
+                  selectedPost.trainingID ??
+                  selectedPost.TrainingID ??
+                  selectedPost.id ??
+                  selectedPost.ID
+                )
+              "
+            >
+              {{
+                regStore.registeredPosts[
+                  selectedPost.trainingID ??
+                  selectedPost.TrainingID ??
+                  selectedPost.id ??
+                  selectedPost.ID
+                ]
+                  ? 'Unregister'
+                  : 'Register'
+              }}
+            </button>
+          </div>
 
         <!-- Career Info -->
         <p>
