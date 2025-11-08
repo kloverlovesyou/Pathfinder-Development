@@ -79,11 +79,31 @@ export const useRegistrationStore = defineStore("regStore", () => {
     }
     }
 
+
+    async function fetchTrainingQRCode(trainingID) {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get(
+          import.meta.env.VITE_API_BASE_URL + `/trainings/${trainingID}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        // Update the registration post with the QR info
+        if (res.data.attendance_link) {
+          if (!registeredPosts[trainingID]) registeredPosts[trainingID] = {};
+          registeredPosts[trainingID].attendance_link = res.data.attendance_link;
+          registeredPosts[trainingID].attendance_key = res.data.attendance_key;
+        }
+      } catch (err) {
+        console.error("Failed to fetch QR:", err);
+      }
+    }
     return {
         registeredPosts,
         myRegistrations,
         loading, // 🔹 now reactive
         fetchMyRegistrations,
         toggleRegister,
+        fetchTrainingQRCode,
     };
 });
