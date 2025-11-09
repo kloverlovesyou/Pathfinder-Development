@@ -546,6 +546,7 @@ export default {
       qrExpiresAt: null,
       activeTrainingId: null, // which training shows the QR
       qrExpireTimeout: null, // to clear old QR timers
+      trainingStore: useTrainingStore(), // ✅ Add this here
 
       /* ==========================
          ✅ Dropdown Menu States
@@ -1034,23 +1035,20 @@ mounted() {
   // Handle clicks outside menus
   document.addEventListener("click", this.handleOutsideClick);
 
-  // Access the store
-  const trainingStore = useTrainingStore();
-
   // Initial QR generation for existing trainings
-  trainingStore.autoGenerateQRs(this.upcomingtrainings);
+  this.trainingStore.autoGenerateQRs(this.upcomingtrainings);
 
   // Poll every 30 seconds to update trainings and regenerate QR
   this.trainingPollInterval = setInterval(async () => {
     await this.fetchTrainings();
 
     // Generate QR for all trainings that should have one
-    trainingStore.autoGenerateQRs(this.upcomingtrainings);
+    this.trainingStore.autoGenerateQRs(this.upcomingtrainings);
 
     // Sync store QR values to component so template updates
-    this.qrCodeValue = trainingStore.qrCodeValue;
-    this.qrExpiresAt = trainingStore.qrExpiresAt;
-    this.activeTrainingId = trainingStore.activeTrainingId;
+    this.qrCodeValue = this.trainingStore.qrCodeValue;
+    this.qrExpiresAt = this.trainingStore.qrExpiresAt;
+    this.activeTrainingId = this.trainingStore.activeTrainingId;
   }, 30000);
 },
 
