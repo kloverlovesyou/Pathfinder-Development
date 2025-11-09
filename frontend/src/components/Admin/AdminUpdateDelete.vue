@@ -163,7 +163,7 @@ onMounted(async () => {
   fetchTrainingCounters();
   try {
     // --- Fetch user from API ---
-    const res = await axios.get("http://127.0.0.1:8000/api/user", {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/user", {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
 
@@ -209,7 +209,7 @@ onMounted(async () => {
 
 function deleteAccount() {
   axios
-    .delete("http://127.0.0.1:8000/api/user", {
+    .delete(import.meta.env.VITE_API_BASE_URL + "/user", {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     })
     .then((res) => {
@@ -264,7 +264,7 @@ const handleUpdate = async () => {
   }
 
   try {
-    await axios.put("http://127.0.0.1:8000/api/user", form.value, {
+    await axios.put(import.meta.env.VITE_API_BASE_URL + "/user", form.value, {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
     alert("Profile updated successfully!");
@@ -277,7 +277,7 @@ const handleUpdate = async () => {
 const handleDelete = async () => {
   try {
     isDeleting.value = true;
-    const res = await axios.delete("http://127.0.0.1:8000/api/user", {
+    const res = await axios.delete(import.meta.env.VITE_API_BASE_URL + "/user", {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       data: { currentPassword: form.value.currentPassword }, // send password for verification
     });

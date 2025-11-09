@@ -51,7 +51,7 @@ async function fetchCareerEvents() {
 
     // Call the API that returns applications with interview schedule
     const { data: apps } = await axios.get(
-      "http://127.0.0.1:8000/api/applications",
+      import.meta.env.VITE_API_BASE_URL + "/applications",
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
@@ -93,7 +93,7 @@ async function fetchCareerDetails(careerID) {
 
   try {
     const response = await axios.get(
-      `http://127.0.0.1:8000/api/careers/${careerID}`,
+      import.meta.env.VITE_API_BASE_URL + `/careers/${careerID}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
