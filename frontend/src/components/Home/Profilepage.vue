@@ -24,7 +24,7 @@ async function openModal(activity) {
       if (!token) return console.error("❌ No token found.");
 
       // Fetch all applications for the user
-      const res = await axios.get("http://127.0.0.1:8000/api/applications", {
+      const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/applications", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -59,7 +59,7 @@ async function openCareerModal(career) {
     if (!token) return console.error("❌ No token found.");
 
     // ✅ Fetch all applications for the logged-in applicant
-    const res = await axios.get("http://127.0.0.1:8000/api/applications", {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/applications", {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -91,7 +91,7 @@ async function openTrainingModal(training) {
     if (!token) return console.error("❌ No token found.");
 
     const id = training.id || training.trainingID;
-    const res = await axios.get(`http://127.0.0.1:8000/api/trainings/${id}`, {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + `/trainings/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
