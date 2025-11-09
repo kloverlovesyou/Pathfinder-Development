@@ -216,11 +216,13 @@ const showModal = ref(false);
 </script>
 
 <template>
-  <main class="font-poppins min-h-screen flex flex-col bg-gray-100">
+  <main class="font-poppins flex flex-col bg-gray-100 min-h-[auto] md:min-h-screen">
 
     <!-- Scrollable white content -->
-    <div class="bg-white flex-1 rounded-t-xl m-2 md:m-3 p-3 md:p-4 overflow-y-auto">
-
+    <div
+      class="bg-white flex-1 rounded-t-xl m-2 md:m-3 p-3 md:p-4
+            overflow-y-auto max-h-[calc(100vh-64px)] md:max-h-full"
+    >
       <!-- Sticky header -->
       <div class="sticky top-0 z-10 bg-white pt-3 pb-2 border-b shadow-sm">
         <h2 class="text-xl font-bold">Training</h2>
@@ -263,7 +265,6 @@ const showModal = ref(false);
           </div>
         </div>
       </div>
-
     </div>
 
     <CalendarSidebar
