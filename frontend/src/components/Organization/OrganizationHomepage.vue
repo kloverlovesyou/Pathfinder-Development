@@ -239,30 +239,35 @@ const fetchTotals = async () => {
 onMounted(async () => {
   try {
     const token = localStorage.getItem("token");
-    if (!token) throw new Error("No token found");
+
+    if (!token) {
+      console.error("No token found in localStorage");
+      return;
+    }
+
+    // Debug (optional): confirm headers being sent
+    console.log("Sending token:", token);
+
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      authorization: `Bearer ${token}`, // some backends require lowercase
+      "x-access-token": token            // fallback for other middlewares
+    };
 
     const trainingsRes = await axios.get(
       import.meta.env.VITE_API_BASE_URL + "/trainings/total",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
+      { headers }
     );
 
     const careersRes = await axios.get(
       import.meta.env.VITE_API_BASE_URL + "/careers/total",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
+      { headers }
     );
 
     totalTrainings.value = trainingsRes.data.totalTrainings;
     totalCareers.value = careersRes.data.totalCareers;
   } catch (error) {
-    console.error("Failed to fetch totals:", error);
+    console.error("Failed to fetch totals:", error.response?.data || error);
   }
 });
 
