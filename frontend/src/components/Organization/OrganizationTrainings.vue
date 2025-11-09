@@ -532,8 +532,6 @@ import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
 import axios from "axios";
 import QrcodeVue from "qrcode.vue";
 import api from "@/composables/api.js";
-import { useTrainingStore } from "@/stores/trainingStore";
-
 export default {
   components: { QrcodeVue }, // ✅ register component
   data() {
@@ -594,12 +592,6 @@ export default {
       newTagName: ''
     };
   },
-
-    created() {
-    // ✅ Initialize the Pinia store here
-    this.trainingStore = useTrainingStore();
-  },
-
 
   methods: {
     async fetchTags() {
@@ -1032,22 +1024,19 @@ async saveTraining() {
    },
 },
 
-mounted() {
-  // Handle clicks outside menus
-  document.addEventListener("click", this.handleOutsideClick);
 
-  // Fetch trainings and schedule QR in the store
-  this.trainingStore.fetchTrainings();
+  mounted() {
+    this.fetchTrainings();
+    document.addEventListener("click", this.handleOutsideClick);
 
-  // Start polling in the store to refresh trainings and generate QR automatically
-  this.trainingStore.startPolling();
-},
-
-
+      // Poll every 30 seconds to update trainings
+  this.trainingPollInterval = setInterval(() => {
+    this.fetchTrainings();
+  }, 30000);
+  },
 
   beforeUnmount() {
     document.removeEventListener("click", this.handleOutsideClick);
-    
   },
 
   computed: {
@@ -1135,20 +1124,7 @@ mounted() {
       .filter(t => new Date(t.schedule) < now)
       .sort((a, b) => new Date(b.schedule) - new Date(a.schedule));
   },
-  activeQrCode() {
-    return this.trainingStore.qrCodeValue;
-  },
-
-  qrExpiresAt() {
-    return this.trainingStore.qrExpiresAt;
-  },
-
-  activeTrainingId() {
-    return this.trainingStore.activeTrainingId;
-  },
 },
-
-
 };
 </script>
 
