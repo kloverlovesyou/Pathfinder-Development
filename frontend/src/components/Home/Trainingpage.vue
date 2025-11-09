@@ -216,50 +216,44 @@ const showModal = ref(false);
 </script>
 
 <template>
-  <main class="font-poppins flex 1 flex-col bg-gray-100 min-h-[auto] md:min-h-screen">
+  <main class="font-poppins">
+    <!-- Header -->
 
-    <!-- Scrollable white content -->
-    <div
-      class="bg-white flex-1 rounded-t-xl m-2 md:m-3 p-3 md:p-4
-             overflow-y-auto max-h-[calc(100vh-64px)] md:max-h-full"
-    >
-      <!-- Sticky header -->
-      <div class="sticky top-0 z-10 bg-white pt-3 pb-2 border-b shadow-sm">
-        <h2 class="text-xl font-bold">Training</h2>
+    <div class="bg-white m-3 p-4 rounded-lg">
+      <div class="sticky top-0 z-10 bg-white pt-4 px-4 pb-2 border-b shadow-sm">
+        <h2 class="text-2xl font-bold mb-3 sticky top-0 bg-white z-10">
+          Training
+        </h2>
       </div>
-
       <!-- Training Cards -->
-      <div class="space-y-3 mt-3">
+      <div class="space-y-4">
         <div
           v-for="training in trainings"
           :key="training.trainingID"
-          class="p-3 bg-blue-gray rounded-lg hover:bg-gray-300 transition cursor-pointer
-                flex items-center justify-between"
+          class="p-4 bg-blue-gray rounded-lg hover:bg-gray-300 transition cursor-pointer flex justify-between items-center"
           @click="openTrainingModal(training)"
         >
-          <!-- Left Text -->
-          <div class="w-[70%]">
-            <h3 class="font-semibold text-base leading-tight">
-              {{ training.title }}
-            </h3>
-            <p class="text-gray-700 text-sm font-medium truncate">
+          <!-- Left: Training info -->
+          <div>
+            <h3 class="font-semibold text-lg">{{ training.title }}</h3>
+            <p class="text-gray-700 font-medium">
               {{ training.organization?.name || training.organizationName }}
             </p>
           </div>
 
-          <!-- Right QR -->
-          <div v-if="myRegistrations.has(training.trainingID)" class="flex-shrink-0">
+          <!-- Right: QR code if registered -->
+          <div v-if="myRegistrations.has(training.trainingID)">
             <div
               v-if="
                 training.attendance_key &&
                 new Date(training.end_time) > new Date()
               "
             >
-              <qrcode-vue :value="training.attendance_link" :size="48" class="md:size-[80px]" />
+              <qrcode-vue :value="training.attendance_link" :size="80" />
             </div>
             <div v-else>
-              <p class="text-xs text-gray-500 text-center max-w-[70px] leading-tight">
-                QR not yet generated or expired
+              <p class="text-sm text-gray-500 text-center">
+                QR code not yet generated or expired.
               </p>
             </div>
           </div>
@@ -275,18 +269,17 @@ const showModal = ref(false);
     />
 
     <TrainingModal
-      :isOpen="showModal"
-      :training="selectedTraining"
-      :isRegistered="myRegistrations.has(selectedTraining?.trainingID)"
-      :isBookmarked="bookmarkedTrainings.includes(selectedTraining?.trainingID)"
-      :bookmarkLoading="bookmarkLoading[selectedTraining?.trainingID]"
-      :registerLoading="regStore.loading[selectedTraining?.trainingID]"
-      @close="showModal = false"
-      @toggle-register="toggleRegister"
-      @bookmark="toggleBookmark"
+    :isOpen="showModal"
+    :training="selectedTraining"
+    :isRegistered="myRegistrations.has(selectedTraining?.trainingID)"
+    :isBookmarked="bookmarkedTrainings.includes(selectedTraining?.trainingID)"
+    :bookmarkLoading="bookmarkLoading[selectedTraining?.trainingID]"
+    :registerLoading="regStore.loading[selectedTraining?.trainingID]" 
+    @close="showModal = false"
+    @toggle-register="toggleRegister"
+    @bookmark="toggleBookmark"
     />
-
-    <!-- Toasts -->
+    <!-- Toast Notifications -->
     <div class="toast toast-end toast-top z-50">
       <div
         v-for="toast in toasts"
@@ -302,6 +295,4 @@ const showModal = ref(false);
       </div>
     </div>
   </main>
-
 </template>
-
