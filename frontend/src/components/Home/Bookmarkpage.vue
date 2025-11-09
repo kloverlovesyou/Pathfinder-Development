@@ -1,7 +1,15 @@
 <script setup>
 import { useRouter } from "vue-router";
-import { ref, onMounted, onUnmounted, computed } from "vue";
+import {
+  ref,
+  onMounted,
+  onUnmounted,
+  computed,
+  watch,
+  onBeforeMount,
+} from "vue";
 import axios from "axios";
+import QrcodeVue from "qrcode.vue";
 
 const router = useRouter();
 
@@ -18,13 +26,10 @@ const upcomingCount = ref(0);
 const completedCount = ref(0);
 const applicationSubmitted = ref(false);
 const appliedCareers = ref(new Set()); // make sure this is also declared
-
-function addToast(message, type = "info") {
-  toasts.value.push({ message, type });
-  setTimeout(() => {
-    toasts.value.shift();
-  }, 3000);
-}
+// ⏳ QR countdown state
+const countdown = ref("");
+const qrExpired = ref(false);
+let countdownInterval = null;
 
 // ✅ Modal States
 const selectedPost = ref(null);
@@ -57,10 +62,10 @@ const fetchOrganizations = async () => {
     const { data } = await axios.get( import.meta.env.VITE_API_BASE_URL + "/organization");
     organizations.value = data.map(o => ({
       ...o,
-      organizationID: Number(o.organizationID)
+      organizationID: Number(o.organizationID),
     }));
     console.log("✅ Organizations:", organizations.value);
-    console.log("✅ Organizations:", data); 
+    console.log("✅ Organizations:", data);
   } catch (error) {
     console.error("❌ Failed to fetch organizations:", error);
   }
@@ -87,26 +92,34 @@ const loadBookmarks = async () => {
     ]);
 
     console.log("✅ Trainings data from API:", trainingsData.data);
-     console.log("✅ Careers data from API:", careersData.data);
-bookmarks.value = [
-  ...trainingRes.data.map((id) => ({
-    trainingID: id,
-    training: trainingsData.data.find((t) => Number(t.trainingID) === Number(id)) || null,
-  })),
-  ...careerRes.data.map((b) => ({
-    careerID: b.careerID,
-    career: careersData.data.find((c) => Number(c.id) === Number(b.careerID)) || null,
-  })),
-];
-
+    console.log("✅ Careers data from API:", careersData.data);
+    bookmarks.value = [
+      ...trainingRes.data.map((id) => ({
+        trainingID: id,
+        training:
+          trainingsData.data.find((t) => Number(t.trainingID) === Number(id)) ||
+          null,
+      })),
+      ...careerRes.data.map((b) => ({
+        careerID: b.careerID,
+        career:
+          careersData.data.find((c) => Number(c.id) === Number(b.careerID)) ||
+          null,
+      })),
+    ];
 
     // ✅ ADD THIS HERE
-   console.log("✅ Career bookmarks:", careerRes.data);
-console.log("💼 All careers:", careersData.data);
-console.log("🔹 Mapped careers:", bookmarks.value.filter(b => b.career));
-
+    console.log("✅ Career bookmarks:", careerRes.data);
+    console.log("💼 All careers:", careersData.data);
+    console.log(
+      "🔹 Mapped careers:",
+      bookmarks.value.filter((b) => b.career)
+    );
   } catch (error) {
-    console.error("❌ Failed to load bookmarks:", error.response?.data || error);
+    console.error(
+      "❌ Failed to load bookmarks:",
+      error.response?.data || error
+    );
   }
 };
 
@@ -139,14 +152,10 @@ const displayedCareers = computed(() =>
 const isBookmarked = (post) => {
   if (isTraining(post)) {
     // For trainings
-    return bookmarks.value.some(
-      (b) => b.trainingID === post.trainingID
-    );
+    return bookmarks.value.some((b) => b.trainingID === post.trainingID);
   } else {
     // For careers
-    return bookmarks.value.some(
-      (b) => b.careerID === post.careerID
-    );
+    return bookmarks.value.some((b) => b.careerID === post.careerID);
   }
 };
 
@@ -187,7 +196,6 @@ async function fetchTrainingCounters() {
   }
 }
 
-
 const loadRegistrations = async () => {
   try {
     const token = localStorage.getItem("token");
@@ -197,10 +205,17 @@ const loadRegistrations = async () => {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    // Assuming data is an array of training IDs
-    myRegistrations.value = new Set(data.map(id => Number(id)));
+    console.log("🟢 /api/registrations response:", data);
+
+    // ✅ Extract trainingID from each object
+    myRegistrations.value = new Set(data.map((r) => Number(r.trainingID)));
+
+    console.log("✅ Registered trainings:", [...myRegistrations.value]);
   } catch (error) {
-    console.error("❌ Failed to load registrations:", error.response?.data || error);
+    console.error(
+      "❌ Failed to load registrations:",
+      error.response?.data || error
+    );
   }
 };
 
@@ -267,10 +282,12 @@ const bookmarkPost = async (post) => {
       }
     }
   } catch (error) {
-    console.error("❌ Failed to toggle bookmark:", error.response?.data || error);
+    console.error(
+      "❌ Failed to toggle bookmark:",
+      error.response?.data || error
+    );
   }
 };
-
 
 const registerTraining = async (training) => {
   const token = localStorage.getItem("token");
@@ -359,26 +376,22 @@ const submitApplication = async () => {
         }
       );
 
-      addToast("Application submitted!", "success");
-      appliedCareers.value.add(selectedPost.value.careerID); // ✅ mark applied
-      
     // ✅ Safely add to appliedCareers
     const careerId = Number(selectedPost.value?.careerID);
     if (!isNaN(careerId)) appliedCareers.value.add(careerId);
 
-      closeApplyModal();
-      uploadedFile.value = null;
-
-    } catch (error) {
-      if (error.response?.status === 409) {
-        addToast("Already applied", "info");
-         const careerId = Number(selectedPost.value?.careerID);
-        appliedCareers.value.add(selectedPost.value.careerID); // ✅ mark applied anyway
-      } else {
-        console.error("❌ Application error:", error.response?.data || error);
-        addToast("Failed to submit application", "error");
-      }
+    closeApplyModal();
+    uploadedFile.value = null;
+  } catch (error) {
+    if (error.response?.status === 409) {
+      addToast("Already applied", "info");
+      const careerId = Number(selectedPost.value?.careerID);
+      appliedCareers.value.add(selectedPost.value.careerID); // ✅ mark applied anyway
+    } else {
+      console.error("❌ Application error:", error.response?.data || error);
+      addToast("Failed to submit application", "error");
     }
+  }
 };
 
 const userApplications = ref(new Set());
@@ -393,13 +406,15 @@ const loadApplications = async () => {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    appliedCareers.value = new Set(data.map(app => Number(app.career_id)));
+    appliedCareers.value = new Set(
+      data.map((app) => Number(app.careerID || app.career_id))
+    );
+
     console.log("✅ Applied careers:", appliedCareers.value);
   } catch (error) {
     console.error(error);
   }
 };
-
 
 // ✅ Lifecycle
 onMounted(() => {
@@ -408,7 +423,7 @@ onMounted(() => {
   fetchTrainingCounters();
   loadRegistrations();
   loadApplications();
-    const savedUser = localStorage.getItem("user");
+  const savedUser = localStorage.getItem("user");
   if (savedUser) {
     try {
       const user = JSON.parse(savedUser);
@@ -419,7 +434,6 @@ onMounted(() => {
   } else {
     userName.value = "Guest";
   }
-   
 });
 </script>
 
@@ -627,7 +641,7 @@ onMounted(() => {
                       {{ career.position }}
                     </h3>
                     <p class="text-sm text-gray-600">
-                      {{ career.organizationName|| "Unknown Org" }}
+                      {{ career.organizationName || "Unknown Org" }}
                     </p>
                   </div>
                 </div>
@@ -635,29 +649,28 @@ onMounted(() => {
                   No bookmarked careers found.
                 </p>
               </div>
-              
 
               <!-- Training Bookmarks (from backend) -->
               <div v-else class="p-4">
-                  <div v-if="displayedTrainings.length" class="space-y-3">
-                    <div
-                      v-for="training in displayedTrainings"
-                      :key="training.trainingID"
-                      @click="openModal(training)"
-                      class="p-4 border rounded-lg cursor-pointer bg-blue-gray hover:bg-gray-300 transition"
-                    >
-                      <h3 class="text-base font-semibold">
-                        {{ training.title }}
-                      </h3>
-                      <p class="text-sm text-gray-600">
-                        {{ training.organization?.name || "Unknown Org" }}
-                      </p>
-                    </div>
+                <div v-if="displayedTrainings.length" class="space-y-3">
+                  <div
+                    v-for="training in displayedTrainings"
+                    :key="training.trainingID"
+                    @click="openModal(training)"
+                    class="p-4 border rounded-lg cursor-pointer bg-blue-gray hover:bg-gray-300 transition"
+                  >
+                    <h3 class="text-base font-semibold">
+                      {{ training.title }}
+                    </h3>
+                    <p class="text-sm text-gray-600">
+                      {{ training.organization?.name || "Unknown Org" }}
+                    </p>
                   </div>
-                  <p v-else class="text-center text-gray-500 mt-6">
-                    No bookmarked trainings found.
-                  </p>
                 </div>
+                <p v-else class="text-center text-gray-500 mt-6">
+                  No bookmarked trainings found.
+                </p>
+              </div>
 
               <!-- ✅ Unified Modal System -->
               <!-- Post Details Modal -->
@@ -677,24 +690,31 @@ onMounted(() => {
                     </h2>
                     <p class="text-sm text-gray-600 mb-2">
                       Organization:
-                      {{
-                           selectedPost.organization?.name || "Unknown Org"
-                      }}
+                      {{ selectedPost.organization?.name || "Unknown Org" }}
                     </p>
                     <div class="my-4 flex justify-end gap-2">
                       <button
                         class="btn btn-outline btn-sm"
                         @click="bookmarkPost(selectedPost)"
                       >
-                       {{ isBookmarked(selectedPost) ? "Bookmarked" : "Bookmark" }}
+                        {{
+                          isBookmarked(selectedPost) ? "Bookmarked" : "Bookmark"
+                        }}
                       </button>
                       <button
                         class="btn bg-customButton btn-sm text-white"
-                        :class="myRegistrations.has(selectedPost.trainingID) ? 'bg-red-500 text-white' : 'bg-customButton text-white'"
+                        :class="
+                          myRegistrations.has(selectedPost.trainingID)
+                            ? 'bg-gray-500'
+                            : 'bg-customButton'
+                        "
                         @click="registerTraining(selectedPost)"
-                        :disabled="myRegistrations.has(selectedPost.trainingID)"
                       >
-                        {{ myRegistrations.has(selectedPost.trainingID) ? "Registered" : "Register" }}
+                        {{
+                          myRegistrations.has(selectedPost.trainingID)
+                            ? "Registered"
+                            : "Register"
+                        }}
                       </button>
                     </div>
                     <p>
@@ -705,14 +725,41 @@ onMounted(() => {
                       <strong>Description:</strong>
                       {{ selectedPost.description }}
                     </p>
-                    <p>
-                      <strong>Schedule:</strong>
-                      {{ formatDateTime(selectedPost.schedule) }}
+                    <!-- Location / Link -->
+                    <p v-if="selectedPost.mode?.toLowerCase() === 'online'">
+                      <strong>Link:</strong>
+                      <a
+                        :href="selectedPost.trainingLink"
+                        target="_blank"
+                        class="text-blue-500 underline"
+                      >
+                        {{ selectedPost.trainingLink }}
+                      </a>
                     </p>
-                    <p>
+                    <p v-else>
                       <strong>Location:</strong> {{ selectedPost.location }}
                     </p>
+                    <div v-if="isRegistered" class="mt-4 text-center">
+                      <div
+                        v-if="selectedPost.attendance_key && !qrExpired"
+                        class="flex flex-col items-center"
+                      >
+                        <qrcode-vue
+                          :value="selectedPost.attendance_key"
+                          :size="120"
+                        />
+                        <p class="text-sm text-gray-600 mt-1">
+                          Expires in: {{ countdown }}
+                        </p>
+                      </div>
+                      <div v-else>
+                        <p class="text-sm text-gray-500">
+                          QR code not yet generated or expired.
+                        </p>
+                      </div>
+                    </div>
                   </div>
+                  <!-- QR Code -->
 
                   <!-- Career -->
                   <div v-else>
@@ -721,24 +768,30 @@ onMounted(() => {
                     </h2>
                     <p class="text-sm text-gray-600 mb-2">
                       Organization:
-                      {{
-                         selectedPost.organizationName || "Unknown Org"
-                      }}
+                      {{ selectedPost.organizationName || "Unknown Org" }}
                     </p>
                     <div class="my-4 flex justify-end gap-2">
                       <button
                         class="btn btn-outline btn-sm"
                         @click="bookmarkPost(selectedPost)"
                       >
-                        {{ isBookmarked(selectedPost) ? "Bookmarked" : "Bookmark" }}
+                        {{
+                          isBookmarked(selectedPost) ? "Bookmarked" : "Bookmark"
+                        }}
                       </button>
-                         <button
-                            class="btn btn-sm bg-customButton text-white"
-                            @click="openApplyModal(selectedPost)"
-                            :disabled="appliedCareers.has(Number(selectedPost?.careerID))"
-                          >
-                            {{ appliedCareers.has(Number(selectedPost?.careerID)) ? 'Applied' : 'Apply' }}
-                          </button>
+                      <button
+                        class="btn btn-sm bg-customButton text-white"
+                        @click="openApplyModal(selectedPost)"
+                        :disabled="
+                          appliedCareers.has(Number(selectedPost?.careerID))
+                        "
+                      >
+                        {{
+                          appliedCareers.has(Number(selectedPost?.careerID))
+                            ? "Applied"
+                            : "Apply"
+                        }}
+                      </button>
                     </div>
                     <p>
                       <strong>Details:</strong>
@@ -765,7 +818,11 @@ onMounted(() => {
               </dialog>
 
               <!-- Apply Modal -->
-              <dialog v-if="applyModalOpen && appliedCareers" open class="modal sm:modal-middle">
+              <dialog
+                v-if="applyModalOpen && appliedCareers"
+                open
+                class="modal sm:modal-middle"
+              >
                 <div class="modal-box max-w-lg relative font-poppins">
                   <button
                     class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
@@ -800,12 +857,18 @@ onMounted(() => {
                         Cancel
                       </button>
                       <!-- ✅ Updated Apply Button -->
-                     <button
+                      <button
                         type="submit"
                         class="btn bg-customButton hover:bg-dark-slate text-white btn-sm"
-                        :disabled="appliedCareers.has(Number(selectedPost?.careerID))"
+                        :disabled="
+                          appliedCareers.has(Number(selectedPost?.careerID))
+                        "
                       >
-                        {{ appliedCareers.has(Number(selectedPost?.careerID)) ? "Applied" : "Submit Application" }}
+                        {{
+                          appliedCareers.has(Number(selectedPost?.careerID))
+                            ? "Applied"
+                            : "Submit Application"
+                        }}
                       </button>
                     </div>
                   </form>
@@ -813,20 +876,20 @@ onMounted(() => {
               </dialog>
 
               <!-- Toast Notifications -->
-                <div class="toast toast-end toast-top z-50">
-                  <div
-                    v-for="toast in toasts"
-                    :key="toast.id"
-                    class="alert"
-                    :class="{
-                      'alert-info': toast.type === 'info',
-                      'alert-success': toast.type === 'success',
-                      'alert-accent': toast.type === 'accent',
-                    }"
-                  >
-                    {{ toast.message }}
-                  </div>
+              <div class="toast toast-end toast-top z-50">
+                <div
+                  v-for="toast in toasts"
+                  :key="toast.id"
+                  class="alert"
+                  :class="{
+                    'alert-info': toast.type === 'info',
+                    'alert-success': toast.type === 'success',
+                    'alert-accent': toast.type === 'accent',
+                  }"
+                >
+                  {{ toast.message }}
                 </div>
+              </div>
             </div>
           </div>
         </div>

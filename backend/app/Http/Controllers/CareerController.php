@@ -84,11 +84,13 @@ class CareerController extends Controller
             $career->tags()->attach($validated['Tags']);
         }
 
-    return response()->json([
-        'message' => 'CAREER POSTED SUCCESSFULLY!!!',
-        'data' => $career
-    ], 201);
-}
+        return response()->json([
+            'message' => 'CAREER POSTED SUCCESSFULLY!!!',
+            'data' => $career,
+            'tags' => $validated['Tags'] 
+        ], 201);
+    }
+
 
 //This is for Total numbers of career
 public function total() {
@@ -107,6 +109,25 @@ public function countsPartial()
     return response()->json([
         'ongoing' => $ongoing,
         'filled' => $filled,
+    ]);
+}
+
+    public function show($id)
+{
+    $career = Career::with('organization')->findOrFail($id);
+
+    return response()->json([
+        'careerID' => $career->careerID,
+        'title' => $career->position,
+        'detailsAndInstructions' => $career->detailsAndInstructions,
+        'qualifications' => $career->qualifications,
+        'requirements' => $career->requirements,
+        'applicationLetterAddress' => $career->applicationLetterAddress,
+        'deadlineOfSubmission' => $career->deadlineOfSubmission,
+        'organization' => $career->organization->name ?? 'Unknown',
+        'link' => $career->link ?? null,
+        'mode' => $career->mode ?? null,
+        'location' => $career->location ?? null,
     ]);
 }
 }
