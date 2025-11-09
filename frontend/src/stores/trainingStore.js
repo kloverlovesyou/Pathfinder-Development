@@ -14,17 +14,15 @@ export const useTrainingStore = defineStore("trainingStore", {
       try {
         const response = await axios.get(import.meta.env.VITE_API_BASE_URL + "/trainings");
         this.trainings = response.data;
-        // Schedule QR for each training
-        this.trainings.forEach(training => this.scheduleQR(training));
+
+        // Schedule QR generation for trainings that are currently active
+        this.autoGenerateQRs(this.trainings);
       } catch (error) {
         console.error("Error fetching trainings:", error);
       }
     },
 
     scheduleQR(training) {
-      // Already active?
-      if (this.activeTrainingId === training.trainingID && this.qrCodeValue) return;
-
       const now = new Date();
       const startTime = new Date(training.schedule);
       const endTime = new Date(training.end_time);
@@ -56,7 +54,6 @@ export const useTrainingStore = defineStore("trainingStore", {
 
         console.log(`✅ QR Generated for "${training.title}", expires at ${this.qrExpiresAt}`);
 
-        // Clear previous timer
         if (this.qrExpireTimeout) clearTimeout(this.qrExpireTimeout);
 
         const now = new Date();
@@ -71,19 +68,10 @@ export const useTrainingStore = defineStore("trainingStore", {
           }, msUntilExpire);
         }
       } catch (error) {
-        console.error("QR GENERATION FAILED:", error);
+        console.error("QR GENERATION FAILED:", error.response?.data || error);
       }
     },
 
-    startPolling() {
-      // Poll every 30 seconds to refresh trainings and schedule QR
-      this.fetchTrainings(); // initial fetch
-      setInterval(() => {
-        this.fetchTrainings();
-      }, 30000);
-    },
-
-    // ✅ Added autoGenerateQRs method
     autoGenerateQRs(trainings) {
       const now = new Date();
       trainings.forEach(training => {
@@ -96,6 +84,11 @@ export const useTrainingStore = defineStore("trainingStore", {
           }
         }
       });
+    },
+
+    startPolling() {
+      this.fetchTrainings(); // initial fetch
+      setInterval(() => this.fetchTrainings(), 30000);
     },
   },
 });
