@@ -225,8 +225,8 @@ function isPast(dateStr) {
 
 const fetchTotals = async () => {
   try {
-    const trainingsResp = await axios.get('/api/trainings/total')
-    const careersResp = await axios.get('/api/careers/total')
+    const trainingsResp = await axios.get(import.meta.env.VITE_API_BASE_URL + '/trainings/total')
+    const careersResp = await axios.get(import.meta.env.VITE_API_BASE_URL + 'careers/total')
 
     totalTrainings.value = trainingsResp.data.totalTrainings
     totalCareers.value = careersResp.data.totalCareers
@@ -238,13 +238,8 @@ const fetchTotals = async () => {
 // fetch totals when component mounts
 onMounted(async () => {
   try {
-    const trainingsRes = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + "/trainings/total"
-    );
-
-    const careersRes = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + "/careers/total"
-    );
+    const trainingsRes = await axios.get(import.meta.env.VITE_API_BASE_URL + "/trainings/total");
+    const careersRes = await axios.get(import.meta.env.VITE_API_BASE_URL + "/careers/total");
 
     totalTrainings.value = trainingsRes.data.totalTrainings;
     totalCareers.value = careersRes.data.totalCareers;

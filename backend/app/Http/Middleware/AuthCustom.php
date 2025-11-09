@@ -11,6 +11,18 @@ class AuthCustom
 {
 public function handle(Request $request, Closure $next)
 {
+    // ✅ List of paths to skip
+    $publicPaths = [
+        'api/trainings/total',
+        'api/trainings/counts-partial',
+        'api/careers/total',
+        'api/careers/counts-partial',
+    ];
+
+    if (in_array($request->path(), $publicPaths)) {
+        return $next($request);
+    }
+
     $header = $request->header('Authorization');
 
     if (!$header || strpos($header, 'Bearer ') !== 0) {
@@ -19,12 +31,8 @@ public function handle(Request $request, Closure $next)
 
     $token = trim(str_replace('Bearer ', '', $header));
 
-    try {
-        $user = Organization::where('api_token', $token)->first()
-             ?? Applicant::where('api_token', $token)->first();
-    } catch (\Exception $e) {
-        return response()->json(['message' => 'Server error: ' . $e->getMessage()], 500);
-    }
+    $user = Organization::where('api_token', $token)->first()
+         ?? Applicant::where('api_token', $token)->first();
 
     if (!$user) {
         return response()->json(['message' => 'Unauthorized - Invalid token'], 401);
@@ -34,4 +42,5 @@ public function handle(Request $request, Closure $next)
 
     return $next($request);
 }
+
 }

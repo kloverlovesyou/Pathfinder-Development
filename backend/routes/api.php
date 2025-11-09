@@ -63,6 +63,19 @@ Route::middleware('auth.custom')->group(function () {
     Route::post('/resume', [ResumeController::class, 'store']);
     Route::get('/resume', [ResumeController::class, 'show']);
     Route::delete('/resume', [ResumeController::class, 'destroy']);
+
+        // Public routes inside auth group
+    Route::get('/trainings/total', [TrainingController::class, 'total'])
+        ->withoutMiddleware('auth.custom');
+
+    Route::get('/trainings/counts-partial', [TrainingController::class, 'countsPartial'])
+        ->withoutMiddleware('auth.custom');
+
+    Route::get('/careers/total', [CareerController::class, 'total'])
+        ->withoutMiddleware('auth.custom');
+
+    Route::get('/careers/counts-partial', [CareerController::class, 'countsPartial'])
+        ->withoutMiddleware('auth.custom');
 });
 
 // ----------------------
@@ -153,7 +166,3 @@ Route::get('/calendar/{applicantID}', [EventController::class, 'getUserEvents'])
 
 // Public routes for totals
 // ✅ Public routes (no auth needed)
-Route::get('/trainings/total', [TrainingController::class, 'total']);
-Route::get('/careers/total', [CareerController::class, 'total']);
-Route::get('/trainings/counts-partial', [TrainingController::class, 'countsPartial']);
-Route::get('/careers/counts-partial', [CareerController::class, 'countsPartial']);
