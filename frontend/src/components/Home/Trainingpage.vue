@@ -216,12 +216,12 @@ const showModal = ref(false);
 </script>
 
 <template>
-  <main class="font-poppins flex flex-col bg-gray-100 min-h-[auto] md:min-h-screen">
+  <main class="font-poppins flex 1 flex-col bg-gray-100 min-h-[auto] md:min-h-screen">
 
     <!-- Scrollable white content -->
     <div
       class="bg-white flex-1 rounded-t-xl m-2 md:m-3 p-3 md:p-4
-            overflow-y-auto max-h-[calc(100vh-64px)] md:max-h-full"
+             overflow-y-auto max-h-[calc(100vh-64px)] md:max-h-full"
     >
       <!-- Sticky header -->
       <div class="sticky top-0 z-10 bg-white pt-3 pb-2 border-b shadow-sm">
