@@ -721,8 +721,8 @@ onMounted(() => {
                         class="btn bg-customButton btn-sm text-white"
                         :class="
                           myRegistrations.has(selectedPost.trainingID)
-                            ? 'bg-red-500 text-white'
-                            : 'bg-customButton text-white'
+                            ? 'bg-gray-500'
+                            : 'bg-customButton'
                         "
                         @click="registerTraining(selectedPost)"
                       >

@@ -1,8 +1,186 @@
 <script setup>
-import { ref, onMounted, nextTick } from "vue";
+import { ref, onMounted, nextTick, reactive } from "vue";
 import axios from "axios";
-
 import CalendarSidebar from "@/components/Layout/CalendarSidebar.vue";
+
+const registeredTrainings = reactive(new Set());
+const bookmarks = reactive(new Set());
+const careerBookmarks = ref([]);
+const applications = ref([]);
+const toasts = ref([]);
+
+onMounted(async () => {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+  try {
+    const [bookmarksRes, regRes] = await Promise.all([
+      axios.get("http://127.0.0.1:8000/api/bookmarks", {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      axios.get("http://127.0.0.1:8000/api/registrations", {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    ]);
+
+    // Add all bookmarked trainings
+    bookmarksRes.data.forEach((b) => bookmarks.add(b.trainingID));
+
+    // Add all registered trainings
+    regRes.data.forEach((r) => registeredTrainings.add(r.trainingID));
+  } catch (err) {
+    console.error("Error loading data:", err);
+    toast.error("Failed to load training data");
+  }
+});
+
+// ✅ Toggle Bookmark
+async function toggleTrainingBookmark(training) {
+  const token = localStorage.getItem("token");
+  if (!token) return toast.error("Please log in first");
+
+  try {
+    if (!bookmarks.has(training.trainingID)) {
+      await axios.post(
+        "http://127.0.0.1:8000/api/bookmarks",
+        { trainingID: training.trainingID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      bookmarks.add(training.trainingID);
+      toast.success("Training bookmarked!");
+    } else {
+      await axios.delete(
+        `http://127.0.0.1:8000/api/bookmarks/${training.trainingID}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      bookmarks.delete(training.trainingID);
+      toast.info("Bookmark removed.");
+    }
+  } catch (err) {
+    console.error("Bookmark toggle failed:", err);
+    toast.error("Failed to update bookmark");
+  }
+}
+
+// ✅ Toggle Register / Unregister
+async function toggleRegistration(training) {
+  const token = localStorage.getItem("token");
+  if (!token) return toast.error("Please log in first");
+
+  try {
+    if (!registeredTrainings.has(training.trainingID)) {
+      await axios.post(
+        "http://127.0.0.1:8000/api/registrations",
+        { trainingID: training.trainingID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      registeredTrainings.add(training.trainingID);
+      toast.success("Successfully registered!");
+    } else {
+      // Unregister
+      await axios.delete(
+        `http://127.0.0.1:8000/api/registrations/${training.trainingID}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      registeredTrainings.delete(training.trainingID);
+      toast.info("You have unregistered.");
+    }
+  } catch (err) {
+    console.error("Registration toggle failed:", err);
+    toast.error("Action failed, please try again.");
+  }
+}
+function addToast(message, type = "info") {
+  const id = Date.now();
+  toasts.value.push({ id, message, type });
+  setTimeout(() => {
+    toasts.value = toasts.value.filter((toast) => toast.id !== id);
+  }, 3000);
+}
+
+onMounted(async () => {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+  try {
+    const [careerBookmarkRes, appRes] = await Promise.all([
+      axios.get("http://127.0.0.1:8000/api/career-bookmarks", {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      axios.get("http://127.0.0.1:8000/api/applications", {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    ]);
+
+    careerBookmarks.value = careerBookmarkRes.data.map((b) => b.careerID);
+    applications.value = appRes.data.map((a) => a.careerID);
+  } catch (err) {
+    addToast.error("Failed to load bookmarks or applications.");
+    console.error(err);
+  }
+});
+
+// ✅ Bookmark helpers
+const isCareerBookmarked = (careerID) =>
+  careerBookmarks.value.includes(careerID);
+
+async function toggleCareerBookmark(career) {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    addToast.warning("Please log in first.");
+    return;
+  }
+
+  try {
+    if (isCareerBookmarked(career.careerID)) {
+      await axios.delete(
+        `http://127.0.0.1:8000/api/career-bookmarks/${career.careerID}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      careerBookmarks.value = careerBookmarks.value.filter(
+        (id) => id !== career.careerID
+      );
+      addToast.info("Bookmark removed.");
+    } else {
+      await axios.post(
+        "http://127.0.0.1:8000/api/career-bookmarks",
+        { careerID: career.careerID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      careerBookmarks.value.push(career.careerID);
+      addToast.success("Career bookmarked!");
+    }
+  } catch (err) {
+    addToast.error("Bookmark action failed.");
+    console.error(err);
+  }
+}
+
+// ✅ Application helpers
+const hasApplied = (careerID) => applications.value.includes(careerID);
+
+async function applyToCareer(career) {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    addToast.warning("Please log in first.");
+    return;
+  }
+
+  try {
+    await axios.post(
+      "http://127.0.0.1:8000/api/applications",
+      { careerID: career.careerID },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    applications.value.push(career.careerID);
+    addToast.success("Successfully applied to this career!");
+  } catch (err) {
+    addToast.error("Application failed. Please try again.");
+    console.error(err);
+  }
+}
 
 const calendarOpen = ref(false);
 
@@ -13,41 +191,49 @@ function openModalCalendar(event) {
 
 // Modal & sidebar
 const isModalOpen = ref(false);
-const selectedOrg = ref({});
+const selectedOrg = ref({
+  careers: [],
+  trainings: [],
+});
+
 const isSidebarOpen = ref(false);
 const orgModal = ref(null);
+const myRegistrations = ref(new Set());
 
-const toasts = ref([]);
-
-function addToast(message, type = "info") {
-  const id = Date.now();
-  toasts.value.push({ id, message, type });
-  setTimeout(() => {
-    toasts.value = toasts.value.filter((toast) => toast.id !== id);
-  }, 3000);
-}
 // Organizations
 const organizations = ref([]);
 
-function openModal(item) {
+async function openModal(item) {
   console.log("openModal called with item:", item);
 
   let org = item;
 
+  // ✅ If the item has an organizationID, fetch that organization
   if (item.organizationID) {
-    org = organizations.value.find((o) => o.id === item.organizationID);
+    try {
+      const response = await axios.get(
+        `http://127.0.0.1:8000/api/organizations/${item.organizationID}`
+      );
+      org = response.data;
+      console.log("Fetched organization from backend:", org);
+    } catch (error) {
+      console.error("Error fetching organization:", error);
+      return;
+    }
   }
 
+  // ✅ Handle if no organization is found
   if (!org) {
     console.warn("Organization not found for modal:", item);
     return;
   }
 
+  // ✅ Deep copy to avoid reactivity glitches
   selectedOrg.value = JSON.parse(JSON.stringify(org));
 
-  nextTick(() => {
-    if (orgModal.value) orgModal.value.showModal();
-  });
+  // ✅ Open the modal after data is ready
+  await nextTick();
+  if (orgModal.value) orgModal.value.showModal();
 }
 
 function closeModal() {
@@ -233,333 +419,456 @@ onMounted(async () => {
   }
 });
 
-import TrainingModal from "@/components/Layout/TrainingModal.vue";
-
-const showModal = ref(false);
-const selectedTraining = ref(null);
-const bookmarkedTrainings = ref([]);
-const myRegistrations = ref(new Set());
-
-async function toggleRegister(training) {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    addToast("Please log in first", "accent");
-    return;
-  }
-
-  // ✅ Optimistic update for instant feedback
-  const wasRegistered = myRegistrations.value.has(training.trainingID);
-
-  if (wasRegistered) {
-    myRegistrations.value.delete(training.trainingID);
-    try {
-      await axios.delete(
-        `http://127.0.0.1:8000/api/registrations/${training.trainingID}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      addToast("Unregistered successfully", "info");
-    } catch (err) {
-      myRegistrations.value.add(training.trainingID); // rollback
-      addToast("Failed to unregister", "error");
-    }
-  } else {
-    myRegistrations.value.add(training.trainingID);
-    try {
-      await axios.post(
-        "http://127.0.0.1:8000/api/registrations",
-        { trainingID: training.trainingID },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      addToast("Registered successfully", "success");
-    } catch (err) {
-      myRegistrations.value.delete(training.trainingID); // rollback
-      addToast("Failed to register", "error");
-    }
-  }
-}
-
-function isTrainingBookmarked(trainingID) {
-  return bookmarkedTrainings.value.includes(trainingID);
-}
-
-// Toggle bookmark for a training
-async function toggleTrainingBookmark(trainingID) {
-  if (!trainingID) return;
-
-  const token = localStorage.getItem("token");
-  if (!token) {
-    addToast("PLEASE LOG IN FIRST", "accent");
-    return;
-  }
-
-  const isBookmarked = bookmarkedTrainings.value.includes(trainingID);
-
-  try {
-    if (isBookmarked) {
-      // Remove bookmark
-      await axios.delete(`http://127.0.0.1:8000/api/bookmarks/${trainingID}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      bookmarkedTrainings.value = bookmarkedTrainings.value.filter(
-        (id) => id !== trainingID
-      );
-      addToast("Bookmark removed", "info");
-    } else {
-      // Add bookmark
-      await axios.post(
-        "http://127.0.0.1:8000/api/bookmarks",
-        { trainingID },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      bookmarkedTrainings.value.push(trainingID);
-      addToast("Bookmarked!", "success");
-    }
-  } catch (error) {
-    if (error.response?.status === 409) {
-      // Already bookmarked — update local state to match backend
-      if (!bookmarkedTrainings.value.includes(trainingID)) {
-        bookmarkedTrainings.value.push(trainingID);
-      }
-      addToast("Already bookmarked", "accent");
-    } else {
-      console.error("Failed to toggle bookmark:", error.response || error);
-      addToast("Failed to toggle bookmark", "error");
-    }
-  }
-}
-
-async function openTrainingModal(training) {
-  console.log("Opening training modal:", training);
-  if (bookmarkedTrainings.value.length === 0) {
-    await fetchBookmarks();
-  }
-  // Set the selected training
-  selectedTraining.value = training;
-
-  // ✅ Close the org modal first (important!)
-  if (orgModal.value && orgModal.value.open) {
-    orgModal.value.close();
-  }
-
-  // ✅ Then open the training modal
-  nextTick(() => {
-    showModal.value = true;
-  });
-}
-
-import CareerModal from "@/components/Layout/CareerModal.vue";
-
 const selectedCareer = ref(null);
-const showCareerModal = ref(false);
-const myApplications = ref(new Set());
-const bookmarkedCareers = ref(new Set());
-async function fetchCareerBookmarks() {
-  const token = localStorage.getItem("token");
-  if (!token) return;
+const selectedTraining = ref(null);
+const careerModal = ref(null);
+const trainingModal = ref(null);
 
+// === Modal Functions ===
+function closeOrgModal() {
+  const modal = document.getElementById("orgModal");
+  if (modal?.close) modal.close();
+  selectedOrg.value = null;
+}
+
+// ✅ Open Career Modal (fetch from backend)
+// --- ✅ Fetch Career Details ---
+async function openCareerModal(career) {
+  console.log("Career clicked:", career);
+  if (orgModal.value && orgModal.value.open) orgModal.value.close();
   try {
-    const res = await axios.get("http://127.0.0.1:8000/api/career-bookmarks", {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("❌ No user token found — please log in.");
+      return;
+    }
+
+    // 🔄 Fetch all applications for the logged-in applicant
+    const response = await axios.get("http://127.0.0.1:8000/api/applications", {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    bookmarkedCareers.value = new Set(res.data.map((b) => b.careerID));
-  } catch (error) {
-    console.error("Error fetching career bookmarks:", error);
+    // 🔍 Find if the user applied to this career
+    const app = response.data.find((a) => a.careerID === career.id);
+
+    if (app) {
+      console.log("✅ Application + interview found for this career:", app);
+      selectedCareer.value = app;
+    } else {
+      console.log(
+        "ℹ️ No application found for this career — showing basic info."
+      );
+      selectedCareer.value = career;
+    }
+
+    await nextTick();
+    if (careerModal.value) careerModal.value.showModal();
+  } catch (err) {
+    console.error("❌ Error fetching application or interview:", err);
   }
 }
 
-async function fetchMyApplications() {
-  const token = localStorage.getItem("token");
-  if (!token) return;
-
+// --- ✅ Fetch Training Details ---
+async function openTrainingModal(training) {
+  console.log("🟨 Training post clicked:", training); // shows data of the clicked post
+  if (orgModal.value && orgModal.value.open) orgModal.value.close();
   try {
-    const res = await axios.get("http://127.0.0.1:8000/api/applications", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const trainingId = training.id || training.trainingID;
+    const userToken = localStorage.getItem("token"); // same as career modal
 
-    myApplications.value = new Set(res.data.map((a) => a.careerID));
+    console.log("🔄 Fetching training details for ID:", trainingId);
+    const response = await axios.get(
+      `http://127.0.0.1:8000/api/trainings/${trainingId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${userToken}`,
+        },
+      }
+    );
+
+    console.log("✅ Training details fetched from backend:", response.data);
+    selectedTraining.value = response.data;
+
+    await nextTick(); // wait until dialog exists in DOM
+    if (trainingModal.value) trainingModal.value.showModal();
   } catch (error) {
-    console.error("Error fetching applications:", error);
+    console.error("❌ Error fetching training:", error);
   }
 }
 
-// Open modal function
-function openCareerModal(career) {
-  selectedCareer.value = career;
-  showCareerModal.value = true;
-  console.log("Opening modal for:", career);
-  console.log("Show state before:", showCareerModal.value);
-  if (orgModal.value && orgModal.value.open) {
-    orgModal.value.close();
-  }
-}
-
-// Close modal function
+// ✅ Close Career/Training Modals
 function closeCareerModal() {
-  showCareerModal.value = false;
+  const modal = document.getElementById("careerModal");
+  if (modal?.close) modal.close();
   selectedCareer.value = null;
+}
+
+function closeTrainingModal() {
+  const modal = document.getElementById("trainingModal");
+  if (modal?.close) modal.close();
+  if (trainingModal.value && trainingModal.value.open)
+    trainingModal.value.close();
+  selectedTraining.value = null;
 }
 </script>
 
 <template>
-  <main class="font-poppins">
-    <div class="bg-white m-3 p-4 rounded-lg">
-      <!-- Header -->
-      <div class="sticky top-0 z-10 bg-white pt-4 px-4 pb-2 border-b shadow-sm">
-        <h2 class="text-2xl font-bold mb-3">Organizations</h2>
+  <div>
+    <main class="font-poppins">
+      <div class="bg-white m-3 p-4 rounded-lg">
+        <!-- Header -->
+        <div
+          class="sticky top-0 z-10 bg-white pt-4 px-4 pb-2 border-b shadow-sm"
+        >
+          <h2 class="text-2xl font-bold mb-3">Organizations</h2>
+        </div>
+
+        <!-- Organization List -->
+        <div class="space-y-4">
+          <div
+            v-for="org in organizations"
+            :key="org.id"
+            class="flex items-center gap-4 p-4 bg-blue-gray rounded-lg hover:bg-gray-200 transition cursor-pointer"
+            @click="openModal(org)"
+          >
+            <!-- Profile Picture / Logo -->
+            <div v-if="selectedOrg" class="flex-shrink-0">
+              <img
+                v-if="org.logo"
+                :src="org.logo"
+                alt="Organization Logo"
+                class="rounded-full w-16 h-16 object-cover"
+              />
+              <div
+                v-else
+                class="w-16 h-16 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 text-sm"
+              >
+                No Logo
+              </div>
+            </div>
+
+            <!-- Org Name -->
+            <div>
+              <p class="text-base font-semibold text-gray-800">
+                {{ org.name }}
+              </p>
+              <p class="text-sm text-gray-600">{{ org.location }}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Organization List -->
-      <div class="space-y-4">
-        <div
-          v-for="org in organizations"
-          :key="org.id"
-          class="flex items-center gap-4 p-4 bg-blue-gray rounded-lg hover:bg-gray-200 transition cursor-pointer"
-          @click="openModal(org)"
-        >
-          <!-- Profile Picture / Logo -->
-          <div v-if="selectedOrg && selectedOrg.id" class="flex-shrink-0">
+      <CalendarSidebar
+        :isOpen="calendarOpen"
+        @open="calendarOpen = true"
+        @close="calendarOpen = false"
+        @eventClick="openModalCalendar"
+      />
+
+      <!-- Organization Details Modal -->
+      <dialog ref="orgModal" class="modal sm:modal-middle">
+        <div class="modal-box max-w-2xl relative font-poppins">
+          <!-- Close button -->
+          <button
+            @click="closeModal"
+            class="btn btn-sm btn-circle absolute right-2 top-2"
+          >
+            ✕
+          </button>
+
+          <!-- Organization Info -->
+          <div
+            v-if="selectedOrg && selectedOrg.id"
+            class="flex items-center gap-3 mb-3"
+          >
             <img
-              v-if="org.logo"
-              :src="org.logo"
+              v-if="(selectedOrg && selectedOrg.logo) || (org && org.logo)"
+              :src="selectedOrg?.logo || org?.logo"
               alt="Organization Logo"
-              class="rounded-full w-16 h-16 object-cover"
+              class="w-16 h-16 rounded-full object-cover"
             />
+
             <div
               v-else
               class="w-16 h-16 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 text-sm"
             >
               No Logo
             </div>
+            <div>
+              <h2 class="text-xl font-bold">
+                {{ selectedOrg.name || "No Name" }}
+              </h2>
+              <p class="text-sm text-gray-600">
+                {{ selectedOrg.location || "No location available" }}
+              </p>
+            </div>
           </div>
 
-          <!-- Org Name -->
-          <div>
-            <p class="text-base font-semibold text-gray-800">
-              {{ org.name }}
-            </p>
-            <p class="text-sm text-gray-600">{{ org.location }}</p>
+          <!-- Website -->
+          <p v-if="selectedOrg && selectedOrg.id" class="text-sm mb-5">
+            <a
+              :href="selectedOrg.website"
+              target="_blank"
+              class="text-blue-600 underline"
+            >
+              {{ selectedOrg.website }}
+            </a>
+          </p>
+
+          <!-- Career Posts -->
+          <div class="mt-4">
+            <h3 class="text-base font-semibold mb-3">Career Posts</h3>
+            <div class="flex overflow-x-auto space-x-3 pb-2 snap-x">
+              <div
+                v-for="career in selectedOrg.careers"
+                :key="career.id"
+                class="snap-start w-[180px] p-3 bg-gray-100 rounded-lg shadow-sm"
+                @click="openCareerModal(career)"
+              >
+                <h4 class="font-semibold text-sm">{{ career.position }}</h4>
+                <p class="text-[11px] text-gray-600">
+                  {{ formatDateTime(career.deadlineOfSubmission) }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Training Posts -->
+          <div class="mt-6">
+            <h3 class="text-base font-semibold mb-3">Training Posts</h3>
+            <div class="flex overflow-x-auto space-x-3 pb-2 snap-x">
+              <div
+                v-for="training in selectedOrg.trainings"
+                :key="training.id"
+                class="snap-start w-[180px] p-3 bg-gray-100 rounded-lg shadow-sm cursor-pointer"
+                @click="openTrainingModal(training)"
+              >
+                <h4 class="font-semibold text-sm">{{ training.title }}</h4>
+                <p class="text-[11px] text-gray-600">
+                  {{ formatDateTime(training.schedule) }}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </dialog>
 
-    <CalendarSidebar
-      :isOpen="calendarOpen"
-      @open="calendarOpen = true"
-      @close="calendarOpen = false"
-      @eventClick="openModalCalendar"
-    />
-
-    <!-- Organization Details Modal -->
-    <dialog ref="orgModal" class="modal sm:modal-middle">
-      <div class="modal-box max-w-2xl relative font-poppins">
-        <!-- Close button -->
-        <button
-          @click="closeModal"
-          class="btn btn-sm btn-circle absolute right-2 top-2"
-        >
-          ✕
-        </button>
-
-        <!-- Organization Info -->
-        <div
-          v-if="selectedOrg && selectedOrg.id"
-          class="flex items-center gap-3 mb-3"
-        >
-          <img
-            v-if="(selectedOrg && selectedOrg.logo) || (org && org.logo)"
-            :src="selectedOrg?.logo || org?.logo"
-            alt="Organization Logo"
-            class="w-16 h-16 rounded-full object-cover"
-          />
-
-          <div
-            v-else
-            class="w-16 h-16 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 text-sm"
+      <!-- ✅ Career Modal -->
+      <div
+        v-if="selectedCareer"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      >
+        <div class="modal-box relative font-poppins">
+          <button
+            @click="closeCareerModal"
+            class="btn btn-sm btn-circle absolute right-2 top-2"
           >
-            No Logo
-          </div>
-          <div>
-            <h2 class="text-xl font-bold">
-              {{ selectedOrg.name || "No Name" }}
+            ✕
+          </button>
+
+          <div v-if="selectedCareer">
+            <h2 class="text-xl font-bold mb-2">
+              {{ selectedCareer.title || selectedCareer.career?.position }}
             </h2>
-            <p class="text-sm text-gray-600">
-              {{ selectedOrg.location || "No location available" }}
+            <p class="text-sm text-gray-600 mb-2">
+              Organization:
+              {{
+                selectedCareer.organizationName || selectedCareer.organization
+              }}
             </p>
-          </div>
-        </div>
+            <!-- ✅ Bookmark and Apply Buttons -->
+            <div class="mt-4 flex gap-3 justify-end">
+              <button
+                class="btn btn-outline btn-sm"
+                @click="toggleCareerBookmark(selectedCareer)"
+              >
+                {{
+                  isCareerBookmarked(selectedCareer.careerID)
+                    ? "Bookmarked"
+                    : "Bookmark"
+                }}
+              </button>
 
-        <!-- Website -->
-        <p v-if="selectedOrg && selectedOrg.id" class="text-sm mb-5">
-          <a
-            :href="selectedOrg.website"
-            target="_blank"
-            class="text-blue-600 underline"
-          >
-            {{ selectedOrg.website }}
-          </a>
-        </p>
-
-        <!-- Career Posts -->
-        <div class="mt-4">
-          <h3 class="text-base font-semibold mb-3">Career Posts</h3>
-          <div class="flex overflow-x-auto space-x-3 pb-2 snap-x">
-            <div
-              v-for="career in selectedOrg.careers"
-              :key="career.id"
-              class="snap-start w-[180px] p-3 bg-gray-100 rounded-lg shadow-sm"
-              @click="openCareerModal(career)"
-            >
-              <h4 class="font-semibold text-sm">{{ career.position }}</h4>
-              <p class="text-[11px] text-gray-600">
-                Deadline: {{ formatDateTime(career.deadlineOfSubmission) }}
-              </p>
+              <button
+                class="btn btn-primary btn-sm"
+                @click="applyToCareer(selectedCareer)"
+                :disabled="hasApplied(selectedCareer.careerID)"
+              >
+                {{ hasApplied(selectedCareer.careerID) ? "Applied" : "Apply" }}
+              </button>
             </div>
-          </div>
-        </div>
 
-        <!-- Training Posts -->
-        <div class="mt-6">
-          <h3 class="text-base font-semibold mb-3">Training Posts</h3>
-          <div class="flex overflow-x-auto space-x-3 pb-2 snap-x">
+            <p>
+              <strong>Details:</strong>
+              {{
+                selectedCareer.detailsAndInstructions ||
+                selectedCareer.career?.detailsAndInstructions
+              }}
+            </p>
+            <p>
+              <strong>Qualifications:</strong>
+              {{
+                selectedCareer.qualifications ||
+                selectedCareer.career?.qualifications
+              }}
+            </p>
+            <p>
+              <strong>Requirements:</strong>
+              {{ selectedCareer.career?.requirements }}
+            </p>
+            <p>
+              <strong>Application Address:</strong>
+              {{
+                selectedCareer.applicationLetterAddress ||
+                selectedCareer.career?.applicationLetterAddress
+              }}
+            </p>
+            <p>
+              <strong>Deadline:</strong>
+              {{
+                formatDateTime(
+                  selectedCareer.deadlineOfSubmission ||
+                    selectedCareer.career?.deadlineOfSubmission
+                )
+              }}
+            </p>
+
+            <!-- ✅ Interview Info (only if the applicant has one) -->
             <div
-              v-for="training in selectedOrg.trainings"
-              :key="training.id"
-              class="snap-start w-[180px] p-3 bg-gray-100 rounded-lg shadow-sm cursor-pointer"
-              @click="openTrainingModal(training)"
+              v-if="
+                selectedCareer.interviewSchedule ||
+                selectedCareer.interviewMode ||
+                selectedCareer.interviewLink ||
+                selectedCareer.interviewLocation
+              "
             >
-              <h4 class="font-semibold text-sm">{{ training.title }}</h4>
-              <p class="text-[11px] text-gray-600">
-                Schedule: {{ formatSchedule(training.schedule) }}
+              <div class="divider"></div>
+              <p v-if="selectedCareer.interviewSchedule">
+                <strong>Interview Schedule:</strong>
+                {{ formatDateTime(selectedCareer.interviewSchedule) }}
+              </p>
+              <p v-if="selectedCareer.interviewMode">
+                <strong>Interview Mode:</strong>
+                {{ selectedCareer.interviewMode }}
+              </p>
+              <p v-if="selectedCareer.interviewLink">
+                <strong>Interview Link:</strong>
+                <a
+                  :href="selectedCareer.interviewLink"
+                  target="_blank"
+                  class="text-blue-500 underline"
+                >
+                  {{ selectedCareer.interviewLink }}
+                </a>
+              </p>
+              <p v-if="selectedCareer.interviewLocation">
+                <strong>Interview Location:</strong>
+                {{ selectedCareer.interviewLocation }}
               </p>
             </div>
           </div>
         </div>
       </div>
-    </dialog>
-    <TrainingModal
-      v-if="showModal"
-      :isOpen="showModal"
-      :training="selectedTraining"
-      :isRegistered="myRegistrations.has(selectedTraining?.id) || false"
-      :isBookmarked="bookmarkedTrainings.includes(selectedTraining?.id)"
-      @toggle-register="toggleRegister"
-      @bookmark="(trainingID) => toggleTrainingBookmark(selectedTraining?.id)"
-      @close="showModal = false"
-    />
 
-    <CareerModal
-      v-if="showCareerModal"
-      :show="showCareerModal"
-      :career="selectedCareer"
-      :myApplications="myApplications"
-      :bookmarkedCareers="bookmarkedCareers"
-      @close="closeCareerModal"
-      @update-applications="myApplications = $event"
-      @update-bookmarks="bookmarkedCareers = $event"
-    />
+      <!-- ✅ Training Modal -->
+      <dialog
+        ref="trainingModal"
+        class="modal sm:modal-middle z-50"
+        v-show="selectedTraining"
+      >
+        <div class="modal-box max-w-3xl relative font-poppins">
+          <button
+            @click="closeTrainingModal"
+            class="btn btn-sm btn-circle absolute right-2 top-2"
+          >
+            ✕
+          </button>
 
+          <div v-if="selectedTraining">
+            <h2 class="text-xl font-bold mb-2">{{ selectedTraining.title }}</h2>
+            <p class="text-sm text-gray-600 mb-2">
+              Organization: {{ selectedTraining.organization?.name }}
+            </p>
+            <div class="mt-4 flex gap-3 justify-end">
+              <!-- Bookmark -->
+              <button
+                @click="toggleTrainingBookmark(selectedTraining)"
+                class="btn btn-outline btn-sm"
+              >
+                {{
+                  bookmarks.has(selectedTraining.trainingID)
+                    ? "Bookmarked"
+                    : "Bookmark"
+                }}
+              </button>
+              <!-- Register/Unregister -->
+              <button
+                @click="toggleRegistration(selectedTraining)"
+                class="btn btn-sm text-white"
+                :class="isRegistered ? 'bg-gray-500' : 'bg-customButton'"
+              >
+                {{
+                  registeredTrainings.has(selectedTraining.trainingID)
+                    ? "Unregister"
+                    : "Register"
+                }}
+              </button>
+            </div>
+            <p><strong>Mode:</strong> {{ selectedTraining.mode }}</p>
+            <p><strong>Details:</strong> {{ selectedTraining.description }}</p>
+
+            <p v-if="selectedTraining.location">
+              <strong>Location:</strong> {{ selectedTraining.location }}
+            </p>
+
+            <p v-if="selectedTraining.trainingLink">
+              <strong>Link:</strong>
+              <a
+                :href="selectedTraining.trainingLink"
+                target="_blank"
+                class="text-blue-500 underline"
+              >
+                {{ selectedTraining.trainingLink }}
+              </a>
+            </p>
+
+            <p>
+              <strong>Schedule:</strong>
+              {{ formatDateTime(selectedTraining.schedule) }}
+            </p>
+            <!-- QR Code Section -->
+            <div
+              v-if="selectedTraining.attendance_key"
+              class="mt-6 text-center border-t pt-4"
+            >
+              <p class="text-sm font-semibold mb-2">
+                Scan this QR Code for Attendance
+              </p>
+
+              <QrcodeVue
+                :value="`http://127.0.0.1:8000/attendance?trainingID=${selectedTraining.trainingID}&key=${selectedTraining.attendance_key}`"
+                :size="200"
+                level="H"
+                class="mx-auto"
+              />
+
+              <p class="text-gray-500 text-xs mt-2">
+                Expires at:
+                {{ formatDateTime(selectedTraining.end_time) }}
+              </p>
+            </div>
+
+            <!-- No QR yet -->
+            <div v-else>
+              <div class="divider"></div>
+              <p class="text-sm text-gray-500 text-center">
+                QR Code not available yet or has expired.
+              </p>
+            </div>
+          </div>
+        </div>
+      </dialog>
+    </main>
     <div class="toast toast-end toast-top z-50">
       <div
         v-for="toast in toasts"
@@ -574,7 +883,7 @@ function closeCareerModal() {
         {{ toast.message }}
       </div>
     </div>
-  </main>
+  </div>
 </template>
 
 <style scoped>
