@@ -239,29 +239,25 @@ const fetchTotals = async () => {
 onMounted(async () => {
   try {
     const token = localStorage.getItem("token");
-
     if (!token) {
-      console.error("No token found in localStorage");
+      console.error("No token found");
       return;
     }
 
-    // Debug (optional): confirm headers being sent
-    console.log("Sending token:", token);
-
-    const headers = {
-      Authorization: `Bearer ${token}`,
-      authorization: `Bearer ${token}`, // some backends require lowercase
-      "x-access-token": token            // fallback for other middlewares
+    const authHeader = {
+      headers: {
+        Authorization: `Bearer ${token}`, // exact header most Node servers expect
+      },
     };
 
     const trainingsRes = await axios.get(
       import.meta.env.VITE_API_BASE_URL + "/trainings/total",
-      { headers }
+      authHeader
     );
 
     const careersRes = await axios.get(
       import.meta.env.VITE_API_BASE_URL + "/careers/total",
-      { headers }
+      authHeader
     );
 
     totalTrainings.value = trainingsRes.data.totalTrainings;
