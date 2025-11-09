@@ -238,8 +238,26 @@ const fetchTotals = async () => {
 // fetch totals when component mounts
 onMounted(async () => {
   try {
-    const trainingsRes = await axios.get(import.meta.env.VITE_API_BASE_URL +"/trainings/total");
-    const careersRes = await axios.get(import.meta.env.VITE_API_BASE_URL +"/careers/total");
+    const token = localStorage.getItem("token");
+    if (!token) throw new Error("No token found");
+
+    const trainingsRes = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/trainings/total",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    const careersRes = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/careers/total",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
     totalTrainings.value = trainingsRes.data.totalTrainings;
     totalCareers.value = careersRes.data.totalCareers;
