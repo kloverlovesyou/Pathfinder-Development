@@ -219,7 +219,7 @@ const showModal = ref(false);
   <main class="font-poppins">
     <!-- Header -->
 
-    <div class="bg-white m-3 p-4 rounded-lg">
+    <div class="bg-white m-2 md:m-3 p-3 md:p-4 rounded-lg">
       <div class="sticky top-0 z-10 bg-white pt-4 px-4 pb-2 border-b shadow-sm">
         <h2 class="text-2xl font-bold mb-3 sticky top-0 bg-white z-10">
           Training
@@ -230,7 +230,8 @@ const showModal = ref(false);
         <div
           v-for="training in trainings"
           :key="training.trainingID"
-          class="p-4 bg-blue-gray rounded-lg hover:bg-gray-300 transition cursor-pointer flex justify-between items-center"
+          class="p-4 bg-blue-gray rounded-lg hover:bg-gray-300 transition cursor-pointer
+                 flex flex-col md:flex-row md:justify-between md:items-center space-y-2 md:space-y-0"
           @click="openTrainingModal(training)"
         >
           <!-- Left: Training info -->
@@ -249,7 +250,7 @@ const showModal = ref(false);
                 new Date(training.end_time) > new Date()
               "
             >
-              <qrcode-vue :value="training.attendance_link" :size="80" />
+              <qrcode-vue :value="training.attendance_link" :size="60" class="md:size-[80px]" />
             </div>
             <div v-else>
               <p class="text-sm text-gray-500 text-center">
@@ -296,3 +297,4 @@ const showModal = ref(false);
     </div>
   </main>
 </template>
+
