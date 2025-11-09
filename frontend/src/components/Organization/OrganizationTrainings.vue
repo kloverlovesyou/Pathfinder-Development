@@ -1050,67 +1050,91 @@ mounted() {
     
   },
 
-computed: {
-  todayDate() {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`; // format: YYYY-MM-DD
-  },
+  computed: {
+    todayDate() {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, "0");
+      const day = String(today.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`; // format: YYYY-MM-DD
+    },
+    visibleUpcomingTrainings() {
+      const list = this.sortedUpcomingTrainings;
+      return this.showAllUpcoming ? list : list.slice(0, 4);
+    },
 
-  allTrainings() {
-    // Return trainings from store
-    return this.trainingStore.trainings || [];
-  },
+    visibleCompletedTrainings() {
+      const list = this.sortedCompletedTrainings;
+      return this.showAllCompleted ? list : list.slice(0, 4);
+    },
 
-  sortedUpcomingTrainings() {
-    const now = new Date();
-    return this.allTrainings
-      .filter(t => new Date(t.schedule) >= now)
-      .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
-  },
+    sortedUpcomingTrainings() {
+      const now = new Date();
+      return this.upcomingtrainings
+        .filter(t => new Date(t.schedule) >= now)
+        .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
+    },
 
-  sortedCompletedTrainings() {
-    const now = new Date();
-    return this.allTrainings
-      .filter(t => new Date(t.schedule) < now)
-      .sort((a, b) => new Date(b.schedule) - new Date(a.schedule));
-  },
-
-  filteredUpcoming() {
-    const query = this.globalSearchQuery.toLowerCase();
-    if (!query) return this.sortedUpcomingTrainings;
-    return this.sortedUpcomingTrainings.filter(training =>
-      training.title.toLowerCase().startsWith(query)
-    );
-  },
-
-  filteredCompleted() {
-    const query = this.globalSearchQuery.toLowerCase();
-    if (!query) return this.sortedCompletedTrainings;
-    return this.sortedCompletedTrainings.filter(training =>
-      training.title.toLowerCase().startsWith(query)
-    );
-  },
-
+    sortedCompletedTrainings() {
+      const now = new Date();
+      return this.upcomingtrainings
+        .filter(t => new Date(t.schedule) < now)
+        .sort((a, b) => new Date(b.schedule) - new Date(a.schedule));
+    },
+    filteredUpcoming() {
+      const query = this.globalSearchQuery.toLowerCase();
+      if (!query) return this.sortedUpcomingTrainings;
+      return this.sortedUpcomingTrainings.filter(training =>
+        training.title.toLowerCase().startsWith(query) // 🔹 only matches if letters typed are in order from the start
+      );
+    },
+    filteredCompleted() {
+      const query = this.globalSearchQuery.toLowerCase();
+      if (!query) return this.sortedCompletedTrainings;
+      return this.sortedCompletedTrainings.filter(training =>
+        training.title.toLowerCase().startsWith(query)
+      );
+    },
+    visibleFilteredUpcoming() {
+      return this.showAllUpcoming
+        ? this.filteredUpcoming
+        : this.filteredUpcoming.slice(0, 4);
+    },
+    visibleFilteredCompleted() {
+      return this.showAllCompleted
+        ? this.filteredCompleted
+        : this.filteredCompleted.slice(0, 4);
+    },
+  
   visibleUpcomingTrainings() {
     const orgId = this.currentOrganizationId;
-    const list = this.filteredUpcoming.filter(
-      t => t.organization_id === orgId
+    const list = this.sortedUpcomingTrainings.filter(
+      training => training.organization_id === orgId
     );
     return this.showAllUpcoming ? list : list.slice(0, 4);
   },
 
   visibleCompletedTrainings() {
     const orgId = this.currentOrganizationId;
-    const list = this.filteredCompleted.filter(
-      t => t.organization_id === orgId
+    const list = this.sortedCompletedTrainings.filter(
+      training => training.organization_id === orgId
     );
     return this.showAllCompleted ? list : list.slice(0, 4);
   },
 
-  // QR-related computed properties
+  sortedUpcomingTrainings() {
+    const now = new Date();
+    return this.upcomingtrainings
+      .filter(t => new Date(t.schedule) >= now)
+      .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
+  },
+
+  sortedCompletedTrainings() {
+    const now = new Date();
+    return this.upcomingtrainings
+      .filter(t => new Date(t.schedule) < now)
+      .sort((a, b) => new Date(b.schedule) - new Date(a.schedule));
+  },
   activeQrCode() {
     return this.trainingStore.qrCodeValue;
   },
@@ -1123,6 +1147,8 @@ computed: {
     return this.trainingStore.activeTrainingId;
   },
 },
+
+
 };
 </script>
 
