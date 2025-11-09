@@ -597,6 +597,14 @@ export default {
   },
 
   methods: {
+
+    isTrainingActive(training) {
+    const now = new Date();
+    const start = new Date(training.schedule);
+    const end = new Date(training.end_time);
+    return now >= start && now <= end;
+    },
+
     async fetchTags() {
       try {
         const response = await axios.get(import.meta.env.VITE_API_BASE_URL +'/tags');
@@ -752,6 +760,8 @@ export default {
         }
       }
     },
+
+
 
     closeRegistrantsModal() {
       this.showRegistrantsModal = false;
@@ -988,6 +998,11 @@ async saveTraining() {
       const day = String(today.getDate()).padStart(2, "0");
       return `${year}-${month}-${day}`; // format: YYYY-MM-DD
     },
+
+      activeTrainingQRExpiresAt() {
+    return qrExpiresAt.value ? qrExpiresAt.value.toLocaleString() : "";
+    },
+
     visibleUpcomingTrainings() {
       const list = this.sortedUpcomingTrainings;
       return this.showAllUpcoming ? list : list.slice(0, 4);
