@@ -199,4 +199,31 @@ public function generateQRCode(Request $request)
             'data' => $training->load('organization')
         ], 201);
     }
+
+    public function show($id)
+{
+    $training = Training::with(['organization'])
+        ->findOrFail($id);
+
+    // Auto-generate QR if needed
+    $this->autoGenerateQR($training);
+
+    return response()->json([
+        'trainingID' => $training->trainingID,
+        'title' => $training->title,
+        'description' => $training->description,
+        'schedule' => $training->schedule?->format('Y-m-d H:i'),
+        'end_time' => $training->end_time?->format('Y-m-d H:i'),
+        'mode' => $training->mode,
+        'location' => $training->location,
+        'trainingLink' => $training->trainingLink,
+        'attendance_key' => $training->attendance_key,
+        'attendance_expires_at' => $training->attendance_expires_at,
+        'organizationID' => $training->organizationID,
+        'organization' => [
+            'name' => optional($training->organization)->name ?? 'Unknown',
+        ],
+    ]);
+}
+
 }

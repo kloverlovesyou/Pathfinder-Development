@@ -851,10 +851,7 @@ onMounted(fetchMyActivities);
                     v-else
                     class="mt-6 text-center text-gray-400 border-t pt-4"
                   >
-                    <p>
-                      QR Code not available yet. It will appear once the
-                      training starts.
-                    </p>
+                    <p>QR Code not available yet or has expired.</p>
                   </div>
                 </div>
               </div>

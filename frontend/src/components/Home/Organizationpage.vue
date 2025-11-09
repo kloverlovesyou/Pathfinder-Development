@@ -17,6 +17,15 @@ const selectedOrg = ref({});
 const isSidebarOpen = ref(false);
 const orgModal = ref(null);
 
+const toasts = ref([]);
+
+function addToast(message, type = "info") {
+  const id = Date.now();
+  toasts.value.push({ id, message, type });
+  setTimeout(() => {
+    toasts.value = toasts.value.filter((toast) => toast.id !== id);
+  }, 3000);
+}
 // Organizations
 const organizations = ref([]);
 
@@ -156,6 +165,10 @@ onMounted(async () => {
         id: c.careerID, // ← careerID from backend
         position: c.position,
         deadlineOfSubmission: c.deadlineOfSubmission,
+        detailsAndInstructions: c.detailsAndInstructions,
+        qualifications: c.qualifications,
+        requirements: c.requirements,
+        applicationLetterAddress: c.applicationLetterAddress,
       })),
       trainings: (org.trainings || []).map((t) => ({
         id: t.trainingID, // ← trainingID from backend
@@ -163,9 +176,22 @@ onMounted(async () => {
         description: t.description,
         schedule: t.schedule,
         end_time: t.end_time,
+        mode: t.mode,
+        location: t.location,
+        trainingLink: t.trainingLink,
+        attendance_key: t.attendance_key,
+        attendance_expires_at: t.attendance_expires_at,
+        qr_generated_at: t.qr_generated_at,
       })),
     }));
     buildEvents();
+    await fetchBookmarks();
+
+    // 3️⃣ Fetch user’s bookmarked careers
+    await fetchCareerBookmarks();
+
+    // 4️⃣ Fetch user’s applications
+    await fetchMyApplications();
   } catch (error) {
     console.error("Error fetching organizations:", error);
   }
@@ -206,6 +232,173 @@ onMounted(async () => {
     calendar.dispatchEvent(event);
   }
 });
+
+import TrainingModal from "@/components/Layout/TrainingModal.vue";
+
+const showModal = ref(false);
+const selectedTraining = ref(null);
+const bookmarkedTrainings = ref([]);
+const myRegistrations = ref(new Set());
+
+async function toggleRegister(training) {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    addToast("Please log in first", "accent");
+    return;
+  }
+
+  // ✅ Optimistic update for instant feedback
+  const wasRegistered = myRegistrations.value.has(training.trainingID);
+
+  if (wasRegistered) {
+    myRegistrations.value.delete(training.trainingID);
+    try {
+      await axios.delete(
+        `http://127.0.0.1:8000/api/registrations/${training.trainingID}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      addToast("Unregistered successfully", "info");
+    } catch (err) {
+      myRegistrations.value.add(training.trainingID); // rollback
+      addToast("Failed to unregister", "error");
+    }
+  } else {
+    myRegistrations.value.add(training.trainingID);
+    try {
+      await axios.post(
+        "http://127.0.0.1:8000/api/registrations",
+        { trainingID: training.trainingID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      addToast("Registered successfully", "success");
+    } catch (err) {
+      myRegistrations.value.delete(training.trainingID); // rollback
+      addToast("Failed to register", "error");
+    }
+  }
+}
+
+function isTrainingBookmarked(trainingID) {
+  return bookmarkedTrainings.value.includes(trainingID);
+}
+
+// Toggle bookmark for a training
+async function toggleTrainingBookmark(trainingID) {
+  if (!trainingID) return;
+
+  const token = localStorage.getItem("token");
+  if (!token) {
+    addToast("PLEASE LOG IN FIRST", "accent");
+    return;
+  }
+
+  const isBookmarked = bookmarkedTrainings.value.includes(trainingID);
+
+  try {
+    if (isBookmarked) {
+      // Remove bookmark
+      await axios.delete(`http://127.0.0.1:8000/api/bookmarks/${trainingID}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      bookmarkedTrainings.value = bookmarkedTrainings.value.filter(
+        (id) => id !== trainingID
+      );
+      addToast("Bookmark removed", "info");
+    } else {
+      // Add bookmark
+      await axios.post(
+        "http://127.0.0.1:8000/api/bookmarks",
+        { trainingID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      bookmarkedTrainings.value.push(trainingID);
+      addToast("Bookmarked!", "success");
+    }
+  } catch (error) {
+    if (error.response?.status === 409) {
+      // Already bookmarked — update local state to match backend
+      if (!bookmarkedTrainings.value.includes(trainingID)) {
+        bookmarkedTrainings.value.push(trainingID);
+      }
+      addToast("Already bookmarked", "accent");
+    } else {
+      console.error("Failed to toggle bookmark:", error.response || error);
+      addToast("Failed to toggle bookmark", "error");
+    }
+  }
+}
+
+async function openTrainingModal(training) {
+  console.log("Opening training modal:", training);
+  if (bookmarkedTrainings.value.length === 0) {
+    await fetchBookmarks();
+  }
+  // Set the selected training
+  selectedTraining.value = training;
+
+  // ✅ Close the org modal first (important!)
+  if (orgModal.value && orgModal.value.open) {
+    orgModal.value.close();
+  }
+
+  // ✅ Then open the training modal
+  nextTick(() => {
+    showModal.value = true;
+  });
+}
+
+import CareerModal from "@/components/Layout/CareerModal.vue";
+
+const selectedCareer = ref(null);
+const showCareerModal = ref(false);
+const myApplications = ref(new Set());
+const bookmarkedCareers = ref(new Set());
+async function fetchCareerBookmarks() {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+  try {
+    const res = await axios.get("http://127.0.0.1:8000/api/career-bookmarks", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    bookmarkedCareers.value = new Set(res.data.map((b) => b.careerID));
+  } catch (error) {
+    console.error("Error fetching career bookmarks:", error);
+  }
+}
+
+async function fetchMyApplications() {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+  try {
+    const res = await axios.get("http://127.0.0.1:8000/api/applications", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    myApplications.value = new Set(res.data.map((a) => a.careerID));
+  } catch (error) {
+    console.error("Error fetching applications:", error);
+  }
+}
+
+// Open modal function
+function openCareerModal(career) {
+  selectedCareer.value = career;
+  showCareerModal.value = true;
+  console.log("Opening modal for:", career);
+  console.log("Show state before:", showCareerModal.value);
+  if (orgModal.value && orgModal.value.open) {
+    orgModal.value.close();
+  }
+}
+
+// Close modal function
+function closeCareerModal() {
+  showCareerModal.value = false;
+  selectedCareer.value = null;
+}
 </script>
 
 <template>
@@ -225,7 +418,7 @@ onMounted(async () => {
           @click="openModal(org)"
         >
           <!-- Profile Picture / Logo -->
-          <div class="flex-shrink-0">
+          <div v-if="selectedOrg && selectedOrg.id" class="flex-shrink-0">
             <img
               v-if="org.logo"
               :src="org.logo"
@@ -275,10 +468,18 @@ onMounted(async () => {
           class="flex items-center gap-3 mb-3"
         >
           <img
-            v-if="selectedOrg.logo"
-            :src="selectedOrg.logo"
-            class="w-14 h-14 rounded-full object-cover"
+            v-if="(selectedOrg && selectedOrg.logo) || (org && org.logo)"
+            :src="selectedOrg?.logo || org?.logo"
+            alt="Organization Logo"
+            class="w-16 h-16 rounded-full object-cover"
           />
+
+          <div
+            v-else
+            class="w-16 h-16 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 text-sm"
+          >
+            No Logo
+          </div>
           <div>
             <h2 class="text-xl font-bold">
               {{ selectedOrg.name || "No Name" }}
@@ -308,6 +509,7 @@ onMounted(async () => {
               v-for="career in selectedOrg.careers"
               :key="career.id"
               class="snap-start w-[180px] p-3 bg-gray-100 rounded-lg shadow-sm"
+              @click="openCareerModal(career)"
             >
               <h4 class="font-semibold text-sm">{{ career.position }}</h4>
               <p class="text-[11px] text-gray-600">
@@ -324,7 +526,8 @@ onMounted(async () => {
             <div
               v-for="training in selectedOrg.trainings"
               :key="training.id"
-              class="snap-start w-[180px] p-3 bg-gray-100 rounded-lg shadow-sm"
+              class="snap-start w-[180px] p-3 bg-gray-100 rounded-lg shadow-sm cursor-pointer"
+              @click="openTrainingModal(training)"
             >
               <h4 class="font-semibold text-sm">{{ training.title }}</h4>
               <p class="text-[11px] text-gray-600">
@@ -335,6 +538,42 @@ onMounted(async () => {
         </div>
       </div>
     </dialog>
+    <TrainingModal
+      v-if="showModal"
+      :isOpen="showModal"
+      :training="selectedTraining"
+      :isRegistered="myRegistrations.has(selectedTraining?.id) || false"
+      :isBookmarked="bookmarkedTrainings.includes(selectedTraining?.id)"
+      @toggle-register="toggleRegister"
+      @bookmark="(trainingID) => toggleTrainingBookmark(selectedTraining?.id)"
+      @close="showModal = false"
+    />
+
+    <CareerModal
+      v-if="showCareerModal"
+      :show="showCareerModal"
+      :career="selectedCareer"
+      :myApplications="myApplications"
+      :bookmarkedCareers="bookmarkedCareers"
+      @close="closeCareerModal"
+      @update-applications="myApplications = $event"
+      @update-bookmarks="bookmarkedCareers = $event"
+    />
+
+    <div class="toast toast-end toast-top z-50">
+      <div
+        v-for="toast in toasts"
+        :key="toast.id"
+        class="alert"
+        :class="{
+          'alert-info': toast.type === 'info',
+          'alert-success': toast.type === 'success',
+          'alert-accent': toast.type === 'accent',
+        }"
+      >
+        {{ toast.message }}
+      </div>
+    </div>
   </main>
 </template>
 

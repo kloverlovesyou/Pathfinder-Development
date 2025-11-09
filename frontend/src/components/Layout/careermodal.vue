@@ -6,16 +6,38 @@ import axios from "axios";
 const props = defineProps({
   show: Boolean, // Controls visibility
   career: Object, // Selected career data
-  myApplications: Set, // Set of user's applied careerIDs
-  bookmarkedCareers: Set, // Set of bookmarked careerIDs
+  myApplications: [Set, Object], // allow Set or ref(Set)
+  bookmarkedCareers: [Set, Object],
 });
+const actualApplications = computed(() =>
+  props.myApplications instanceof Set
+    ? props.myApplications
+    : props.myApplications?.value
+);
 
+const actualBookmarks = computed(() =>
+  props.bookmarkedCareers instanceof Set
+    ? props.bookmarkedCareers
+    : props.bookmarkedCareers?.value
+);
 const emits = defineEmits(["close", "update-applications", "update-bookmarks"]);
+const myApplications = ref(new Set());
+const bookmarkedCareers = ref(new Set());
 
 const showUploadModal = ref(false);
 const uploadedFile = ref(null);
 const toasts = ref([]);
 
+const modalRef = ref(null);
+
+watch(
+  () => props.show,
+  async (newVal) => {
+    await nextTick();
+    if (newVal) modalRef.value?.showModal();
+    else modalRef.value?.close();
+  }
+);
 // --- Toast Helper ---
 function addToast(message, type = "info") {
   const id = Date.now();
@@ -24,6 +46,11 @@ function addToast(message, type = "info") {
     toasts.value = toasts.value.filter((t) => t.id !== id);
   }, 3000);
 }
+
+watch(
+  () => props.show,
+  (val) => console.log("Modal received prop:", val)
+);
 
 // --- Check if bookmarked / applied ---
 const isBookmarked = computed(() =>
