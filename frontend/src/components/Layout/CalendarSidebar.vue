@@ -26,9 +26,97 @@ async function fetchMyRegistrations() {
     console.error("❌ Failed to fetch registrations:", err);
   }
 }
+const applications = ref([]);
+const posts = ref([]); // never undefined
+const organizations = ref({}); // never undefined
 
+const fetchApplications = async (applicantID) => {
+  try {
+    const response = await axios.get(
+      `/api/applications?applicantID=${applicantID}`
+    );
+    applications.value = response.data;
+  } catch (error) {
+    console.error("Failed to fetch applications:", error);
+  }
+};
 onMounted(fetchMyRegistrations);
+// --- Career events for applications the user applied for ---
 
+async function fetchCareerEvents() {
+  try {
+    const user = JSON.parse(localStorage.getItem("user"));
+    const token = localStorage.getItem("token");
+    if (!user || !token) return;
+
+    // Call the API that returns applications with interview schedule
+    const { data: apps } = await axios.get(
+      "http://127.0.0.1:8000/api/applications",
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    // Filter only applications that have an interview schedule
+    const careerEvents = apps
+      .filter((app) => app.interviewSchedule) // skip applications without interviews
+      .map((app) => ({
+        id: app.applicationID,
+        careerID: app.careerID,
+        title: app.career?.position || "Career Interview",
+        date: new Date(app.interviewSchedule).toISOString().split("T")[0],
+        type: "career",
+        interviewSchedule: app.interviewSchedule,
+        interviewMode: app.interviewMode,
+        interviewLink: app.interviewLink,
+        interviewLocation: app.interviewLocation,
+        organization: app.career?.organization,
+      }));
+
+    // Merge career events into your existing events map
+    careerEvents.forEach((event) => {
+      if (!events.value[event.date]) events.value[event.date] = [];
+      events.value[event.date].push(event);
+    });
+
+    console.log("📅 Career events merged:", careerEvents);
+  } catch (error) {
+    console.error("❌ Failed to fetch career events:", error);
+  }
+}
+// 🔹 Fetch complete career details for the modal
+async function fetchCareerDetails(careerID) {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    console.error("⚠️ No token found — user may not be logged in.");
+    return null;
+  }
+
+  try {
+    const response = await axios.get(
+      `http://127.0.0.1:8000/api/careers/${careerID}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      }
+    );
+
+    console.log("✅ Career details fetched:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Failed to fetch career details:", error);
+    return null;
+  }
+}
+async function fetchInterviews() {
+  try {
+    const res = await axios.get("/api/interviews");
+    careerEvents.value = res.data;
+  } catch (err) {
+    console.error("Error fetching interviews:", err);
+  }
+}
 function toggleBookmark(post) {
   const id = post.trainingID || post.careerID;
   bookmarkedPosts.value[id] = !bookmarkedPosts.value[id];
@@ -85,17 +173,23 @@ const trainings = ref([]);
 const myRegistrations = ref(new Set());
 
 const selectedTraining = ref(null);
-
 const selectedPost = ref(null);
-function openModal(post) {
+
+async function openModal(post) {
   console.log("Opening modal for:", post); // ✅ debug line
 
   if (post.type === "training") {
     selectedTraining.value = post; // 🟦 training modal
     selectedPost.value = null;
   } else if (post.type === "career") {
-    selectedPost.value = post; // 🟩 career modal
-    selectedTraining.value = null;
+    const careerDetails = await fetchCareerDetails(post.careerID);
+
+    const merged = {
+      ...post, // first object: date, mode, link
+      ...careerDetails, // second object: details, organization, deadline
+    };
+
+    selectedPost.value = merged;
   } else {
     console.warn("Unknown post type:", post);
   }
@@ -170,6 +264,7 @@ function onDayClick(date) {
 // --- Initialize calendar: fetch events & select today ---
 onMounted(async () => {
   await fetchEvents();
+  await fetchCareerEvents(); // add career events
   onDayClick(new Date()); // select today automatically
 });
 // --- Check if a date is today ---
@@ -234,7 +329,7 @@ function showEvents(date) {
 onMounted(async () => {
   await nextTick();
   await fetchEvents();
-
+  await fetchInterviews();
   const calendar = calendarRef.value;
   if (!calendar) return;
 
@@ -565,12 +660,32 @@ watch([trainings, myRegistrations], async () => {
               v-for="(event, i) in dayEvents"
               :key="i"
               class="bg-gray-100 p-2 rounded-lg shadow-sm cursor-pointer hover:bg-gray-200 break-words flex justify-between items-center"
-              @click="openModal(event)"
+              @click="
+                () => {
+                  console.log('Clicked event:', event);
+                  openModal(event);
+                }
+              "
             >
               <div>
-                <h3 class="font-semibold text-sm">{{ event.title }}</h3>
-                <p class="text-xs text-gray-600">{{ event.organization }}</p>
+                <h3 class="font-semibold text-sm">
+                  {{
+                    event.title ??
+                    (event.type === "career"
+                      ? "Career Event"
+                      : "Training Event")
+                  }}
+                </h3>
+
+                <!-- Optional: show interview date/time for career events -->
+                <p
+                  v-if="event.type === 'career' && event.date"
+                  class="text-xs text-gray-500"
+                >
+                  {{ event.organization ?? "" }}
+                </p>
               </div>
+
               <span
                 class="text-[10px] text-white px-2 py-1 rounded-full"
                 :class="
@@ -605,294 +720,163 @@ watch([trainings, myRegistrations], async () => {
         </svg>
       </slot>
     </button>
-    <div>
-      <!-- 🟦 Training Modal -->
-      <dialog v-if="selectedTraining" open class="modal sm:modal-middle">
-        <div class="modal-box max-w-3xl relative font-poppins">
-          <!-- Close button -->
-          <button
-            class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
-            @click="closeModal"
+
+    <!-- 🟦 Training Modal -->
+    <dialog v-if="selectedTraining" open class="modal sm:modal-middle">
+      <div class="modal-box max-w-3xl relative font-poppins">
+        <!-- Close button -->
+        <button
+          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
+          @click="closeModal"
+        >
+          ✕
+        </button>
+
+        <!-- Training Details -->
+        <h2 class="text-xl font-bold mb-2">{{ selectedTraining.title }}</h2>
+        <p class="text-sm text-gray-600 mb-2">
+          Organization: {{ selectedTraining.organization }}
+        </p>
+
+        <p><strong>Mode:</strong> {{ selectedTraining.Mode }}</p>
+        <!-- Description -->
+        <p><strong>Description: </strong>{{ selectedTraining.description }}</p>
+
+        <!-- Conditional display: Online or On-site -->
+        <p v-if="selectedTraining.Mode?.toLowerCase() === 'online'">
+          <strong>Link:</strong>
+          <a
+            :href="selectedTraining.trainingLink"
+            target="_blank"
+            class="text-blue-500 underline"
           >
-            ✕
-          </button>
+            {{ selectedTraining.trainingLink }}
+          </a>
+        </p>
+        <p v-else-if="selectedTraining.Mode?.toLowerCase() === 'on-site'">
+          <strong>Location:</strong> {{ selectedTraining.location }}
+        </p>
 
-          <!-- Training Details -->
-          <h2 class="text-xl font-bold mb-2">{{ selectedTraining.title }}</h2>
-          <p class="text-sm text-gray-600 mb-2">
-            Organization: {{ selectedTraining.organization }}
-          </p>
-          <!-- Buttons -->
-          <div class="my-4 flex justify-end gap-2">
-            <!-- Bookmark -->
-            <button
-              class="btn btn-outline btn-sm"
-              @click="toggleBookmark(selectedTraining)"
-            >
-              {{
-                bookmarkedPosts[selectedTraining.trainingID]
-                  ? "Bookmarked"
-                  : "Bookmark"
-              }}
-            </button>
+        <p>
+          <strong>Schedule:</strong>
+          {{ formatDate(selectedTraining.date) }} at
+          {{ selectedTraining.time }}
+        </p>
 
-            <!-- Register / Unregister -->
-            <button
-              class="btn btn-sm text-white"
-              :class="
-                registeredPosts[selectedTraining.trainingID]
-                  ? 'bg-gray-500'
-                  : 'bg-customButton'
-              "
-              @click.stop="toggleRegister(selectedTraining)"
-            >
-              {{
-                registeredPosts[selectedTraining.trainingID]
-                  ? "Unregister"
-                  : "Register"
-              }}
-            </button>
-          </div>
-
-          <p><strong>Mode:</strong> {{ selectedTraining.Mode }}</p>
-          <!-- Description -->
-          <p>
-            <strong>Description: </strong>{{ selectedTraining.description }}
+        <!-- QR Code Section -->
+        <div
+          v-if="selectedTraining.attendance_key"
+          class="mt-6 text-center border-t pt-4"
+        >
+          <p class="text-sm font-semibold mb-2">
+            Scan this QR Code for Attendance
           </p>
 
-          <!-- Conditional display: Online or On-site -->
-          <p v-if="selectedTraining.Mode?.toLowerCase() === 'online'">
-            <strong>Link:</strong>
-            <a
-              :href="selectedTraining.trainingLink"
-              target="_blank"
-              class="text-blue-500 underline"
-            >
-              {{ selectedTraining.trainingLink }}
-            </a>
-          </p>
-          <p v-else-if="selectedTraining.Mode?.toLowerCase() === 'on-site'">
-            <strong>Location:</strong> {{ selectedTraining.location }}
-          </p>
+          <QrcodeVue
+            :value="`http://127.0.0.1:8000/attendance?trainingID=${selectedTraining.trainingID}&key=${selectedTraining.attendance_key}`"
+            :size="200"
+            level="H"
+            class="mx-auto"
+          />
 
-          <p>
-            <strong>Schedule:</strong>
-            {{ formatDate(selectedTraining.date) }} at
-            {{ selectedTraining.time }}
+          <p class="text-gray-500 text-xs mt-2">
+            Expires at:
+            {{ formatDateTime(selectedTraining.end_time) }}
           </p>
-
-          <!-- QR code if registered -->
-          <div
-            v-if="myRegistrations.has(selectedTraining.trainingID)"
-            class="mt-4 text-center"
-          >
-            <div
-              v-if="
-                selectedTraining.attendance_key &&
-                new Date(selectedTraining.end_time) > new Date()
-              "
-              class="text-center flex flex-col items-center justify-center"
-            >
-              <qrcode-vue
-                :value="selectedTraining.attendance_key"
-                :size="120"
-              />
-              <p class="text-sm text-gray-600 mt-1">
-                Expires in:
-                {{
-                  qrCountdowns[selectedTraining.trainingID] ||
-                  formatDateTime(selectedTraining.end_time)
-                }}
-              </p>
-            </div>
-            <div v-else>
-              <p class="text-sm text-gray-500">
-                QR code not yet generated or expired.
-              </p>
-            </div>
-          </div>
         </div>
-      </dialog>
 
-      <!-- 🟩 Career Modal -->
-      <dialog v-if="selectedPost" open class="modal sm:modal-middle">
-        <div class="modal-box max-w-3xl relative font-poppins">
-          <!-- Close button -->
-          <button
-            class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
-            @click="closeModal"
-          >
-            ✕
-          </button>
-
-          <!-- Career Details -->
-          <h2 class="text-xl font-bold mb-2">{{ selectedPost.position }}</h2>
-          <p class="text-sm text-gray-600 mb-2">
-            Organization: {{ organizations[selectedPost.organizationID] }}
+        <!-- No QR yet -->
+        <div v-else>
+          <div class="divider"></div>
+          <p class="text-sm text-gray-500 text-center">
+            QR Code not available yet or has expired.
           </p>
-
-          <!-- Buttons -->
-          <div class="my-4 flex justify-end gap-2">
-            <!-- Bookmark -->
-            <button
-              class="btn btn-outline btn-sm"
-              @click="toggleBookmark(selectedPost)"
-            >
-              {{
-                bookmarkedPosts[selectedPost.careerID]
-                  ? "Bookmarked"
-                  : "Bookmark"
-              }}
-            </button>
-
-            <!-- Apply / Cancel -->
-            <button
-              v-if="!appliedPosts[selectedPost.careerID]"
-              class="btn btn-sm bg-customButton text-white"
-              @click="openApplyModal(selectedPost)"
-            >
-              Apply
-            </button>
-
-            <button
-              v-else
-              class="btn btn-sm bg-gray-500 text-white"
-              @click="cancelApplication(selectedPost)"
-            >
-              Cancel
-            </button>
-          </div>
-
-          <!-- Career Info -->
-          <p>
-            <strong>Details:</strong>
-            {{ selectedCareer.detailsAndInstructions }}
-          </p>
-          <p>
-            <strong>Qualifications:</strong> {{ selectedCareer.qualifications }}
-          </p>
-          <p>
-            <strong>Requirements:</strong> {{ selectedCareer.requirements }}
-          </p>
-          <p>
-            <strong>Application Address:</strong>
-            {{ selectedCareer.applicationLetterAddress }}
-          </p>
-          <p>
-            <strong>Deadline:</strong>
-            {{ formatDate(selectedCareer.deadlineOfSubmission) }}
-          </p>
-
-          <!-- Interview Schedule -->
-          <p v-if="selectedCareer.date && selectedCareer.time">
-            <strong>Interview Schedule:</strong>
-            {{ formatDate(selectedCareer.date) }} at
-            {{ formatTime(selectedCareer.time) }}
-          </p>
-
-          <!-- Interview Mode -->
-          <p v-if="selectedCareer.mode">
-            <strong>Mode:</strong> {{ selectedCareer.mode }}
-          </p>
-
-          <!-- Conditional display based on mode -->
-          <p
-            v-if="
-              selectedCareer.mode &&
-              selectedCareer.mode.toLowerCase() === 'online' &&
-              selectedCareer.interviewLink
-            "
-          >
-            <strong>Link:</strong>
-            <a
-              :href="selectedCareer.interviewLink"
-              target="_blank"
-              class="text-blue-500 underline"
-            >
-              {{ selectedCareer.interviewLink }}
-            </a>
-          </p>
-
-          <p
-            v-if="
-              selectedCareer.mode &&
-              selectedCareer.mode.toLowerCase() === 'on-site' &&
-              selectedCareer.interviewLocation
-            "
-          >
-            <strong>Location:</strong> {{ selectedCareer.interviewLocation }}
-          </p>
-
-          <!-- Recommended Trainings -->
-          <div class="mt-6">
-            <h3 class="text-base font-semibold mb-3">Recommended Trainings</h3>
-            <div
-              class="flex overflow-x-auto space-x-3 pb-2 snap-x snap-mandatory"
-              style="scrollbar-width: thin"
-            >
-              <div
-                v-for="post in posts.filter((p) => p.type === 'training')"
-                :key="post.trainingID"
-                class="snap-start w-[180px] flex-shrink-0 p-3 bg-blue-gray rounded-lg cursor-pointer hover:bg-gray-200 transition shadow-sm"
-                @click.stop="openModal(post)"
-              >
-                <h4 class="font-semibold text-sm leading-snug mb-1">
-                  {{ post.title }}
-                </h4>
-                <p class="text-[11px] text-gray-600 truncate">
-                  {{ organizations[post.organizationID] }}
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
-      </dialog>
-      <!-- Apply Modal -->
-      <dialog v-if="applyModalOpen" open class="modal sm:modal-middle">
-        <div class="modal-box max-w-lg relative font-poppins">
-          <button
-            class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
-            @click="closeApplyModal"
-          >
-            ✕
-          </button>
+      </div>
+    </dialog>
 
-          <h2 class="text-xl font-bold mb-4">
-            Apply for {{ selectedPost?.position }}
-          </h2>
+    <!-- 🟩 Career Modal -->
+    <!-- TEST MODAL -->
+    <div
+      v-if="selectedPost"
+      style="
+        position: fixed;
+        inset: 0;
 
-          <form @submit.prevent="submitApplication">
-            <div class="mb-4">
-              <label class="block text-sm font-medium mb-1"
-                >Upload PDF Requirements</label
-              >
-              <input
-                type="file"
-                accept="application/pdf"
-                @change="handleFileUpload"
-                required
-                class="file-input file-input-bordered w-full"
-              />
-            </div>
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+      "
+    >
+      <div class="modal-box relative font-poppins">
+        <!-- Close button -->
+        <button
+          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
+          @click="closeModal"
+        >
+          ✕
+        </button>
 
-            <div class="flex justify-end gap-2">
-              <button
-                type="button"
-                class="btn btn-outline btn-sm"
-                @click="closeApplyModal"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="btn bg-customButton hover:bg-dark-slate text-white btn-sm"
-              >
-                Submit
-              </button>
-            </div>
-          </form>
-        </div>
-      </dialog>
+        <!-- Career Details -->
+        <h2 class="text-xl font-bold mb-2">{{ selectedPost.title }}</h2>
+        <p class="text-sm text-gray-600 mb-2">
+          Organization:
+          {{ selectedPost.organization || "Unknown Organization" }}
+        </p>
+
+        <p>
+          <strong>Details:</strong>
+          {{ selectedPost?.detailsAndInstructions || "N/A" }}
+        </p>
+        <p>
+          <strong>Qualifications:</strong>
+          {{ selectedPost?.qualifications || "N/A" }}
+        </p>
+
+        <p>
+          <strong>Requirements:</strong>
+          {{ selectedPost.requirements || "N/A" }}
+        </p>
+        <p>
+          <strong>Application Address:</strong>
+          {{ selectedPost.applicationLetterAddress || "N/A" }}
+        </p>
+        <p>
+          <strong>Deadline of Submission:</strong>
+          {{ formatDate(selectedPost.deadlineOfSubmission) || "N/A" }}
+        </p>
+        <div class="divider"></div>
+        <p v-if="selectedPost.interviewSchedule">
+          <strong>Interview Schedule:</strong>
+          {{ formatDateTime(selectedPost.interviewSchedule) }}
+        </p>
+
+        <p v-if="selectedPost.interviewMode">
+          <strong>Interview Mode:</strong> {{ selectedPost.interviewMode }}
+        </p>
+
+        <p
+          v-if="
+            selectedPost.interviewMode?.toLowerCase() === 'online' &&
+            selectedPost.interviewLink
+          "
+        >
+          <strong>Interview Link: </strong>
+          <a :href="selectedPost.interviewLink" target="_blank">{{
+            selectedPost.interviewLink
+          }}</a>
+        </p>
+
+        <p
+          v-if="
+            selectedPost.interviewMode?.toLowerCase() === 'on-site' &&
+            selectedPost.interviewLocation
+          "
+        >
+          <strong>Location:</strong> {{ selectedPost.interviewLocation }}
+        </p>
+      </div>
     </div>
   </div>
 </template>

@@ -21,7 +21,8 @@ use App\Http\Controllers\{
     CareerRecommendationController,
     SearchController,
     MyActivityController,
-    EventController
+    EventController,
+    InterviewController
 };
 
 // ----------------------
@@ -72,10 +73,14 @@ Route::middleware('auth.custom')->group(function () {
     // Trainings
     Route::post('/trainings', [TrainingController::class, 'store']);
     Route::post('/trainings/generate-qr', [TrainingController::class, 'generateQRCode']);
-    
-    
+    Route::get('/attendance/checkin', [TrainingController::class, 'attendanceCheckin']);
+    Route::get('/trainings/{trainingID}', [TrainingController::class, 'show']);
+
     // Careers
     Route::post('/careers', [CareerController::class, 'store']);
+    Route::get('/careers/{id}', [CareerController::class, 'show']);
+
+Route::get('/interviews', [InterviewController::class, 'index']);
 
     // Registrations
     Route::get('/registrations', [RegistrationController::class, 'index']);

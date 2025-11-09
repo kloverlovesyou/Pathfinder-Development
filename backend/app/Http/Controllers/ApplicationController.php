@@ -11,17 +11,40 @@ use Illuminate\Support\Facades\Storage;
 class ApplicationController extends Controller
 {
     //list applicant's applications
-    public function index(Request $request)
+   public function index(Request $request)
+{
+    $user = $request->user();
+
+    $apps = Application::with('career.organization') // eager load organization
+        ->where('applicantID', $user->applicantID)
+        ->get();
+
+    return response()->json($apps->map(function($app) {
+        return [
+            'applicationID' => $app->applicationID,
+            'careerID' => $app->careerID,
+            'title' => $app->career->position ?? 'Career',
+            'organizationName' => $app->career->organization->name ?? 'Unknown Organization',
+            'interviewSchedule' => $app->interviewSchedule,
+            'interviewMode' => $app->interviewMode,
+            'interviewLink' => $app->interviewLink,
+            'interviewLocation' => $app->interviewLocation,
+            'detailsAndInstructions' => $app->career->detailsAndInstructions ?? null,
+            'qualifications' => $app->career->qualifications ?? null,
+            'requirements' => $app->career->requirements ?? null,
+            'applicationLetterAddress' => $app->career->applicationLetterAddress ?? null,
+            'deadlineOfSubmission' => $app->career->deadlineOfSubmission ?? null,
+            'status' => $app->applicationStatus,
+        ];
+    }));
+}
+
+ public function career()
     {
-        $user = $request->user();
-
-        $apps = Application::with('career')
-            ->where('applicantID', $user->applicantID)
-            ->get();
-
-            return response()->json($apps);
+        // Eager load the organization as well
+        return $this->belongsTo(Career::class, 'careerID', 'careerID')
+                    ->with('organization');
     }
-
     //create application
     public function store(Request $request)
     {
@@ -55,12 +78,14 @@ class ApplicationController extends Controller
             'requirements' => $requirementsPath,
             'dateSubmitted' => Carbon::now(),
             'applicationStatus' => 'Applied',
-            'interviewSchedule' => null,
+    'interviewSchedule' => null,
             'interviewMode' => null,
             'interviewLocation' => null,
             'interviewLink' => null,
+
             'careerID' => (int) $validated['careerID'],
             'applicantID' => $user->applicantID,
+            'organization' => $app->career->organization ?? 'Unknown Organization',
         ]);
 
         return response()->json([

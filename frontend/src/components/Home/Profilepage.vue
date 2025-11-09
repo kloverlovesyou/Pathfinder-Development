@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, reactive } from "vue";
+import { ref, onMounted, reactive, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
 import QrcodeVue from "qrcode.vue";
@@ -10,9 +10,111 @@ const userName = ref("Guest");
 const activities = ref([]);
 const upcomingCount = ref(0);
 const completedCount = ref(0);
-const showModal = ref(false);
-const selectedActivity = ref(null);
+const careerModal = ref(null);
+const trainingModal = ref(null);
+const selectedCareer = ref(null);
+const selectedTraining = ref(null);
 
+async function openModal(activity) {
+  console.log("🟢 Activity clicked:", activity);
+
+  if (activity.type === "career") {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return console.error("❌ No token found.");
+
+      // Fetch all applications for the user
+      const res = await axios.get("http://127.0.0.1:8000/api/applications", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // Find the full application for this career
+      const app = res.data.find(
+        (a) => a.careerID === activity.careerID || a.id === activity.id
+      );
+
+      if (app) {
+        console.log("✅ Application + interview found:", app);
+        selectedCareer.value = app; // now has interview details
+      } else {
+        console.log("ℹ️ No application found, using activity data only.");
+        selectedCareer.value = activity;
+      }
+
+      await nextTick();
+      if (careerModal.value) careerModal.value.showModal();
+    } catch (err) {
+      console.error("❌ Error fetching application:", err);
+    }
+  } else if (activity.type === "training") {
+    await openTrainingModal(activity);
+  } else {
+    console.warn("⚠️ Unknown activity type:", activity);
+  }
+}
+
+async function openCareerModal(career) {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return console.error("❌ No token found.");
+
+    // ✅ Fetch all applications for the logged-in applicant
+    const res = await axios.get("http://127.0.0.1:8000/api/applications", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    console.log("✅ Application list from backend:", res.data);
+
+    // 🔍 Find if the user applied to this career
+    const app = res.data.find((a) => a.careerID === career.id);
+    selectedCareer.value = app || career; // app has the interview details
+
+    if (app) {
+      console.log("🎯 Career + interview details found:", app);
+      selectedCareer.value = app;
+    } else {
+      console.log("ℹ️ No application found — showing basic career info.");
+      selectedCareer.value = career;
+    }
+
+    await nextTick();
+    if (careerModal.value) careerModal.value.showModal();
+  } catch (err) {
+    console.error("❌ Error opening career modal:", err);
+  }
+}
+
+// ✅ Function to open training modal
+async function openTrainingModal(training) {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return console.error("❌ No token found.");
+
+    const id = training.id || training.trainingID;
+    const res = await axios.get(`http://127.0.0.1:8000/api/trainings/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    selectedTraining.value = res.data;
+
+    await nextTick();
+    if (trainingModal.value) trainingModal.value.showModal();
+  } catch (err) {
+    console.error("❌ Error opening training modal:", err);
+  }
+}
+
+function closeCareerModal() {
+  if (careerModal.value && careerModal.value.open) {
+    careerModal.value.close();
+  }
+}
+
+function closeTrainingModal() {
+  if (trainingModal.value && trainingModal.value.open) {
+    trainingModal.value.close();
+  }
+}
 // ✅ For QR countdown timers
 const qrCountdowns = reactive({});
 let qrCountdownInterval = null;
@@ -214,16 +316,6 @@ async function submitAttendance(activity) {
   }
 }
 
-// ✅ Modal controls
-function openModal(activity) {
-  selectedActivity.value = activity;
-  showModal.value = true;
-}
-function closeModal() {
-  showModal.value = false;
-  selectedActivity.value = null;
-}
-
 // ✅ Manual counter adjuster
 function updateCounters(type, increase = true) {
   if (type === "upcoming") {
@@ -405,98 +497,6 @@ onMounted(fetchMyActivities);
             </div>
           </li>
         </ul>
-      </div>
-      <!-- 🟣 MODAL -->
-      <div
-        v-if="showModal"
-        class="fixed inset-0 flex items-center justify-center z-50"
-      >
-        <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg relative">
-          <button
-            @click="closeModal"
-            class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-xl"
-          >
-            ×
-          </button>
-
-          <h3 class="text-xl font-semibold mb-2">
-            {{ selectedActivity.title }}
-          </h3>
-          <p class="text-sm text-gray-600 mb-4">
-            <strong>Organization:</strong>
-            {{ selectedActivity.organizationName }}
-          </p>
-
-          <!-- TRAINING DETAILS -->
-          <div v-if="selectedActivity.type === 'training'">
-            <p><strong>Mode:</strong> {{ selectedActivity.mode }}</p>
-            <p>
-              <strong>Schedule:</strong>
-              {{ formatDateTime(selectedActivity.schedule) }}
-            </p>
-            <p><strong>Location:</strong> {{ selectedActivity.location }}</p>
-            <p v-if="selectedActivity.trainingLink">
-              <strong>Training Link:</strong>
-              <a
-                :href="selectedActivity.trainingLink"
-                target="_blank"
-                class="text-blue-600 underline"
-              >
-                {{ selectedActivity.trainingLink }}
-              </a>
-            </p>
-            <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
-
-            <!-- QR Code Section -->
-            <div
-              v-if="selectedActivity.attendance_key"
-              class="mt-6 text-center border-t pt-4"
-            >
-              <p class="text-sm font-semibold mb-2">
-                Scan this QR Code for Attendance
-              </p>
-
-              <QrcodeVue
-                :value="`http://127.0.0.1:8000/attendance?trainingID=${selectedActivity.trainingID}&key=${selectedActivity.attendance_key}`"
-                :size="200"
-                level="H"
-                class="mx-auto"
-              />
-
-              <p class="text-gray-500 text-xs mt-2">
-                Expires at: {{ formatDateTime(selectedActivity.end_time) }}
-              </p>
-            </div>
-
-            <!-- No QR yet -->
-            <div v-else class="mt-6 text-center text-gray-400 border-t pt-4">
-              <p>
-                QR Code not available yet. It will appear once the training
-                starts.
-              </p>
-            </div>
-          </div>
-
-          <!-- CAREER DETAILS -->
-          <div v-else-if="selectedActivity.type === 'career'">
-            <p>
-              <strong>Details:</strong>
-              {{ selectedActivity.detailsAndInstructions }}
-            </p>
-            <p>
-              <strong>Qualifications:</strong>
-              {{ selectedActivity.qualifications }}
-            </p>
-            <p>
-              <strong>Requirements:</strong> {{ selectedActivity.requirements }}
-            </p>
-            <p>
-              <strong>Deadline:</strong>
-              {{ formatDateTime(selectedActivity.deadlineOfSubmission) }}
-            </p>
-            <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -796,89 +796,172 @@ onMounted(fetchMyActivities);
                 </tr>
               </tbody>
             </table>
-            <!-- 🟣 MODAL -->
-            <div
-              v-if="showModal"
-              class="fixed inset-0 flex items-center justify-center z-50"
-            >
-              <div
-                class="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg relative"
-              >
-                <button
-                  @click="closeModal"
-                  class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-xl"
-                >
-                  ×
-                </button>
-
-                <h3 class="text-xl font-semibold mb-2">
-                  {{ selectedActivity.title }}
-                </h3>
-                <p class="text-sm text-gray-600 mb-4">
-                  <strong>Organization:</strong>
-                  {{ selectedActivity.organizationName }}
-                </p>
-
-                <!-- TRAINING DETAILS -->
-                <div v-if="selectedActivity.type === 'training'">
-                  <p><strong>Mode:</strong> {{ selectedActivity.mode }}</p>
-                  <p>
-                    <strong>Schedule:</strong>
-                    {{ formatDateTime(selectedActivity.schedule) }}
-                  </p>
-                  <p>
-                    <strong>Location:</strong> {{ selectedActivity.location }}
-                  </p>
-                  <p v-if="selectedActivity.trainingLink">
-                    <strong>Training Link:</strong>
-                    <a
-                      :href="selectedActivity.trainingLink"
-                      target="_blank"
-                      class="text-blue-600 underline"
-                    >
-                      {{ selectedActivity.trainingLink }}
-                    </a>
-                  </p>
-                  <p><strong>Status:</strong> {{ selectedActivity.status }}</p>
-
-                  <!-- QR Code Section -->
-                  <div
-                    v-if="selectedActivity.attendance_key"
-                    class="mt-6 text-center border-t pt-4"
-                  >
-                    <p class="text-sm font-semibold mb-2">
-                      Scan this QR Code for Attendance
-                    </p>
-
-                    <QrcodeVue
-                      :value="`http://127.0.0.1:8000/attendance?trainingID=${selectedActivity.trainingID}&key=${selectedActivity.attendance_key}`"
-                      :size="200"
-                      level="H"
-                      class="mx-auto"
-                    />
-
-                    <p class="text-gray-500 text-xs mt-2">
-                      Expires at:
-                      {{ formatDateTime(selectedActivity.end_time) }}
-                    </p>
-                  </div>
-
-                  <!-- No QR yet -->
-                  <div
-                    v-else
-                    class="mt-6 text-center text-gray-400 border-t pt-4"
-                  >
-                    <p>
-                      QR Code not available yet. It will appear once the
-                      training starts.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
     </div>
+    <!-- ✅ Career Modal -->
+    <dialog ref="careerModal" class="modal sm:modal-middle z-50">
+      <div
+        v-if="selectedCareer"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      >
+        <div class="modal-box relative font-poppins">
+          <button
+            @click="closeCareerModal"
+            class="btn btn-sm btn-circle absolute right-2 top-2"
+          >
+            ✕
+          </button>
+
+          <div v-if="selectedCareer">
+            <h2 class="text-xl font-bold mb-2">
+              {{ selectedCareer.title || selectedCareer.career?.position }}
+            </h2>
+            <p class="text-sm text-gray-600 mb-2">
+              Organization:
+              {{
+                selectedCareer.organizationName || selectedCareer.organization
+              }}
+            </p>
+
+            <p>
+              <strong>Details:</strong>
+              {{
+                selectedCareer.detailsAndInstructions ||
+                selectedCareer.career?.detailsAndInstructions
+              }}
+            </p>
+            <p>
+              <strong>Qualifications:</strong>
+              {{
+                selectedCareer.qualifications ||
+                selectedCareer.career?.qualifications
+              }}
+            </p>
+            <p>
+              <strong>Requirements:</strong>
+              {{ selectedCareer.career?.requirements }}
+            </p>
+            <p>
+              <strong>Application Address:</strong>
+              {{
+                selectedCareer.applicationLetterAddress ||
+                selectedCareer.career?.applicationLetterAddress
+              }}
+            </p>
+            <p>
+              <strong>Deadline:</strong>
+              {{
+                formatDateTime(
+                  selectedCareer.deadlineOfSubmission ||
+                    selectedCareer.career?.deadlineOfSubmission
+                )
+              }}
+            </p>
+
+            <!-- ✅ Interview Info (only if the applicant has one) -->
+            <div
+              v-if="
+                selectedCareer.interviewSchedule ||
+                selectedCareer.interviewMode ||
+                selectedCareer.interviewLink ||
+                selectedCareer.interviewLocation
+              "
+            >
+              <div class="divider"></div>
+              <p v-if="selectedCareer.interviewSchedule">
+                <strong>Interview Schedule:</strong>
+                {{ formatDateTime(selectedCareer.interviewSchedule) }}
+              </p>
+              <p v-if="selectedCareer.interviewMode">
+                <strong>Mode:</strong> {{ selectedCareer.interviewMode }}
+              </p>
+              <p v-if="selectedCareer.interviewLink">
+                <strong>Link:</strong>
+                <a :href="selectedCareer.interviewLink" target="_blank">
+                  {{ selectedCareer.interviewLink }}
+                </a>
+              </p>
+              <p v-if="selectedCareer.interviewLocation">
+                <strong>Location:</strong>
+                {{ selectedCareer.interviewLocation }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- ✅ Training Modal -->
+    <dialog ref="trainingModal" class="modal sm:modal-middle z-50">
+      <div class="modal-box max-w-3xl relative font-poppins">
+        <button
+          @click="closeTrainingModal"
+          class="btn btn-sm btn-circle absolute right-2 top-2"
+        >
+          ✕
+        </button>
+
+        <div v-if="selectedTraining">
+          <h2 class="text-xl font-bold mb-2">{{ selectedTraining.title }}</h2>
+          <p class="text-sm text-gray-600 mb-2">
+            Organization: {{ selectedTraining.organization?.name }}
+          </p>
+
+          <p><strong>Mode:</strong> {{ selectedTraining.mode }}</p>
+          <p><strong>Details:</strong> {{ selectedTraining.description }}</p>
+
+          <p v-if="selectedTraining.location">
+            <strong>Location:</strong> {{ selectedTraining.location }}
+          </p>
+
+          <p v-if="selectedTraining.trainingLink">
+            <strong>Link:</strong>
+            <a
+              :href="selectedTraining.trainingLink"
+              target="_blank"
+              class="text-blue-500 underline"
+            >
+              {{ selectedTraining.trainingLink }}
+            </a>
+          </p>
+
+          <p>
+            <strong>Schedule:</strong>
+            {{ formatDateTime(selectedTraining.schedule) }}
+          </p>
+          <!-- QR Code Section -->
+          <div
+            v-if="selectedTraining.attendance_key"
+            class="mt-6 text-center border-t pt-4"
+          >
+            <p class="text-sm font-semibold mb-2">
+              Scan this QR Code for Attendance
+            </p>
+
+            <QrcodeVue
+              :value="`http://127.0.0.1:8000/attendance?trainingID=${selectedTraining.trainingID}&key=${selectedTraining.attendance_key}`"
+              :size="200"
+              level="H"
+              class="mx-auto"
+            />
+
+            <p class="text-gray-500 text-xs mt-2">
+              Expires at:
+              {{ formatDateTime(selectedTraining.end_time) }}
+            </p>
+          </div>
+
+          <!-- No QR yet -->
+          <div v-else>
+            <div class="divider"></div>
+            <p class="text-sm text-gray-500 text-center">
+              QR Code not available yet or has expired.
+            </p>
+          </div>
+        </div>
+      </div>
+    </dialog>
   </div>
 </template>
