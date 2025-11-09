@@ -216,10 +216,10 @@ const showModal = ref(false);
 </script>
 
 <template>
-  <main class="font-poppins">
+  <main class="font-poppins min-h-screen flex flex-col">
     <!-- Header -->
 
-    <div class="bg-white m-2 md:m-3 p-3 md:p-4 rounded-lg">
+    <div class="bg-white m-2 md:m-3 p-3 md:p-4 rounded-lg flex-1 overflow-y-auto">
       <div class="sticky top-0 z-10 bg-white pt-4 px-4 pb-2 border-b shadow-sm">
         <h2 class="text-2xl font-bold mb-3 sticky top-0 bg-white z-10">
           Training
