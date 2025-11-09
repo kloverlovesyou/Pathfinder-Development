@@ -532,6 +532,8 @@ import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
 import axios from "axios";
 import QrcodeVue from "qrcode.vue";
 import api from "@/composables/api.js";
+import { useTrainingStore } from "@/stores/trainingStore";
+
 export default {
   components: { QrcodeVue }, // ✅ register component
   data() {
@@ -686,21 +688,29 @@ export default {
     },
 
     scheduleQR(training) {
-      // If QR already active for this training, do nothing
-      if (this.activeTrainingId === training.trainingID && this.qrCodeValue) return;
+  // If QR already active for this training, do nothing
+  if (this.activeTrainingId === training.trainingID && this.qrCodeValue) return;
 
-      const now = new Date();
-      const trainingTime = new Date(training.schedule);
-      const msUntilStart = trainingTime - now;
+  const now = new Date();
+  const startTime = new Date(training.schedule);
+  const endTime = new Date(training.end_time);
 
-      if (msUntilStart <= 0) {
-        // Already started or past, generate immediately
-        this.generateQR(training);
-      } else {
-        setTimeout(() => this.generateQR(training), msUntilStart);
-        console.log(`QR for "${training.title}" will generate in ${msUntilStart / 1000}s`);
-      }
-    },
+  // Already started? Generate immediately
+  if (now >= startTime && now < endTime) {
+    this.generateQR(training);
+  } else if (now < startTime) {
+    const msUntilStart = startTime - now;
+    setTimeout(() => this.generateQR(training), msUntilStart);
+    console.log(`QR for "${training.title}" will generate in ${msUntilStart / 1000}s`);
+  }
+
+  // Optional: clear expired QR
+  if (this.qrExpiresAt && now >= this.qrExpiresAt) {
+    this.qrCodeValue = null;
+    this.qrExpiresAt = null;
+    this.activeTrainingId = null;
+  }
+},
 
 
     handleOutsideClick(e) {
@@ -826,16 +836,27 @@ export default {
 
     
     async fetchTrainings() {
-      const response = await api.get("/trainings");
-      const newTrainings = response.data;
+      try {
+        const response = await api.get("/trainings");
+        const newTrainings = response.data;
 
-      newTrainings.forEach(training => {
-        // Only schedule if this training isn’t in upcomingtrainings yet
-        if (!this.upcomingtrainings.some(t => t.trainingID === training.trainingID)) {
-          this.upcomingtrainings.push(training);
-          this.scheduleQR(training);
-        }
-      });
+        newTrainings.forEach(training => {
+          const existingIndex = this.upcomingtrainings.findIndex(t => t.trainingID === training.trainingID);
+
+          if (existingIndex > -1) {
+            // Update existing training info
+            this.upcomingtrainings[existingIndex] = { ...this.upcomingtrainings[existingIndex], ...training };
+          } else {
+            // Add new training
+            this.upcomingtrainings.push(training);
+          }
+
+          // Schedule QR if it hasn't been generated yet
+          
+        });
+      } catch (error) {
+        console.error("Error fetching trainings:", error);
+      }
     },
 
     openTrainingPopup() {
@@ -968,61 +989,74 @@ async saveTraining() {
     },
 
     /* ✅ ADD THIS FUNCTION HERE */
-    async generateQR(training) {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await axios.post(
-          import.meta.env.VITE_API_BASE_URL +"/trainings/generate-qr",
-          { trainingID: training.trainingID },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+      async generateQR(training) {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        import.meta.env.VITE_API_BASE_URL + "/trainings/generate-qr",
+        { trainingID: training.trainingID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-        // Assign QR data
-        this.qrCodeValue = import.meta.env.VITE_API_BASE_URL +`/attendance/checkin?trainingID=${training.trainingID}&key=${response.data.key}`;
-        this.qrExpiresAt = new Date(response.data.expires_at); // make it a Date object
-        this.activeTrainingId = training.trainingID;
+      this.qrCodeValue = import.meta.env.VITE_API_BASE_URL +
+        `/attendance/checkin?trainingID=${training.trainingID}&key=${response.data.key}`;
 
-        console.log(`✅ QR Generated for "${training.title}", expires at ${this.qrExpiresAt}`);
+      this.qrExpiresAt = new Date(response.data.expires_at);
+      this.activeTrainingId = training.trainingID;
 
-        // Clear previous timer if any
-        if (this.qrExpireTimeout) clearTimeout(this.qrExpireTimeout);
+      console.log(`✅ QR Generated for "${training.title}", expires at ${this.qrExpiresAt}`);
 
-        // Calculate remaining time until expiration
-        const now = new Date();
-        const msUntilExpire = this.qrExpiresAt - now;
+      // Clear previous timer
+      if (this.qrExpireTimeout) clearTimeout(this.qrExpireTimeout);
 
-        if (msUntilExpire > 0) {
-          this.qrExpireTimeout = setTimeout(() => {
-            this.qrCodeValue = null;
-            this.qrExpiresAt = null;
-            this.activeTrainingId = null;
-            console.log(`QR for "${training.title}" expired.`);
-          }, msUntilExpire);
-        } else {
-          // Already expired
+      const now = new Date();
+      const msUntilExpire = this.qrExpiresAt - now;
+
+      if (msUntilExpire > 0) {
+        this.qrExpireTimeout = setTimeout(() => {
           this.qrCodeValue = null;
           this.qrExpiresAt = null;
           this.activeTrainingId = null;
-          console.log(`QR for "${training.title}" already expired.`);
-        }
-
-      } catch (error) {
-        console.error("QR GENERATION FAILED:", error);
-        alert("Failed to generate QR");
+          console.log(`QR for "${training.title}" expired.`);
+        }, msUntilExpire);
       }
-    },
+    } catch (error) {
+      console.error("QR GENERATION FAILED:", error);
+    }
+   },
+},
 
 
-  },
+mounted() {
+  // Fetch initial trainings
+  this.fetchTrainings();
 
+  // Handle clicks outside menus
+  document.addEventListener("click", this.handleOutsideClick);
 
-  mounted() {
-    this.fetchTrainings();
-    document.addEventListener("click", this.handleOutsideClick);
-  },
+  // Access the store
+  const trainingStore = useTrainingStore();
+
+  // Initial QR generation for existing trainings
+  trainingStore.autoGenerateQRs(this.upcomingtrainings);
+
+  // Poll every 30 seconds to update trainings and regenerate QR
+  this.trainingPollInterval = setInterval(async () => {
+    await this.fetchTrainings();
+
+    // Generate QR for all trainings that should have one
+    trainingStore.autoGenerateQRs(this.upcomingtrainings);
+
+    // Sync store QR values to component so template updates
+    this.qrCodeValue = trainingStore.qrCodeValue;
+    this.qrExpiresAt = trainingStore.qrExpiresAt;
+    this.activeTrainingId = trainingStore.activeTrainingId;
+  }, 30000);
+},
 
   beforeUnmount() {
     document.removeEventListener("click", this.handleOutsideClick);
+    clearInterval(this.trainingPollInterval);
   },
 
   computed: {
