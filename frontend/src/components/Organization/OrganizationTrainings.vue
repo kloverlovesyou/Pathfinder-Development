@@ -1036,7 +1036,7 @@ mounted() {
   document.addEventListener("click", this.handleOutsideClick);
 
   // Initial QR generation for existing trainings
-  this.trainingStore.autoGenerateQRs(this.upcomingtrainings);
+  trainingStore.trainings.forEach(training => trainingStore.scheduleQR(training));
 
   // Poll every 30 seconds to update trainings and regenerate QR
   this.trainingPollInterval = setInterval(async () => {

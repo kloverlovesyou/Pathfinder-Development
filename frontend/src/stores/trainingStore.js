@@ -82,5 +82,20 @@ export const useTrainingStore = defineStore("trainingStore", {
         this.fetchTrainings();
       }, 30000);
     },
+
+    // ✅ Added autoGenerateQRs method
+    autoGenerateQRs(trainings) {
+      const now = new Date();
+      trainings.forEach(training => {
+        const startTime = new Date(training.schedule);
+        const endTime = new Date(training.end_time);
+
+        if (now >= startTime && now < endTime) {
+          if (this.activeTrainingId !== training.trainingID) {
+            this.generateQR(training);
+          }
+        }
+      });
+    },
   },
 });
