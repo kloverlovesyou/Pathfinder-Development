@@ -1,19 +1,11 @@
 <template>
   <div class="flex relative font-poppins">
-
-        <!-- Mobile overlay -->
-    <div
-      v-if="isExpanded && window.innerWidth < 768"
-      class="fixed inset-0 bg-black/40 z-40"
-      @click="toggleSidebar"
-    ></div>
-
     <!-- Sidebar -->
     <div
       ref="sidebar"
       :class="[
-        'bg-dark-slate text-white transition-transform duration-300 flex flex-col fixed top-0 z-50 h-screen md:relative md:h-auto',
-        isExpanded ? 'translate-x-0 w-64 px-4' : '-translate-x-full md:translate-x-0 w-16 md:w-16'
+        'h-screen bg-dark-slate text-white transition-all duration-300 flex flex-col',
+        isExpanded ? 'w-75 px-4' : 'w-16 items-center',
       ]"
     >
       <!-- Menu Button -->
@@ -40,7 +32,7 @@
       </div>
 
       <!-- Nav Items -->
-      <aside class="flex flex-col h-full overflow-y-auto">
+      <aside class="flex flex-col h-screen">
         <!-- TOP + MENU -->
         <ul class="flex-1 flex flex-col p-2 w-full">
           <li>
