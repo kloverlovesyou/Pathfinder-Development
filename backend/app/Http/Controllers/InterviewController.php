@@ -42,7 +42,8 @@ class InterviewController extends Controller
 {
     $user = $request->user(); // get logged-in applicant
 
-    $apps = Application::with('career')
+    // Eager load career and its organization
+    $apps = Application::with('career.organization')
         ->where('applicantID', $user->applicantID)
         ->get();
 
@@ -51,7 +52,7 @@ class InterviewController extends Controller
             'id' => $app->applicationID,
             'careerID' => $app->careerID,
             'title' => $app->career->position ?? 'Career',
-            'organization' => $app->career->organization ?? 'Unknown Organization',
+            'organizationName' => $app->career->organization->name ?? 'Unknown Organization', // ✅ organization name
             'interviewSchedule' => $app->interviewSchedule,
             'interviewMode' => $app->interviewMode,
             'interviewLink' => $app->interviewLink,
@@ -64,6 +65,8 @@ class InterviewController extends Controller
         ];
     }));
 }
+
+
 
     
 }

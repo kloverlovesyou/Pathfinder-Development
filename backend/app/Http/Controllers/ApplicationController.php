@@ -11,16 +11,34 @@ use Illuminate\Support\Facades\Storage;
 class ApplicationController extends Controller
 {
     //list applicant's applications
-    public function index(Request $request)
-    {
-        $user = $request->user();
+   public function index(Request $request)
+{
+    $user = $request->user();
 
-        $apps = Application::with('career')
-            ->where('applicantID', $user->applicantID)
-            ->get();
+    $apps = Application::with('career.organization') // eager load organization
+        ->where('applicantID', $user->applicantID)
+        ->get();
 
-            return response()->json($apps);
-    }
+    return response()->json($apps->map(function($app) {
+        return [
+            'applicationID' => $app->applicationID,
+            'careerID' => $app->careerID,
+            'title' => $app->career->position ?? 'Career',
+            'organizationName' => $app->career->organization->name ?? 'Unknown Organization',
+            'interviewSchedule' => $app->interviewSchedule,
+            'interviewMode' => $app->interviewMode,
+            'interviewLink' => $app->interviewLink,
+            'interviewLocation' => $app->interviewLocation,
+            'detailsAndInstructions' => $app->career->detailsAndInstructions ?? null,
+            'qualifications' => $app->career->qualifications ?? null,
+            'requirements' => $app->career->requirements ?? null,
+            'applicationLetterAddress' => $app->career->applicationLetterAddress ?? null,
+            'deadlineOfSubmission' => $app->career->deadlineOfSubmission ?? null,
+            'status' => $app->applicationStatus,
+        ];
+    }));
+}
+
  public function career()
     {
         // Eager load the organization as well

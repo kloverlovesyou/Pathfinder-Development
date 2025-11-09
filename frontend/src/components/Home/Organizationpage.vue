@@ -672,10 +672,9 @@ function closeTrainingModal() {
             </h2>
             <p class="text-sm text-gray-600 mb-2">
               Organization:
-              {{
-                selectedCareer.organizationName || selectedCareer.organization
-              }}
+              {{ selectedCareer.organizationName }}
             </p>
+
             <!-- ✅ Bookmark and Apply Buttons -->
             <div class="mt-4 flex gap-3 justify-end">
               <button
