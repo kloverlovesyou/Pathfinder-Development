@@ -152,9 +152,8 @@ Route::get('/my-activities/{applicantID}', [MyActivityController::class, 'getMyA
 Route::get('/calendar/{applicantID}', [EventController::class, 'getUserEvents']);
 
 // Public routes for totals
+// ✅ Public routes (no auth needed)
 Route::get('/trainings/total', [TrainingController::class, 'total']);
 Route::get('/careers/total', [CareerController::class, 'total']);
-
-// Public routes for counting types of careers and trainings
 Route::get('/trainings/counts-partial', [TrainingController::class, 'countsPartial']);
 Route::get('/careers/counts-partial', [CareerController::class, 'countsPartial']);
