@@ -21,7 +21,12 @@ class ApplicationController extends Controller
 
             return response()->json($apps);
     }
-
+ public function career()
+    {
+        // Eager load the organization as well
+        return $this->belongsTo(Career::class, 'careerID', 'careerID')
+                    ->with('organization');
+    }
     //create application
     public function store(Request $request)
     {
@@ -55,12 +60,14 @@ class ApplicationController extends Controller
             'requirements' => $requirementsPath,
             'dateSubmitted' => Carbon::now(),
             'applicationStatus' => 'Applied',
-            'interviewSchedule' => null,
+    'interviewSchedule' => null,
             'interviewMode' => null,
             'interviewLocation' => null,
             'interviewLink' => null,
+
             'careerID' => (int) $validated['careerID'],
             'applicantID' => $user->applicantID,
+            'organization' => $app->career->organization ?? 'Unknown Organization',
         ]);
 
         return response()->json([

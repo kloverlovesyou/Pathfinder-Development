@@ -85,4 +85,24 @@ class CareerController extends Controller
             'tags' => $validated['Tags'] 
         ], 201);
     }
+
+    public function show($id)
+{
+    $career = Career::with('organization')->findOrFail($id);
+
+    return response()->json([
+        'careerID' => $career->careerID,
+        'title' => $career->position,
+        'detailsAndInstructions' => $career->detailsAndInstructions,
+        'qualifications' => $career->qualifications,
+        'requirements' => $career->requirements,
+        'applicationLetterAddress' => $career->applicationLetterAddress,
+        'deadlineOfSubmission' => $career->deadlineOfSubmission,
+        'organization' => $career->organization->name ?? 'Unknown',
+        'link' => $career->link ?? null,
+        'mode' => $career->mode ?? null,
+        'location' => $career->location ?? null,
+    ]);
+}
+
 }
