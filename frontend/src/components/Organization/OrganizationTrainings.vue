@@ -596,6 +596,12 @@ export default {
     };
   },
 
+    created() {
+    // ✅ Initialize the Pinia store here
+    this.trainingStore = useTrainingStore();
+  },
+
+
   methods: {
     async fetchTags() {
       try {
@@ -1027,29 +1033,36 @@ async saveTraining() {
    },
 },
 
-  mounted() {
-    // Fetch initial trainings
-    this.fetchTrainings();
+mounted() {
+  // Fetch initial trainings
+  this.fetchTrainings();
 
-    // Handle clicks outside menus
-    document.addEventListener("click", this.handleOutsideClick);
+  // Handle clicks outside menus
+  document.addEventListener("click", this.handleOutsideClick);
 
-    // Initial QR generation for existing trainings
-    this.trainingStore.trainings.forEach(training => this.trainingStore.scheduleQR(training));
+  // Initial QR generation for existing trainings (safe now)
+  if (this.trainingStore.trainings && this.trainingStore.trainings.length) {
+    this.trainingStore.trainings.forEach(training =>
+      this.trainingStore.scheduleQR(training)
+    );
+  }
 
-    // Poll every 30 seconds to update trainings and regenerate QR
-    this.trainingPollInterval = setInterval(async () => {
-      await this.fetchTrainings();
+  // Poll every 30 seconds to update trainings and regenerate QR
+  this.trainingPollInterval = setInterval(async () => {
+    await this.fetchTrainings();
 
-      // Generate QR for all trainings that should have one
+    // Generate QR for all trainings that should have one
+    if (this.trainingStore.autoGenerateQRs) {
       this.trainingStore.autoGenerateQRs(this.upcomingtrainings);
+    }
 
-      // Sync store QR values to component so template updates
-      this.qrCodeValue = this.trainingStore.qrCodeValue;
-      this.qrExpiresAt = this.trainingStore.qrExpiresAt;
-      this.activeTrainingId = this.trainingStore.activeTrainingId;
-    }, 30000);
-  },
+    // Sync store QR values to component so template updates
+    this.qrCodeValue = this.trainingStore.qrCodeValue;
+    this.qrExpiresAt = this.trainingStore.qrExpiresAt;
+    this.activeTrainingId = this.trainingStore.activeTrainingId;
+  }, 30000);
+},
+
 
 
   beforeUnmount() {
