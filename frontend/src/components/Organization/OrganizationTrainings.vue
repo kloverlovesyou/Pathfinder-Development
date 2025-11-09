@@ -850,7 +850,9 @@ export default {
           }
 
           // Schedule QR if it hasn't been generated yet
-          
+          if (training.attendance_key === null && !this.activeTrainingId) {
+            this.scheduleQR(training);
+          }
         });
       } catch (error) {
         console.error("Error fetching trainings:", error);
