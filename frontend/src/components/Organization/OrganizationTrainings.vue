@@ -546,7 +546,6 @@ export default {
       qrExpiresAt: null,
       activeTrainingId: null, // which training shows the QR
       qrExpireTimeout: null, // to clear old QR timers
-      trainingStore: useTrainingStore(), // ✅ Add this here
 
       /* ==========================
          ✅ Dropdown Menu States
