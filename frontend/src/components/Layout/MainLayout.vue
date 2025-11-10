@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-screen">
+  <div class="flex min-h-screen">
     <!-- Sidebar -->
     <SideBar :is-expanded="isExpanded" />
     <!-- Main Area -->

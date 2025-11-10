@@ -111,6 +111,22 @@ class ApplicationController extends Controller
 
         return response()->json(['message' => 'APPLICATION WITHDRAWN'], 200);
     }
+public function viewRequirement($id)
+{
+    $application = Application::findOrFail($id);
+
+    // Check if a requirement exists
+    if (!$application->requirements) {
+        return response()->json(['message' => 'No requirement found.'], 404);
+    }
+
+    // Convert BLOB to PDF response
+    return response($application->requirements)
+        ->header('Content-Type', 'application/pdf')
+        ->header('Cache-Control', 'no-cache, must-revalidate')
+        ->header('Content-Disposition', 'inline; filename="requirement.pdf"');
+}
+
 
 
 }
