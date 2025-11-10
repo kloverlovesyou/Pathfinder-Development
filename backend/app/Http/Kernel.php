@@ -2,9 +2,9 @@
 
 namespace App\Http;
 
-use Illuminate\Console\Scheduling\Schedule; // ✅ needed
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
-use Illuminate\Support\Str; // ✅ important
+use Illuminate\Support\Str;
 use App\Models\Training;
 
 class Kernel extends HttpKernel
@@ -29,7 +29,7 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
-            \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
+            'throttle:api', // ✅ Correct syntax
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
     ];
@@ -38,6 +38,7 @@ class Kernel extends HttpKernel
         'auth' => \App\Http\Middleware\Authenticate::class,
         'auth.custom' => \App\Http\Middleware\AuthCustom::class,
         'apitoken' => \App\Http\Middleware\ApiTokenAuth::class,
+        'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class, // ✅ Add this line
     ];
 
     // ✅ Auto-generate QR key 1 minute before or right at schedule

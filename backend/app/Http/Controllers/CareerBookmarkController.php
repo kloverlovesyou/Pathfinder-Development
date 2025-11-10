@@ -3,15 +3,18 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\CareerBookmark;
+use App\Models\Careerbookmark;
 
 class CareerBookmarkController extends Controller
 {
     public function index(Request $request)
     {
-        $token = $request->bearerToken();
-        $user = \App\Models\Applicant::where('api_token', $token)->first();
-        if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
+        $user = $request->user();
+
+        // Only allow applicants to fetch bookmarks
+        if (!($user instanceof \App\Models\Applicant)) {
+            return response()->json(['message' => 'Only applicants can have bookmarks'], 403);
+        }
 
         $bookmarks = CareerBookmark::where('applicantID', $user->applicantID)->get();
         return response()->json($bookmarks);
@@ -19,20 +22,28 @@ class CareerBookmarkController extends Controller
 
     public function store(Request $request)
     {
-        $token = $request->bearerToken();
-        $user = \App\Models\Applicant::where('api_token', $token)->first();
-        if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
+        $user = $request->user();
 
-        $careerID = $request->careerID;
-        if (!$careerID) return response()->json(['message' => 'careerID is required'], 422);
+        // Only applicants can bookmark careers
+        if (!($user instanceof \App\Models\Applicant)) {
+            return response()->json(['message' => 'Only applicants can bookmark careers'], 403);
+        }
+
+        $validated = $request->validate([
+            'careerID' => 'required|integer|exists:career,careerID',
+        ]);
+
+        $careerID = $validated['careerID'];
 
         $exists = CareerBookmark::where('applicantID', $user->applicantID)
             ->where('careerID', $careerID)
             ->exists();
 
-        if ($exists) return response()->json(['message' => 'Already bookmarked'], 409);
+        if ($exists) {
+            return response()->json(['message' => 'Already bookmarked'], 409);
+        }
 
-        $bookmark = CareerBookmark::create([
+        $bookmark = Careerbookmark::create([
             'applicantID' => $user->applicantID,
             'careerID' => $careerID,
         ]);
@@ -42,11 +53,13 @@ class CareerBookmarkController extends Controller
 
     public function destroy(Request $request, $careerID)
     {
-        $token = $request->bearerToken();
-        $user = \App\Models\Applicant::where('api_token', $token)->first();
-        if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
+        $user = $request->user();
 
-        $bookmark = CareerBookmark::where('applicantID', $user->applicantID)
+        if (!($user instanceof \App\Models\Applicant)) {
+            return response()->json(['message' => 'Only applicants can remove bookmarks'], 403);
+        }
+
+        $bookmark = Careerbookmark::where('applicantID', $user->applicantID)
             ->where('careerID', $careerID)
             ->first();
 

@@ -7,6 +7,9 @@ const props = defineProps({
   training: Object,
   isRegistered: Boolean,
   isBookmarked: Boolean,
+  bookmarkLoading: Boolean,
+  registerLoading: Boolean,
+  
 });
 
 const emit = defineEmits(["close", "toggle-register", "bookmark"]);
@@ -103,22 +106,68 @@ function formatTime(datetime) {
           }}
         </p>
         <!-- Buttons -->
-        <div class="my-4 flex justify-end gap-2">
-          <button
-            class="btn btn-outline btn-sm"
-            @click="$emit('bookmark', training.trainingID)"
+        <!-- Buttons -->
+      <div class="my-4 flex justify-end gap-2">
+        <button
+          class="btn btn-outline btn-sm flex items-center justify-center space-x-2"
+          @click="$emit('bookmark', training.trainingID)"
+          :disabled="bookmarkLoading"
+        >
+          <svg
+            v-if="bookmarkLoading"
+            class="animate-spin h-4 w-4 text-gray-600"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
           >
-            {{ isBookmarked ? "Bookmarked" : "Bookmark" }}
-          </button>
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
+            ></path>
+          </svg>
 
-          <button
-            class="btn btn-sm text-white"
-            :class="isRegistered ? 'bg-gray-500' : 'bg-customButton'"
-            @click="$emit('toggle-register', training)"
+          <span v-else>{{ isBookmarked ? "Bookmarked" : "Bookmark" }}</span>
+        </button>
+
+        <button
+          class="btn btn-sm flex items-center justify-center space-x-2 text-white"
+          :class="isRegistered ? 'bg-gray-500' : 'bg-customButton'"
+          @click="$emit('toggle-register', training)"
+          :disabled="registerLoading"
+        >
+          <svg
+            v-if="registerLoading"
+            class="animate-spin h-4 w-4 text-white"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
           >
-            {{ isRegistered ? "Unregister" : "Register" }}
-          </button>
-        </div>
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
+            ></path>
+          </svg>
+          <span v-else>{{ isRegistered ? "Unregister" : "Register" }}</span>
+        </button>
+      </div>
         <p><strong>Mode:</strong> {{ training.mode || training.Mode }}</p>
         <!-- Description & Mode -->
         <p><strong>Description:</strong> {{ training.description }}</p>
@@ -150,7 +199,7 @@ function formatTime(datetime) {
             v-if="training.attendance_key && !qrExpired"
             class="flex flex-col items-center"
           >
-            <qrcode-vue :value="training.attendance_key" :size="120" />
+            <qrcode-vue :value="training.attendance_link" :size="120" />
             <p class="text-sm text-gray-600 mt-1">
               Expires in: {{ countdown }}
             </p>

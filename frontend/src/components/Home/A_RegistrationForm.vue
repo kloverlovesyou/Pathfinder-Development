@@ -571,7 +571,7 @@ const careers = ref([]);
 
 onMounted(async () => {
   try {
-    const res = await axios.get("http://127.0.0.1:8000/api/careers")
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/careers")
     careers.value = Array.isArray(res.data) ? res.data : res.data.careers || [];
   } catch (error) {
     console.error('Error fetching careers:', error)
@@ -591,7 +591,7 @@ const handleSubmit = async () => {
   }
 
   try {
-    await axios.post("http://127.0.0.1:8000/api/applicants", {
+    await axios.post(import.meta.env.VITE_API_BASE_URL + "/applicants", {
       ...form.value,
     });
 

@@ -31,6 +31,7 @@ use App\Http\Controllers\{
 Route::get('/trainings', [TrainingController::class, 'index']);
 Route::get('/careers', [CareerController::class, 'index']);
 Route::get('/organization', [OrganizationController::class, 'index']);
+Route::post('/attendance/checkin', [TrainingController::class, 'attendanceCheckin']);
 
 // Tags
 Route::get('/tags', [TagController::class, 'index']);
@@ -62,6 +63,19 @@ Route::middleware('auth.custom')->group(function () {
     Route::post('/resume', [ResumeController::class, 'store']);
     Route::get('/resume', [ResumeController::class, 'show']);
     Route::delete('/resume', [ResumeController::class, 'destroy']);
+
+        // Public routes inside auth group
+    Route::get('/trainings/total', [TrainingController::class, 'total'])
+        ->withoutMiddleware('auth.custom');
+
+    Route::get('/trainings/counts-partial', [TrainingController::class, 'countsPartial'])
+        ->withoutMiddleware('auth.custom');
+
+    Route::get('/careers/total', [CareerController::class, 'total'])
+        ->withoutMiddleware('auth.custom');
+
+    Route::get('/careers/counts-partial', [CareerController::class, 'countsPartial'])
+        ->withoutMiddleware('auth.custom');
 });
 
 // ----------------------
@@ -136,6 +150,7 @@ Route::put('/user', [ApplicantController::class, 'update']);
 
 Route::get('/search', [SearchController::class, 'search']);
 Route::get('/training/{id}', [SearchController::class, 'getTraining']);
+Route::get('/training/{id}', [TrainingController::class, 'show']);
 Route::get('/career/{id}', [SearchController::class, 'getCareer']);
 Route::get('/organization/{id}', [SearchController::class, 'getOrganization']);
 
@@ -150,3 +165,6 @@ Route::get('/user', function (Request $request) {
 // Activities & Events
 Route::get('/my-activities/{applicantID}', [MyActivityController::class, 'getMyActivities']);
 Route::get('/calendar/{applicantID}', [EventController::class, 'getUserEvents']);
+
+// Public routes for totals
+// ✅ Public routes (no auth needed)

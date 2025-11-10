@@ -8,11 +8,19 @@ use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 class Kernel extends ConsoleKernel
 {
     /**
+     * Register custom commands
+     */
+    protected $commands = [
+        \App\Console\Commands\AutoGenerateTrainingQR::class,
+    ];
+
+    /**
      * Define the application's command schedule.
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // ✅ Run QR generation every minute
+        $schedule->command('qr:autogenerate')->everyMinute();
     }
 
     /**

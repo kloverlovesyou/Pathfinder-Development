@@ -264,7 +264,7 @@ export default {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const res = await axios.get("http://127.0.0.1:8000/api/trainings", {
+      const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/trainings", {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       });
 
@@ -284,7 +284,7 @@ export default {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const res = await axios.get("http://127.0.0.1:8000/api/careers", {
+      const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/careers", {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       });
 

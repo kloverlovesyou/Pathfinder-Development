@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\TrainingBookmark;
+use App\Models\Trainingbookmark;
 use App\Models\Training;
 
 class TrainingBookmarkController extends Controller
@@ -17,7 +17,7 @@ class TrainingBookmarkController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $bookmarks = TrainingBookmark::where('applicantID', $user->applicantID)
+        $bookmarks = Trainingbookmark::where('applicantID', $user->applicantID)
             ->pluck('trainingID'); // returns just an array of IDs
 
         return response()->json($bookmarks);
@@ -27,30 +27,18 @@ class TrainingBookmarkController extends Controller
     public function store(Request $request)
     {
         $user = $request->user();
-
         if (!$user) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $trainingID = $request->input('trainingID'); // ✅ use input()
+        $request->validate([
+            'trainingID' => 'required|exists:training,trainingID'
+        ]);
 
-        if (!$trainingID) {
-            return response()->json(['message' => 'trainingID is required'], 400);
-        }
-
-        // Prevent duplicates
-        $exists = TrainingBookmark::where('applicantID', $user->applicantID)
-            ->where('trainingID', $trainingID)
-            ->exists();
-
-        if ($exists) {
-            return response()->json(['message' => 'Already bookmarked'], 409);
-        }
-
-        $bookmark = new TrainingBookmark();
-        $bookmark->applicantID = $user->applicantID;
-        $bookmark->trainingID = $trainingID;
-        $bookmark->save();
+        Trainingbookmark::create([
+            'applicantID' => $user->applicantID,
+            'trainingID' => $request->trainingID
+        ]);
 
         return response()->json(['message' => 'Bookmarked successfully'], 201);
     }
@@ -64,7 +52,7 @@ class TrainingBookmarkController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $bookmark = TrainingBookmark::where('applicantID', $user->applicantID)
+        $bookmark = Trainingbookmark::where('applicantID', $user->applicantID)
             ->where('trainingID', $trainingID)
             ->first();
 

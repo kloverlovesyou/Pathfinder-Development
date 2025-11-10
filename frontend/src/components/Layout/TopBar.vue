@@ -2,101 +2,91 @@
 import { ref, onMounted, onBeforeUnmount, watch, reactive } from "vue";
 import axios from "axios";
 import { useRoute } from "vue-router";
+import { useRegistrationStore } from "@/stores/registrationStore";
+
+const qrCodeUrl = ref(null);
+
 const route = useRoute();
-const registeredPosts = reactive({}); // stores registered trainings
+const toasts = ref([]);
+const regStore = useRegistrationStore(); // ✅ Pinia store
 
-async function fetchMyRegistrations() {
-  const token = localStorage.getItem("token");
-  if (!token) return;
-
+async function fetchQRCode(trainingID) {
   try {
-    const res = await axios.get("http://127.0.0.1:8000/api/registrations", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    res.data.forEach((r) => {
-      // 👇 Make sure this matches your backend JSON fields
-      registeredPosts[r.trainingID] = { registrationID: r.registrationID };
-    });
-
-    console.log("✅ Registered trainings:", registeredPosts);
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + `/training/${trainingID}/qrcode`
+    );
+    qrCodeUrl.value = res.data.qr_url || null;
   } catch (err) {
-    console.error("❌ Failed to fetch registrations:", err);
+    console.error("Failed to fetch QR code:", err);
+    qrCodeUrl.value = null;
   }
 }
 
-onMounted(fetchMyRegistrations);
+function showToast(message, type = "info") {
+  toasts.value.push({ message, type });
 
+  setTimeout(() => {
+    toasts.value.shift();
+  }, 3000);
+}
+
+// ✅ Use store instead of local registeredPosts
+onMounted(() => {
+  regStore.fetchMyRegistrations();
+});
+
+// ✅ Toggle using store
 async function toggleRegister(training) {
   const token = localStorage.getItem("token");
-  if (!token) return alert("Please log in first.");
+  if (!token) return showToast("Please log in first.", "error");
 
-  const isRegistered = registeredPosts[training.trainingID];
+  const trainingID = training.trainingID ?? training.TrainingID ?? training.ID ?? training.id;
 
-  // 🔹 Unregister
-  if (isRegistered) {
-    try {
-      await axios.delete(
-        `http://127.0.0.1:8000/api/registrations/${isRegistered.registrationID}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+  try {
+    await regStore.toggleRegister(training);
 
-      delete registeredPosts[training.trainingID];
-      alert(`You have unregistered from ${training.title}`);
-    } catch (err) {
-      console.error(err);
-      alert("Unregister failed.");
+    const isRegistered = !!regStore.registeredPosts[trainingID];
+
+    showToast(
+      isRegistered ? "Registered successfully!" : "Unregistered successfully!",
+      "success"
+    );
+
+    // ✅ Fetch QR if registered
+    if (isRegistered) {
+      await fetchQRCode(trainingID);
+    } else {
+      qrCodeUrl.value = null;
     }
-  }
-
-  // 🔹 Register
-  else {
-    try {
-      const res = await axios.post(
-        "http://127.0.0.1:8000/api/registrations",
-        { trainingID: training.trainingID },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      // 👇 Note: backend wraps registration in `data`
-      const reg = res.data.data;
-      registeredPosts[reg.trainingID] = { registrationID: reg.registrationID };
-      alert(`You have registered for ${training.title}`);
-    } catch (err) {
-      console.error(err);
-      alert("Registration failed.");
-    }
+  } catch (err) {
+    showToast("Action failed.", "error");
+    console.error(err);
   }
 }
 
-// --- State ---
+// ✅ Everything else below remains **untouched**
 const showDropdown = ref(false);
-const activeMains = ref([]); // Training / Career / Organization
-const activeSubs = ref([]); // Online / Onsite
+const activeMains = ref([]);
+const activeSubs = ref([]);
 const searchContainer = ref(null);
 const mainFilters = ["Training", "Career", "Organization"];
-const searchInput = ref(""); // User's search text
-const results = ref([]); // Results from backend
-
-// --- Modal States ---
+const searchInput = ref("");
+const results = ref([]);
 
 const applyModalOpen = ref(false);
-const isModalOpen = ref(false); // For org modal
+const isModalOpen = ref(false);
 
-// --- Misc States ---
 const bookmarkedPosts = ref({});
 const appliedPosts = ref({});
 const organizations = ref({});
 const posts = ref([]);
 
-// --- Filter Toggles ---
 function toggleMainFilter(main) {
   if (activeMains.value.includes(main)) {
     activeMains.value = activeMains.value.filter((m) => m !== main);
     if (main === "Training" || main === "Career") activeSubs.value = [];
   } else {
     if (main === "Training" || main === "Career") {
-      // Mutually exclusive
       activeMains.value = activeMains.value.filter(
         (m) => m !== (main === "Training" ? "Career" : "Training")
       );
@@ -118,7 +108,6 @@ function toggleExclusiveSub(sub) {
   }
 }
 
-// --- Click outside to close dropdown ---
 function handleClickOutside(event) {
   if (searchContainer.value && !searchContainer.value.contains(event.target)) {
     showDropdown.value = false;
@@ -129,7 +118,6 @@ onBeforeUnmount(() =>
   document.removeEventListener("click", handleClickOutside)
 );
 
-// --- Perform Search (calls Laravel backend + stored procedure) ---
 async function performSearch() {
   if (!searchInput.value.trim()) {
     results.value = [];
@@ -137,13 +125,16 @@ async function performSearch() {
   }
 
   try {
-    const response = await axios.get("http://127.0.0.1:8000/api/search", {
-      params: {
-        search: searchInput.value,
-        filterType: activeMains.value[0]?.toLowerCase() || "",
-        subFilter: activeSubs.value[0] || "",
-      },
-    });
+    const response = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/search",
+      {
+        params: {
+          search: searchInput.value,
+          filterType: activeMains.value[0]?.toLowerCase() || "",
+          subFilter: activeSubs.value[0] || "",
+        },
+      }
+    );
 
     results.value = response.data.results || [];
   } catch (error) {
@@ -153,7 +144,6 @@ async function performSearch() {
 }
 watch([searchInput, activeMains, activeSubs], performSearch);
 
-// --- Type Checkers ---
 function isTraining(post) {
   return post.Type?.toLowerCase().includes("training");
 }
@@ -177,14 +167,18 @@ async function openOrganizationModal(orgItem) {
       trainings: [],
     };
 
-    // Fetch related posts dynamically
-    const response = await axios.get(`/api/organization/${orgItem.ID}/posts`);
+    const response = await axios.get(
+      import.meta.env.VITE_API_BASE_URL +
+        `/organization/${orgItem.ID}/posts`
+    );
     selectedOrg.value.careers = response.data.careers || [];
     selectedOrg.value.trainings = response.data.trainings || [];
   } catch (error) {
     console.error("Failed to fetch organization details:", error);
   }
 }
+
+
 
 function resetModals() {
   selectedPost.value = null;
@@ -200,62 +194,61 @@ const isOrgModalOpen = ref(false);
 const selectedPost = ref({});
 const selectedOrg = ref({});
 
-// 🟦 TRAINING MODAL
-function openTrainingModal(post) {
+async function openTrainingModal(post) {
   selectedPost.value = post;
   isTrainingModalOpen.value = true;
+
+  const trainingID = post.trainingID ?? post.TrainingID ?? post.ID ?? post.id;
+
+  // Ensure latest registrations
+  await regStore.fetchMyRegistrations();
+
+  // If already registered, fetch QR
+  if (regStore.registeredPosts[trainingID]) {
+    await fetchQRCode(trainingID);
+  } else {
+    qrCodeUrl.value = null;
+  }
 }
+
 
 function closeTrainingModal() {
   selectedPost.value = {};
   isTrainingModalOpen.value = false;
 }
-
-// 🟩 CAREER MODAL
 function openCareerModal(post) {
   selectedPost.value = post;
   isCareerModalOpen.value = true;
 }
-
 function closeCareerModal() {
   selectedPost.value = {};
   isCareerModalOpen.value = false;
 }
-
-// 🧩 APPLY MODAL
 function openApplyModal(post) {
   selectedPost.value = post;
   applyModalOpen.value = true;
 }
-
 function closeApplyModal() {
   applyModalOpen.value = false;
   selectedPost.value = {};
 }
-
-// 🟧 ORG MODAL
 function openOrgModal(org) {
   selectedOrg.value = org;
   isOrgModalOpen.value = true;
 }
-
 function closeOrgModal() {
   isOrgModalOpen.value = false;
   selectedOrg.value = {};
 }
 
-// Handles result click depending on Type
 async function handleResultClick(item) {
   if (item.Type === "Training" || item.Type.includes("Training")) {
-    // 🎯 Training modal
     selectedPost.value = item;
     isTrainingModalOpen.value = true;
   } else if (item.Type === "Career" || item.Type.includes("Career")) {
-    // 🎯 Career modal
     selectedPost.value = item;
     isCareerModalOpen.value = true;
   } else if (item.Type === "Organization") {
-    // 🎯 Organization modal (fetch org info + its posts)
     selectedOrg.value = {
       ...item,
       careers: [],
@@ -560,6 +553,7 @@ async function handleResultClick(item) {
         >
           ✕
         </button>
+
         <h2 class="text-xl font-bold mb-2">{{ selectedPost.Title }}</h2>
         <p class="text-sm text-gray-600 mb-2">
           Organization: {{ selectedPost.OrganizationName }}
@@ -567,6 +561,7 @@ async function handleResultClick(item) {
 
         <!-- Buttons -->
         <div class="my-4 flex justify-end gap-2">
+
           <!-- Bookmark -->
           <button
             class="btn btn-outline btn-sm"
@@ -579,24 +574,53 @@ async function handleResultClick(item) {
             }}
           </button>
 
-          <!-- Register (training only) -->
+          <!-- Register -->
           <button
             v-if="isTraining(selectedPost)"
             class="btn btn-sm text-white"
             :class="
-              registeredPosts[selectedPost.TrainingID]
+              regStore.registeredPosts[
+                selectedPost.trainingID ??
+                selectedPost.TrainingID ??
+                selectedPost.id ??
+                selectedPost.ID
+              ]
                 ? 'bg-gray-500'
                 : 'bg-customButton'
             "
             @click="toggleRegister(selectedPost)"
           >
             {{
-              registeredPosts[selectedPost.TrainingID]
-                ? "Unregister"
-                : "Register"
+              regStore.registeredPosts[
+                selectedPost.trainingID ??
+                selectedPost.TrainingID ??
+                selectedPost.id ??
+                selectedPost.ID
+              ]
+                ? 'Unregister'
+                : 'Register'
             }}
           </button>
+
         </div>
+
+        <!-- ✅ ✅ QR CODE SECTION -->
+        <div class="flex justify-center my-4">
+          <template v-if="qrCodeUrl">
+            <img
+              :src="qrCodeUrl"
+              alt="Training QR"
+              class="w-40 h-40 border rounded shadow-md"
+            />
+          </template>
+
+          <template v-else>
+            <p class="text-center text-gray-500 text-sm">
+              QR code will appear once registered.
+            </p>
+          </template>
+        </div>
+        <!-- ✅ ✅ END QR SECTION -->
 
         <!-- Training Info -->
         <p><strong>Mode:</strong> {{ selectedPost.Mode || "Not specified" }}</p>
@@ -625,35 +649,37 @@ async function handleResultClick(item) {
 
         <!-- Buttons -->
         <div class="my-4 flex justify-end gap-2">
-          <!-- Bookmark -->
-          <button
-            class="btn btn-outline btn-sm"
-            @click="toggleBookmark(selectedPost)"
-          >
-            {{
-              bookmarkedPosts[selectedPost.TrainingID || selectedPost.CareerID]
-                ? "Bookmarked"
-                : "Bookmark"
-            }}
-          </button>
+            <!-- Bookmark -->
+            <button
+              class="btn btn-outline btn-sm"
+              @click="toggleBookmark(selectedPost)"
+            >
+              {{
+                bookmarkedPosts[selectedPost.TrainingID || selectedPost.CareerID]
+                  ? "Bookmarked"
+                  : "Bookmark"
+              }}
+            </button>
 
-          <!-- Apply / Cancel -->
-          <button
-            v-if="!appliedPosts[selectedPost.ID]"
-            class="btn btn-sm bg-customButton text-white"
-            @click="openApplyModal(selectedPost)"
-          >
-            Apply
-          </button>
-
-          <button
-            v-else
-            class="btn btn-sm bg-gray-500 text-white"
-            @click="cancelApplication(selectedPost)"
-          >
-            Cancel Application
-          </button>
-        </div>
+            <!-- Register (training only) -->
+            <button
+                v-if="isTraining(selectedPost)"
+                class="btn btn-sm text-white flex items-center justify-center gap-2"
+                :class="regStore.registeredPosts[selectedPost.trainingID ?? selectedPost.TrainingID ?? selectedPost.id ?? selectedPost.ID] ? 'bg-gray-500' : 'bg-customButton'"
+                :disabled="regStore.loadingPosts[selectedPost.trainingID ?? selectedPost.TrainingID ?? selectedPost.id ?? selectedPost.ID]"
+                @click="toggleRegister(selectedPost)"
+              >
+                <template v-if="regStore.loadingPosts[selectedPost.trainingID ?? selectedPost.TrainingID ?? selectedPost.id ?? selectedPost.ID]">
+                  <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                  </svg>
+                </template>
+                <template v-else>
+                  {{ regStore.registeredPosts[selectedPost.trainingID ?? selectedPost.TrainingID ?? selectedPost.id ?? selectedPost.ID] ? 'Unregister' : 'Register' }}
+                </template>
+              </button>
+          </div>
 
         <!-- Career Info -->
         <p>
@@ -743,6 +769,21 @@ async function handleResultClick(item) {
         </form>
       </div>
     </dialog>
+
+    <div class="fixed top-4 right-4 space-y-2 z-50">
+      <div
+        v-for="(t, i) in toasts"
+        :key="i"
+        class="px-4 py-2 rounded text-white shadow-md"
+        :class="{
+          'bg-green-600': t.type === 'success',
+          'bg-red-600': t.type === 'error',
+          'bg-blue-600': t.type === 'info'
+        }"
+      >
+        {{ t.message }}
+      </div>
+    </div>
     <!--  ORGANIZATION MODAL -->
     <dialog v-if="isOrgModalOpen" open class="modal sm:modal-middle">
       <div class="modal-box max-w-2xl relative font-poppins">

@@ -69,15 +69,15 @@ class RegistrationController extends Controller
     }
 
     // Cancel registration
-    public function destroy(Request $request, int $id)
+    public function destroy(Request $request, int $trainingID)
     {
-        $user = $request->user(); // ✅ Use user resolver
+        $user = $request->user();
 
         if (!$user) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $registration = Registration::where('registrationID', $id)
+        $registration = Registration::where('trainingID', $trainingID)
             ->where('applicantID', $user->applicantID)
             ->first();
 

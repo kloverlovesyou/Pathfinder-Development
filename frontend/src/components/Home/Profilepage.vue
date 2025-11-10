@@ -24,7 +24,7 @@ async function openModal(activity) {
       if (!token) return console.error("❌ No token found.");
 
       // Fetch all applications for the user
-      const res = await axios.get("http://127.0.0.1:8000/api/applications", {
+      const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/applications", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -59,7 +59,7 @@ async function openCareerModal(career) {
     if (!token) return console.error("❌ No token found.");
 
     // ✅ Fetch all applications for the logged-in applicant
-    const res = await axios.get("http://127.0.0.1:8000/api/applications", {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/applications", {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -91,7 +91,7 @@ async function openTrainingModal(training) {
     if (!token) return console.error("❌ No token found.");
 
     const id = training.id || training.trainingID;
-    const res = await axios.get(`http://127.0.0.1:8000/api/trainings/${id}`, {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + `/trainings/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -152,9 +152,7 @@ async function fetchMyActivities() {
     `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Guest";
 
   try {
-    const res = await axios.get(
-      `http://127.0.0.1:8000/api/my-activities/${user.applicantID}`
-    );
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL +`/my-activities/${user.applicantID}`);
     activities.value = res.data.activities || [];
 
     console.log("Raw activities data:", activities.value);
@@ -181,9 +179,13 @@ const startAllQRCountdowns = () => {
   if (qrCountdownInterval) clearInterval(qrCountdownInterval);
 
   qrCountdownInterval = setInterval(() => {
+    const now = new Date().getTime();
+    let newUpcoming = 0;
+    let newCompleted = 0;
+
     activities.value.forEach((activity) => {
+      // --- QR Countdown ---
       if (activity.end_time) {
-        const now = new Date().getTime();
         const expiry = new Date(activity.end_time).getTime();
         const diff = expiry - now;
 
@@ -195,7 +197,25 @@ const startAllQRCountdowns = () => {
           qrCountdowns[activity.id] = "Expired";
         }
       }
+
+      // --- Update counters dynamically ---
+      const statusLower = (activity.status || "").toLowerCase();
+      const endTimePassed = activity.end_time
+        ? now > new Date(activity.end_time).getTime()
+        : false;
+
+      // Completed if end_time passed or status is completed
+      if (statusLower === "completed" || endTimePassed) {
+        newCompleted++;
+      } else if (["upcoming", "registered", "scheduled"].includes(statusLower)) {
+        newUpcoming++;
+      }
     });
+
+    // Assign updated counters
+    upcomingCount.value = newUpcoming;
+    completedCount.value = newCompleted;
+
   }, 1000);
 };
 
@@ -271,18 +291,15 @@ async function submitAttendance(activity) {
   }
 
   try {
-    const res = await axios.get(
-      "http://127.0.0.1:8000/api/attendance/checkin",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        params: {
-          trainingID: activity.trainingID, // ✅ use registrationID instead
-          key: activity.qrInput.trim(),
-        },
-      }
-    );
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/attendance/checkin", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      params: {
+        trainingID: activity.registrationID, // ✅ use registrationID instead
+        key: activity.qrInput.trim(),
+      },
+    });
 
     alert(res.data.message || "Attendance recorded successfully!");
     activity.qrInput = "";
