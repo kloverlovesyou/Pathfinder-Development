@@ -2,23 +2,21 @@
 
 return [
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie', 'applications/*'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://path.com','http://localhost:5173', 'https://portal.pathfinder.com'],
+    'allowed_origins' => ['*'],
 
     'allowed_origins_patterns' => [],
 
+    // ✅ Allow all headers (including Authorization)
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    // ✅ Make Authorization visible to browser / pass through proxy
+    'exposed_headers' => ['Authorization'],
+
     'max_age' => 0,
+
     'supports_credentials' => true,
-    'paths' => ['api/*', 'applications/*'],
-'allowed_origins' => ['http://localhost:5173'],
-'allowed_methods' => ['*'],
-'allowed_headers' => ['*'],
-
 ];
-

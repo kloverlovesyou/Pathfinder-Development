@@ -14,6 +14,7 @@ const selectedImage = ref(null);
 const selectedTitle = ref(null);
 const upcomingCount = ref(0);
 const completedCount = ref(0);
+let trainingCounterInterval = null;
 
 // ➤ Add a new upload entry
 function addCertificate() {
@@ -27,6 +28,18 @@ function addCertificate() {
 // ➤ Remove an upload entry
 function removeCertificate(index) {
   certificates.value.splice(index, 1);
+}
+
+function startTrainingCounterUpdater() {
+  fetchTrainingCounters(); // initial fetch
+  console.log("upcoming:", upcomingCount.value, "completed:", completedCount.value);
+  // Update every 60 seconds
+  trainingCounterInterval = setInterval(fetchTrainingCounters, 60 * 1000);
+}
+
+// Stop interval if needed (optional)
+function stopTrainingCounterUpdater() {
+  if (trainingCounterInterval) clearInterval(trainingCounterInterval);
 }
 
 // ➤ File preview handler
@@ -48,21 +61,35 @@ async function fetchTrainingCounters() {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const response = await axios.get("http://127.0.0.1:8000/api/registrations", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/registrations",
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
     const trainings = response.data || [];
 
-    upcomingCount.value = trainings.filter(
-      (r) =>
-        r.registrationStatus?.toLowerCase() === "upcoming" ||
-        r.registrationStatus?.toLowerCase() === "registered"
-    ).length;
+    let newUpcoming = 0;
+    let newCompleted = 0;
+    const now = new Date().getTime();
 
-    completedCount.value = trainings.filter(
-      (r) => r.registrationStatus?.toLowerCase() === "completed"
-    ).length;
+    trainings.forEach((r) => {
+    console.log("end_time:", r.end_time, "parsed:", Date.parse(r.end_time));
+
+      const statusLower = (r.registrationStatus || "").toLowerCase();
+      const endTimePassed = r.end_time
+        ? now > Date.parse(r.end_time)
+        : false;
+
+      // Mark as completed if end_time passed or status is completed
+      if (statusLower === "completed" || endTimePassed) {
+        newCompleted++;
+      } else if (["upcoming", "registered"].includes(statusLower)) {
+        newUpcoming++;
+      }
+    });
+
+    upcomingCount.value = newUpcoming;
+    completedCount.value = newCompleted;
   } catch (error) {
     console.error("❌ Error fetching training counters:", error);
   }
@@ -73,7 +100,7 @@ async function fetchCertificates(applicantID) {
   try {
     const token = localStorage.getItem("token");
     const response = await axios.get(
-      `http://127.0.0.1:8000/api/certificates/${applicantID}`,
+      import.meta.env.VITE_API_BASE_URL +`/certificates/${applicantID}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
@@ -113,7 +140,7 @@ async function uploadCertificate(cert, index) {
 
   try {
     const response = await axios.post(
-      "http://127.0.0.1:8000/api/certificates",
+      import.meta.env.VITE_API_BASE_URL + "/certificates",
       formData,
       {
         headers: {
@@ -155,7 +182,7 @@ async function deleteCertificateConfirmed() {
   const id = certToDelete.value.certificationID || certToDelete.value.id;
 
   try {
-    await axios.delete(`http://127.0.0.1:8000/api/certificates/${id}`, {
+    await axios.delete(import.meta.env.VITE_API_BASE_URL +`/certificates/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -181,7 +208,7 @@ async function toggleCertificateSelection(cert) {
   try {
     const id = cert.certificationID || cert.id;
     const response = await axios.patch(
-      `http://127.0.0.1:8000/api/certificates/${id}/toggle`,
+      import.meta.env.VITE_API_BASE_URL +`/certificates/${id}/toggle`,
       {},
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -235,6 +262,7 @@ onMounted(async () => {
   } else {
     userName.value = "Guest";
   }
+  startTrainingCounterUpdater();
   await fetchTrainingCounters();
 });
 
@@ -264,7 +292,7 @@ const selectAllCertificates = async () => {
         if (!cert.IsSelected) {
           const id = cert.certificationID || cert.id;
           await axios.patch(
-            `http://127.0.0.1:8000/api/certificates/${id}/toggle`,
+            import.meta.env.VITE_API_BASE_URL + `/certificates/${id}/toggle`,
             {},
             { headers: { Authorization: `Bearer ${token}` } }
           );
@@ -292,7 +320,7 @@ const deselectAllCertificates = async () => {
         if (cert.IsSelected) {
           const id = cert.certificationID || cert.id;
           await axios.patch(
-            `http://127.0.0.1:8000/api/certificates/${id}/toggle`,
+            import.meta.env.VITE_API_BASE_URL + `/certificates/${id}/toggle`,
             {},
             { headers: { Authorization: `Bearer ${token}` } }
           );

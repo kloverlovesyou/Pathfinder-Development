@@ -10,7 +10,7 @@ async function fetchMyRegistrations() {
   if (!token) return;
 
   try {
-    const res = await axios.get("http://127.0.0.1:8000/api/registrations", {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/registrations", {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -51,7 +51,7 @@ async function fetchCareerEvents() {
 
     // Call the API that returns applications with interview schedule
     const { data: apps } = await axios.get(
-      "http://127.0.0.1:8000/api/applications",
+      import.meta.env.VITE_API_BASE_URL + "/applications",
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
@@ -93,7 +93,7 @@ async function fetchCareerDetails(careerID) {
 
   try {
     const response = await axios.get(
-      `http://127.0.0.1:8000/api/careers/${careerID}`,
+      import.meta.env.VITE_API_BASE_URL + `/careers/${careerID}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -134,7 +134,7 @@ async function toggleRegister(training) {
       const registrationID =
         registeredPosts[training.trainingID].registrationID;
       await axios.delete(
-        `http://127.0.0.1:8000/api/registrations/${registrationID}`,
+        import.meta.env.VITE_API_BASE_URL +`/registrations/${registrationID}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -148,7 +148,7 @@ async function toggleRegister(training) {
   else {
     try {
       const res = await axios.post(
-        "http://127.0.0.1:8000/api/registrations",
+        import.meta.env.VITE_API_BASE_URL + "/registrations",
         { trainingID: training.trainingID },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -290,7 +290,7 @@ async function fetchEvents() {
     }
 
     const response = await axios.get(
-      `http://127.0.0.1:8000/api/calendar/${user.applicantID}`,
+      import.meta.env.VITE_API_BASE_URL + `/calendar/${user.applicantID}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -423,7 +423,7 @@ function startQRCountdown(training) {
   const endTime = new Date(training.end_time || training.end_Time); // supports both snakeCase or camelCase
 
   // Generate QR (you can change this to your full URL if needed)
-  qrCodeValue.value = `http://192.168.1.247:8000/attendance/submit?trainingID=${training.trainingID}&key=${training.attendance_key}`;
+  qrCodeValue.value = import.meta.env.VITE_API_BASE_URL + `/attendance/submit?trainingID=${training.trainingID}&key=${training.attendance_key}`;
   qrExpiresAt.value = endTime;
   qrActiveTrainingId.value = training.trainingID;
 
@@ -477,7 +477,7 @@ function startAllQRCountdowns() {
 
         const updateCountdown = () => {
           const now = new Date();
-          const expires = new Date(training.attendance_expires_at);
+          const expires = new Date(training.end_time);
           const diff = expires - now;
 
           if (diff <= 0) {
@@ -571,7 +571,7 @@ onMounted(async () => {
 
 async function fetchTrainings() {
   try {
-    const response = await axios.get("http://127.0.0.1:8000/api/trainings");
+    const response = await axios.get(import.meta.env.VITE_API_BASE_URL +"/trainings");
     trainings.value = response.data;
   } catch (error) {
     console.error("Error fetching trainings:", error);

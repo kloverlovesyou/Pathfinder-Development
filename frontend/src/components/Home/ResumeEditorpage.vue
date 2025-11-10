@@ -56,21 +56,33 @@ async function fetchTrainingCounters() {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const response = await axios.get("http://127.0.0.1:8000/api/registrations", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/registrations",
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
     const trainings = response.data || [];
 
-    upcomingCount.value = trainings.filter(
-      (r) =>
-        r.registrationStatus?.toLowerCase() === "upcoming" ||
-        r.registrationStatus?.toLowerCase() === "registered"
-    ).length;
+    let newUpcoming = 0;
+    let newCompleted = 0;
+    const now = new Date().getTime();
 
-    completedCount.value = trainings.filter(
-      (r) => r.registrationStatus?.toLowerCase() === "completed"
-    ).length;
+    trainings.forEach((r) => {
+      const statusLower = (r.registrationStatus || "").toLowerCase();
+      const endTimePassed = r.end_time
+        ? now > new Date(r.end_time).getTime()
+        : false;
+
+      // Mark as completed if end_time passed or status is completed
+      if (statusLower === "completed" || endTimePassed) {
+        newCompleted++;
+      } else if (["upcoming", "registered"].includes(statusLower)) {
+        newUpcoming++;
+      }
+    });
+
+    upcomingCount.value = newUpcoming;
+    completedCount.value = newCompleted;
   } catch (error) {
     console.error("❌ Error fetching training counters:", error);
   }
@@ -81,7 +93,7 @@ async function saveResume() {
   try {
     const token = localStorage.getItem("token");
     const response = await axios.post(
-      "http://127.0.0.1:8000/api/resume",
+      import.meta.env.VITE_API_BASE_URL +"/resume",
       {
         summary: resume.summary,
         professionalLink: resume.url,
@@ -101,7 +113,7 @@ async function saveResume() {
 async function loadResume() {
   try {
     const token = localStorage.getItem("token");
-    const { data } = await axios.get("http://127.0.0.1:8000/api/resume", {
+    const { data } = await axios.get(import.meta.env.VITE_API_BASE_URL +"/resume", {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -112,7 +124,7 @@ async function loadResume() {
     }
 
     const { data: expData } = await axios.get(
-      "http://127.0.0.1:8000/api/experiences",
+      import.meta.env.VITE_API_BASE_URL +"/experiences",
       {
         headers: { Authorization: `Bearer ${token}` },
       }
@@ -129,7 +141,7 @@ async function loadResume() {
 async function deleteResume() {
   try {
     const token = localStorage.getItem("token");
-    await axios.delete("http://127.0.0.1:8000/api/resume", {
+    await axios.delete(import.meta.env.VITE_API_BASE_URL +"/resume", {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -149,7 +161,7 @@ async function addEducation() {
 
     if (!resume.resumeID) {
       const resumeRes = await axios.post(
-        "http://127.0.0.1:8000/api/resume",
+        import.meta.env.VITE_API_BASE_URL +"/resume",
         {
           summary: resume.summary || "",
           professionalLink: resume.url || "",
@@ -160,7 +172,7 @@ async function addEducation() {
     }
 
     const { data } = await axios.post(
-      "http://127.0.0.1:8000/api/education",
+      import.meta.env.VITE_API_BASE_URL +"/education",
       { ...newEducation, resumeID: resume.resumeID },
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -181,7 +193,7 @@ async function loadEducation() {
     const resumeID = resume.resumeID || localStorage.getItem("resumeID");
 
     const { data } = await axios.get(
-      `http://127.0.0.1:8000/api/education?resumeID=${resumeID}`,
+      import.meta.env.VITE_API_BASE_URL +`/education?resumeID=${resumeID}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
@@ -198,7 +210,7 @@ async function removeEducation(index) {
     const edu = resume.education[index];
     if (edu.educationID) {
       await axios.delete(
-        `http://127.0.0.1:8000/api/education/${edu.educationID}`,
+        import.meta.env.VITE_API_BASE_URL +`/education/${edu.educationID}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -227,7 +239,7 @@ async function addExperience() {
 
     if (!resume.resumeID) {
       const resumeRes = await axios.post(
-        "http://127.0.0.1:8000/api/resume",
+        import.meta.env.VITE_API_BASE_URL +"/resume",
         {
           summary: resume.summary || "",
           professionalLink: resume.url || "",
@@ -238,7 +250,7 @@ async function addExperience() {
     }
 
     const { data } = await axios.post(
-      "http://127.0.0.1:8000/api/experiences",
+      import.meta.env.VITE_API_BASE_URL +"/experiences",
       {
         ...newExperience,
         startYear: `${newExperience.startYear}-01-01`,
@@ -270,7 +282,7 @@ async function removeExperience(index) {
     const exp = resume.experience[index];
     if (exp.experienceID) {
       await axios.delete(
-        `http://127.0.0.1:8000/api/experiences/${exp.experienceID}`,
+        import.meta.env.VITE_API_BASE_URL +`/experiences/${exp.experienceID}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -288,7 +300,7 @@ async function loadSkills(resumeID) {
   try {
     const token = localStorage.getItem("token");
     const { data } = await axios.get(
-      `http://127.0.0.1:8000/api/skills/${resumeID}`,
+      import.meta.env.VITE_API_BASE_URL +`/skills/${resumeID}`,
       {
         headers: { Authorization: `Bearer ${token}` },
       }
@@ -311,7 +323,7 @@ async function addSkill() {
     }
 
     const { data } = await axios.post(
-      "http://127.0.0.1:8000/api/skills",
+      import.meta.env.VITE_API_BASE_URL +"/skills",
       { skillName: newSkill.value.trim(), resumeID: resume.resumeID },
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -328,7 +340,7 @@ async function removeSkill(index) {
     const token = localStorage.getItem("token");
     const skill = resume.skills[index];
     if (skill.skillID) {
-      await axios.delete(`http://127.0.0.1:8000/api/skills/${skill.skillID}`, {
+      await axios.delete(import.meta.env.VITE_API_BASE_URL +`/skills/${skill.skillID}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
     }
@@ -520,7 +532,7 @@ async function fetchSelectedCertificates() {
 
   try {
     const response = await axios.get(
-      `http://127.0.0.1:8000/api/certificates/${user.applicantID}/selected`,
+      import.meta.env.VITE_API_BASE_URL +`/certificates/${user.applicantID}/selected`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
 

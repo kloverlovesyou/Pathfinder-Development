@@ -107,6 +107,14 @@
         </div>
       </header>
 
+      <!-- ✅ GLOBAL SEARCH -->
+      <section class="global-search-section">
+        <div class="flex justify-center my-6 px-4">
+          <input type="text" v-model="globalSearchQuery" placeholder="Search trainings..."
+            class="global-search-bar text-black px-4 py-2 border rounded-lg w-full sm:w-3/4 md:w-1/2 lg:w-1/3" />
+        </div>
+      </section>
+
       <!-- ✅ Upcoming Trainings Section -->
       <section class="upcoming">
         <div class="flex items-center justify-between">
@@ -120,7 +128,7 @@
 
         <!-- ✅ Grid Layout -->
         <div class="trainings-grid">
-          <div v-for="training in visibleUpcomingTrainings" :key="training.trainingID" class="training-card"
+          <div v-for="training in visibleFilteredUpcoming" :key="training.trainingID" class="training-card"
             @click="openTrainingDetails(training)">
             <div class="training-right" @click="openTrainingDetails(training)">
               <h3 class="training-title">{{ training.title }}</h3>
@@ -160,7 +168,7 @@
 
         <!-- ✅ Grid Layout -->
         <div class="trainings-grid">
-          <div v-for="training in visibleCompletedTrainings" :key="training.trainingID" class="training-card"
+          <div v-for="training in visibleFilteredCompleted" :key="training.trainingID" class="training-card"
             @click="openTrainingDetails(training)">
             <div class="training-right" @click="openTrainingDetails(training)">
               <h3 class="training-title">{{ training.title }}</h3>
@@ -272,11 +280,12 @@
           </div>
           <!-- ✅ Show QR only if training is live/upcoming within allowed time -->
           <div
-            v-if="qrCodeValue && activeTrainingId === selectedTraining.trainingID && isTrainingActive(selectedTraining)"
-            class="qr-container">
-            <h3>QR Code (Expires at: {{ qrExpiresAt }})</h3>
-            <qrcode-vue :value="qrCodeValue" :size="200" />
-          </div>
+              v-if="activeTrainingQR && activeTrainingId === selectedTraining.trainingID && isTrainingActive(selectedTraining)"
+              class="qr-container"
+            >
+              <h3>QR Code (Expires at: {{ activeTrainingQRExpiresAt }})</h3>
+              <qrcode-vue :value="activeTrainingQR" :size="200" />
+            </div>
         </div>
       </div>
 
@@ -523,18 +532,21 @@
 import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
 import axios from "axios";
 import QrcodeVue from "qrcode.vue";
+import api from "@/composables/api.js";
+import { activeTrainingQR, activeTrainingId, scheduleQR } from "@/composables/useTrainingQR.js";
 
 export default {
   components: { QrcodeVue }, // ✅ register component
   data() {
     return {
       dictLogo,
+      globalSearchQuery: '',
       showAllUpcoming: false,
       showAllCompleted: false,
-      qrCodeValue: null,
-      qrExpiresAt: null,
+      activeTrainingQR,  // <-- QR code value (reactive)
+      activeTrainingId,  // <-- which training is active
       activeTrainingId: null, // which training shows the QR
-      qrExpireTimeout: null, // to clear old QR timers
+      
 
       /* ==========================
          ✅ Dropdown Menu States
@@ -587,7 +599,7 @@ export default {
   methods: {
     async fetchTags() {
       try {
-        const response = await axios.get('http://127.0.0.1:8000/api/tags');
+        const response = await axios.get(import.meta.env.VITE_API_BASE_URL +'/tags');
         this.tagOptions = response.data; // Update tagOptions correctly
       } catch (error) {
         console.error('Error fetching tags:', error);
@@ -619,7 +631,7 @@ export default {
       if (newTag) {
         try {
           // Send the new tag to the backend
-          const response = await axios.post('http://127.0.0.1:8000/api/tags', {
+          const response = await axios.post(import.meta.env.VITE_API_BASE_URL +'/tags', {
             TagName: newTag
           });
 
@@ -676,24 +688,6 @@ export default {
       this.openCompletedMenu = null;
     },
 
-    scheduleQR(training) {
-      // If QR already active for this training, do nothing
-      if (this.activeTrainingId === training.trainingID && this.qrCodeValue) return;
-
-      const now = new Date();
-      const trainingTime = new Date(training.schedule);
-      const msUntilStart = trainingTime - now;
-
-      if (msUntilStart <= 0) {
-        // Already started or past, generate immediately
-        this.generateQR(training);
-      } else {
-        setTimeout(() => this.generateQR(training), msUntilStart);
-        console.log(`QR for "${training.title}" will generate in ${msUntilStart / 1000}s`);
-      }
-    },
-
-
     handleOutsideClick(e) {
       if (!e.target.closest(".menu")) {
         this.closeAllMenus();
@@ -722,7 +716,7 @@ export default {
 
         // Fetch registrants from API
         const response = await axios.get(
-          `http://127.0.0.1:8000/api/trainings/${training.trainingID}/registrants`,
+          import.meta.env.VITE_API_BASE_URL +`/trainings/${training.trainingID}/registrants`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -817,17 +811,26 @@ export default {
 
     
     async fetchTrainings() {
-      const response = await axios.get("http://127.0.0.1:8000/api/trainings");
+    try {
+      const response = await api.get("/trainings");
       const newTrainings = response.data;
 
       newTrainings.forEach(training => {
-        // Only schedule if this training isn’t in upcomingtrainings yet
-        if (!this.upcomingtrainings.some(t => t.trainingID === training.trainingID)) {
+        const existingIndex = this.upcomingtrainings.findIndex(t => t.trainingID === training.trainingID);
+
+        if (existingIndex > -1) {
+          this.upcomingtrainings[existingIndex] = { ...this.upcomingtrainings[existingIndex], ...training };
+        } else {
           this.upcomingtrainings.push(training);
-          this.scheduleQR(training);
         }
+
+        // ✅ Schedule QR using composable
+        scheduleQR(training);
       });
-    },
+    } catch (error) {
+      console.error("Error fetching trainings:", error);
+    }
+  },
 
     openTrainingPopup() {
       this.showTrainingPopup = true;
@@ -892,7 +895,7 @@ async saveTraining() {
       Tags: this.newTraining.Tags
     };
 
-    const response = await axios.post("http://127.0.0.1:8000/api/trainings", payload, {
+    const response = await api.post("/trainings", payload, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json"
@@ -959,57 +962,18 @@ async saveTraining() {
     },
 
     /* ✅ ADD THIS FUNCTION HERE */
-    async generateQR(training) {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await axios.post(
-          "http://127.0.0.1:8000/api/trainings/generate-qr",
-          { trainingID: training.trainingID },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
 
-        // Assign QR data
-        this.qrCodeValue = `http://127.0.0.1:8000/api/attendance/checkin?trainingID=${training.trainingID}&key=${response.data.key}`;
-        this.qrExpiresAt = new Date(response.data.expires_at); // make it a Date object
-        this.activeTrainingId = training.trainingID;
-
-        console.log(`✅ QR Generated for "${training.title}", expires at ${this.qrExpiresAt}`);
-
-        // Clear previous timer if any
-        if (this.qrExpireTimeout) clearTimeout(this.qrExpireTimeout);
-
-        // Calculate remaining time until expiration
-        const now = new Date();
-        const msUntilExpire = this.qrExpiresAt - now;
-
-        if (msUntilExpire > 0) {
-          this.qrExpireTimeout = setTimeout(() => {
-            this.qrCodeValue = null;
-            this.qrExpiresAt = null;
-            this.activeTrainingId = null;
-            console.log(`QR for "${training.title}" expired.`);
-          }, msUntilExpire);
-        } else {
-          // Already expired
-          this.qrCodeValue = null;
-          this.qrExpiresAt = null;
-          this.activeTrainingId = null;
-          console.log(`QR for "${training.title}" already expired.`);
-        }
-
-      } catch (error) {
-        console.error("QR GENERATION FAILED:", error);
-        alert("Failed to generate QR");
-      }
-    },
-
-
-  },
+},
 
 
   mounted() {
     this.fetchTrainings();
     document.addEventListener("click", this.handleOutsideClick);
+
+      // Poll every 30 seconds to update trainings
+  this.trainingPollInterval = setInterval(() => {
+    this.fetchTrainings();
+  }, 30000);
   },
 
   beforeUnmount() {
@@ -1017,14 +981,61 @@ async saveTraining() {
   },
 
   computed: {
-  todayDate() {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`; // format: YYYY-MM-DD
-  },
+    todayDate() {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, "0");
+      const day = String(today.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`; // format: YYYY-MM-DD
+    },
+    visibleUpcomingTrainings() {
+      const list = this.sortedUpcomingTrainings;
+      return this.showAllUpcoming ? list : list.slice(0, 4);
+    },
 
+    visibleCompletedTrainings() {
+      const list = this.sortedCompletedTrainings;
+      return this.showAllCompleted ? list : list.slice(0, 4);
+    },
+
+    sortedUpcomingTrainings() {
+      const now = new Date();
+      return this.upcomingtrainings
+        .filter(t => new Date(t.schedule) >= now)
+        .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
+    },
+
+    sortedCompletedTrainings() {
+      const now = new Date();
+      return this.upcomingtrainings
+        .filter(t => new Date(t.schedule) < now)
+        .sort((a, b) => new Date(b.schedule) - new Date(a.schedule));
+    },
+    filteredUpcoming() {
+      const query = this.globalSearchQuery.toLowerCase();
+      if (!query) return this.sortedUpcomingTrainings;
+      return this.sortedUpcomingTrainings.filter(training =>
+        training.title.toLowerCase().startsWith(query) // 🔹 only matches if letters typed are in order from the start
+      );
+    },
+    filteredCompleted() {
+      const query = this.globalSearchQuery.toLowerCase();
+      if (!query) return this.sortedCompletedTrainings;
+      return this.sortedCompletedTrainings.filter(training =>
+        training.title.toLowerCase().startsWith(query)
+      );
+    },
+    visibleFilteredUpcoming() {
+      return this.showAllUpcoming
+        ? this.filteredUpcoming
+        : this.filteredUpcoming.slice(0, 4);
+    },
+    visibleFilteredCompleted() {
+      return this.showAllCompleted
+        ? this.filteredCompleted
+        : this.filteredCompleted.slice(0, 4);
+    },
+  
   visibleUpcomingTrainings() {
     const orgId = this.currentOrganizationId;
     const list = this.sortedUpcomingTrainings.filter(
@@ -1383,15 +1394,10 @@ const logout = () => {
 /* Training and Job Offer Area*/
 
 .training-slider {
-  display: flex;
-  flex-direction: column;
-  /* ✅ vertical */
-  overflow-y: auto;
-  /* ✅ vertical scroll */
-  max-height: 400px;
-  /* adjust as needed */
-  gap: 1rem;
-  /* spacing between cards */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
 }
 
 .upcoming {
@@ -1419,9 +1425,48 @@ const logout = () => {
 
 .trainings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  /* 4 per row if enough space */
-  gap: 1rem;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  overflow: hidden;
+  transition: max-height 0.4s ease;
+}
+
+/* Collapsed view */
+.trainings-grid.collapsed {
+  max-height: 600px;
+  /* adjust depending on your card height */
+}
+
+/* Expanded view */
+.trainings-grid.expanded {
+  max-height: 2000px;
+  overflow: visible;
+}
+
+/* Default - Large screens (4 per row) */
+.trainings-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Medium screens (3 per row) */
+@media (max-width: 1200px) {
+  .trainings-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Small screens (2 per row) */
+@media (max-width: 900px) {
+  .trainings-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Extra small screens (1 per row) */
+@media (max-width: 600px) {
+  .trainings-grid {
+    grid-template-columns: repeat(1, 1fr);
+  }
 }
 
 .training-card {
@@ -2422,5 +2467,28 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   width: 26px;
   height: 26px;
   cursor: pointer;
+}
+
+/* Search Bar CSS*/
+.global-search-bar {
+  width: 600px;
+  padding: 10px 14px;
+  border: 1px solid #aaaaaa;
+  border-radius: 8px;
+  background-color: #fff;
+  outline: none;
+  transition: all 0.2s ease;
+  color: #000;
+}
+
+.global-search-bar::placeholder {
+  color: #9ca3af;       /* same as Tailwind’s text-gray-400 */
+  font-style: italic;   /* optional — match whatever Training uses */
+  opacity: 1;           /* ensures consistent rendering */
+}
+
+.global-search-bar:focus {
+  border-color: #44576d;
+  box-shadow: 0 0 5px rgba(68, 87, 109, 0.2);
 }
 </style>

@@ -42,11 +42,19 @@ class CareerController extends Controller
 
         return response()->json($careers);
     }
-    
-    public function store(Request $request)
+        public function store(Request $request)
     {
-        \Log::info('INCOMING CAREER DATA:', $request->all());
+        // ✅ Use authenticated user from middleware
+         $token = $request->bearerToken();
+         // Try both models since you have separate tables
+        $user = \App\Models\Organization::where('api_token', $token)->first()
+            ?? \App\Models\Applicant::where('api_token', $token)->first();
 
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        // Validate request
         $validated = $request->validate([
             'position' => 'required|string|max:255',
             'details' => 'required|string|max:255',
@@ -54,17 +62,13 @@ class CareerController extends Controller
             'requirements' => 'required|string|max:255',
             'letterAddress' => 'required|string|max:255',
             'deadline' => 'required|date',
-            'Tags' => 'nullable|array', 
+            'Tags' => 'nullable|array',
             'Tags.*' => 'integer|exists:tag,TagID',
         ]);
 
         $deadline = Carbon::parse($validated['deadline'])->format('Y-m-d');
 
-        $user = $request->user();
-
-        // optional log to verify
-        \Log::info('AUTHENTICATED USER:', ['user' => $user]);
-
+        // Create career linked to organization
         $career = Career::create([
             'position' => $validated['position'],
             'detailsAndInstructions' => $validated['details'],
@@ -72,9 +76,10 @@ class CareerController extends Controller
             'requirements' => $validated['requirements'],
             'applicationLetterAddress' => $validated['letterAddress'],
             'deadlineOfSubmission' => $deadline,
-            'organizationID' => $user->organizationID ?? null, // safe access
+            'organizationID' => $user->organizationID ?? $user->id,
         ]);
 
+        // Attach tags if any
         if (!empty($validated['Tags'])) {
             $career->tags()->attach($validated['Tags']);
         }
@@ -85,6 +90,27 @@ class CareerController extends Controller
             'tags' => $validated['Tags'] 
         ], 201);
     }
+
+
+//This is for Total numbers of career
+public function total() {
+    $totalCareers = \App\Models\Career::count();
+    return response()->json(['totalCareers' => $totalCareers]);
+}
+
+//This is for numbers of on-going and filled out career
+public function countsPartial()
+{
+    $now = now(); // current date & time
+
+    $ongoing = \App\Models\Career::where('deadlineOfSubmission', '>', $now)->count();
+    $filled = \App\Models\Career::where('deadlineOfSubmission', '<=', $now)->count();
+
+    return response()->json([
+        'ongoing' => $ongoing,
+        'filled' => $filled,
+    ]);
+}
 
     public function show($id)
 {
@@ -104,5 +130,4 @@ class CareerController extends Controller
         'location' => $career->location ?? null,
     ]);
 }
-
 }

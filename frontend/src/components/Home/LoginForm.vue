@@ -153,6 +153,8 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
+import { useRegistrationStore } from "@/stores/registrationStore"; 
+const regStore = useRegistrationStore();
 
 const router = useRouter();
 const showPassword = ref(false);
@@ -173,25 +175,29 @@ const handleLogin = async () => {
   if (emailError.value || passwordError.value) return;
 
   try {
-    const response = await axios.post("http://127.0.0.1:8000/api/login", {
-      emailAddress: email.value,
-      password: password.value,
-    });
+    // 1️⃣ Send login request
+    const response = await axios.post(
+      import.meta.env.VITE_API_BASE_URL + "/login",
+      {
+        emailAddress: email.value,
+        password: password.value,
+      }
+    );
 
-    const userData = response.data.user;
-    const role = userData.role;
-    const token = response.data.token;
+    const userData = response.data.user || response.data.organization;
+    const token = response.data.token; // api_token from backend
+    const role = userData.role || (userData.adminID ? "organization" : "applicant");
 
     let displayName = "";
     if (role === "organization") {
-      displayName =
-        userData.organizationName || userData.name || "Organization";
+      displayName = userData.organizationName || userData.name || "Organization";
     } else if (role === "admin") {
       displayName = userData.name || "Admin";
     } else {
       displayName = `${userData.firstName} ${userData.lastName}`;
     }
 
+    // 2️⃣ Store user info and token locally
     localStorage.setItem("token", token);
     localStorage.setItem(
       "user",
@@ -202,7 +208,9 @@ const handleLogin = async () => {
       })
     );
 
-    // ✅ Redirect based on role
+    await regStore.fetchMyRegistrations(); // 🔹 ensures myRegistrations is populated
+
+    // 3️⃣ Redirect based on role
     if (role === "organization") {
       router.push("/organization");
     } else if (role === "admin") {
@@ -210,11 +218,14 @@ const handleLogin = async () => {
     } else {
       router.push("/app");
     }
+
+    console.log("✅ Logged in successfully with token");
   } catch (err) {
     console.error(err.response?.data || err.message);
     loginError.value = "Invalid credentials. Please try again.";
   }
 };
+
 </script>
 
 <style>

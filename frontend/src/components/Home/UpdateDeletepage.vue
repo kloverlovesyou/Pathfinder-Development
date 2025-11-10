@@ -41,7 +41,7 @@ onMounted(async () => {
   fetchTrainingCounters();
   try {
     // --- Fetch user from API ---
-    const res = await axios.get("http://127.0.0.1:8000/api/user", {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/user", {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
 
@@ -93,23 +93,32 @@ async function fetchTrainingCounters() {
     if (!token) return;
 
     const response = await axios.get(
-      "http://127.0.0.1:8000/api/registrations",
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
+      import.meta.env.VITE_API_BASE_URL + "/registrations",
+      { headers: { Authorization: `Bearer ${token}` } }
     );
 
     const trainings = response.data || [];
 
-    upcomingCount.value = trainings.filter(
-      (r) =>
-        r.registrationStatus?.toLowerCase() === "upcoming" ||
-        r.registrationStatus?.toLowerCase() === "registered"
-    ).length;
+    let newUpcoming = 0;
+    let newCompleted = 0;
+    const now = new Date().getTime();
 
-    completedCount.value = trainings.filter(
-      (r) => r.registrationStatus?.toLowerCase() === "completed"
-    ).length;
+    trainings.forEach((r) => {
+      const statusLower = (r.registrationStatus || "").toLowerCase();
+      const endTimePassed = r.end_time
+        ? now > new Date(r.end_time).getTime()
+        : false;
+
+      // Mark as completed if end_time passed or status is completed
+      if (statusLower === "completed" || endTimePassed) {
+        newCompleted++;
+      } else if (["upcoming", "registered"].includes(statusLower)) {
+        newUpcoming++;
+      }
+    });
+
+    upcomingCount.value = newUpcoming;
+    completedCount.value = newCompleted;
   } catch (error) {
     console.error("❌ Error fetching training counters:", error);
   }
@@ -125,7 +134,7 @@ const handleUpdate = async () => {
 
   try {
     // --- 1️⃣ Update user profile ---
-    await axios.put("http://127.0.0.1:8000/api/user", form.value, {
+    await axios.put(import.meta.env.VITE_API_BASE_URL +"/user", form.value, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -141,7 +150,7 @@ const handleUpdate = async () => {
       form.value.confirmPassword
     ) {
       await axios.post(
-        "http://127.0.0.1:8000/api/update-password",
+        import.meta.env.VITE_API_BASE_URL +"/update-password",
         {
           currentPassword: form.value.currentPassword,
           newPassword: form.value.newPassword,
@@ -470,3 +479,5 @@ const logout = () => {
     </div>
   </div>
 </template>
+
+

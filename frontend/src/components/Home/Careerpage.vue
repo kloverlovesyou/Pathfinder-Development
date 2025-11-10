@@ -5,6 +5,7 @@ import axios from "axios";
 import CalendarSidebar from "@/components/Layout/CalendarSidebar.vue";
 
 const calendarOpen = ref(false);
+const careerBookmarkLoading = ref(false);
 
 function openModalCalendar(event) {
   // Handle modal opening for training/career
@@ -22,6 +23,8 @@ function addToast(message, type = "info") {
   }, 3000);
 }
 
+// ✅ Fetch user's applications
+
 // ✅ Fetch user's bookmarked careers
 const bookmarkedCareers = ref(new Set());
 
@@ -29,7 +32,7 @@ async function fetchCareerBookmarks() {
   try {
     const token = localStorage.getItem("token");
     if (!token) return;
-    const res = await axios.get("http://127.0.0.1:8000/api/career-bookmarks", {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/career-bookmarks", {
       headers: { Authorization: `Bearer ${token}` },
     });
     bookmarkedCareers.value = new Set(res.data.map((b) => b.careerID));
@@ -51,26 +54,19 @@ async function toggleCareerBookmark(careerId) {
     return;
   }
 
+  careerBookmarkLoading.value = true;
+
   try {
     if (bookmarkedCareers.value.has(careerId)) {
-      // Remove bookmark
-      await axios.delete(
-        `http://127.0.0.1:8000/api/career-bookmarks/${careerId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await axios.delete(import.meta.env.VITE_API_BASE_URL + `/career-bookmarks/${careerId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       bookmarkedCareers.value.delete(careerId);
       addToast("Bookmark removed", "success");
     } else {
-      // Add bookmark
-      await axios.post(
-        "http://127.0.0.1:8000/api/career-bookmarks",
-        { careerID: careerId }, // <-- matches your backend
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await axios.post(import.meta.env.VITE_API_BASE_URL + "/career-bookmarks", { careerID: careerId }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       bookmarkedCareers.value.add(careerId);
       addToast("Bookmark added", "success");
     }
@@ -83,15 +79,17 @@ async function toggleCareerBookmark(careerId) {
       addToast("Unauthorized. Please log in again", "accent");
     } else {
       addToast("Error toggling career bookmark", "accent");
-      console.error("Error toggling career bookmark:", error);
+      console.error(error);
     }
+  } finally {
+    careerBookmarkLoading.value = false;
   }
 }
 
 // ✅ Fetch careers
 onMounted(async () => {
   try {
-    const response = await axios.get("http://127.0.0.1:8000/api/careers");
+    const response = await axios.get(import.meta.env.VITE_API_BASE_URL +"/careers");
     careers.value = response.data;
   } catch (error) {
     console.error("Error fetching careers:", error);
@@ -145,7 +143,7 @@ async function submitApplication() {
       form.append("requirements", uploadedFile.value);
     }
 
-    await axios.post("http://127.0.0.1:8000/api/applications", form, {
+    await axios.post(import.meta.env.VITE_API_BASE_URL + "/applications", form, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "multipart/form-data",
@@ -258,7 +256,7 @@ function closeModal() {
 async function fetchMyApplications() {
   const token = localStorage.getItem("token");
   if (!token) return;
-  const res = await axios.get("http://127.0.0.1:8000/api/applications", {
+  const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/applications", {
     headers: { Authorization: `Bearer ${token}` },
   });
   myApplications.value = new Set(res.data.map((a) => a.careerID));
@@ -267,7 +265,7 @@ async function fetchMyApplications() {
 async function fetchBookmarks() {
   const token = localStorage.getItem("token");
   if (!token) return;
-  const res = await axios.get("http://127.0.0.1:8000/api/career-bookmarks", {
+  const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/career-bookmarks", {
     headers: { Authorization: `Bearer ${token}` },
   });
   bookmarkedCareers.value = new Set(res.data.map((b) => b.careerID));
@@ -319,6 +317,7 @@ onMounted(async () => {
       :career="selectedCareer"
       :myApplications="myApplications"
       :bookmarkedCareers="bookmarkedCareers"
+      :careerBookmarkLoading="careerBookmarkLoading"
       @close="closeModal"
       @update-applications="myApplications = $event"
       @update-bookmarks="bookmarkedCareers = $event"

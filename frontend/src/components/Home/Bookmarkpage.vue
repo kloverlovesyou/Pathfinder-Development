@@ -59,8 +59,8 @@ onUnmounted(() => window.removeEventListener("resize", handleResize));
 // ✅ Fetch Organizations
 const fetchOrganizations = async () => {
   try {
-    const { data } = await axios.get("http://127.0.0.1:8000/api/organization");
-    organizations.value = data.map((o) => ({
+    const { data } = await axios.get( import.meta.env.VITE_API_BASE_URL + "/organization");
+    organizations.value = data.map(o => ({
       ...o,
       organizationID: Number(o.organizationID),
     }));
@@ -78,17 +78,17 @@ const loadBookmarks = async () => {
     if (!token) return console.warn("⚠️ No token found");
 
     const [trainingRes, careerRes] = await Promise.all([
-      axios.get("http://127.0.0.1:8000/api/bookmarks", {
+      axios.get( import.meta.env.VITE_API_BASE_URL + "/bookmarks", {
         headers: { Authorization: `Bearer ${token}` },
       }),
-      axios.get("http://127.0.0.1:8000/api/career-bookmarks", {
+      axios.get(import.meta.env.VITE_API_BASE_URL + "/career-bookmarks", {
         headers: { Authorization: `Bearer ${token}` },
       }),
     ]);
 
     const [trainingsData, careersData] = await Promise.all([
-      axios.get("http://127.0.0.1:8000/api/trainings"),
-      axios.get("http://127.0.0.1:8000/api/careers"),
+      axios.get(import.meta.env.VITE_API_BASE_URL + "/trainings"),
+      axios.get(import.meta.env.VITE_API_BASE_URL +"/careers"),
     ]);
 
     console.log("✅ Trainings data from API:", trainingsData.data);
@@ -159,30 +159,38 @@ const isBookmarked = (post) => {
   }
 };
 
-// Fetch TrainingCounter
 async function fetchTrainingCounters() {
   try {
     const token = localStorage.getItem("token");
     if (!token) return;
 
     const response = await axios.get(
-      "http://127.0.0.1:8000/api/registrations",
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
+      import.meta.env.VITE_API_BASE_URL + "/registrations",
+      { headers: { Authorization: `Bearer ${token}` } }
     );
 
     const trainings = response.data || [];
 
-    upcomingCount.value = trainings.filter(
-      (r) =>
-        r.registrationStatus?.toLowerCase() === "upcoming" ||
-        r.registrationStatus?.toLowerCase() === "registered"
-    ).length;
+    let newUpcoming = 0;
+    let newCompleted = 0;
+    const now = new Date().getTime();
 
-    completedCount.value = trainings.filter(
-      (r) => r.registrationStatus?.toLowerCase() === "completed"
-    ).length;
+    trainings.forEach((r) => {
+      const statusLower = (r.registrationStatus || "").toLowerCase();
+      const endTimePassed = r.end_time
+        ? now > new Date(r.end_time).getTime()
+        : false;
+
+      // Mark as completed if end_time passed or status is completed
+      if (statusLower === "completed" || endTimePassed) {
+        newCompleted++;
+      } else if (["upcoming", "registered"].includes(statusLower)) {
+        newUpcoming++;
+      }
+    });
+
+    upcomingCount.value = newUpcoming;
+    completedCount.value = newCompleted;
   } catch (error) {
     console.error("❌ Error fetching training counters:", error);
   }
@@ -193,12 +201,9 @@ const loadRegistrations = async () => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const { data } = await axios.get(
-      "http://127.0.0.1:8000/api/registrations",
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+    const { data } = await axios.get(import.meta.env.VITE_API_BASE_URL + "/registrations", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
     console.log("🟢 /api/registrations response:", data);
 
@@ -252,45 +257,27 @@ const bookmarkPost = async (post) => {
     if (isBookmarked(post)) {
       // Remove bookmark
       if (isTraining(post)) {
-        await axios.delete(
-          `http://127.0.0.1:8000/api/bookmarks/${post.trainingID}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        bookmarks.value = bookmarks.value.filter(
-          (b) => b.trainingID !== post.trainingID
-        );
+        await axios.delete(import.meta.env.VITE_API_BASE_URL + `/bookmarks/${post.trainingID}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        bookmarks.value = bookmarks.value.filter(b => b.trainingID !== post.trainingID);
       } else {
-        await axios.delete(
-          `http://127.0.0.1:8000/api/career-bookmarks/${post.careerID}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        bookmarks.value = bookmarks.value.filter(
-          (b) => b.careerID !== post.careerID
-        );
+        await axios.delete(import.meta.env.VITE_API_BASE_URL + `/career-bookmarks/${post.careerID}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        bookmarks.value = bookmarks.value.filter(b => b.careerID !== post.careerID);
       }
     } else {
       // Add bookmark
       if (isTraining(post)) {
-        await axios.post(
-          "http://127.0.0.1:8000/api/bookmarks",
-          { trainingID: post.trainingID },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        await axios.post(import.meta.env.VITE_API_BASE_URL +"/bookmarks", { trainingID: post.trainingID }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         bookmarks.value.push({ trainingID: post.trainingID, training: post });
       } else {
-        await axios.post(
-          "http://127.0.0.1:8000/api/career-bookmarks",
-          { careerID: post.careerID },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        await axios.post(import.meta.env.VITE_API_BASE_URL + "/career-bookmarks", { careerID: post.careerID }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         bookmarks.value.push({ careerID: post.careerID, career: post });
       }
     }
@@ -310,7 +297,7 @@ const registerTraining = async (training) => {
   if (myRegistrations.value.has(training.trainingID)) {
     try {
       // Find registration ID of this user for this training
-      const res = await axios.get("http://127.0.0.1:8000/api/registrations", {
+      const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/registrations", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -325,7 +312,7 @@ const registerTraining = async (training) => {
 
       // Delete registration on backend
       await axios.delete(
-        `http://127.0.0.1:8000/api/registrations/${registration.registrationID}`,
+        import.meta.env.VITE_API_BASE_URL + `/registrations/${registration.registrationID}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -344,7 +331,7 @@ const registerTraining = async (training) => {
   else {
     try {
       await axios.post(
-        "http://127.0.0.1:8000/api/registrations",
+        import.meta.env.VITE_API_BASE_URL + "/registrations",
         { trainingID: training.trainingID },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -377,20 +364,17 @@ const submitApplication = async () => {
   formData.append("file", uploadedFile.value);
   formData.append("careerID", selectedPost.value.careerID);
 
-  try {
-    const response = await axios.post(
-      "http://127.0.0.1:8000/api/applications",
-      formData,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
-
-    addToast("Application submitted!", "success");
-    appliedCareers.value.add(selectedPost.value.careerID); // ✅ mark applied
+    try {
+      const response = await axios.post(
+         import.meta.env.VITE_API_BASE_URL + "/applications",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
     // ✅ Safely add to appliedCareers
     const careerId = Number(selectedPost.value?.careerID);
@@ -418,7 +402,7 @@ const loadApplications = async () => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const { data } = await axios.get("http://127.0.0.1:8000/api/applications", {
+    const { data } = await axios.get(import.meta.env.VITE_API_BASE_URL + "/applications", {
       headers: { Authorization: `Bearer ${token}` },
     });
 

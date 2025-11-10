@@ -59,16 +59,17 @@ public function login(Request $request)
     if (!$applicant || !Hash::check($request->password, $applicant->password)) {
         return response()->json(['message' => 'Invalid credentials'], 401);
     }
-      // Generate a new token
-    $token = Str::random(60);
-    $applicant->api_token = $token;
-    $applicant->save();
 
-    // You can also generate a token here if needed (for Sanctum)
+    // ✅ Only generate if missing
+    if (!$applicant->api_token) {
+        $applicant->api_token = Str::random(60);
+        $applicant->save();
+    }
+
     return response()->json([
         'message' => 'Login successful',
         'user' => $applicant,
-        'token' => $applicant->api_token, // send token to frontend
+        'token' => $applicant->api_token,
     ]);
 }
 
