@@ -1,10 +1,11 @@
 <template>
-  <div class="flex relative font-poppins">
+  <div class="flex relative min-h-screen font-poppins">
     <!-- Sidebar -->
     <div
       ref="sidebar"
       :class="[
-        'h-screen bg-dark-slate text-white transition-all duration-300 flex flex-col',
+        'min-h-screen bg-dark-slate text-white transition-all duration-300 flex flex-col flex-shrink-0',
+        ,
         isExpanded ? 'w-75 px-4' : 'w-16 items-center',
       ]"
     >

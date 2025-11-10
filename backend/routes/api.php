@@ -91,6 +91,8 @@ Route::get('/interviews', [InterviewController::class, 'index']);
     Route::get('/applications', [ApplicationController::class, 'index']);
     Route::post('/applications', [ApplicationController::class, 'store']);
     Route::delete('/applications/{id}', [ApplicationController::class, 'destroy']);
+// routes/web.php or routes/api.php
+    Route::get('/applications/{id}/requirement', [ApplicationController::class, 'viewRequirement']);
 
     // Certificates ✅
     Route::get('/certificates/{applicantID}', [CertificateController::class, 'index']);
