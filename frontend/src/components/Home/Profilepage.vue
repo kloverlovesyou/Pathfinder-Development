@@ -308,7 +308,24 @@ function updateCounters(type, increase = true) {
   }
 }
 
-// ✅ Call on mount
+const showPdfModal = ref(false);
+const pdfUrl = ref("");
+
+const viewRequirement = (activity, event) => {
+  event?.stopPropagation(); // prevent parent modal opening
+
+  if (!activity.requirements) return;
+
+  const applicationID = activity.applicationID;
+
+  // ✅ Use your backend URL (adjust if your route is in api.php)
+  pdfUrl.value = `${
+    import.meta.env.VITE_API_URL
+  }/api/applications/${applicationID}/requirement`;
+
+  showPdfModal.value = true;
+};
+
 onMounted(fetchMyActivities);
 </script>
 
@@ -428,13 +445,14 @@ onMounted(fetchMyActivities);
                   </span>
                   <button
                     v-if="activity.type === 'career'"
-                    class="ml-2 px-3 py-1 rounded text-white text-sm"
-                    :class="
+                    :disabled="!activity.requirements"
+                    :class="[
+                      'px-3 py-1 rounded text-white',
                       activity.requirements
                         ? 'bg-blue-500 hover:bg-blue-600'
-                        : 'bg-gray-300 cursor-not-allowed'
-                    "
-                    :disabled="!activity.requirements"
+                        : 'bg-gray-300 cursor-not-allowed',
+                    ]"
+                    @click.stop="viewRequirement(activity, $event)"
                   >
                     View Requirement
                   </button>
@@ -730,6 +748,7 @@ onMounted(fetchMyActivities);
                           ? 'bg-blue-500 hover:bg-blue-600'
                           : 'bg-gray-300 cursor-not-allowed',
                       ]"
+                      @click.stop="viewRequirement(activity, $event)"
                     >
                       View Requirement
                     </button>
@@ -944,6 +963,27 @@ onMounted(fetchMyActivities);
             </p>
           </div>
         </div>
+      </div>
+    </dialog>
+    <dialog v-if="showPdfModal" class="modal" open>
+      <div class="modal-box w-11/12 max-w-5xl relative">
+        <button
+          class="btn btn-sm btn-circle absolute right-2 top-2"
+          @click="showPdfModal = false"
+        >
+          ✕
+        </button>
+
+        <h3 class="font-bold text-lg mb-4">Uploaded Requirement</h3>
+
+        <iframe
+          v-if="pdfUrl"
+          :src="pdfUrl"
+          class="w-full h-[80vh] rounded-lg"
+          frameborder="0"
+        ></iframe>
+
+        <p v-else class="text-center text-gray-500">No requirement found.</p>
       </div>
     </dialog>
   </div>
