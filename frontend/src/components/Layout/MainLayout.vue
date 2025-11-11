@@ -5,17 +5,12 @@
     <!-- Main Area -->
     <div class="flex flex-col flex-1">
       <!-- Header -->
-      <header class="h-16 text-dark-slate flex items-center px-10">
+      <header class="h-16 text-dark-slate flex items-center px-8">
         <TopBar />
       </header>
 
       <!-- Page Content -->
-      <main
-        :class="[
-          'flex-1 min-h-screen transition-all duration-300',
-          isSidebarExpanded ? 'ml-72' : 'ml-16',
-        ]"
-      >
+      <main class="flex-1">
         <router-view v-slot="{ Component }">
           <keep-alive>
             <component :is="Component" />
