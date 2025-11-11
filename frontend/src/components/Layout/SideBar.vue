@@ -4,7 +4,7 @@
     <div
       ref="sidebar"
       :class="[
-        'fixed top-0 left-0 h-screen overflow-y-auto bg-dark-slate text-white transition-all duration-300 flex flex-col z-50',
+        'top-0 left-0 overflow-y-auto bg-dark-slate text-white transition-all duration-300 flex flex-col z-50',
         isExpanded ? 'w-72 px-4' : 'w-16 items-center',
       ]"
     >
@@ -32,9 +32,9 @@
       </div>
 
       <!-- Nav Items -->
-      <aside class="flex flex-col h-screen">
+      <aside class="flex flex-col h-full">
         <!-- TOP + MENU -->
-        <ul class="flex-1 flex flex-col p-2 w-full">
+        <ul class="flex flex-col p-2 gap-2 flex-1">
           <li>
             <button @click="$router.push({ name: 'Profile' })" class="w-full">
               <div
@@ -205,7 +205,7 @@
         </ul>
 
         <!-- LOGOUT -->
-        <div class="p-2">
+        <div class="flex flex-col p-2 mt-auto gap-2">
           <ul>
             <li>
               <button
