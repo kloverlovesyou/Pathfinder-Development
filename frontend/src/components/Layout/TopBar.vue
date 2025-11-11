@@ -41,6 +41,20 @@ async function toggleBookmark(post) {
   }
 }
 
+// ✅ Use store instead of local bookmarkedPosts
+async function handleBookmark(post) {
+  const result = await regStore.toggleBookmark(post);
+
+  if (!result.success) {
+    showToast(result.error || "Failed to toggle bookmark", "error");
+  } else {
+    showToast(
+      result.bookmarked ? "Bookmarked successfully!" : "Bookmark removed!",
+      "success"
+    );
+  }
+}
+
 // ✅ Helper function in template
 function isBookmarked(post) {
   const trainingID = post.TrainingID ?? post.trainingID ?? post.CareerID ?? post.ID ?? post.id;
@@ -599,15 +613,24 @@ async function handleResultClick(item) {
 
         <!-- Buttons -->
         <div class="my-4 flex justify-end gap-2">
-
-          <!-- Bookmark -->
+          
+          <!-- Bookmark with Loading -->
           <button
-            class="btn btn-outline btn-sm"
-            @click="toggleBookmark(selectedPost)"
+            class="btn btn-outline btn-sm flex items-center gap-2"
+            @click="handleBookmark(selectedPost)"
+            :disabled="bookmarkLoading[selectedPost.TrainingID ?? selectedPost.CareerID ?? selectedPost.ID ?? selectedPost.id]"
           >
-            {{ isBookmarked(selectedPost) ? "Bookmarked" : "Bookmark" }}
-          </button>
+            <!-- Spinner -->
+            <span
+              v-if="bookmarkLoading[selectedPost.TrainingID ?? selectedPost.CareerID ?? selectedPost.ID ?? selectedPost.id]"
+              class="animate-spin h-4 w-4 border-2 border-gray-400 rounded-full border-t-transparent"
+            ></span>
 
+            <!-- Text -->
+            <span v-else>
+              {{ isBookmarked(selectedPost) ? "Bookmarked" : "Bookmark" }}
+            </span>
+          </button>
           <!-- Register -->
           <button
             v-if="isTraining(selectedPost)"
@@ -725,7 +748,7 @@ async function handleResultClick(item) {
                   }}
                 </span>
               </button>
-              
+
             <!-- Register (training only) -->
             <button
                 v-if="isTraining(selectedPost)"
