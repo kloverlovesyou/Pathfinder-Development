@@ -121,36 +121,35 @@ export const useRegistrationStore = defineStore("regStore", () => {
   // ✅ ✅ TOGGLE BOOKMARK
   async function toggleBookmark(post) {
   const postID = post.TrainingID ?? post.CareerID ?? post.ID ?? post.id;
-  if (!postID) return;
+  if (!postID) return { success: false, error: "Invalid post ID" };
 
-  if (bookmarkLoading[postID]) return; // prevent double click
+  if (bookmarkLoading[postID]) return { success: false, error: "Already loading" };
   bookmarkLoading[postID] = true;
 
   try {
     const token = localStorage.getItem("token");
-    if (!token) return showToast("Please log in first", "error");
+    if (!token) return { success: false, error: "Not logged in" };
 
-    const isBookmarked = !!bookmarkedPosts[postID];
+    const isBookmarked = bookmarkedTrainings.value.includes(postID);
 
     if (isBookmarked) {
-      await axios.delete(
-        `${import.meta.env.VITE_API_BASE_URL}/bookmarks/${postID}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      delete bookmarkedPosts[postID];
-      showToast("Removed from bookmarks", "success");
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/bookmarks/${postID}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      bookmarkedTrainings.value = bookmarkedTrainings.value.filter((id) => id !== postID);
     } else {
       await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/bookmarks`,
         { postID },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      bookmarkedPosts[postID] = true;
-      showToast("Bookmarked!", "success");
+      bookmarkedTrainings.value.push(postID);
     }
+
+    return { success: true, bookmarked: !isBookmarked };
   } catch (err) {
     console.error(err);
-    showToast("Failed to toggle bookmark", "error");
+    return { success: false, error: err };
   } finally {
     bookmarkLoading[postID] = false;
   }
