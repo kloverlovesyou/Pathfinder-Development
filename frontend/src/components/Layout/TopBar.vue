@@ -603,8 +603,11 @@ async function handleResultClick(item) {
             :disabled="isRegisterLoading"
             @click="toggleRegisterWithLoading(selectedPost)"
           >
-            <span v-if="isRegisterLoading">
-              <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+            <span
+              v-if="isRegisterLoading"
+              class="flex items-center gap-2"
+            >
+              <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
                 <circle
                   class="opacity-25"
                   cx="12"
@@ -612,12 +615,13 @@ async function handleResultClick(item) {
                   r="10"
                   stroke="currentColor"
                   stroke-width="4"
-                ></circle>
+                  fill="none"
+                />
                 <path
                   class="opacity-75"
                   fill="currentColor"
                   d="M4 12a8 8 0 018-8v8z"
-                ></path>
+                />
               </svg>
               Processing...
             </span>
