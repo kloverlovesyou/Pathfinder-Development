@@ -24,9 +24,12 @@ async function openModal(activity) {
       if (!token) return console.error("❌ No token found.");
 
       // Fetch all applications for the user
-      const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/applications", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await axios.get(
+        import.meta.env.VITE_API_BASE_URL + "/applications",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       // Find the full application for this career
       const app = res.data.find(
@@ -59,9 +62,12 @@ async function openCareerModal(career) {
     if (!token) return console.error("❌ No token found.");
 
     // ✅ Fetch all applications for the logged-in applicant
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/applications", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/applications",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
 
     console.log("✅ Application list from backend:", res.data);
 
@@ -91,9 +97,12 @@ async function openTrainingModal(training) {
     if (!token) return console.error("❌ No token found.");
 
     const id = training.id || training.trainingID;
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + `/trainings/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + `/trainings/${id}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
 
     selectedTraining.value = res.data;
 
@@ -152,7 +161,9 @@ async function fetchMyActivities() {
     `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Guest";
 
   try {
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL +`/my-activities/${user.applicantID}`);
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + `/my-activities/${user.applicantID}`
+    );
     activities.value = res.data.activities || [];
 
     console.log("Raw activities data:", activities.value);
@@ -207,7 +218,9 @@ const startAllQRCountdowns = () => {
       // Completed if end_time passed or status is completed
       if (statusLower === "completed" || endTimePassed) {
         newCompleted++;
-      } else if (["upcoming", "registered", "scheduled"].includes(statusLower)) {
+      } else if (
+        ["upcoming", "registered", "scheduled"].includes(statusLower)
+      ) {
         newUpcoming++;
       }
     });
@@ -215,7 +228,6 @@ const startAllQRCountdowns = () => {
     // Assign updated counters
     upcomingCount.value = newUpcoming;
     completedCount.value = newCompleted;
-
   }, 1000);
 };
 
@@ -291,15 +303,18 @@ async function submitAttendance(activity) {
   }
 
   try {
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/attendance/checkin", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      params: {
-        trainingID: activity.registrationID, // ✅ use registrationID instead
-        key: activity.qrInput.trim(),
-      },
-    });
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/attendance/checkin",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          trainingID: activity.registrationID, // ✅ use registrationID instead
+          key: activity.qrInput.trim(),
+        },
+      }
+    );
 
     alert(res.data.message || "Attendance recorded successfully!");
     activity.qrInput = "";
@@ -347,7 +362,7 @@ onMounted(fetchMyActivities);
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-100 font-poppins">
+  <div class="bg-gray-100 font-poppins">
     <div class="lg:hidden block font-poppins">
       <!-- Row 1: Profile Info -->
       <div class="text-black p-6">
@@ -400,7 +415,7 @@ onMounted(fetchMyActivities);
           </div>
         </div>
       </div>
-      <div class="bg-white mx-3 p-4 rounded-lg">
+      <div class="bg-white p-4 rounded-lg">
         <h3 class="text-lg font-semibold mb-2">My Activity</h3>
 
         <ul class="space-y-4">

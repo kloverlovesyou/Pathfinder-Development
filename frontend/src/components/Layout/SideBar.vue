@@ -4,7 +4,7 @@
     <div
       ref="sidebar"
       :class="[
-        'top-0 left-0 overflow-y-auto bg-dark-slate text-white transition-all duration-300 flex flex-col z-50',
+        'h-screen top-0 left-0 overflow-y-auto bg-dark-slate text-white transition-all duration-300 flex flex-col z-50',
         isExpanded ? 'w-72 px-4' : 'w-16 items-center',
       ]"
     >
@@ -32,7 +32,7 @@
       </div>
 
       <!-- Nav Items -->
-      <aside class="flex flex-col h-full">
+      <aside class="flex flex-col flex-1 overflow-y-auto">
         <!-- TOP + MENU -->
         <ul class="flex flex-col p-2 gap-2 flex-1">
           <li>
@@ -294,6 +294,14 @@ const handleClickOutside = (event) => {
     isExpanded.value = false;
   }
 };
+onMounted(() => {
+  const handleResize = () => {
+    sidebar.value.style.height = `${window.innerHeight}px`;
+  };
+  window.addEventListener("resize", handleResize);
+  handleResize(); // initial set
+  onBeforeUnmount(() => window.removeEventListener("resize", handleResize));
+});
 
 onMounted(() => {
   document.addEventListener("click", handleClickOutside);
