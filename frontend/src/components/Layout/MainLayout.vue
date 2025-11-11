@@ -1,7 +1,7 @@
 <template>
-  <div class="flex min-h-screen">
+  <div class="flex h-screen">
     <!-- Sidebar -->
-    <SideBar :is-expanded="isExpanded" />
+    <SideBar />
     <!-- Main Area -->
     <div class="flex flex-col flex-1">
       <!-- Header -->
