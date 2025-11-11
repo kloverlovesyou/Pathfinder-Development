@@ -82,7 +82,50 @@ function closeModal() {
 // 🔖 Bookmark Functions
 // ============================
 
+async function toggleBookmark(trainingId) {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    addToast("PLEASE LOG IN FIRST", "accent");
+    return;
+  }
 
+  bookmarkLoading[trainingId] = true;
+
+  try {
+    if (isTrainingBookmarked(trainingId)) {
+      await axios.delete(
+        import.meta.env.VITE_API_BASE_URL + `/bookmarks/${trainingId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      addToast("Bookmark removed", "info");
+    } else {
+      await axios.post(
+        import.meta.env.VITE_API_BASE_URL + "/bookmarks",
+        { trainingID: trainingId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      addToast("Bookmarked!", "success");
+    }
+    await fetchBookmarks();
+  } catch (error) {
+    console.error("Failed to toggle bookmark:", error);
+    addToast("Failed to toggle bookmark", "error");
+  } finally {
+    bookmarkLoading[trainingId] = false;
+  }
+}
+
+function isTrainingBookmarked(trainingId) {
+  return bookmarkedTrainings.value.includes(trainingId);
+}
+
+function isTraining(post) {
+  return post && (post.type === "training" || post.trainingID);
+}
+
+function closeTrainingModal() {
+  selectedTraining.value = null;
+}
 
 // ============================
 // 🔔 Toast Function
@@ -111,7 +154,14 @@ async function fetchTrainings() {
   }
 }
 
-
+async function fetchBookmarks() {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+  const { data } = await axios.get(import.meta.env.VITE_API_BASE_URL + "/bookmarks", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  bookmarkedTrainings.value = data;
+}
 
 async function fetchOrganizations() {
   try {
@@ -222,12 +272,12 @@ const showModal = ref(false);
     :isOpen="showModal"
     :training="selectedTraining"
     :isRegistered="myRegistrations.has(selectedTraining?.trainingID)"
-    :isBookmarked="regStore.isTrainingBookmarked(selectedTraining?.trainingID)"
-    :bookmarkLoading="regStore.bookmarkLoading[selectedTraining?.trainingID]"
+    :isBookmarked="bookmarkedTrainings.includes(selectedTraining?.trainingID)"
+    :bookmarkLoading="bookmarkLoading[selectedTraining?.trainingID]"
     :registerLoading="regStore.loading[selectedTraining?.trainingID]" 
     @close="showModal = false"
     @toggle-register="toggleRegister"
-    @bookmark="regStore.toggleBookmark(selectedTraining.trainingID)"
+    @bookmark="toggleBookmark"
     />
     <!-- Toast Notifications -->
     <div class="toast toast-end toast-top z-50">
