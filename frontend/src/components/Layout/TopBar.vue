@@ -589,7 +589,7 @@ async function handleResultClick(item) {
           <!-- Register -->
           <button
             v-if="isTraining(selectedPost)"
-            class="btn btn-sm text-white flex items-center gap-2"
+            class="btn btn-sm text-white flex items-center justify-center"
             :class="
               regStore.registeredPosts[
                 selectedPost.trainingID ??
@@ -603,10 +603,8 @@ async function handleResultClick(item) {
             :disabled="isRegisterLoading"
             @click="toggleRegisterWithLoading(selectedPost)"
           >
-            <span
-              v-if="isRegisterLoading"
-              class="flex items-center gap-2"
-            >
+            <!-- Loading Spinner Only -->
+            <span v-if="isRegisterLoading" class="flex items-center justify-center">
               <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
                 <circle
                   class="opacity-25"
@@ -623,9 +621,9 @@ async function handleResultClick(item) {
                   d="M4 12a8 8 0 018-8v8z"
                 />
               </svg>
-              Processing...
             </span>
 
+            <!-- Text -->
             <span v-else>
               {{
                 regStore.registeredPosts[
