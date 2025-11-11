@@ -119,37 +119,42 @@ export const useRegistrationStore = defineStore("regStore", () => {
   }
 
   // ✅ ✅ TOGGLE BOOKMARK
-  async function toggleBookmark(trainingID) {
+  async function toggleBookmark(post) {
+  const postID = post.TrainingID ?? post.CareerID ?? post.ID ?? post.id;
+  if (!postID) return;
+
+  if (bookmarkLoading[postID]) return; // prevent double click
+  bookmarkLoading[postID] = true;
+
+  try {
     const token = localStorage.getItem("token");
-    if (!token) return { error: "NO_TOKEN" };
+    if (!token) return showToast("Please log in first", "error");
 
-    bookmarkLoading[trainingID] = true;
+    const isBookmarked = !!bookmarkedPosts[postID];
 
-    try {
-      const isBookmarked = bookmarkedTrainings.value.includes(trainingID);
-
-      if (isBookmarked) {
-        await axios.delete(
-          import.meta.env.VITE_API_BASE_URL + `/bookmarks/${trainingID}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      } else {
-        await axios.post(
-          import.meta.env.VITE_API_BASE_URL + "/bookmarks",
-          { trainingID },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      }
-
-      await fetchBookmarks();
-      return { success: true };
-    } catch (err) {
-      console.error("Failed to toggle bookmark:", err);
-      return { error: true };
-    } finally {
-      bookmarkLoading[trainingID] = false;
+    if (isBookmarked) {
+      await axios.delete(
+        `${import.meta.env.VITE_API_BASE_URL}/bookmarks/${postID}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      delete bookmarkedPosts[postID];
+      showToast("Removed from bookmarks", "success");
+    } else {
+      await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/bookmarks`,
+        { postID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      bookmarkedPosts[postID] = true;
+      showToast("Bookmarked!", "success");
     }
+  } catch (err) {
+    console.error(err);
+    showToast("Failed to toggle bookmark", "error");
+  } finally {
+    bookmarkLoading[postID] = false;
   }
+}
 
   function isTrainingBookmarked(trainingID) {
     return bookmarkedTrainings.value.includes(trainingID);
