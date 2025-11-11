@@ -22,6 +22,30 @@ async function toggleRegisterWithLoading(post) {
   }
 }
 
+// ✅ Toggle bookmark using store
+async function toggleBookmark(post) {
+  const trainingID = post.TrainingID ?? post.trainingID ?? post.CareerID ?? post.ID ?? post.id;
+  if (!trainingID) return;
+
+  const result = await regStore.toggleBookmark(trainingID);
+  if (result.error) {
+    showToast("Failed to toggle bookmark.", "error");
+  } else {
+    showToast(
+      regStore.isTrainingBookmarked(trainingID)
+        ? "Bookmarked successfully!"
+        : "Bookmark removed!",
+      "success"
+    );
+  }
+}
+
+// ✅ Helper function in template
+function isBookmarked(post) {
+  const trainingID = post.TrainingID ?? post.trainingID ?? post.CareerID ?? post.ID ?? post.id;
+  return regStore.isTrainingBookmarked(trainingID);
+}
+
 async function fetchQRCode(trainingID) {
   try {
     const res = await axios.get(
@@ -45,6 +69,7 @@ function showToast(message, type = "info") {
 // ✅ Use store instead of local registeredPosts
 onMounted(() => {
   regStore.fetchMyRegistrations();
+  regStore.fetchBookmarks();
 });
 
 // ✅ Toggle using store
@@ -579,11 +604,7 @@ async function handleResultClick(item) {
             class="btn btn-outline btn-sm"
             @click="toggleBookmark(selectedPost)"
           >
-            {{
-              bookmarkedPosts[selectedPost.TrainingID || selectedPost.CareerID]
-                ? "Bookmarked"
-                : "Bookmark"
-            }}
+            {{ isBookmarked(selectedPost) ? "Bookmarked" : "Bookmark" }}
           </button>
 
           <!-- Register -->
@@ -687,15 +708,11 @@ async function handleResultClick(item) {
         <div class="my-4 flex justify-end gap-2">
             <!-- Bookmark -->
             <button
-              class="btn btn-outline btn-sm"
-              @click="toggleBookmark(selectedPost)"
-            >
-              {{
-                bookmarkedPosts[selectedPost.TrainingID || selectedPost.CareerID]
-                  ? "Bookmarked"
-                  : "Bookmark"
-              }}
-            </button>
+            class="btn btn-outline btn-sm"
+            @click="toggleBookmark(selectedPost)"
+          >
+            {{ isBookmarked(selectedPost) ? "Bookmarked" : "Bookmark" }}
+          </button>
 
             <!-- Register (training only) -->
             <button
