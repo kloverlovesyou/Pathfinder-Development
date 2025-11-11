@@ -10,12 +10,14 @@
       </header>
 
       <!-- Page Content -->
-      <main class="flex-1">
-        <router-view v-slot="{ Component }">
-          <keep-alive>
-            <component :is="Component" />
-          </keep-alive>
-        </router-view>
+      <main class="flex-1 overflow-x-auto">
+        <div class="w-full max-w-full">
+          <router-view v-slot="{ Component }">
+            <keep-alive>
+              <component :is="Component" />
+            </keep-alive>
+          </router-view>
+        </div>
       </main>
     </div>
   </div>
