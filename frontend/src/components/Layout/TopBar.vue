@@ -614,14 +614,23 @@ async function handleResultClick(item) {
         <!-- Buttons -->
         <div class="my-4 flex justify-end gap-2">
 
-          <!-- Bookmark -->
-        <button
-          class="btn btn-outline btn-sm"
-          @click="handleBookmark(selectedPost)"
-        >
-          {{ isBookmarked(selectedPost) ? "Bookmarked" : "Bookmark" }}
-        </button>
+          <!-- Bookmark with Loading -->
+          <button
+            class="btn btn-outline btn-sm flex items-center gap-2"
+            @click="handleBookmark(selectedPost)"
+            :disabled="bookmarkLoading[selectedPost.TrainingID ?? selectedPost.CareerID ?? selectedPost.ID ?? selectedPost.id]"
+          >
+            <!-- Spinner -->
+            <span
+              v-if="bookmarkLoading[selectedPost.TrainingID ?? selectedPost.CareerID ?? selectedPost.ID ?? selectedPost.id]"
+              class="animate-spin h-4 w-4 border-2 border-gray-400 rounded-full border-t-transparent"
+            ></span>
 
+            <!-- Text -->
+            <span v-else>
+              {{ isBookmarked(selectedPost) ? "Bookmarked" : "Bookmark" }}
+            </span>
+          </button>
           <!-- Register -->
           <button
             v-if="isTraining(selectedPost)"
