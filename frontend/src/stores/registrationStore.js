@@ -5,13 +5,18 @@ import axios from "axios";
 export const useRegistrationStore = defineStore("regStore", () => {
   const registeredPosts = reactive({});
   const myRegistrations = ref(new Set());
-  const loading = ref({}); // 🔹 use ref instead of reactive
 
+  // ✅ Registration button loading state
+  const loading = ref({});
   function setLoading(trainingID, value) {
-    loading.value = { ...loading.value, [trainingID]: value }; // triggers reactivity
+    loading.value = { ...loading.value, [trainingID]: value };
   }
 
-  // Fetch user's registrations
+  // ✅ Bookmark Data
+  const bookmarkedTrainings = ref([]);
+  const bookmarkLoading = reactive({});
+
+  // ✅ Fetch user's registrations
   async function fetchMyRegistrations() {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -32,18 +37,14 @@ export const useRegistrationStore = defineStore("regStore", () => {
     localStorage.setItem("registeredPosts", JSON.stringify(registeredPosts));
   }
 
-    // Toggle registration with loading state
-    async function toggleRegister(training) {
-    // Resolve ID
+  // ✅ Toggle Registration
+  async function toggleRegister(training) {
     const trainingID =
-        typeof training === "object"
+      typeof training === "object"
         ? training.trainingID ?? training.TrainingID ?? training.id ?? training.ID
         : training;
 
-    if (!trainingID) {
-        console.error("Invalid training ID passed:", training);
-        return;
-    }
+    if (!trainingID) return console.error("Invalid training ID:", training);
 
     const token = localStorage.getItem("token");
     if (!token) return alert("Please log in first");
@@ -51,59 +52,122 @@ export const useRegistrationStore = defineStore("regStore", () => {
     setLoading(trainingID, true);
 
     try {
-        if (myRegistrations.value.has(trainingID)) {
+      if (myRegistrations.value.has(trainingID)) {
         // UNREGISTER
         await axios.delete(
-            import.meta.env.VITE_API_BASE_URL + `/registrations/${trainingID}`,
-            { headers: { Authorization: `Bearer ${token}` } }
+          import.meta.env.VITE_API_BASE_URL + `/registrations/${trainingID}`,
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         myRegistrations.value.delete(trainingID);
         delete registeredPosts[trainingID];
-        } else {
+      } else {
         // REGISTER
         const res = await axios.post(
-            import.meta.env.VITE_API_BASE_URL + `/registrations`,
-            { trainingID },
-            { headers: { Authorization: `Bearer ${token}` } }
-        );
-        myRegistrations.value.add(trainingID);
-        registeredPosts[trainingID] = { registrationID: res.data.data.registrationID };
-        }
-
-        localStorage.setItem("registeredPosts", JSON.stringify(registeredPosts));
-    } catch (err) {
-        console.error("Failed to toggle registration:", err);
-        throw err;
-    } finally {
-        setLoading(trainingID, false);
-    }
-    }
-
-
-    async function fetchTrainingQRCode(trainingID) {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await axios.get(
-          import.meta.env.VITE_API_BASE_URL + `/trainings/${trainingID}`,
+          import.meta.env.VITE_API_BASE_URL + `/registrations`,
+          { trainingID },
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        // Update the registration post with the QR info
-        if (res.data.attendance_link) {
-          if (!registeredPosts[trainingID]) registeredPosts[trainingID] = {};
-          registeredPosts[trainingID].attendance_link = res.data.attendance_link;
-          registeredPosts[trainingID].attendance_key = res.data.attendance_key;
-        }
-      } catch (err) {
-        console.error("Failed to fetch QR:", err);
+        myRegistrations.value.add(trainingID);
+        registeredPosts[trainingID] = {
+          registrationID: res.data.data.registrationID,
+        };
       }
+
+      localStorage.setItem("registeredPosts", JSON.stringify(registeredPosts));
+    } catch (err) {
+      console.error("Failed to toggle registration:", err);
+      throw err;
+    } finally {
+      setLoading(trainingID, false);
     }
-    return {
-        registeredPosts,
-        myRegistrations,
-        loading, // 🔹 now reactive
-        fetchMyRegistrations,
-        toggleRegister,
-        fetchTrainingQRCode,
-    };
+  }
+
+  // ✅ Fetch QR
+  async function fetchTrainingQRCode(trainingID) {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(
+        import.meta.env.VITE_API_BASE_URL + `/trainings/${trainingID}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (res.data.attendance_link) {
+        if (!registeredPosts[trainingID]) registeredPosts[trainingID] = {};
+        registeredPosts[trainingID].attendance_link = res.data.attendance_link;
+        registeredPosts[trainingID].attendance_key = res.data.attendance_key;
+      }
+    } catch (err) {
+      console.error("Failed to fetch QR:", err);
+    }
+  }
+
+  // ✅ ✅ FETCH BOOKMARKS
+  async function fetchBookmarks() {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const { data } = await axios.get(
+        import.meta.env.VITE_API_BASE_URL + "/bookmarks",
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      bookmarkedTrainings.value = data; // array of trainingIDs
+    } catch (err) {
+      console.error("Failed to fetch bookmarks:", err);
+    }
+  }
+
+  // ✅ ✅ TOGGLE BOOKMARK
+  async function toggleBookmark(trainingID) {
+    const token = localStorage.getItem("token");
+    if (!token) return { error: "NO_TOKEN" };
+
+    bookmarkLoading[trainingID] = true;
+
+    try {
+      const isBookmarked = bookmarkedTrainings.value.includes(trainingID);
+
+      if (isBookmarked) {
+        await axios.delete(
+          import.meta.env.VITE_API_BASE_URL + `/bookmarks/${trainingID}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } else {
+        await axios.post(
+          import.meta.env.VITE_API_BASE_URL + "/bookmarks",
+          { trainingID },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      }
+
+      await fetchBookmarks();
+      return { success: true };
+    } catch (err) {
+      console.error("Failed to toggle bookmark:", err);
+      return { error: true };
+    } finally {
+      bookmarkLoading[trainingID] = false;
+    }
+  }
+
+  function isTrainingBookmarked(trainingID) {
+    return bookmarkedTrainings.value.includes(trainingID);
+  }
+
+  return {
+    registeredPosts,
+    myRegistrations,
+    loading,
+    fetchMyRegistrations,
+    toggleRegister,
+    fetchTrainingQRCode,
+
+    // ✅ bookmark exports
+    bookmarkedTrainings,
+    bookmarkLoading,
+    fetchBookmarks,
+    toggleBookmark,
+    isTrainingBookmarked,
+  };
 });
