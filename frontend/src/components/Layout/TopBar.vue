@@ -9,15 +9,18 @@ const qrCodeUrl = ref(null);
 const route = useRoute();
 const toasts = ref([]);
 const regStore = useRegistrationStore(); // ✅ Pinia store
+const isRegisterLoading = ref(false);
 
-const selectedTrainingID = computed(() => {
-  return (
-    selectedPost.trainingID ??
-    selectedPost.TrainingID ??
-    selectedPost.id ??
-    selectedPost.ID
-  );
-});
+async function toggleRegisterWithLoading(post) {
+  if (isRegisterLoading.value) return; // Prevent double clicks
+
+  isRegisterLoading.value = true;
+  try {
+    await regStore.toggleRegister(post);
+  } finally {
+    isRegisterLoading.value = false;
+  }
+}
 
 async function fetchQRCode(trainingID) {
   try {
@@ -586,38 +589,47 @@ async function handleResultClick(item) {
           <!-- Register -->
           <button
             v-if="isTraining(selectedPost)"
-            class="btn btn-sm flex items-center justify-center text-white"
-            :class="regStore.registeredPosts[selectedTrainingID] ? 'bg-gray-500' : 'bg-customButton'"
-            @click="toggleRegister(selectedPost)"
-            :disabled="regStore.loading[selectedTrainingID]"
+            class="btn btn-sm text-white flex items-center gap-2"
+            :class="
+              regStore.registeredPosts[
+                selectedPost.trainingID ??
+                selectedPost.TrainingID ??
+                selectedPost.id ??
+                selectedPost.ID
+              ]
+                ? 'bg-gray-500'
+                : 'bg-customButton'
+            "
+            :disabled="isRegisterLoading"
+            @click="toggleRegisterWithLoading(selectedPost)"
           >
-            <!-- Spinner -->
-            <svg
-              v-if="regStore.loading[selectedTrainingID]"
-              class="animate-spin h-4 w-4 text-white"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              ></circle>
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
-              ></path>
-            </svg>
+            <span v-if="isRegisterLoading">
+              <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                ></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8z"
+                ></path>
+              </svg>
+              Processing...
+            </span>
 
-            <!-- Text -->
             <span v-else>
               {{
-                regStore.registeredPosts[selectedTrainingID]
+                regStore.registeredPosts[
+                  selectedPost.trainingID ??
+                  selectedPost.TrainingID ??
+                  selectedPost.id ??
+                  selectedPost.ID
+                ]
                   ? "Unregister"
                   : "Register"
               }}
