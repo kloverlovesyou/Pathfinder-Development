@@ -33,7 +33,7 @@
 
       <!-- Nav Items -->
       <aside
-        class="fixed top-0 left-0 flex flex-col h-screen w-75 bg-dark-slate text-white"
+        class="fixed top-0 left-0 flex flex-col min-h-screen w-75 bg-dark-slate text-white"
       >
         <!-- TOP + MENU -->
         <ul class="flex-1 flex flex-col p-2 w-full">
