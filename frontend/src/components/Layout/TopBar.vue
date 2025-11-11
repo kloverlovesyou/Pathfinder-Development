@@ -10,6 +10,7 @@ const route = useRoute();
 const toasts = ref([]);
 const regStore = useRegistrationStore(); // ✅ Pinia store
 const isRegisterLoading = ref(false);
+const bookmarkLoading = reactive({});
 
 async function toggleRegisterWithLoading(post) {
   if (isRegisterLoading.value) return; // Prevent double clicks
@@ -708,12 +709,23 @@ async function handleResultClick(item) {
         <div class="my-4 flex justify-end gap-2">
             <!-- Bookmark -->
             <button
-            class="btn btn-outline btn-sm"
-            @click="toggleBookmark(selectedPost)"
-          >
-            {{ isBookmarked(selectedPost) ? "Bookmarked" : "Bookmark" }}
-          </button>
+                class="btn btn-outline btn-sm flex items-center gap-2"
+                @click="toggleBookmark(selectedPost)"
+                :disabled="bookmarkLoading[selectedPost.TrainingID || selectedPost.CareerID]"
+              >
+                <!-- Loading spinner -->
+                <span v-if="bookmarkLoading[selectedPost.TrainingID || selectedPost.CareerID]" class="animate-spin h-4 w-4 border-2 border-gray-400 rounded-full border-t-transparent"></span>
 
+                <!-- Text -->
+                <span v-else>
+                  {{
+                    bookmarkedPosts[selectedPost.TrainingID || selectedPost.CareerID]
+                      ? "Bookmarked"
+                      : "Bookmark"
+                  }}
+                </span>
+              </button>
+              
             <!-- Register (training only) -->
             <button
                 v-if="isTraining(selectedPost)"
