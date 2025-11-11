@@ -111,19 +111,7 @@ async function fetchTrainings() {
   }
 }
 
-// ✅ Use store instead of local bookmarkedPosts
-async function handleBookmark(post) {
-  const result = await regStore.toggleBookmark(post);
 
-  if (!result.success) {
-    showToast(result.error || "Failed to toggle bookmark", "error");
-  } else {
-    showToast(
-      result.bookmarked ? "Bookmarked successfully!" : "Bookmark removed!",
-      "success"
-    );
-  }
-}
 
 async function fetchOrganizations() {
   try {
@@ -239,7 +227,7 @@ const showModal = ref(false);
     :registerLoading="regStore.loading[selectedTraining?.trainingID]" 
     @close="showModal = false"
     @toggle-register="toggleRegister"
-    @bookmark="handleBookmark"
+    @bookmark="regStore.toggleBookmark(selectedTraining.trainingID)"
     />
     <!-- Toast Notifications -->
     <div class="toast toast-end toast-top z-50">
