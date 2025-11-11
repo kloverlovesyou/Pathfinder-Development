@@ -4,9 +4,10 @@
     <div
       ref="sidebar"
       :class="[
-        'min-h-screen bg-dark-slate text-white transition-all duration-300 flex flex-col flex-shrink-0',
+        'bg-dark-slate text-white transition-all duration-300 flex flex-col flex-shrink-0 relative',
+        'min-h-screen h-screen', // full height always
         isExpanded
-          ? 'w-64 px-4 md:w-72' // expanded width (medium+ screens)
+          ? 'w-64 px-4 md:w-72' // expanded width
           : 'w-16 md:w-20 items-center', // collapsed width
       ]"
     >
@@ -206,7 +207,9 @@
         </ul>
 
         <!-- LOGOUT -->
-        <div class="p-2">
+        <div
+          class="p-2 absolute bottom-2 left-2 w-full flex flex-col items-center md:items-start space-y-2"
+        >
           <ul>
             <li>
               <button
