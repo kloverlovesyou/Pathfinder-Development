@@ -1,16 +1,21 @@
 <template>
-  <div class="flex h-screen">
+  <div class="flex min-h-screen">
     <!-- Sidebar -->
     <SideBar />
     <!-- Main Area -->
     <div class="flex flex-col flex-1">
       <!-- Header -->
-      <header class="h-16 text-dark-slate flex items-center px-4">
+      <header class="h-16 text-dark-slate flex items-center px-10">
         <TopBar />
       </header>
 
       <!-- Page Content -->
-      <main class="flex-1 overflow-y-auto bg-gray-100">
+      <main
+        :class="[
+          'flex-1 min-h-screen transition-all duration-300',
+          isSidebarExpanded ? 'ml-72' : 'ml-16',
+        ]"
+      >
         <router-view v-slot="{ Component }">
           <keep-alive>
             <component :is="Component" />
