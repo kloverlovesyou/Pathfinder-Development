@@ -5,11 +5,11 @@
       ref="sidebar"
       :class="[
         'min-h-screen bg-dark-slate text-white transition-all duration-300 flex flex-col flex-shrink-0',
-        ,
-        isExpanded ? 'w-75 px-4' : 'w-16 items-center',
+        isExpanded
+          ? 'w-64 px-4 md:w-72' // expanded width (medium+ screens)
+          : 'w-16 md:w-20 items-center', // collapsed width
       ]"
     >
-      <!-- Menu Button -->
       <div class="flex items-center">
         <button
           class="p-2 mt-4 mb-2 hover:bg-slate-700 rounded-lg"
