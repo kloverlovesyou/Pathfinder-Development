@@ -154,4 +154,34 @@ public function login(Request $request)
 
         return response()->json(['message' => 'Password updated successfully']);
     }
+
+      public function index()
+    {
+        $applicants = Applicant::select(
+            'applicantID',
+            'firstName',
+            'middleName',
+            'lastName',
+            'emailAddress',
+            'address',
+            'phoneNumber'
+        )->get();
+
+        return response()->json($applicants);
+    }
+
+    // 🗑️ 2. Delete applicant by ID (for admin use)
+    public function destroyById($id)
+    {
+        $applicant = Applicant::find($id);
+
+        if (!$applicant) {
+            return response()->json(['message' => 'Applicant not found'], 404);
+        }
+
+        $applicant->delete();
+
+        return response()->json(['message' => 'Applicant deleted successfully']);
+    }
+
 }

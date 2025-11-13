@@ -1,16 +1,14 @@
 <template>
-  <div class="flex relative min-h-screen font-poppins">
+  <div class="flex relative font-poppins">
     <!-- Sidebar -->
     <div
       ref="sidebar"
       :class="[
-        'bg-dark-slate text-white transition-all duration-300 flex flex-col flex-shrink-0 relative',
-        'min-h-screen h-screen', // full height always
-        isExpanded
-          ? 'w-64 px-4 md:w-72' // expanded width
-          : 'w-16 md:w-20 items-center', // collapsed width
+        'h-screen top-0 left-0 overflow-y-auto bg-dark-slate text-white transition-all duration-300 flex flex-col z-50',
+        isExpanded ? 'w-72 px-4' : 'w-16 items-center',
       ]"
     >
+      <!-- Menu Button -->
       <div class="flex items-center">
         <button
           class="p-2 mt-4 mb-2 hover:bg-slate-700 rounded-lg"
@@ -34,9 +32,9 @@
       </div>
 
       <!-- Nav Items -->
-      <aside class="flex flex-col h-screen">
+      <aside class="flex flex-col flex-1 overflow-y-auto">
         <!-- TOP + MENU -->
-        <ul class="flex-1 flex flex-col p-2 w-full">
+        <ul class="flex flex-col p-2 gap-2 flex-1">
           <li>
             <button @click="$router.push({ name: 'Profile' })" class="w-full">
               <div
@@ -207,9 +205,7 @@
         </ul>
 
         <!-- LOGOUT -->
-        <div
-          class="p-2 absolute bottom-2 left-2 w-full flex flex-col items-center md:items-start space-y-2"
-        >
+        <div class="flex flex-col p-2 mt-auto gap-2">
           <ul>
             <li>
               <button
@@ -298,6 +294,14 @@ const handleClickOutside = (event) => {
     isExpanded.value = false;
   }
 };
+onMounted(() => {
+  const handleResize = () => {
+    sidebar.value.style.height = `${window.innerHeight}px`;
+  };
+  window.addEventListener("resize", handleResize);
+  handleResize(); // initial set
+  onBeforeUnmount(() => window.removeEventListener("resize", handleResize));
+});
 
 onMounted(() => {
   document.addEventListener("click", handleClickOutside);
