@@ -40,10 +40,11 @@ function rejectOrg(id) {
   <div class="min-h-screen p-3 rounded-lg font-poppins bg-gray-50">
     <!-- Main Area -->
     <div class="bg-white rounded-lg shadow p-6 flex-1">
-      <header
-        class="sticky top-0 z-10 bg-white h-16 text-black flex items-center px-4 shadow"
-      >
-        <h1 class="text-3xl font-bold">Account Verification</h1>
+      <header class="sticky top-0 z-10 h-16 text-black flex items-center px-4">
+        <h1>
+          <span class="block text-sm">Organization Account</span>
+          <span class="block font-bold text-3xl">Verification</span>
+        </h1>
       </header>
 
       <section class="mt-4">

@@ -7,7 +7,7 @@
         <!-- Bottom Row: Event List -->
         <div class="bg-white rounded-lg shadow p-6 flex-1">
           <header
-            class="sticky top-0 z-10 bg-white h-16 text-black flex items-center px-4 shadow"
+            class="sticky top-0 z-10 bg-white h-16 text-black flex items-center px-4"
           >
             <h1 class="text-3xl font-bold">Account Setting</h1>
           </header>
