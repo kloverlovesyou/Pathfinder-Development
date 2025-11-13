@@ -6,7 +6,7 @@
     <div class="flex flex-col flex-1">
       <!-- Header -->
       <header class="h-16 text-dark-slate flex items-center px-4">
-        <TopBar />
+        <AdminTopBar />
       </header>
 
       <!-- Page Content -->
@@ -24,7 +24,7 @@
 <script setup>
 import { ref } from "vue";
 
-import TopBar from "./TopBar.vue";
+import AdminTopBar from "@/components/Layout/AdminTopBar.vue";
 
 const isExpanded = ref(true);
 </script>

@@ -3,7 +3,7 @@
     <!--Large screen-->
     <div class="min-h-screen font-poppins lg:flex">
       <!-- Right Column -->
-      <div class="w-full lg:mt-0 lg:ml-3 flex flex-col gap-6">
+      <div class="w-full lg:mt-0 lg:ml-0 flex flex-col gap-6">
         <!-- Bottom Row: Event List -->
         <div class="bg-white rounded-lg shadow p-6 flex-1">
           <header
@@ -277,10 +277,13 @@ const handleUpdate = async () => {
 const handleDelete = async () => {
   try {
     isDeleting.value = true;
-    const res = await axios.delete(import.meta.env.VITE_API_BASE_URL + "/user", {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      data: { currentPassword: form.value.currentPassword }, // send password for verification
-    });
+    const res = await axios.delete(
+      import.meta.env.VITE_API_BASE_URL + "/user",
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        data: { currentPassword: form.value.currentPassword }, // send password for verification
+      }
+    );
     alert(res.data.message);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
