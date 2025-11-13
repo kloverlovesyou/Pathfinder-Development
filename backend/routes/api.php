@@ -171,3 +171,7 @@ Route::get('/calendar/{applicantID}', [EventController::class, 'getUserEvents'])
 // ✅ Public routes (no auth needed)
 
 Route::get('/admin/search', [AdminSearchController::class, 'search']);
+Route::get('/admin/applicants', [ApplicantController::class, 'index']);
+Route::delete('/admin/applicants/{id}', [ApplicantController::class, 'destroyById']);
+Route::get('/admin/organizations', [OrganizationController::class, 'index']);
+Route::delete('/admin/organizations/{id}', [OrganizationController::class, 'destroyById']);

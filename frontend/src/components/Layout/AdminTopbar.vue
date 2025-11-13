@@ -6,6 +6,58 @@ import { useRoute } from "vue-router";
 const route = useRoute();
 const toasts = ref([]);
 
+async function fetchApplicants() {
+  console.log("📡 Fetching applicants...");
+  try {
+    const res = await fetch("http://127.0.0.1:8000/api/admin/applicants");
+    if (!res.ok) throw new Error("Failed to fetch applicants");
+
+    const data = await res.json();
+
+    // Ensure we always have an array
+    const applicants = Array.isArray(data) ? data : [data];
+
+    // ✅ Use .value for refs
+    allApplicants.value = applicants.map((a) => ({
+      id: a.applicantID || a.id,
+      name: a.firstName && a.lastName ? `${a.firstName} ${a.lastName}` : a.name,
+      email: a.emailAddress || a.email,
+      location: a.address || a.location || "N/A",
+    }));
+
+    console.log("✅ Applicants loaded:", allApplicants.value);
+  } catch (err) {
+    console.error("❌ Error fetching applicants:", err);
+  }
+}
+
+// Open modal and load applicants
+const openApplicantModal = async () => {
+  showApplicantModal.value = true;
+  await fetchApplicants();
+  console.log("🟢 openApplicantModal triggered");
+};
+
+// Delete applicant
+async function deleteApplicant(id) {
+  try {
+    const res = await fetch(
+      `http://127.0.0.1:8000/api/admin/applicants/${id}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to delete applicant");
+
+    allApplicants.value = allApplicants.value.filter((a) => a.id !== id);
+    showDeleteModal.value = false; // close modal
+    applicantToDelete.value = null; // reset
+  } catch (err) {
+    console.error("Error deleting applicant:", err);
+  }
+}
+
 function showToast(message, type = "info") {
   toasts.value.push({ message, type });
 
@@ -16,10 +68,8 @@ function showToast(message, type = "info") {
 
 const showDropdown = ref(false);
 const searchContainer = ref(null);
-const searchInput = ref("");
 const results = ref([]);
 const selectedOrg = ref(null);
-const showApplicantModal = ref(false);
 const applicants = ref([]);
 const selectedApplicant = ref(null);
 
@@ -31,18 +81,32 @@ function clearSearch() {
 }
 
 // 🖱 Handle click on search result
-function handleResultClick(item) {
+async function handleResultClick(item) {
   showDropdown.value = false;
   searchInput.value = "";
 
   if (item.type === "organization") {
+    openOrganizationModal(item);
     selectedOrg.value = item;
   } else if (item.type === "applicant") {
-    // Load all applicants
-
     selectedApplicant.value = item;
+
+    // Fetch all applicants
+    const res = await fetch("http://127.0.0.1:8000/api/admin/applicants");
+    const data = await res.json();
+
+    allApplicants.value = data.map((a) => ({
+      id: a.applicantID || a.id,
+      name: a.firstName && a.lastName ? `${a.firstName} ${a.lastName}` : a.name,
+      email: a.emailAddress || a.email,
+      location: a.address || a.location || "N/A",
+      phone: a.phoneNumber || a.phone || "N/A",
+    }));
+
+    // Optional: move searched applicant to top
+    allApplicants.value.sort((a) => (a.id === item.id ? -1 : 0));
+
     showApplicantModal.value = true;
-    console.log("Selected applicant:", item);
   }
 }
 
@@ -108,6 +172,50 @@ function closeApplicantModal() {
   showApplicantModal.value = false;
   selectedApplicant.value = null;
 }
+const showOrganizationModal = ref(false);
+const allOrganizations = ref([]);
+const highlightedOrg = ref(null);
+
+// Fetch organizations
+async function fetchOrganizations() {
+  try {
+    const res = await fetch("http://127.0.0.1:8000/api/admin/organizations");
+    if (!res.ok) throw new Error("Failed to fetch organizations");
+    const data = await res.json();
+
+    allOrganizations.value = data.map((org) => ({
+      id: org.organizationID,
+      name: org.name,
+      location: org.location,
+      websiteURL: org.websiteURL,
+      emailAddress: org.emailAddress,
+    }));
+  } catch (err) {
+    console.error("Error fetching organizations:", err);
+  }
+}
+
+// Open organization modal
+async function openOrganizationModal(searchResult = null) {
+  highlightedOrg.value = searchResult;
+
+  if (!allOrganizations.value.length) {
+    await fetchOrganizations();
+  }
+
+  // Move highlighted org to top
+  if (searchResult) {
+    allOrganizations.value.sort((a) => (a.id === searchResult.id ? -1 : 0));
+  }
+
+  showOrganizationModal.value = true;
+}
+
+// Close modal
+function closeOrganizationModal() {
+  showOrganizationModal.value = false;
+  highlightedOrg.value = null;
+}
 
 // Modal states
 const showApplicantsModal = ref(false);
@@ -125,23 +233,56 @@ function openApplicantsModal(item) {
     .sort((a) => (a.id === item.id ? -1 : 0)); // Put searched applicant on top
 
   showApplicantsModal.value = true;
+  console.log("🟢 openApplicantModal triggered");
 }
 
-const allApplicants = ref([
-  // Example data; replace with your search results or API call
-  {
-    id: 1,
-    name: "Juan Dela Cruz",
-    email: "juan@email.com",
-    location: "Manila",
-  },
-  { id: 2, name: "Maria Santos", email: "maria@email.com", location: "Cebu" },
-]);
+const showApplicantModal = ref(false);
+const allApplicants = ref([]);
+const searchInput = ref("");
 
-function deleteApplicant(id) {
-  // Replace with your API delete call
-  allApplicants.value = allApplicants.value.filter((a) => a.id !== id);
-  console.log("Deleted applicant id:", id);
+function openApplicantDetailModal(applicant) {
+  selectedApplicant.value = applicant;
+  showApplicantDetailModal.value = true;
+  console.log("Raw response:", applicant);
+}
+
+// Close detail modal
+function closeApplicantDetailModal() {
+  showApplicantDetailModal.value = false;
+  selectedApplicant.value = null;
+}
+const showDeleteModal = ref(false);
+const applicantToDelete = ref(null);
+
+function confirmDelete(applicant) {
+  applicantToDelete.value = applicant; // store selected applicant
+  showDeleteModal.value = true; // show the modal
+}
+
+const showOrgDeleteModal = ref(false);
+const orgToDelete = ref(null);
+
+function confirmOrgDelete(org) {
+  orgToDelete.value = org;
+  showOrgDeleteModal.value = true;
+}
+
+async function deleteOrganization(id) {
+  try {
+    const res = await fetch(
+      `http://127.0.0.1:8000/api/admin/organizations/${id}`,
+      {
+        method: "DELETE",
+      }
+    );
+    if (!res.ok) throw new Error("Failed to delete organization");
+
+    allOrganizations.value = allOrganizations.value.filter((o) => o.id !== id);
+    showOrgDeleteModal.value = false;
+    orgToDelete.value = null;
+  } catch (err) {
+    console.error("Error deleting organization:", err);
+  }
 }
 </script>
 
@@ -183,7 +324,7 @@ function deleteApplicant(id) {
               d="M11.1 8H6.9C3.4 8 2 9.4 2 12.9V17.1C2 20.6 3.4 22 6.9 22H11.1C14.6 22 16 20.6 16 17.1V12.9C16 9.4 14.6 8 11.1 8ZM12.29 13.65L8.58 17.36C8.44 17.5 8.26 17.57 8.07 17.57C7.88 17.57 7.7 17.5 7.56 17.36L5.7 15.5C5.42 15.22 5.42 14.77 5.7 14.49C5.98 14.21 6.43 14.21 6.71 14.49L8.06 15.84L11.27 12.63C11.55 12.35 12 12.35 12.28 12.63C12.56 12.91 12.57 13.37 12.29 13.65Z"
             />
           </svg>
-          <span class="text-xs whitespace-nowrap">Account Verification</span>
+          <span class="text-xs whitespace-nowrap">Verification</span>
         </button>
 
         <!-- Account Settings Button -->
@@ -208,7 +349,7 @@ function deleteApplicant(id) {
               fill="currentColor"
             />
           </svg>
-          <span class="text-xs whitespace-nowrap">Account Setting</span>
+          <span class="text-xs whitespace-nowrap">Account Settings</span>
         </button>
       </div>
 
@@ -345,10 +486,10 @@ function deleteApplicant(id) {
           </div>
         </div>
       </div>
-      <!-- 🧭 Applicants Table Modal (Minimalist) -->
+      <!-- 🧭 Applicants Table Modal -->
       <div
         v-if="showApplicantModal"
-        class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50"
+        class="fixed inset-0 flex items-center justify-center z-50"
         @click.self="closeApplicantModal"
       >
         <div
@@ -370,12 +511,19 @@ function deleteApplicant(id) {
           <table class="w-full text-left border-separate border-spacing-y-2">
             <thead>
               <tr>
-                <th class="text-left text-gray-500 font-medium px-4 py-2">
-                  Name
+                <th class="text-left text-black font-medium px-4 py-2">Name</th>
+                <th class="text-left text-black font-medium px-4 py-2">
+                  Location
                 </th>
-                <th class="text-left text-gray-500 font-medium px-4 py-2">
+                <th class="text-left text-black font-medium px-4 py-2">
                   Email
                 </th>
+                <th
+                  class="text-left text-black font-medium px-4 py-2 whitespace-nowrap"
+                >
+                  Contact Number
+                </th>
+
                 <th class="px-4 py-2"></th>
               </tr>
             </thead>
@@ -386,11 +534,15 @@ function deleteApplicant(id) {
                 class="bg-gray-50 hover:bg-gray-100 rounded-lg transition"
               >
                 <td class="px-4 py-3 text-gray-800">{{ applicant.name }}</td>
+                <td class="px-4 py-3 text-gray-800">
+                  {{ applicant.location }}
+                </td>
                 <td class="px-4 py-3 text-gray-600">{{ applicant.email }}</td>
-                <td class="px-4 py-3 flex justify-center">
+                <td class="px-4 py-3 text-gray-800">{{ applicant.phone }}</td>
+                <td class="px-4 py-3 flex items-center justify-center">
                   <button
-                    @click="deleteApplicant(applicant.id)"
-                    class="bg-red-500 text-white text-sm px-3 py-1 rounded-md hover:bg-red-600 transition"
+                    @click="confirmDelete(applicant)"
+                    class="bg-gray-500 text-white text-sm px-4 py-2 rounded-md hover:bg-dark-slate transition"
                   >
                     Delete
                   </button>
@@ -398,6 +550,136 @@ function deleteApplicant(id) {
               </tr>
             </tbody>
           </table>
+
+          <!-- Optional empty state -->
+          <div
+            v-if="allApplicants.length === 0"
+            class="text-center text-gray-500 py-6"
+          >
+            No applicants found.
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete Confirmation Modal -->
+      <div
+        v-if="showDeleteModal"
+        class="fixed inset-0 flex items-center justify-center z-50"
+        @click.self="showDeleteModal = false"
+      >
+        <div class="bg-white rounded-xl shadow-lg w-full max-w-md p-6 relative">
+          <h2 class="text-xl font-semibold mb-4 text-gray-800">
+            Confirm Deletion
+          </h2>
+          <p class="mb-6 text-gray-600">
+            Are you sure you want to delete
+            <strong>{{ applicantToDelete.name }}</strong
+            >?
+          </p>
+          <div class="flex justify-end gap-3">
+            <button
+              @click="showDeleteModal = false"
+              class="px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-100"
+            >
+              Cancel
+            </button>
+            <button
+              @click="deleteApplicant(applicantToDelete.id)"
+              class="bg-gray-500 text-white text-sm px-4 py-2 rounded-md hover:bg-dark-slate transition"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- 🧭 Organizations Table Modal -->
+      <div
+        v-if="showOrganizationModal"
+        class="fixed inset-0 flex items-center justify-center z-50"
+        @click.self="closeOrganizationModal"
+      >
+        <div
+          class="bg-white rounded-xl shadow-lg w-full max-w-5xl p-6 relative max-h-[80vh] overflow-auto"
+        >
+          <!-- Close button -->
+          <button
+            @click="closeOrganizationModal"
+            class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-light"
+          >
+            &times;
+          </button>
+
+          <h2 class="text-2xl font-semibold mb-6 text-gray-800">
+            All Organizations
+          </h2>
+
+          <!-- Organizations Table -->
+          <table class="w-full text-left border-separate border-spacing-y-2">
+            <thead>
+              <tr>
+                <th class="text-left text-gray-500 font-medium px-4 py-2">
+                  Name
+                </th>
+                <th class="text-left text-gray-500 font-medium px-4 py-2">
+                  Location
+                </th>
+                <th class="text-left text-gray-500 font-medium px-4 py-2">
+                  Website
+                </th>
+                <th class="text-left text-gray-500 font-medium px-4 py-2">
+                  Email
+                </th>
+                <th class="px-4 py-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="org in allOrganizations"
+                :key="org.id"
+                class="bg-gray-50 hover:bg-gray-100 rounded-lg transition"
+              >
+                <td class="px-4 py-3 text-gray-800">{{ org.name }}</td>
+                <td class="px-4 py-3 text-gray-600">{{ org.location }}</td>
+                <td class="px-4 py-3 text-blue-500 underline">
+                  <a :href="org.websiteURL" target="_blank">{{
+                    org.websiteURL
+                  }}</a>
+                </td>
+                <td class="px-4 py-3 text-gray-600">{{ org.emailAddress }}</td>
+                <td class="px-4 py-3 flex items-center justify-center">
+                  <button
+                    @click="confirmOrgDelete(org)"
+                    class="bg-gray-500 text-white text-sm px-4 py-2 rounded-md hover:bg-dark-slate transition"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Delete Confirmation Modal for Organization -->
+      <div
+        v-if="showOrgDeleteModal"
+        class="fixed inset-0 flex items-center justify-center z-50"
+      >
+        <div class="bg-white rounded-xl shadow-lg w-full max-w-md p-6 relative">
+          <h2 class="text-xl font-semibold mb-4">Confirm Deletion</h2>
+          <p class="mb-6">
+            Are you sure you want to delete
+            <strong>{{ orgToDelete?.name }}</strong
+            >?
+          </p>
+          <div class="flex justify-end gap-3">
+            <button @click="showOrgDeleteModal = false">Cancel</button>
+            <button
+              @click="deleteOrganization(orgToDelete.id)"
+              class="bg-gray-500 text-white text-sm px-4 py-2 rounded-md hover:bg-dark-slate transition"
+            >
+              Delete
+            </button>
+          </div>
         </div>
       </div>
     </div>
