@@ -143,6 +143,7 @@
               <div v-if="openUpcomingMenu === training.trainingID" class="dropdown-menu" @click.stop>
                 <ul>
                   <li @click="deleteTraining(training.trainingID)">Delete Training</li>
+                  <li @click="updateTraining(training.trainingID)">Update Training</li>
                 </ul>
               </div>
             </div>
@@ -371,7 +372,7 @@
           </button>
 
           <!-- Title -->
-          <h2 class="training-popup-title">Post Training</h2>
+          <h2 class="training-popup-title">{{ isEditMode ? "Update Training" : "Post Training" }}</h2>
 
           <!-- Form -->
           <form @submit.prevent="saveTraining" class="training-popup-form">
@@ -441,7 +442,7 @@
               placeholder="Training Link" class="training-input" />
 
             <!-- Save -->
-            <button type="submit" class="training-post-btn">Post</button>
+            <button type="submit" class="training-post-btn">{{ isEditMode ? "Update" : "Post" }}</button>
           </form>
         </div>
       </div>
@@ -462,6 +463,8 @@ export default {
       globalSearchQuery: '',
       showAllUpcoming: false,
       showAllCompleted: false,
+      isEditMode: false,
+      trainingToEditId: null,
       qrCodeValue: null,
       qrExpiresAt: null,
       activeTrainingId: null, // which training shows the QR
@@ -687,16 +690,45 @@ export default {
        ✅ Trainings Fetch
     ========================== */
     async fetchTrainings() {
-      const response = await axios.get("http://127.0.0.1:8000/api/trainings");
-      const newTrainings = response.data;
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get("http://127.0.0.1:8000/api/trainings", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-      newTrainings.forEach(training => {
-        // Only schedule if this training isn’t in upcomingtrainings yet
-        if (!this.upcomingtrainings.some(t => t.trainingID === training.trainingID)) {
-          this.upcomingtrainings.push(training);
-          this.scheduleQR(training);
-        }
-      });
+        const newTrainings = response.data;
+
+        // Clear existing trainings and replace with fresh list
+        this.upcomingtrainings = newTrainings.map(training => {
+          // Schedule QR for upcoming trainings
+          const scheduleDate = new Date(training.schedule);
+          const now = new Date();
+          if (scheduleDate >= now) {
+            this.scheduleQR(training);
+          }
+
+          // Format date & time for display
+          const formattedDate = scheduleDate.toLocaleDateString("en-US", {
+            weekday: "short",
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          });
+          const formattedTime = scheduleDate.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
+          return {
+            ...training,
+            date: formattedDate,
+            time: formattedTime,
+          };
+        });
+
+      } catch (error) {
+        console.error("Failed to fetch trainings:", error);
+      }
     },
 
 
@@ -720,6 +752,32 @@ export default {
       };
     },
 
+    //For update training
+    updateTraining(trainingID) {
+      const training = this.upcomingtrainings.find(t => t.trainingID === trainingID);
+      if (!training) {
+        alert("Training not found.");
+        return;
+      }
+
+      // Prefill form fields
+      this.newTraining = {
+        title: training.title,
+        description: training.description,
+        date: training.schedule ? training.schedule.split("T")[0] : "",
+        time: training.schedule ? training.schedule.split("T")[1]?.slice(0, 5) : "",
+        mode: training.mode,
+        location: training.location || "",
+        trainingLink: training.training_link || "",
+      };
+
+      // Enable edit mode and open popup
+      this.isEditMode = true;
+      this.trainingToEditId = trainingID;
+      this.showTrainingPopup = true;
+      this.closeAllMenus();
+    },
+
     async saveTraining() {
       try {
         if (!this.newTraining.date || !this.newTraining.time) {
@@ -727,113 +785,78 @@ export default {
           return;
         }
 
-        // ✅ Combine date and time as a proper local timestamp (not UTC)
         const combinedSchedule = `${this.newTraining.date}T${this.newTraining.time}:00`;
 
         const payload = {
           title: this.newTraining.title,
           description: this.newTraining.description,
-          // ✅ Store local time in the same format you see (not auto-converted to UTC)
           schedule: combinedSchedule,
           mode: this.newTraining.mode,
-          location: this.newTraining.location || null,
-          training_link: this.newTraining.trainingLink || null,
+          location: this.newTraining.mode === "On-Site" ? this.newTraining.location || null : null,
+          training_link: this.newTraining.mode === "Online" ? this.newTraining.trainingLink || null : null,
         };
 
         const token = localStorage.getItem("token");
-        const response = await axios.post("http://127.0.0.1:8000/api/trainings", payload, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
 
-        if (response.data && response.data.data) {
-          const newTraining = response.data.data;
-
-          const storedUser = localStorage.getItem("user");
-          let organizationName = "Unknown Organization";
-          if (storedUser) {
-            const user = JSON.parse(storedUser);
-            organizationName = user.displayName || user.name || "Unknown Organization";
-          }
-
-          // ✅ Use local date and time directly without timezone shift
-          const scheduleDate = new Date(combinedSchedule);
-          const formattedDate = scheduleDate.toLocaleDateString("en-US", {
-            weekday: "short",
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          });
-          const formattedTime = scheduleDate.toLocaleTimeString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-
-          this.upcomingtrainings.push({
-            id: newTraining.trainingID,
-            title: newTraining.title,
-            description: newTraining.description,
-            schedule: combinedSchedule,
-            date: formattedDate,
-            time: formattedTime,
-            mode: newTraining.mode,
-            ...(newTraining.mode === "On-Site"
-              ? { location: newTraining.location }
-              : { trainingLink: newTraining.trainingLink }),
-            organizationName,
-          });
+        if (this.isEditMode && this.trainingToEditId) {
+          // UPDATE existing training
+          await axios.put(
+            `http://127.0.0.1:8000/api/trainings/${this.trainingToEditId}`,
+            payload,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          alert("✅ TRAINING UPDATED SUCCESSFULLY!");
+        } else {
+          // CREATE new training
+          await axios.post(
+            "http://127.0.0.1:8000/api/trainings",
+            payload,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          alert("✅ TRAINING POSTED SUCCESSFULLY!");
         }
 
-        alert("TRAINING POSTED SUCCESSFULLY!!!");
-        this.newTraining = { title: "", description: "", date: "", time: "", mode: "", location: "", trainingLink: "" };
-        this.showTrainingPopup = false;
+        // 🔹 Automatically refresh the trainings list without page reload
+        await this.fetchTrainings();
+
+        // Reset form & close popup
+        this.closeTrainingPopup();
+        this.isEditMode = false;
+        this.trainingToEditId = null;
+
       } catch (error) {
         console.error("ERROR SAVING TRAINING:", error.response?.data || error);
-        alert("SOMETHING WENT WRONG WHILE SAVING THE TRAINING");
+        alert("❌ SOMETHING WENT WRONG WHILE SAVING THE TRAINING");
       }
     },
 
     async deleteTraining(trainingID) {
-      if (!confirm("Are you sure you want to delete this training?")) return;
-
       try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          alert("You must be logged in to delete a training.");
-          return;
-        }
+        if (!confirm("Are you sure you want to delete this training?")) return;
 
-        // Send DELETE request to your backend
+        const token = localStorage.getItem("token");
+
+        // Call backend to delete training
         await axios.delete(`http://127.0.0.1:8000/api/trainings/${trainingID}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
-        // Remove deleted training from UI
-        this.upcomingtrainings = this.upcomingtrainings.filter(t => t.trainingID !== trainingID);
-        this.completedtrainings = this.completedtrainings.filter(t => t.trainingID !== trainingID);
+        alert("✅ Training deleted successfully!");
 
-        this.closeAllMenus();
-        alert("✅ Training deleted successfully.");
+        // Refresh trainings array so UI updates immediately
+        await this.fetchTrainings();
+
+        // Clear QR if it was active for the deleted training
+        if (this.activeTrainingId === trainingID) {
+          this.qrCodeValue = null;
+          this.qrExpiresAt = null;
+          this.activeTrainingId = null;
+          if (this.qrExpireTimeout) clearTimeout(this.qrExpireTimeout);
+        }
 
       } catch (error) {
-        if (error.response) {
-          console.error("Delete error:", error.response.data);
-          if (error.response.status === 404) {
-            alert("Training not found or already deleted.");
-          } else if (error.response.status === 401) {
-            alert("Unauthorized. Please log in again.");
-          } else {
-            alert("Failed to delete training. Please try again.");
-          }
-        } else {
-          console.error("Network error:", error.message);
-          alert("Network error. Please check your connection.");
-        }
+        console.error("Failed to delete training:", error.response?.data || error);
+        alert("❌ Something went wrong while deleting the training.");
       }
     },
 
@@ -2369,9 +2392,12 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 }
 
 .global-search-bar::placeholder {
-  color: #9ca3af;       /* same as Tailwind’s text-gray-400 */
-  font-style: italic;   /* optional — match whatever Training uses */
-  opacity: 1;           /* ensures consistent rendering */
+  color: #9ca3af;
+  /* same as Tailwind’s text-gray-400 */
+  font-style: italic;
+  /* optional — match whatever Training uses */
+  opacity: 1;
+  /* ensures consistent rendering */
 }
 
 .global-search-bar:focus {

@@ -55,11 +55,15 @@ Route::middleware('auth.custom')->group(function () {
 
     // Trainings
     Route::post('/trainings', [TrainingController::class, 'store']);
+    Route::put('/trainings/{id}', [TrainingController::class, 'update']);
+    Route::delete('/trainings/{id}', [TrainingController::class, 'destroy']);
     Route::post('/trainings/generate-qr', [TrainingController::class, 'generateQRCode']);
     Route::get('/attendance/checkin', [TrainingController::class, 'attendanceCheckin']);
     
     // Careers
     Route::post('/careers', [CareerController::class, 'store']);
+    Route::put('/careers/{id}', [CareerController::class, 'update']);  
+    Route::delete('/careers/{id}', [CareerController::class, 'destroy']); 
 
     // Registrations
     Route::get('/registrations', [RegistrationController::class, 'index']);
