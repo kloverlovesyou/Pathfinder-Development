@@ -37,7 +37,7 @@ function rejectOrg(id) {
 }
 </script>
 <template>
-  <div class="min-h-screen p-6 rounded-lg font-poppins bg-gray-50">
+  <div class="min-h-screen p-3 rounded-lg font-poppins bg-gray-50">
     <!-- Main Area -->
     <div class="bg-white rounded-lg shadow p-6 flex-1">
       <header
@@ -53,10 +53,10 @@ function rejectOrg(id) {
             v-for="org in organizations"
             :key="org.id"
             @click="openModal(org)"
-            class="p-4 border rounded-lg cursor-pointer hover:bg-gray-50 flex justify-between items-center"
+            class="p-2 border rounded-lg cursor-pointer hover:bg-gray-50 flex justify-between items-center"
           >
             <div>
-              <h3 class="text-lg font-medium text-dark-slate">
+              <h3 class="text-md font-medium">
                 {{ org.name }}
               </h3>
             </div>
