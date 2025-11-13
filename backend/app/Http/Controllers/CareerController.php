@@ -89,4 +89,53 @@ public function countsPartial()
         'filled' => $filled,
     ]);
 }
+
+ public function update(Request $request, $id)
+    {
+        $career = Career::find($id);
+
+        if (!$career) {
+            return response()->json(['message' => 'Career not found'], 404);
+        }
+
+        // Validate request (optional but recommended)
+        $validated = $request->validate([
+            'position' => 'required|string|max:255',
+            'detailsAndInstructions' => 'required|string',
+            'qualifications' => 'required|string',
+            'requirements' => 'required|string',
+            'applicationLetterAddress' => 'required|string',
+            'deadlineOfSubmission' => 'required|date',
+        ]);
+
+        $career->position = $validated['position'];
+        $career->detailsAndInstructions = $validated['detailsAndInstructions'];
+        $career->qualifications = $validated['qualifications'];
+        $career->requirements = $validated['requirements'];
+        $career->applicationLetterAddress = $validated['applicationLetterAddress'];
+        $career->deadlineOfSubmission = $validated['deadlineOfSubmission'];
+
+        $career->save();
+
+        return response()->json([
+            'message' => 'Career updated successfully',
+            'data' => $career
+        ]);
+    }
+
+    // Delete career
+    public function destroy($id)
+    {
+        $career = Career::find($id);
+
+        if (!$career) {
+            return response()->json(['message' => 'Career not found'], 404);
+        }
+
+        $career->delete();
+
+        return response()->json([
+            'message' => 'Career deleted successfully'
+        ]);
+    }
 }
