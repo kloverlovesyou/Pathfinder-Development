@@ -2,25 +2,9 @@
 import { ref, onMounted, onBeforeUnmount, watch, reactive } from "vue";
 import axios from "axios";
 import { useRoute } from "vue-router";
-import { useRegistrationStore } from "@/stores/registrationStore";
-
-const qrCodeUrl = ref(null);
 
 const route = useRoute();
 const toasts = ref([]);
-const regStore = useRegistrationStore(); // ✅ Pinia store
-
-async function fetchQRCode(trainingID) {
-  try {
-    const res = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + `/training/${trainingID}/qrcode`
-    );
-    qrCodeUrl.value = res.data.qr_url || null;
-  } catch (err) {
-    console.error("Failed to fetch QR code:", err);
-    qrCodeUrl.value = null;
-  }
-}
 
 function showToast(message, type = "info") {
   toasts.value.push({ message, type });
@@ -30,252 +14,139 @@ function showToast(message, type = "info") {
   }, 3000);
 }
 
-// ✅ Use store instead of local registeredPosts
-onMounted(() => {
-  regStore.fetchMyRegistrations();
-});
-
-// ✅ Toggle using store
-async function toggleRegister(training) {
-  const token = localStorage.getItem("token");
-  if (!token) return showToast("Please log in first.", "error");
-
-  const trainingID =
-    training.trainingID ?? training.TrainingID ?? training.ID ?? training.id;
-
-  try {
-    await regStore.toggleRegister(training);
-
-    const isRegistered = !!regStore.registeredPosts[trainingID];
-
-    showToast(
-      isRegistered ? "Registered successfully!" : "Unregistered successfully!",
-      "success"
-    );
-
-    // ✅ Fetch QR if registered
-    if (isRegistered) {
-      await fetchQRCode(trainingID);
-    } else {
-      qrCodeUrl.value = null;
-    }
-  } catch (err) {
-    showToast("Action failed.", "error");
-    console.error(err);
-  }
-}
-
-// ✅ Everything else below remains **untouched**
 const showDropdown = ref(false);
-const activeMains = ref([]);
-const activeSubs = ref([]);
 const searchContainer = ref(null);
-const mainFilters = ["Training", "Career", "Organization"];
 const searchInput = ref("");
 const results = ref([]);
+const selectedOrg = ref(null);
+const showApplicantModal = ref(false);
+const applicants = ref([]);
+const selectedApplicant = ref(null);
 
-const applyModalOpen = ref(false);
-const isModalOpen = ref(false);
-
-const bookmarkedPosts = ref({});
-const appliedPosts = ref({});
-const organizations = ref({});
-const posts = ref([]);
-
-function toggleMainFilter(main) {
-  if (activeMains.value.includes(main)) {
-    activeMains.value = activeMains.value.filter((m) => m !== main);
-    if (main === "Training" || main === "Career") activeSubs.value = [];
-  } else {
-    if (main === "Training" || main === "Career") {
-      activeMains.value = activeMains.value.filter(
-        (m) => m !== (main === "Training" ? "Career" : "Training")
-      );
-    }
-    activeMains.value.push(main);
-  }
+// 🧹 Clear search
+function clearSearch() {
+  searchInput.value = "";
+  results.value = [];
+  showDropdown.value = false;
 }
 
-function toggleExclusiveSub(sub) {
-  if (activeSubs.value.includes(sub)) {
-    activeSubs.value = [];
-  } else {
-    if (["Online", "On-site"].includes(sub)) {
-      activeSubs.value = activeSubs.value.filter(
-        (s) => !["Online", "On-site"].includes(s)
-      );
-    }
-    activeSubs.value = [sub];
-  }
-}
+// 🖱 Handle click on search result
+function handleResultClick(item) {
+  showDropdown.value = false;
+  searchInput.value = "";
 
-function handleClickOutside(event) {
-  if (searchContainer.value && !searchContainer.value.contains(event.target)) {
-    showDropdown.value = false;
+  if (item.type === "organization") {
+    selectedOrg.value = item;
+  } else if (item.type === "applicant") {
+    // Load all applicants
+
+    selectedApplicant.value = item;
+    showApplicantModal.value = true;
+    console.log("Selected applicant:", item);
   }
 }
-onMounted(() => document.addEventListener("click", handleClickOutside));
-onBeforeUnmount(() =>
-  document.removeEventListener("click", handleClickOutside)
-);
 
 async function performSearch() {
-  if (!searchInput.value.trim()) {
+  console.log("Searching for:", searchInput.value);
+  if (!searchInput.value) {
     results.value = [];
     return;
   }
 
   try {
-    const response = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + "/search",
-      {
-        params: {
-          search: searchInput.value,
-          filterType: activeMains.value[0]?.toLowerCase() || "",
-          subFilter: activeSubs.value[0] || "",
-        },
-      }
+    const res = await fetch(
+      `http://127.0.0.1:8000/api/admin/search?query=${encodeURIComponent(
+        searchInput.value
+      )}`
     );
-
-    results.value = response.data.results || [];
-  } catch (error) {
-    console.error("Search failed:", error);
-    results.value = [];
-  }
-}
-watch([searchInput, activeMains, activeSubs], performSearch);
-
-function isTraining(post) {
-  return post.Type?.toLowerCase().includes("training");
-}
-function isCareer(post) {
-  return post.Type?.toLowerCase().includes("career");
-}
-function isOrganization(post) {
-  return post.Type?.toLowerCase().includes("organization");
-}
-
-async function openOrganizationModal(orgItem) {
-  resetModals();
-  try {
-    isModalOpen.value = true;
-    selectedOrg.value = {
-      name: orgItem.Name || orgItem.OrganizationName,
-      location: orgItem.Location || "",
-      website: orgItem.Website || "",
-      logo: orgItem.Logo || "",
-      careers: [],
-      trainings: [],
-    };
-
-    const response = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + `/organization/${orgItem.ID}/posts`
-    );
-    selectedOrg.value.careers = response.data.careers || [];
-    selectedOrg.value.trainings = response.data.trainings || [];
-  } catch (error) {
-    console.error("Failed to fetch organization details:", error);
-  }
-}
-
-function resetModals() {
-  selectedPost.value = null;
-  isModalOpen.value = false;
-  selectedOrg.value = null;
-  applyModalOpen.value = false;
-}
-
-const isTrainingModalOpen = ref(false);
-const isCareerModalOpen = ref(false);
-const isOrgModalOpen = ref(false);
-
-const selectedPost = ref({});
-const selectedOrg = ref({});
-
-async function openTrainingModal(post) {
-  selectedPost.value = post;
-  isTrainingModalOpen.value = true;
-
-  const trainingID = post.trainingID ?? post.TrainingID ?? post.ID ?? post.id;
-
-  // Ensure latest registrations
-  await regStore.fetchMyRegistrations();
-
-  // If already registered, fetch QR
-  if (regStore.registeredPosts[trainingID]) {
-    await fetchQRCode(trainingID);
-  } else {
-    qrCodeUrl.value = null;
-  }
-}
-
-function closeTrainingModal() {
-  selectedPost.value = {};
-  isTrainingModalOpen.value = false;
-}
-function openCareerModal(post) {
-  selectedPost.value = post;
-  isCareerModalOpen.value = true;
-}
-function closeCareerModal() {
-  selectedPost.value = {};
-  isCareerModalOpen.value = false;
-}
-function openApplyModal(post) {
-  selectedPost.value = post;
-  applyModalOpen.value = true;
-}
-function closeApplyModal() {
-  applyModalOpen.value = false;
-  selectedPost.value = {};
-}
-function openOrgModal(org) {
-  selectedOrg.value = org;
-  isOrgModalOpen.value = true;
-}
-function closeOrgModal() {
-  isOrgModalOpen.value = false;
-  selectedOrg.value = {};
-}
-
-async function handleResultClick(item) {
-  if (item.Type === "Training" || item.Type.includes("Training")) {
-    selectedPost.value = item;
-    isTrainingModalOpen.value = true;
-  } else if (item.Type === "Career" || item.Type.includes("Career")) {
-    selectedPost.value = item;
-    isCareerModalOpen.value = true;
-  } else if (item.Type === "Organization") {
-    selectedOrg.value = {
-      ...item,
-      careers: [],
-      trainings: [],
-    };
-    isOrgModalOpen.value = true;
-
-    try {
-      const response = await axios.get(
-        `/api/search?search=${encodeURIComponent(
-          item.Title
-        )}&filterType=organization`
-      );
-      const results = response.data.results || [];
-
-      selectedOrg.value.careers = results.filter((r) =>
-        r.Type.includes("Career")
-      );
-      selectedOrg.value.trainings = results.filter((r) =>
-        r.Type.includes("Training")
-      );
-    } catch (error) {
-      console.error("Error fetching organization posts:", error);
+    const contentType = res.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      const text = await res.text();
+      console.error("❌ Expected JSON, got:", text);
+      return;
     }
+
+    const data = await res.json();
+
+    // Normalize API keys to lowercase for template
+    results.value = data.map((item) => ({
+      id: item.ID,
+      name: item.Name,
+      location: item.Location,
+      email: item.EmailAddress,
+      type: item.Type.toLowerCase(),
+    }));
+  } catch (err) {
+    console.error("Search failed:", err);
   }
+}
+
+// Emit events to parent
+const emit = defineEmits(["open-organization-modal", "open-applicant-modal"]);
+
+function openModal(item) {
+  if (item.type === "organization") {
+    emit("open-organization-modal", item);
+  } else if (item.type === "applicant") {
+    emit("open-applicant-modal", item);
+  }
+
+  // Clear search
+  results.value = [];
+  searchInput.value = "";
+}
+
+function acceptOrg(id) {
+  console.log("Accepted org:", id);
+}
+
+function rejectOrg(id) {
+  console.log("Rejected org:", id);
+}
+
+function closeApplicantModal() {
+  showApplicantModal.value = false;
+  selectedApplicant.value = null;
+}
+
+// Modal states
+const showApplicantsModal = ref(false);
+const showApplicantDetailModal = ref(false);
+
+const highlightedApplicant = ref(null); // The one matching the search
+
+function openApplicantsModal(item) {
+  // Use the search results for highlighting
+  highlightedApplicant.value = item;
+
+  // Optionally fetch all applicants or use your search API
+  allApplicants.value = results.value
+    .filter((i) => i.type === "applicant")
+    .sort((a) => (a.id === item.id ? -1 : 0)); // Put searched applicant on top
+
+  showApplicantsModal.value = true;
+}
+
+const allApplicants = ref([
+  // Example data; replace with your search results or API call
+  {
+    id: 1,
+    name: "Juan Dela Cruz",
+    email: "juan@email.com",
+    location: "Manila",
+  },
+  { id: 2, name: "Maria Santos", email: "maria@email.com", location: "Cebu" },
+]);
+
+function deleteApplicant(id) {
+  // Replace with your API delete call
+  allApplicants.value = allApplicants.value.filter((a) => a.id !== id);
+  console.log("Deleted applicant id:", id);
 }
 </script>
 
 <template>
-  <div class="flex-grow flex items-center justify-between p-4">
+  <div class="flex-grow flex items-center justify-between p-4 font-poppins">
     <div class="flex items-center justify-between p-4 w-full">
       <!-- LEFT: Logo -->
       <button
@@ -392,18 +263,16 @@ async function handleResultClick(item) {
         </button>
       </div>
 
-      <!-- RIGHT: Search bar (non-admin pages) -->
       <div class="flex justify-center w-full">
         <div
           ref="searchContainer"
           class="relative w-full max-w-md ml-4 font-poppins"
         >
-          <!-- Search Input -->
+          <!-- 🔍 Search Input -->
           <label
             class="bg-blue-gray input w-full flex items-center gap-2 border-none rounded-full px-3 py-2 cursor-text"
             @click="showDropdown = true"
           >
-            <!-- Search Icon -->
             <svg
               class="h-5 w-5 text-gray-500 flex-shrink-0"
               xmlns="http://www.w3.org/2000/svg"
@@ -416,113 +285,119 @@ async function handleResultClick(item) {
                 fill="none"
                 stroke="darkslategray"
               >
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="m21 21-4.3-4.3"></path>
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
               </g>
             </svg>
 
             <input
               type="search"
-              placeholder="Search"
+              placeholder="Search Applicants or Organizations..."
               v-model="searchInput"
               class="flex-grow bg-transparent outline-none font-poppins"
               @focus="showDropdown = true"
+              @input="performSearch"
             />
             <button
               v-if="searchInput"
               type="button"
-              @click="searchInput = ''"
+              @click="clearSearch"
               class="absolute right-2 text-gray-400 hover:text-black"
             >
               ✕
             </button>
           </label>
 
-          <!-- Dropdown -->
+          <!-- 🔽 Dropdown Results -->
           <div
-            v-if="showDropdown"
+            v-if="showDropdown && (results.length || searchInput)"
             class="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-md z-50 p-3 flex flex-col gap-3"
           >
-            <!-- Main Filters -->
-            <div class="flex flex-wrap gap-2 justify-start">
-              <button
-                v-for="main in mainFilters"
-                :key="main"
-                @mousedown.prevent="toggleMainFilter(main)"
-                :class="[
-                  'px-4 py-1 rounded-full text-sm font-medium border transition-colors',
-                  activeMains.includes(main)
-                    ? 'bg-dark-slate text-white border-dark-slate'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300',
-                ]"
-              >
-                {{ main }}
-              </button>
-            </div>
-
-            <!-- Subfilters -->
+            <!-- No results -->
             <div
-              v-if="activeMains.includes('Training')"
-              class="flex flex-wrap gap-2 justify-start"
-            >
-              <button
-                v-for="sub in ['Online', 'On-site']"
-                :key="sub"
-                @mousedown.prevent="toggleExclusiveSub(sub)"
-                :class="[
-                  'px-4 py-1 rounded-full text-sm font-medium border transition-colors',
-                  activeSubs.includes(sub)
-                    ? 'bg-dark-slate text-white border-dark-slate'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300',
-                ]"
-              >
-                {{ sub }}
-              </button>
-            </div>
-
-            <div
-              v-if="activeMains.includes('Career')"
-              class="flex flex-wrap gap-2 justify-start"
-            >
-              <button
-                v-for="sub in ['Position']"
-                :key="sub"
-                @mousedown.prevent="toggleExclusiveSub(sub)"
-                :class="[
-                  'px-4 py-1 rounded-full text-sm font-medium border transition-colors',
-                  activeSubs.includes(sub)
-                    ? 'bg-dark-slate text-white border-dark-slate'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300',
-                ]"
-              >
-                {{ sub }}
-              </button>
-            </div>
-
-            <!-- Search Results -->
-            <div v-if="results.length" class="mt-2 max-h-60 overflow-y-auto">
-              <div
-                v-for="(item, index) in results"
-                :key="index"
-                class="p-2 hover:bg-gray-100 rounded cursor-pointer"
-                @click="handleResultClick(item)"
-              >
-                <div class="font-semibold text-gray-800">
-                  {{ item.Title || item.Position || item.Name }}
-                </div>
-                <div class="text-sm text-gray-500">
-                  {{ item.OrganizationName || item.Location || "" }}
-                </div>
-              </div>
-            </div>
-
-            <div
-              v-else-if="searchInput && activeMains.length"
+              v-if="!results.length && searchInput"
               class="text-center text-gray-500 text-sm mt-2"
             >
               No results found.
             </div>
+
+            <!-- Results -->
+            <div v-else class="max-h-60 overflow-y-auto">
+              <div
+                v-for="(item, index) in results"
+                :key="index"
+                class="p-2 hover:bg-gray-100 rounded cursor-pointer transition-all"
+                @mousedown.prevent="handleResultClick(item)"
+              >
+                <div class="font-semibold text-gray-800">
+                  {{ item.name }}
+                </div>
+                <div class="text-sm text-gray-500">
+                  {{ item.email || item.location }}
+                </div>
+                <div class="text-xs italic text-gray-400">
+                  {{
+                    item.type === "organization" ? "Organization" : "Applicant"
+                  }}
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
+      </div>
+      <!-- 🧭 Applicants Table Modal (Minimalist) -->
+      <div
+        v-if="showApplicantModal"
+        class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50"
+        @click.self="closeApplicantModal"
+      >
+        <div
+          class="bg-white rounded-xl shadow-lg w-full max-w-4xl p-6 relative max-h-[80vh] overflow-auto"
+        >
+          <!-- Close button -->
+          <button
+            @click="closeApplicantModal"
+            class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-light"
+          >
+            &times;
+          </button>
+
+          <h2 class="text-2xl font-semibold mb-6 text-gray-800">
+            All Applicants
+          </h2>
+
+          <!-- Applicants Table -->
+          <table class="w-full text-left border-separate border-spacing-y-2">
+            <thead>
+              <tr>
+                <th class="text-left text-gray-500 font-medium px-4 py-2">
+                  Name
+                </th>
+                <th class="text-left text-gray-500 font-medium px-4 py-2">
+                  Email
+                </th>
+                <th class="px-4 py-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="applicant in allApplicants"
+                :key="applicant.id"
+                class="bg-gray-50 hover:bg-gray-100 rounded-lg transition"
+              >
+                <td class="px-4 py-3 text-gray-800">{{ applicant.name }}</td>
+                <td class="px-4 py-3 text-gray-600">{{ applicant.email }}</td>
+                <td class="px-4 py-3 flex justify-center">
+                  <button
+                    @click="deleteApplicant(applicant.id)"
+                    class="bg-red-500 text-white text-sm px-3 py-1 rounded-md hover:bg-red-600 transition"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

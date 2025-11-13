@@ -22,7 +22,8 @@ use App\Http\Controllers\{
     SearchController,
     MyActivityController,
     EventController,
-    InterviewController
+    InterviewController,
+    AdminSearchController
 };
 
 // ----------------------
@@ -168,3 +169,5 @@ Route::get('/calendar/{applicantID}', [EventController::class, 'getUserEvents'])
 
 // Public routes for totals
 // ✅ Public routes (no auth needed)
+
+Route::get('/admin/search', [AdminSearchController::class, 'search']);
