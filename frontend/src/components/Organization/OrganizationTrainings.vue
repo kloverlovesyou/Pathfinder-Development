@@ -893,8 +893,8 @@ async saveTraining() {
     }
 
     // Combine date and times
-    const startDateTime = `${t.date}T${t.startTime}:00`;
-    const endDateTime = `${t.date}T${t.endTime}:00`;
+    const startDateTime = `${t.date} ${t.startTime}`; // "2025-11-14 14:30"
+    const endDateTime = `${t.date} ${t.endTime}`;     // "2025-11-14 16:30"
 
     const payload = {
       title: t.title,
