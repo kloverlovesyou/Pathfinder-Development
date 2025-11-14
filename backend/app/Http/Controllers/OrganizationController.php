@@ -115,25 +115,34 @@ class OrganizationController extends Controller
     
     public function destroyById($id)
     {
+        // Find the training by primary key
         $training = Training::find($id);
 
         if (!$training) {
             return response()->json(['message' => 'Training not found'], 404);
         }
 
-        // Wrap in transaction for safety
+        // Wrap in transaction to ensure related data is deleted safely
         DB::transaction(function () use ($training) {
-            // Delete related data first
+            // Delete related bookmarks
             $training->trainingbookmarks()->delete();
-            $training->registrations()->delete();
-            $training->attendances()->delete();
-            $training->tags()->detach(); // remove pivot table links
 
-            // Delete the training itself
+            // Delete registrations
+            $training->registrations()->delete();
+
+            // Delete attendances
+            if (method_exists($training, 'attendances')) {
+                $training->attendances()->delete();
+            }
+
+            // Detach tags (pivot table)
+            $training->tags()->detach();
+
+            // Finally, delete the training itself
             $training->delete();
         });
 
-        return response()->json(['message' => 'Training deleted successfully']);
+        return response()->json(['message' => 'Training and all related data deleted successfully']);
     }
 
 }
