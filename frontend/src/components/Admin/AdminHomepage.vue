@@ -8,7 +8,7 @@ const selectedOrg = ref(null);
 // Fetch all pending organizations
 async function loadPendingOrganizations() {
   try {
-    const res = await axios.get("http://127.0.0.1:8000/api/admin/pending-organizations");
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/admin/pending-organizations");
     organizations.value = res.data;
   } catch (err) {
     console.error("Error loading organizations:", err);
