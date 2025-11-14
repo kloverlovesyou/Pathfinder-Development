@@ -34,13 +34,15 @@ Route::get('/careers/{careerID}/recommended', [CareerRecommendationController::c
 Route::get('/careers/{careerID}/trainings', [CareerRecommendationController::class, 'recommendedTrainings']);
 Route::get('/careers/{careerID}/details', [CareerRecommendationController::class, 'careerDetails']);
 
+ 
+
 //auth required
 Route::middleware('auth.custom')->group(function () {
     // Certificate issuance
     Route::put('/registrations/{registrationID}/certificate', [RegistrationController::class, 'updateCertificate']);
     Route::post('/trainings/{trainingID}/certificates/bulk', [RegistrationController::class, 'issueBulkCertificates']);
 
-    // Applicant monitoring
+   // Applicant monitoring
     Route::get('/careers/{careerID}/applicants', [ApplicationController::class, 'getApplicantsByCareer']);
     Route::put('/applications/{applicationID}/status', [ApplicationController::class, 'updateStatus']);
     Route::put('/applications/{applicationID}/interview', [ApplicationController::class, 'updateInterview']);
