@@ -108,7 +108,7 @@ class OrganizationController extends Controller
         $organizations = Organization::where('status', 'pending')->get();
         return response()->json($organizations);
     }
-    // List All Organizations
+    // Delete organization by ID along with related data
     
     public function destroyById($id)
     {
@@ -118,15 +118,22 @@ class OrganizationController extends Controller
             return response()->json(['message' => 'Organization not found'], 404);
         }
 
-        // Delete related trainings
+        // Delete training bookmarks
+        foreach ($organization->trainings as $training) {
+            $training->bookmarks()->delete(); // assumes hasMany('TrainingBookmark') relationship
+        }
+
+        // Delete trainings
         $organization->trainings()->delete();
 
-        // Optionally: delete related careers too
+        // Delete careers
         $organization->careers()->delete();
 
+        // Finally, delete the organization
         $organization->delete();
 
-        return response()->json(['message' => 'Organization deleted successfully']);
+        return response()->json(['message' => 'Organization and related data deleted successfully']);
     }
-    
+
+
 }
