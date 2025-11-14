@@ -296,37 +296,62 @@ public function countsPartial()
     ]);
 }
 
-//This is for Updating Trainings
-public function update(Request $request, $id)
-{
-    $training = \App\Models\Training::find($id);
+    //This is for Updating Trainings
+    public function update(Request $request, $id)
+    {
+        $training = Training::find($id);
 
-    if (!$training) {
-        return response()->json(['message' => 'Training not found'], 404);
+        if (!$training) {
+            return response()->json(['message' => 'Training not found'], 404);
+        }
+
+        // SECURITY: Only the owning organization can update
+        $user = $request->user();
+        if (!$user || $user->organizationID !== $training->organizationID) {
+            return response()->json(['message' => 'Unauthorized to update this training'], 403);
+        }
+
+        // Validate incoming data
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'required|string|max:255',
+            'schedule' => 'required|date_format:Y-m-d H:i',
+            'end_time' => 'required|date_format:Y-m-d H:i|after:schedule',
+            'mode' => 'required|string|in:On-Site,Online',
+            'location' => 'nullable|string|max:255',
+            'training_link' => 'nullable|url',
+            'Tags' => 'nullable|array',
+            'Tags.*' => 'integer|exists:tag,TagID',
+        ]);
+
+        // Update core fields
+        $training->title = $validated['title'];
+        $training->description = $validated['description'];
+        $training->schedule = $validated['schedule'];
+        $training->end_time = $validated['end_time'];
+        $training->mode = $validated['mode'];
+
+        // Update mode-specific fields
+        if ($validated['mode'] === 'Online') {
+            $training->location = null;
+            $training->trainingLink = $validated['training_link'] ?? null;
+        } else { // On-Site
+            $training->trainingLink = null;
+            $training->location = $validated['location'] ?? null;
+        }
+
+        $training->save();
+
+        // Update tags if provided
+        if (isset($validated['Tags'])) {
+            $training->tags()->sync($validated['Tags']);
+        }
+
+        return response()->json([
+            'message' => 'Training updated successfully',
+            'data' => $training->load('tags', 'organization'),
+        ]);
     }
-
-    // Update main fields
-    $training->title = $request->title;
-    $training->description = $request->description;
-    $training->schedule = $request->schedule;
-    $training->mode = $request->mode;
-
-    // Correct mode-specific fields with proper column names
-    if ($request->mode === 'Online') {
-        $training->location = null; 
-        $training->trainingLink = $request->training_link; // must match DB column name
-    } elseif ($request->mode === 'On-Site') {
-        $training->trainingLink = null; 
-        $training->location = $request->location;
-    }
-
-    $training->save();
-
-    return response()->json([
-        'message' => 'Training updated successfully',
-        'data' => $training
-    ]);
-}
 
 public function destroy($id)
 {
