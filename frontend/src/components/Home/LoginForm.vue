@@ -184,7 +184,7 @@ const handleLogin = async () => {
       }
     );
 
-    const userData = response.data.user || response.data.organization;
+    const userData = response.data.user || response.data.organization;  
     const token = response.data.token;
     const role = userData.role || (userData.adminID ? "organization" : "applicant");
 
