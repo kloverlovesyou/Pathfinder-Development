@@ -866,35 +866,40 @@ async saveTraining() {
   }
 
   try {
-    // Validate required fields
-    if (
-      !this.newTraining.title ||
-      !this.newTraining.description ||
-      !this.newTraining.date ||
-      !this.newTraining.time ||
-      !this.newTraining.mode ||
-      (this.newTraining.mode === "On-Site" && !this.newTraining.location) ||
-      (this.newTraining.mode === "Online" && !this.newTraining.trainingLink)
-    ) {
+    const t = this.newTraining;
+
+    // Basic required fields check
+    if (!t.title || !t.description || !t.date || !t.time || !t.mode) {
       alert("PLEASE FILL OUT ALL REQUIRED FIELDS BEFORE POSTING!!!");
       return;
     }
 
+    // Mode-specific validation
+    if (t.mode === "On-Site" && (!t.location || t.location.trim() === "")) {
+      alert("Please provide a location for On-Site trainings.");
+      return;
+    }
+
+    if (t.mode === "Online" && (!t.trainingLink || t.trainingLink.trim() === "")) {
+      alert("Please provide a training link for Online trainings.");
+      return;
+    }
+
     // Combine date and time
-    const combinedSchedule = `${this.newTraining.date}T${this.newTraining.time}:00`;
+    const combinedSchedule = `${t.date}T${t.time}:00`;
 
     const payload = {
-      title: this.newTraining.title,
-      description: this.newTraining.description,
+      title: t.title,
+      description: t.description,
       schedule: combinedSchedule,
-      end_time: this.newTraining.endTime ? `${this.newTraining.date} ${this.newTraining.endTime}` : undefined,
-      mode: this.newTraining.mode,
-      location: this.newTraining.mode === "On-Site" ? this.newTraining.location : undefined,
-      training_link: this.newTraining.mode === "Online" ? this.newTraining.trainingLink : undefined,
-      tags: this.newTraining.Tags || []
+      end_time: t.endTime ? `${t.date} ${t.endTime}` : undefined,
+      mode: t.mode,
+      location: t.mode === "On-Site" ? t.location : undefined,
+      training_link: t.mode === "Online" ? t.trainingLink : undefined,
+      tags: t.Tags || []
     };
 
-    const response = await axios.post(import.meta.env.VITE_API_BASE_URL + "/trainings", payload, {
+    const response = await api.post("/trainings", payload, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json"
@@ -902,18 +907,12 @@ async saveTraining() {
     });
 
     if (response?.status >= 200 && response.status < 300 && response.data?.data) {
-      const newTraining = response.data.data;
-      this.upcomingtrainings.push(newTraining);
+      this.upcomingtrainings.push(response.data.data);
       alert("TRAINING POSTED SUCCESSFULLY!!!");
       this.closeTrainingPopup();
-    } else {
-      alert("Something went wrong. Please try again.");
     }
 
-    // Refresh trainings
     await this.fetchTrainings();
-
-    // Reset edit mode
     this.isEditMode = false;
     this.trainingToEditId = null;
 
