@@ -330,13 +330,11 @@ public function update(Request $request, $id)
 
 public function destroy($id)
 {
-    $training = Training::find($id);
+    // Delete all registrations tied to this training
+    DB::table('registration')->where('trainingID', $id)->delete();
 
-    if (!$training) {
-        return response()->json(['message' => 'Training not found'], 404);
-    }
-
-    $training->delete();
+    // Delete the training itself
+    DB::table('training')->where('trainingID', $id)->delete();
 
     return response()->json(['message' => 'Training deleted successfully']);
 }
