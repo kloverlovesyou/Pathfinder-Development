@@ -23,7 +23,7 @@ function openModal(org) {
 async function acceptOrg(id) {
   try {
     await axios.post(import.meta.env.VITE_API_BASE_URL + `/organization/${id}/approve`);
-    organizations.value = organizations.value.filter((o) => o.id !== id);
+    organizations.value = organizations.value.filter((o) => o.organizationID !== id);
     selectedOrg.value = null;
   } catch (err) {
     console.error("Approval failed:", err);
@@ -34,7 +34,7 @@ async function acceptOrg(id) {
 async function rejectOrg(id) {
   try {
     await axios.post(import.meta.env.VITE_API_BASE_URL + `/organization/${id}/reject`);
-    organizations.value = organizations.value.filter((o) => o.id !== id);
+    organizations.value = organizations.value.filter((o) => o.organizationID !== id);
     selectedOrg.value = null;
   } catch (err) {
     console.error("Rejection failed:", err);
@@ -62,7 +62,7 @@ onMounted(() => {
         <div v-if="organizations.length" class="space-y-4">
           <div
             v-for="org in organizations"
-            :key="org.id"
+            :key="org.organizationID"
             @click="openModal(org)"
             class="p-2 border rounded-lg cursor-pointer hover:bg-gray-50 flex justify-between items-center"
           >
@@ -74,13 +74,13 @@ onMounted(() => {
 
             <div class="flex space-x-2">
               <button
-                @click.stop="acceptOrg(org.id)"
+                @click.stop="acceptOrg(org.organizationID)"
                 class="px-4 py-2 text-white bg-customButton hover:bg-dark-slate rounded-lg transition"
               >
                 Accept
               </button>
               <button
-                @click.stop="rejectOrg(org.id)"
+                @click.stop="rejectOrg(org.organizationID)"
                 class="px-4 py-2 text-black bg-gray-400 hover:bg-gray-500 rounded-lg transition"
               >
                 Reject
@@ -128,13 +128,13 @@ onMounted(() => {
 
         <div class="mt-6 flex justify-end space-x-2">
           <button
-            @click="rejectOrg(selectedOrg.id)"
+            @click="rejectOrg(selectedOrg.organizationID)"
             class="px-4 py-2 text-black bg-gray-400 hover:bg-gray-500 rounded-lg"
           >
             Reject
           </button>
           <button
-            @click="acceptOrg(selectedOrg.id)"
+            @click="acceptOrg(selectedOrg.organizationID)"
             class="px-4 py-2 text-white bg-customButton hover:bg-dark-slate rounded-lg"
           >
             Accept
