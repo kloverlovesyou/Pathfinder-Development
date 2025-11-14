@@ -185,7 +185,7 @@ const handleLogin = async () => {
     );
 
     const userData = response.data.user || response.data.organization;
-    const token = response.data.token; // api_token from backend
+    const token = response.data.token;
     const role = userData.role || (userData.adminID ? "organization" : "applicant");
 
     let displayName = "";
@@ -197,20 +197,21 @@ const handleLogin = async () => {
       displayName = `${userData.firstName} ${userData.lastName}`;
     }
 
-    // 2️⃣ Store user info and token locally
+    // Store user + token
     localStorage.setItem("token", token);
     localStorage.setItem(
       "user",
-      JSON.stringify({
-        ...userData,
-        role,
-        displayName,
-      })
+      JSON.stringify({ ...userData, role, displayName })
     );
 
-    await regStore.fetchMyRegistrations(); // 🔹 ensures myRegistrations is populated
+    // 🔥 NEW — Verification check using 'status' column
+    if (role === "organization" && userData.status !== "approved") {
+      alert("⚠️ Your organization account is not yet verified by the admin.");
+    }
 
-    // 3️⃣ Redirect based on role
+    await regStore.fetchMyRegistrations();
+
+    // Redirect
     if (role === "organization") {
       router.push("/organization");
     } else if (role === "admin") {
