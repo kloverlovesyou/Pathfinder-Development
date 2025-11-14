@@ -612,9 +612,7 @@ export default {
         certificates: []
       },
 
-      /* ==========================
-         ✅ Dropdown Menu States
-      ========================== */
+    
       openUpcomingMenu: null,
       openCompletedMenu: null,
 

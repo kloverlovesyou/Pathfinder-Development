@@ -29,7 +29,7 @@ class RegistrationController extends Controller
     // Register applicant
     public function store(Request $request)
     {
-        $user = $request->user(); // ✅ Use user resolver
+        $user = $request->user(); 
 
         if (!$user) {
             return response()->json(['message' => 'Unauthorized'], 401);

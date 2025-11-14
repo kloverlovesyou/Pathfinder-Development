@@ -6,7 +6,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://path.com','http://localhost:5173', 'https://portal.pathfinder.com'],
+    'allowed_origins' => ['*'], // Allow all origins for development - restrict in production
 
     'allowed_origins_patterns' => [],
 
