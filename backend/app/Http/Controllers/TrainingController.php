@@ -295,4 +295,51 @@ public function countsPartial()
         'completed' => $completed,
     ]);
 }
+
+//This is for Updating Trainings
+public function update(Request $request, $id)
+{
+    $training = \App\Models\Training::find($id);
+
+    if (!$training) {
+        return response()->json(['message' => 'Training not found'], 404);
+    }
+
+    // Update main fields
+    $training->title = $request->title;
+    $training->description = $request->description;
+    $training->schedule = $request->schedule;
+    $training->mode = $request->mode;
+
+    // Correct mode-specific fields with proper column names
+    if ($request->mode === 'Online') {
+        $training->location = null; 
+        $training->trainingLink = $request->training_link; // must match DB column name
+    } elseif ($request->mode === 'On-Site') {
+        $training->trainingLink = null; 
+        $training->location = $request->location;
+    }
+
+    $training->save();
+
+    return response()->json([
+        'message' => 'Training updated successfully',
+        'data' => $training
+    ]);
+}
+
+public function destroy($id)
+{
+    $training = Training::find($id);
+
+    if (!$training) {
+        return response()->json(['message' => 'Training not found'], 404);
+    }
+
+    $training->delete();
+
+    return response()->json(['message' => 'Training deleted successfully']);
+}
+
+
 }
