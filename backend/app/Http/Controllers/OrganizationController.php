@@ -39,6 +39,7 @@ class OrganizationController extends Controller
             'emailAddress'=> $request->input('emailAddress'),
             'password'    => Hash::make($request->input('password')),
             'adminID'     => $request->input('adminID'),
+            'status'      => 'pending',
         ]);
 
         return response()->json([
@@ -61,6 +62,15 @@ class OrganizationController extends Controller
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
+        // BLOCK PENDING / REJECTED
+        if ($organization->status === 'pending') {
+            return response()->json(['message' => 'Your registration is still under review.'], 403);
+        }
+
+        if ($organization->status === 'rejected') {
+            return response()->json(['message' => 'Your registration was rejected.'], 403);
+        }
+
         // Generate or reuse token
         if (!$organization->api_token) {
             $organization->api_token = Str::random(60);
@@ -74,6 +84,30 @@ class OrganizationController extends Controller
         ]);
     }
 
+    public function approve($id)
+    {
+        $org = Organization::findOrFail($id);
+        $org->status = 'approved';
+        $org->save();
+
+        return response()->json(['message' => 'Organization approved']);
+    }
+
+    public function reject($id)
+    {
+        $org = Organization::findOrFail($id);
+        $org->status = 'rejected';
+        $org->save();
+
+        return response()->json(['message' => 'Organization rejected']);
+    }
+
+    // List pending organizations
+    public function pending()
+    {
+        $organizations = Organization::where('status', 'pending')->get();
+        return response()->json($organizations);
+    }
     // List All Organizations
     
 }

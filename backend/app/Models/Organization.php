@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $password
  * @property string|null $api_token
  * @property int|null $adminID
- * 
+ * @property string|null $status
  * @property Admin|null $admin
  * @property Collection|Career[] $careers
  * @property Collection|Training[] $trainings
@@ -49,7 +49,8 @@ class Organization extends Model
 		'emailAddress',
 		'password',
 		'api_token',
-		'adminID'
+		'adminID',
+		'status',
 	];
 
 	public function admin()
