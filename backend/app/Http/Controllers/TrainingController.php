@@ -281,20 +281,20 @@ public function total() {
     return response()->json(['totalTrainings' => $totalTrainings]);
 }
 
-//This is for numbers of upcoming and completed trainings
-public function countsPartial()
-{
-    // Ensure timezone matches your data
-    $now = now('Asia/Manila'); // Philippine Standard Time
+    //This is for numbers of upcoming and completed trainings
+    public function countsPartial()
+    {
+        // Ensure timezone matches your data
+        $now = now('Asia/Manila'); // Philippine Standard Time
 
-    $upcoming = \App\Models\Training::where('schedule', '>', $now)->count();
-    $completed = \App\Models\Training::where('schedule', '<=', $now)->count();
+        $upcoming = \App\Models\Training::where('schedule', '>', $now)->count();
+        $completed = \App\Models\Training::where('schedule', '<=', $now)->count();
 
-    return response()->json([
-        'upcoming' => $upcoming,
-        'completed' => $completed,
-    ]);
-}
+        return response()->json([
+            'upcoming' => $upcoming,
+            'completed' => $completed,
+        ]);
+    }
 
     //This is for Updating Trainings
     public function update(Request $request, $id)
@@ -353,16 +353,34 @@ public function countsPartial()
         ]);
     }
 
-public function destroy($id)
-{
-    // Delete all registrations tied to this training
-    DB::table('registration')->where('trainingID', $id)->delete();
+    public function destroy($id)
+    {
+        // Delete all registrations tied to this training
+        DB::table('registration')->where('trainingID', $id)->delete();
 
-    // Delete the training itself
-    DB::table('training')->where('trainingID', $id)->delete();
+        // Delete the training itself
+        DB::table('training')->where('trainingID', $id)->delete();
 
-    return response()->json(['message' => 'Training deleted successfully']);
-}
+        return response()->json(['message' => 'Training deleted successfully']);
+    }
 
+    public function destroyById($trainingID)
+    {
+        $training = Training::find($trainingID);
+
+        if (!$training) {
+            return response()->json(['message' => 'Training not found'], 404);
+        }
+
+        DB::transaction(function () use ($training) {
+            $training->trainingbookmarks()->delete();
+            $training->registrations()->delete();
+            $training->attendances()->delete();
+            $training->tags()->detach();
+            $training->delete();
+        });
+
+        return response()->json(['message' => 'Training deleted successfully']);
+    }
 
 }

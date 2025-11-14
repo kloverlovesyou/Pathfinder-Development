@@ -113,36 +113,36 @@ class OrganizationController extends Controller
 
     // Delete organization by ID along with related data
     
-    public function destroyById($id)
-    {
-        // Find the training by primary key
-        $training = Training::find($id);
+public function destroyById($id)
+{
+    // Find the training by primary key
+    $training = Training::find($id);
 
-        if (!$training) {
-            return response()->json(['message' => 'Training not found'], 404);
+    if (!$training) {
+        return response()->json(['message' => 'Training not found'], 404);
+    }
+
+    // Wrap in transaction to ensure related data is deleted safely
+    DB::transaction(function () use ($training) {
+        // Delete related bookmarks
+        $training->trainingbookmarks()->delete();
+
+        // Delete registrations
+        $training->registrations()->delete();
+
+        // Delete attendances
+        if (method_exists($training, 'attendances')) {
+            $training->attendances()->delete();
         }
 
-        // Wrap in transaction to ensure related data is deleted safely
-        DB::transaction(function () use ($training) {
-            // Delete related bookmarks
-            $training->trainingbookmarks()->delete();
+        // Detach tags (pivot table)
+        $training->tags()->detach();
 
-            // Delete registrations
-            $training->registrations()->delete();
+        // Finally, delete the training itself
+        $training->delete();
+    });
 
-            // Delete attendances
-            if (method_exists($training, 'attendances')) {
-                $training->attendances()->delete();
-            }
-
-            // Detach tags (pivot table)
-            $training->tags()->detach();
-
-            // Finally, delete the training itself
-            $training->delete();
-        });
-
-        return response()->json(['message' => 'Training and all related data deleted successfully']);
-    }
+    return response()->json(['message' => 'Training and all related data deleted successfully']);
+}
 
 }
