@@ -610,6 +610,15 @@ export default {
         console.error('Error fetching tags:', error);
       }
     },
+    deleteTraining(trainingID) {
+      // Example: call your API to delete the training
+      if (confirm("Are you sure you want to delete this training?")) {
+        // Call API here
+        console.log("Deleting training ID:", trainingID);
+        // After successful deletion, remove it from your local array
+        this.trainings = this.trainings.filter(t => t.trainingID !== trainingID);
+      }
+    },
 
     toggleTag(tagID) {
       const index = this.newTraining.Tags.indexOf(tagID);
@@ -940,6 +949,43 @@ async saveTraining() {
   }
 },
 
+async deleteTraining(trainingID) {
+  if (!confirm("Are you sure you want to delete this training?")) return;
+
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Please log in first.");
+      return;
+    }
+
+    // Call backend API to delete training
+    await api.delete(`/trainings/${trainingID}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    // Remove training from local arrays
+    this.upcomingtrainings = this.upcomingtrainings.filter(t => t.trainingID !== trainingID);
+    this.completedtrainings = this.completedtrainings.filter(t => t.trainingID !== trainingID);
+
+    alert("Training deleted successfully!");
+
+    // Optionally, refresh trainings from API to stay in sync
+    await this.fetchTrainings();
+
+  } catch (error) {
+    console.error("Error deleting training:", error);
+    if (error.response && error.response.status === 401) {
+      alert("Unauthorized. Please log in again.");
+    } else if (error.response && error.response.status === 403) {
+      alert("You don't have permission to delete this training.");
+    } else if (error.response && error.response.status === 404) {
+      alert("Training not found or already deleted.");
+    } else {
+      alert("Failed to delete training. Please try again.");
+    }
+  }
+},
     formatSchedule(schedule) {
       if (!schedule) return "No schedule set";
       try {
