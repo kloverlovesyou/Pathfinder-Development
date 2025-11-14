@@ -886,15 +886,20 @@ async saveTraining() {
       Tags: this.newTraining.Tags || []
     };
 
-    let response;
-    if (this.isEditMode && this.trainingToEditId) {
-      // UPDATE existing training
-      response = await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/trainings/${this.trainingToEditId}`,
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("✅ TRAINING UPDATED SUCCESSFULLY!");
+    const response = await api.post("/trainings", payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    console.log("API Response:", response);
+
+    if (response && response.status >= 200 && response.status < 300 && response.data?.data) {
+      const newTraining = response.data.data;
+      this.upcomingtrainings.push(newTraining);
+      alert("TRAINING POSTED SUCCESSFULLY!!!");
+      this.closeTrainingPopup();
     } else {
       // CREATE new training
       response = await axios.post(
