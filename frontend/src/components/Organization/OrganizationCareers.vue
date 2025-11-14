@@ -518,6 +518,7 @@ export default {
       openUpcomingMenu: null,
       openCompletedMenu: null,
 
+
       showCareerDetailsModal: false,
 
       showApplicantsModal: false,
@@ -710,60 +711,39 @@ export default {
         alert("Please log in to continue.");
         return;
       }
-      
+
       if (!person.requirements) {
         alert("No requirements file available for this applicant.");
         return;
       }
-      
+
       try {
         this.selectedPerson = person;
-        console.log("Fetching requirements for application ID:", person.id);
-        console.log("Requirements path in DB:", person.requirements);
-        
+        console.log("Fetching signed URL for application ID:", person.id);
+
+        // Call the signed URL API
         const response = await axios.get(
-          `http://127.0.0.1:8000/api/applications/${person.id}/requirements`,
+          `http://127.0.0.1:8000/api/applications/${person.id}/requirements-signed-url`,
           {
             headers: {
               Authorization: `Bearer ${token.trim()}`,
-              Accept: 'application/pdf, application/octet-stream, */*',
-              'Content-Type': 'application/json',
-            },
-            responseType: 'blob'
+              Accept: 'application/json'
+            }
           }
         );
 
-        console.log("Requirements response received:", response);
-        console.log("Response status:", response.status);
-        console.log("Response headers:", response.headers);
-        
-        // Check if response is actually a PDF
-        const contentType = response.headers['content-type'] || response.headers['Content-Type'] || '';
-        console.log("Content type:", contentType);
-        
-        // Check if the blob is valid
-        if (!response.data || response.data.size === 0) {
-          throw new Error("Empty file received");
+        console.log("Signed URL response received:", response);
+
+        if (!response.data || !response.data.signed_url) {
+          throw new Error("Signed URL not returned from server");
         }
 
-        const blob = new Blob([response.data], { type: contentType.includes('pdf') ? 'application/pdf' : 'application/octet-stream' });
-        console.log("Blob created, size:", blob.size, "bytes");
-        
-        if (blob.size === 0) {
-          throw new Error("Invalid PDF file - file is empty");
-        }
-        
-        // Revoke old URL if exists
-        if (this.requirementsUrl) {
-          URL.revokeObjectURL(this.requirementsUrl);
-        }
-        
-        this.requirementsUrl = URL.createObjectURL(blob);
-        console.log("Requirements URL created:", this.requirementsUrl);
+        // Assign the signed URL directly to iframe
+        this.requirementsUrl = response.data.signed_url;
         this.showRequirementsModal = true;
+
       } catch (error) {
-        console.error("Error fetching requirements:", error);
-        console.error("Error response:", error.response);
+        console.error("Error fetching signed URL:", error);
         if (error.response?.status === 404) {
           alert("Requirements file not found. The file may have been deleted or moved.");
         } else if (error.response?.status === 401) {
@@ -779,12 +759,11 @@ export default {
     },
 
 
+
     closeRequirementsModal() {
       this.showRequirementsModal = false;
-      if (this.requirementsUrl) {
-        URL.revokeObjectURL(this.requirementsUrl);
-        this.requirementsUrl = null;
-      }
+      this.requirementsUrl = null; // just clear the URL
+      this.selectedPerson = null;   // optional: clear the selected applicant
     },
 
     downloadRequirements() {

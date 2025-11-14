@@ -19,7 +19,7 @@ use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\CareerBookmarkController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\CareerRecommendationController;
-
+use App\Http\Controllers\ApplicationFileController;
 
 //no auth required
 Route::get('/trainings', [TrainingController::class, 'index']);
@@ -34,7 +34,11 @@ Route::get('/careers/{careerID}/recommended', [CareerRecommendationController::c
 Route::get('/careers/{careerID}/trainings', [CareerRecommendationController::class, 'recommendedTrainings']);
 Route::get('/careers/{careerID}/details', [CareerRecommendationController::class, 'careerDetails']);
 
- 
+Route::get('/signed/applications/{application}/{organization}/requirements',
+    [ApplicationFileController::class, 'serveSigned'])
+    ->name('signed.requirements.view')
+    ->middleware('signed');
+
 
 //auth required
 Route::middleware('auth.custom')->group(function () {
@@ -46,7 +50,8 @@ Route::middleware('auth.custom')->group(function () {
     Route::get('/careers/{careerID}/applicants', [ApplicationController::class, 'getApplicantsByCareer']);
     Route::put('/applications/{applicationID}/status', [ApplicationController::class, 'updateStatus']);
     Route::put('/applications/{applicationID}/interview', [ApplicationController::class, 'updateInterview']);
-    Route::get('/applications/{applicationID}/requirements', [ApplicationController::class, 'getRequirements']);
+    //Route::get('/applications/{applicationID}/requirements', [ApplicationController::class, 'getRequirements']);
+    Route::get('/applications/{applicationID}/requirements/signed-url', [ApplicationFileController::class, 'generateSignedUrl']);
 
     // Careers & Trainings
     Route::post('/trainings', [TrainingController::class, 'store']);
