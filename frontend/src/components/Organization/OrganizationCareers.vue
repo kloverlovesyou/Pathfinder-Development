@@ -723,7 +723,7 @@ export default {
 
       try {
         const token = localStorage.getItem("token");
-        await axios.delete(`http://127.0.0.1:8000/api/careers/${careerId}`, {
+        await axios.delete(import.meta.env.VITE_API_BASE_URL + `/careers/${careerId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -1238,10 +1238,6 @@ const logout = () => {
 </script>
 
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 24f77c21ac2ec1b23032aa40593a54f49876d366
 <style scoped>
 
 .tag-list-wrapper {
