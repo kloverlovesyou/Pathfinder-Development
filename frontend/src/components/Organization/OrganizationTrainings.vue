@@ -383,8 +383,6 @@
             <input v-model="newTraining.title" type="text" placeholder="Title" class="training-input" />
             <textarea v-model="newTraining.description" placeholder="Description" class="training-input"></textarea>
 
-
-            <!-- Schedule -->
             <!-- Schedule -->
 <div class="popup-form-group schedule-group">
   <label for="schedule">Schedule</label>
@@ -767,6 +765,31 @@ export default {
       }
     },
 
+    updateTraining(trainingID) {
+    const training = this.upcomingtrainings.find(t => t.trainingID === trainingID);
+    if (!training) return alert("Training not found.");
+
+    this.showTrainingPopup = true;
+
+    this.newTraining = {
+      title: training.title || "",
+      description: training.description || "",
+      date: training.schedule ? training.schedule.split(" ")[0] : "",
+      startTime: training.schedule ? training.schedule.split(" ")[1] : "",
+      endTime: training.end_time ? training.end_time.split(" ")[1] : "",
+      mode: training.mode || "",
+      location: training.location || "",
+      trainingLink: training.training_link || "",
+      Tags: training.tags || []
+    };
+
+    this.isEditMode = true;
+    this.trainingToEditId = trainingID;
+
+    // Ensure tags are loaded
+    this.fetchTags();
+  },
+
     closeRegistrantsModal() {
       this.showRegistrantsModal = false;
       this.registrantsList = [];
@@ -867,44 +890,30 @@ closeTrainingPopup() {
   this.newTagName = ""; // optional: clear the tag input too
 },
 
-async saveTraining() {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    alert("Please log in to continue.");
-    return;
-  }
+  async saveTraining() {
+    const token = localStorage.getItem("token");
+    if (!token) return alert("Please log in to continue.");
 
-  try {
     const t = this.newTraining;
 
-    // Basic required fields check
-    if (
-      !t.title?.trim() ||
-      !t.description?.trim() ||
-      !t.date ||
-      !t.startTime ||
-      !t.endTime ||
-      !t.mode
-    ) {
-      alert("PLEASE FILL OUT ALL REQUIRED FIELDS BEFORE POSTING!!!");
-      return;
+    // ✅ Validation
+    const requiredFields = ["title", "description", "date", "startTime", "endTime", "mode"];
+    for (const field of requiredFields) {
+      if (!t[field]?.toString().trim()) {
+        return alert("PLEASE FILL OUT ALL REQUIRED FIELDS BEFORE POSTING!!!");
+      }
     }
 
-    // Mode-specific validation
-    if (t.mode === "On-Site" && (!t.location || !t.location.trim())) {
-      alert("Please provide a location for On-Site trainings.");
-      return;
+    if (t.mode === "On-Site" && !t.location?.trim()) {
+      return alert("Please provide a location for On-Site trainings.");
+    }
+    if (t.mode === "Online" && !t.trainingLink?.trim()) {
+      return alert("Please provide a training link for Online trainings.");
     }
 
-    if (t.mode === "Online" && (!t.trainingLink || !t.trainingLink.trim())) {
-      alert("Please provide a training link for Online trainings.");
-      return;
-    }
-
-    // Combine date and times
-    const startDateTime = `${t.date} ${t.startTime}`; // "2025-11-14 14:30"
-    const endDateTime = `${t.date} ${t.endTime}`;     // "2025-11-14 16:30"
-
+    // ✅ Prepare payload
+    const startDateTime = `${t.date} ${t.startTime}`;
+    const endDateTime = `${t.date} ${t.endTime}`;
     const payload = {
       title: t.title,
       description: t.description,
@@ -916,38 +925,45 @@ async saveTraining() {
       tags: t.Tags || []
     };
 
-    const response = await api.post("/trainings", payload, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
-      }
-    });
+    try {
+      let response;
 
-    if (response?.status >= 200 && response.status < 300 && response.data?.data) {
-      this.upcomingtrainings.push(response.data.data);
-      alert("TRAINING POSTED SUCCESSFULLY!!!");
-      this.closeTrainingPopup();
-    }
+      if (this.isEditMode && this.trainingToEditId) {
+        // ✅ Update existing training
+        response = await api.put(`/trainings/${this.trainingToEditId}`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
-    await this.fetchTrainings();
-    this.isEditMode = false;
-    this.trainingToEditId = null;
+        // Update local array
+        const index = this.upcomingtrainings.findIndex(t => t.trainingID === this.trainingToEditId);
+        if (index > -1) this.upcomingtrainings[index] = response.data.data;
 
-  } catch (error) {
-    console.error("ERROR SAVING TRAINING:", error.response?.data || error);
-    if (error.response) {
-      if (error.response.status === 401) {
-        alert("Unauthorized: Please log in again.");
-      } else if (error.response.status === 422) {
-        alert("Validation failed. Please check your inputs.");
+        alert("Training updated successfully!");
       } else {
-        alert("Something went wrong. Please try again.");
+        // ✅ Create new training
+        response = await api.post("/trainings", payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response?.data?.data) this.upcomingtrainings.push(response.data.data);
+        alert("Training posted successfully!");
       }
-    } else {
-      alert("Unable to connect to the server.");
+
+      // Reset form and state
+      this.closeTrainingPopup();
+      this.isEditMode = false;
+      this.trainingToEditId = null;
+
+      // Refresh trainings from API
+      await this.fetchTrainings();
+
+    } catch (error) {
+      console.error("ERROR SAVING TRAINING:", error.response?.data || error);
+      if (error.response?.status === 401) alert("Unauthorized: Please log in again.");
+      else if (error.response?.status === 422) alert("Validation failed. Please check your inputs.");
+      else alert("Something went wrong. Please try again.");
     }
-  }
-},
+  },
 
 async deleteTraining(trainingID) {
   if (!confirm("Are you sure you want to delete this training?")) return;
