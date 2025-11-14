@@ -1,41 +1,51 @@
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
+import axios from "axios";
 
-const organizations = ref([
-  {
-    id: 1,
-    name: "TechNova Corp",
-    location: "Cebu City",
-    websiteURL: "https://technova.com",
-    emailAddress: "contact@technova.com",
-  },
-  {
-    id: 2,
-    name: "EduLink Solutions",
-    location: "Makati, Manila",
-    websiteURL: "https://edulink.ph",
-    emailAddress: "info@edulink.ph",
-  },
-]);
-
+const organizations = ref([]);
 const selectedOrg = ref(null);
+
+// Fetch all pending organizations
+async function loadPendingOrganizations() {
+  try {
+    const res = await axios.get("http://127.0.0.1:8000/api/admin/pending-organizations");
+    organizations.value = res.data;
+  } catch (err) {
+    console.error("Error loading organizations:", err);
+  }
+}
 
 function openModal(org) {
   selectedOrg.value = org;
 }
 
-function acceptOrg(id) {
-  alert(`✅ Organization ID ${id} has been accepted.`);
-  selectedOrg.value = null;
-  organizations.value = organizations.value.filter((o) => o.id !== id);
+// Approve Organization
+async function acceptOrg(id) {
+  try {
+    await axios.post(import.meta.env.VITE_API_BASE_URL + `/organization/${id}/approve`);
+    organizations.value = organizations.value.filter((o) => o.id !== id);
+    selectedOrg.value = null;
+  } catch (err) {
+    console.error("Approval failed:", err);
+  }
 }
 
-function rejectOrg(id) {
-  alert(`❌ Organization ID ${id} has been rejected.`);
-  selectedOrg.value = null;
-  organizations.value = organizations.value.filter((o) => o.id !== id);
+// Reject Organization
+async function rejectOrg(id) {
+  try {
+    await axios.post(import.meta.env.VITE_API_BASE_URL + `/organization/${id}/reject`);
+    organizations.value = organizations.value.filter((o) => o.id !== id);
+    selectedOrg.value = null;
+  } catch (err) {
+    console.error("Rejection failed:", err);
+  }
 }
+
+onMounted(() => {
+  loadPendingOrganizations();
+});
 </script>
+
 <template>
   <div class="min-h-screen p-3 rounded-lg font-poppins bg-gray-50">
     <!-- Main Area -->
@@ -58,7 +68,7 @@ function rejectOrg(id) {
           >
             <div>
               <h3 class="text-md font-medium">
-                {{ org.name }}
+                {{ org.organizationName ?? org.name }}
               </h3>
             </div>
 
@@ -88,7 +98,7 @@ function rejectOrg(id) {
     <!-- Modal -->
     <div
       v-if="selectedOrg"
-      class="fixed inset-0 flex items-center justify-center z-50"
+      class="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-20"
     >
       <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
         <button
@@ -101,7 +111,7 @@ function rejectOrg(id) {
         <h2 class="text-xl font-semibold mb-4">Organization Details</h2>
 
         <div class="space-y-2">
-          <p><strong>Name:</strong> {{ selectedOrg.name }}</p>
+          <p><strong>Name:</strong> {{ selectedOrg.organizationName ?? selectedOrg.name }}</p>
           <p><strong>Location:</strong> {{ selectedOrg.location }}</p>
           <p>
             <strong>Website:</strong>
@@ -109,8 +119,9 @@ function rejectOrg(id) {
               :href="selectedOrg.websiteURL"
               target="_blank"
               class="text-blue-600 underline"
-              >{{ selectedOrg.websiteURL }}</a
             >
+              {{ selectedOrg.websiteURL }}
+            </a>
           </p>
           <p><strong>Email:</strong> {{ selectedOrg.emailAddress }}</p>
         </div>
