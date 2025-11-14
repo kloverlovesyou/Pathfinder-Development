@@ -118,8 +118,15 @@ class OrganizationController extends Controller
             return response()->json(['message' => 'Organization not found'], 404);
         }
 
+        // Delete related trainings
+        $organization->trainings()->delete();
+
+        // Optionally: delete related careers too
+        $organization->careers()->delete();
+
         $organization->delete();
 
         return response()->json(['message' => 'Organization deleted successfully']);
     }
+    
 }
