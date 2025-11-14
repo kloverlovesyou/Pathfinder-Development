@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\DB;
+use App\Models\Training;
 use Illuminate\Http\Request;
 use App\Models\Organization;
 use Illuminate\Support\Facades\Hash;
@@ -108,30 +110,30 @@ class OrganizationController extends Controller
         $organizations = Organization::where('status', 'pending')->get();
         return response()->json($organizations);
     }
-    
+
     // Delete organization by ID along with related data
     
     public function destroyById($id)
     {
-        $organization = Organization::find($id);
+        $training = Training::find($id);
 
-        if (!$organization) {
-            return response()->json(['message' => 'Organization not found'], 404);
+        if (!$training) {
+            return response()->json(['message' => 'Training not found'], 404);
         }
 
-        foreach ($organization->trainings as $training) {
+        // Wrap in transaction for safety
+        DB::transaction(function () use ($training) {
+            // Delete related data first
             $training->trainingbookmarks()->delete();
             $training->registrations()->delete();
             $training->attendances()->delete();
-            $training->tags()->detach(); // clear pivot table
-        }
+            $training->tags()->detach(); // remove pivot table links
 
-        $organization->trainings()->delete();
-        $organization->careers()->delete();
-        $organization->delete();
+            // Delete the training itself
+            $training->delete();
+        });
 
-        return response()->json(['message' => 'Organization and all related data deleted successfully']);
+        return response()->json(['message' => 'Training deleted successfully']);
     }
-
 
 }
