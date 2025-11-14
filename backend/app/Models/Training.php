@@ -74,10 +74,7 @@ class Training extends Model
 		return $this->hasMany(Trainingbookmark::class, 'trainingID');
 	}
 
-	public function attendances(): HasMany
-	{
-		return $this->hasMany(Attendance::class, 'trainingID');
-	}
+	
 	public function tags()
 	{
 		return $this->belongsToMany(Tag::class, 'training_tag', 'trainingID', 'TagID');
