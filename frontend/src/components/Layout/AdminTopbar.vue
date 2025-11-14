@@ -9,7 +9,7 @@ const toasts = ref([]);
 async function fetchApplicants() {
   console.log("📡 Fetching applicants...");
   try {
-    const res = await fetch("http://127.0.0.1:8000/api/admin/applicants");
+    const res = await fetch(import.meta.env.VITE_API_BASE_URL + "/admin/applicants");
     if (!res.ok) throw new Error("Failed to fetch applicants");
 
     const data = await res.json();
@@ -42,7 +42,7 @@ const openApplicantModal = async () => {
 async function deleteApplicant(id) {
   try {
     const res = await fetch(
-      `http://127.0.0.1:8000/api/admin/applicants/${id}`,
+      import.meta.env.VITE_API_BASE_URL + `admin/applicants/${id}`,
       {
         method: "DELETE",
       }
@@ -92,7 +92,7 @@ async function handleResultClick(item) {
     selectedApplicant.value = item;
 
     // Fetch all applicants
-    const res = await fetch("http://127.0.0.1:8000/api/admin/applicants");
+    const res = await fetch(import.meta.env.VITE_API_BASE_URL + "/admin/applicants");
     const data = await res.json();
 
     allApplicants.value = data.map((a) => ({
@@ -119,7 +119,7 @@ async function performSearch() {
 
   try {
     const res = await fetch(
-      `http://127.0.0.1:8000/api/admin/search?query=${encodeURIComponent(
+      import.meta.env.VITE_API_BASE_URL + `/admin/search?query=${encodeURIComponent(
         searchInput.value
       )}`
     );
@@ -179,7 +179,7 @@ const highlightedOrg = ref(null);
 // Fetch organizations
 async function fetchOrganizations() {
   try {
-    const res = await fetch("http://127.0.0.1:8000/api/admin/organizations");
+    const res = await fetch(import.meta.env.VITE_API_BASE_URL + "/admin/organizations");
     if (!res.ok) throw new Error("Failed to fetch organizations");
     const data = await res.json();
 
@@ -270,7 +270,7 @@ function confirmOrgDelete(org) {
 async function deleteOrganization(id) {
   try {
     const res = await fetch(
-      `http://127.0.0.1:8000/api/admin/organizations/${id}`,
+      import.meta.env.VITE_API_BASE_URL + `/admin/organizations/${id}`,
       {
         method: "DELETE",
       }
