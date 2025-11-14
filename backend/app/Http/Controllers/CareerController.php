@@ -113,22 +113,22 @@ public function countsPartial()
 }
 
     public function show($id)
-{
-    $career = Career::with('organization')->findOrFail($id);
+    {
+        $career = Career::with('organization')->findOrFail($id);
 
-    return response()->json([
-        'careerID' => $career->careerID,
-        'title' => $career->position,
-        'detailsAndInstructions' => $career->detailsAndInstructions,
-        'qualifications' => $career->qualifications,
-        'requirements' => $career->requirements,
-        'applicationLetterAddress' => $career->applicationLetterAddress,
-        'deadlineOfSubmission' => $career->deadlineOfSubmission,
-        'organization' => $career->organization->name ?? 'Unknown',
-        'link' => $career->link ?? null,
-        'mode' => $career->mode ?? null,
-        'location' => $career->location ?? null,
-    ]);
+        return response()->json([
+            'careerID' => $career->careerID,
+            'title' => $career->position,
+            'detailsAndInstructions' => $career->detailsAndInstructions,
+            'qualifications' => $career->qualifications,
+            'requirements' => $career->requirements,
+            'applicationLetterAddress' => $career->applicationLetterAddress,
+            'deadlineOfSubmission' => $career->deadlineOfSubmission,
+            'organization' => $career->organization->name ?? 'Unknown',
+            'link' => $career->link ?? null,
+            'mode' => $career->mode ?? null,
+            'location' => $career->location ?? null,
+        ]);
 }
  public function update(Request $request, $id)
     {
