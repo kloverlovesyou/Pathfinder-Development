@@ -794,7 +794,7 @@ export default {
           };
 
           const response = await axios.put(
-            `http://127.0.0.1:8000/api/careers/${this.careerToEditId}`,
+            import.meta.env.VITE_API_BASE_URL + `/careers/${this.careerToEditId}`,
             payload,
             { headers: { Authorization: `Bearer ${token}` } }
           );
@@ -820,7 +820,7 @@ export default {
           };
 
           await axios.post(
-            `http://127.0.0.1:8000/api/careers`,
+            import.meta.env.VITE_API_BASE_URL + `/careers`,
             payload,
             { headers: { Authorization: `Bearer ${token}` } }
           );
