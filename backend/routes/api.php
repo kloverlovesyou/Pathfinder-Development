@@ -185,3 +185,4 @@ Route::get('/admin/pending-organizations', [OrganizationController::class, 'pend
 Route::post('/organization/{id}/approve', [OrganizationController::class, 'approve']);
 Route::post('/organization/{id}/reject', [OrganizationController::class, 'reject']);
 Route::delete('/admin/organizations/{id}', [OrganizationController::class, 'destroyById']);
+Route::delete('/trainings/{trainingID}', [TrainingController::class, 'destroyById']);
