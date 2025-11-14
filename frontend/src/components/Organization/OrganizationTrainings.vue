@@ -144,6 +144,7 @@
               <div v-if="openUpcomingMenu === training.trainingID" class="dropdown-menu" @click.stop>
                 <ul>
                   <li @click="deleteTraining(training.trainingID)">Delete Training</li>
+                  <li @click="updateTraining(training.trainingID)">Update Training</li>
                 </ul>
               </div>
             </div>
@@ -375,7 +376,7 @@
           </button>
 
           <!-- Title -->
-          <h2 class="training-popup-title">Post Training</h2>
+          <h2 class="training-popup-title">{{ isEditMode ? "Update Training" : "Post Training" }}</h2>
 
           <!-- Form -->
           <form @submit.prevent="saveTraining" class="training-popup-form">
@@ -520,7 +521,7 @@
 
 
             <!-- Save -->
-            <button type="submit" class="training-post-btn">Post</button>
+            <button type="submit" class="training-post-btn">{{ isEditMode ? "Update" : "Post" }}</button>
           </form>
         </div>
       </div>
@@ -2482,9 +2483,12 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 }
 
 .global-search-bar::placeholder {
-  color: #9ca3af;       /* same as Tailwind’s text-gray-400 */
-  font-style: italic;   /* optional — match whatever Training uses */
-  opacity: 1;           /* ensures consistent rendering */
+  color: #9ca3af;
+  /* same as Tailwind’s text-gray-400 */
+  font-style: italic;
+  /* optional — match whatever Training uses */
+  opacity: 1;
+  /* ensures consistent rendering */
 }
 
 .global-search-bar:focus {

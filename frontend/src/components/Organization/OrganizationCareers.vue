@@ -138,7 +138,8 @@
               <div class="menu-icon" @click.stop="toggleUpcomingMenu(career.careerID || career.id)">⋮</div>
               <div v-if="openUpcomingMenu === (career.careerID || career.id)" class="dropdown-menu" @click.stop>
                 <ul>
-                  <li @click.stop="openApplicantsModal">Applicants</li>
+                  <li @click="deleteCareer(career)">Delete Career</li>
+                  <li @click="updateCareer(career)">Update Career</li>
                 </ul>
               </div>
             </div>
@@ -172,7 +173,7 @@
               <div class="menu-icon" @click.stop="toggleCompletedMenu(career.careerID || career.id)">⋮</div>
               <div v-if="openCompletedMenu === (career.careerID || career.id)" class="dropdown-menu" @click.stop>
                 <ul>
-                  <li @click.stop="openApplicantsModal">Applicants</li>
+                  <li @click="deleteCareer(career)">Delete Career</li>
                 </ul>
               </div>
             </div>
@@ -356,7 +357,7 @@
           </button>
 
           <!-- Title -->
-          <h2 class="career-popup-title">Post Career</h2>
+          <h2 class="career-popup-title">{{ isEditMode ? 'Update Career' : 'Post Career' }}</h2>
 
           <form @submit.prevent="saveCareer" class="Career-popup-form">
             <!-- Inputs -->
@@ -402,6 +403,8 @@
 
             <!-- Submit -->
             <button type="submit" class="career-save-btn">Post</button>
+            <!-- Save -->
+            <button type="submit" class="career-save-btn">{{ isEditMode ? 'Update' : 'Post' }}</button>
           </form>
         </div>
       </div>
@@ -465,6 +468,9 @@ export default {
 
       showAllUpcoming: false,
       showAllCompleted: false,
+
+      isEditMode: false,
+      careerToEditId: null,
 
       scheduleData: {
         date: "",
@@ -704,6 +710,151 @@ export default {
       this.scheduleData = { date: "", onSite: false, online: false, link: "" };
     },
 
+    // Delete a career
+    async deleteCareer(career) {
+      const careerId = career.careerID || career.id; // fallback to id
+      if (!careerId) {
+        console.error("No career ID provided", career);
+        return;
+      }
+
+      const confirmDelete = confirm(`Are you sure you want to delete "${career.position}"?`);
+      if (!confirmDelete) return;
+
+      try {
+        const token = localStorage.getItem("token");
+        await axios.delete(`http://127.0.0.1:8000/api/careers/${careerId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        // Remove from local array
+        const index = this.upcomingCareers.findIndex(c => (c.careerID || c.id) === careerId);
+        if (index !== -1) this.upcomingCareers.splice(index, 1);
+
+        alert("✅ Career deleted successfully!");
+      } catch (error) {
+        console.error("ERROR DELETING CAREER:", error.response?.data || error);
+        alert("❌ Failed to delete career. See console for details.");
+      }
+    },
+
+    // Open career in edit mode
+    updateCareer(career) {
+      this.showCareerPopup = true;
+      this.isEditMode = true;
+      this.careerToEditId = career.careerID || career.id;
+
+      this.newCareer = {
+        position: career.position,
+        details: career.detailsAndInstructions,
+        qualifications: career.qualifications,
+        requirements: career.requirements,
+        letterAddress: career.applicationLetterAddress,
+        deadline: career.deadlineOfSubmission,
+      };
+    },
+
+    // Save career (create or update)
+    async saveCareer() {
+      try {
+        const {
+          position,
+          details,
+          qualifications,
+          requirements,
+          letterAddress,
+          deadline
+        } = this.newCareer;
+
+        if (!position || !details || !qualifications || !requirements || !letterAddress || !deadline) {
+          alert("⚠️ Please fill out all fields.");
+          return;
+        }
+
+        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+        const organizationID = storedUser?.organizationID;
+
+        if (!organizationID) {
+          alert("⚠️ Could not determine your organization ID.");
+          return;
+        }
+
+        const token = localStorage.getItem("token");
+
+        if (this.isEditMode && this.careerToEditId) {
+          // ✅ FIXED PAYLOAD FOR UPDATE
+          const payload = {
+            position,
+            detailsAndInstructions: details,
+            qualifications,
+            requirements,
+            applicationLetterAddress: letterAddress,
+            deadlineOfSubmission: deadline,
+            organizationID
+          };
+
+          const response = await axios.put(
+            `http://127.0.0.1:8000/api/careers/${this.careerToEditId}`,
+            payload,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+
+          const index = this.upcomingCareers.findIndex(
+            c => (c.careerID || c.id) === this.careerToEditId
+          );
+          if (index !== -1) {
+            this.upcomingCareers[index] = response.data.data || response.data;
+          }
+
+          alert("✅ Career updated successfully!");
+        } else {
+          // ✅ FIXED PAYLOAD FOR CREATE
+          const payload = {
+            position,
+            detailsAndInstructions: details,
+            qualifications,
+            requirements,
+            applicationLetterAddress: letterAddress,
+            deadlineOfSubmission: deadline,
+            organizationID
+          };
+
+          await axios.post(
+            `http://127.0.0.1:8000/api/careers`,
+            payload,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+
+          await this.fetchCareers(); // refresh list
+          alert("✅ Career posted successfully!");
+        }
+
+        this.closeCareerPopup();
+        this.resetNewCareer();
+
+      } catch (error) {
+        console.error("ERROR SAVING CAREER:", error.response?.data || error);
+        console.error("Validation errors:", error.response?.data?.errors); // 👈 Add this for debugging
+        alert("❌ Something went wrong while saving the career.");
+      } finally {
+        this.isEditMode = false;
+        this.careerToEditId = null;
+      }
+    },
+
+    resetNewCareer() {
+      this.newCareer = {
+        position: "",
+        details: "",
+        qualifications: "",
+        requirements: "",
+        letterAddress: "",
+        deadline: "",
+      };
+      this.isEditMode = false;
+      this.careerToEditId = null;
+    },
+
     // ✅ OPEN VIEW SCHEDULE MODAL (only when status = Interview Scheduled)
     openViewScheduleModal(person) {
       if (person.status === "Interview Scheduled") {
@@ -790,13 +941,25 @@ export default {
     async fetchCareers() {
       try {
         const response = await axios.get(import.meta.env.VITE_API_BASE_URL +"/careers");
-        this.upcomingCareers = response.data;
+         // Normalize so every career has a careerID
+        this.upcomingCareers = response.data.map(career => ({
+          ...career,
+          careerID: career.id, // if backend uses 'id', map it to 'careerID'
+        }));
       } catch (error) {
         console.error("ERROR FETCHING CAREERS:", error);
       }
     },
 
-    openCareerPopup() {
+    openCareerPopup(career = null) {
+      if (career) {
+        // Editing existing career
+        this.newCareer = { ...career }; // pre-fill the form fields
+        this.isEditingCareer = true;    // flag to differentiate
+      } else {
+        this.resetNewCareer();          // new career
+        this.isEditingCareer = false;   // flag for creating
+      }
       this.showCareerPopup = true;
     },
     closeCareerPopup() {
@@ -1031,36 +1194,18 @@ export default {
 </script>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
 const isSidebarOpen = ref(true);
 const organizationName = ref("");
 
-
 // Toggle sidebar
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
 };
 
-// For On-Going Careers
-const openUpcomingMenu = ref(null);
-function toggleUpcomingMenu(id) {
-  openUpcomingMenu.value = openUpcomingMenu.value === id ? null : id;
-}
-
-// For Filled Out Careers
-const openCompletedMenu = ref(null);
-function toggleCompletedMenu(id) {
-  openCompletedMenu.value = openCompletedMenu.value === id ? null : id;
-}
-
-// Close all dropdowns when clicking outside
-function closeAllMenus() {
-  openUpcomingMenu.value = null;
-  openCompletedMenu.value = null;
-}
 // Get org name from localStorage on mount
 onMounted(() => {
   const storedUser = localStorage.getItem("user");
@@ -1070,10 +1215,6 @@ onMounted(() => {
       organizationName.value = user.displayName || user.name;
     }
   }
-  document.addEventListener("click", closeAllMenus);
-});
-onBeforeUnmount(() => {
-  document.removeEventListener("click", closeAllMenus);
 });
 
 // Sidebar navigation functions
@@ -1096,7 +1237,10 @@ const logout = () => {
 </script>
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 24f77c21ac2ec1b23032aa40593a54f49876d366
 <style scoped>
 
 .tag-list-wrapper {
