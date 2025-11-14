@@ -113,36 +113,35 @@ class OrganizationController extends Controller
 
     // Delete organization by ID along with related data
     
-public function destroyById($id)
-{
-    // Find the training by primary key
-    $training = Training::find($id);
+    public function destroyById($id)
+    {
+        $organization = Organization::find($id);
 
-    if (!$training) {
-        return response()->json(['message' => 'Training not found'], 404);
-    }
-
-    // Wrap in transaction to ensure related data is deleted safely
-    DB::transaction(function () use ($training) {
-        // Delete related bookmarks
-        $training->trainingbookmarks()->delete();
-
-        // Delete registrations
-        $training->registrations()->delete();
-
-        // Delete attendances
-        if (method_exists($training, 'attendances')) {
-            $training->attendances()->delete();
+        if (!$organization) {
+            return response()->json(['message' => 'Organization not found'], 404);
         }
 
-        // Detach tags (pivot table)
-        $training->tags()->detach();
+        // Wrap in transaction to delete everything safely
+        DB::transaction(function () use ($organization) {
+            // Delete all trainings and related data
+            foreach ($organization->trainings as $training) {
+                $training->trainingbookmarks()->delete();
+                $training->registrations()->delete();
+                if (method_exists($training, 'attendances')) {
+                    $training->attendances()->delete();
+                }
+                $training->tags()->detach();
+                $training->delete();
+            }
 
-        // Finally, delete the training itself
-        $training->delete();
-    });
+            // Delete other organization-related data if any
+            $organization->careers()->delete();
 
-    return response()->json(['message' => 'Training and all related data deleted successfully']);
-}
+            // Finally, delete the organization
+            $organization->delete();
+        });
+
+        return response()->json(['message' => 'Organization and all related data deleted successfully']);
+    }
 
 }
