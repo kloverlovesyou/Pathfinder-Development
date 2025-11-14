@@ -869,30 +869,38 @@ async saveTraining() {
     const t = this.newTraining;
 
     // Basic required fields check
-    if (!t.title || !t.description || !t.date || !t.time || !t.mode) {
+    if (
+      !t.title?.trim() ||
+      !t.description?.trim() ||
+      !t.date ||
+      !t.startTime ||
+      !t.endTime ||
+      !t.mode
+    ) {
       alert("PLEASE FILL OUT ALL REQUIRED FIELDS BEFORE POSTING!!!");
       return;
     }
 
     // Mode-specific validation
-    if (t.mode === "On-Site" && (!t.location || t.location.trim() === "")) {
+    if (t.mode === "On-Site" && (!t.location || !t.location.trim())) {
       alert("Please provide a location for On-Site trainings.");
       return;
     }
 
-    if (t.mode === "Online" && (!t.trainingLink || t.trainingLink.trim() === "")) {
+    if (t.mode === "Online" && (!t.trainingLink || !t.trainingLink.trim())) {
       alert("Please provide a training link for Online trainings.");
       return;
     }
 
-    // Combine date and time
-    const combinedSchedule = `${t.date}T${t.time}:00`;
+    // Combine date and times
+    const startDateTime = `${t.date}T${t.startTime}:00`;
+    const endDateTime = `${t.date}T${t.endTime}:00`;
 
     const payload = {
       title: t.title,
       description: t.description,
-      schedule: combinedSchedule,
-      end_time: t.endTime ? `${t.date} ${t.endTime}` : undefined,
+      schedule: startDateTime,
+      end_time: endDateTime,
       mode: t.mode,
       location: t.mode === "On-Site" ? t.location : undefined,
       training_link: t.mode === "Online" ? t.trainingLink : undefined,
