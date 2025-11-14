@@ -110,4 +110,16 @@ class OrganizationController extends Controller
     }
     // List All Organizations
     
+    public function destroyById($id)
+    {
+        $organization = Organization::find($id);
+
+        if (!$organization) {
+            return response()->json(['message' => 'Organization not found'], 404);
+        }
+
+        $organization->delete();
+
+        return response()->json(['message' => 'Organization deleted successfully']);
+    }
 }
