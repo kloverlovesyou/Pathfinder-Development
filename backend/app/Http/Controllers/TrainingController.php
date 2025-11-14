@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Training;
-use App\Models\Attendance;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -375,7 +374,7 @@ public function total() {
         DB::transaction(function () use ($training) {
             $training->trainingbookmarks()->delete();
             $training->registrations()->delete();
-            $training->attendances()->delete();
+            //$training->attendances()->delete();
             $training->tags()->detach();
             $training->delete();
         });
