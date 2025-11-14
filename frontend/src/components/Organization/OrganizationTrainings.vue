@@ -867,8 +867,16 @@ async saveTraining() {
 
   try {
     // Validate required fields
-    if (!this.newTraining.title || !this.newTraining.description || !this.newTraining.date || !this.newTraining.time || !this.newTraining.mode) {
-      alert("PLEASE FILL OUT ALL FIELDS BEFORE POSTING!!!");
+    if (
+      !this.newTraining.title ||
+      !this.newTraining.description ||
+      !this.newTraining.date ||
+      !this.newTraining.time ||
+      !this.newTraining.mode ||
+      (this.newTraining.mode === "On-Site" && !this.newTraining.location) ||
+      (this.newTraining.mode === "Online" && !this.newTraining.trainingLink)
+    ) {
+      alert("PLEASE FILL OUT ALL REQUIRED FIELDS BEFORE POSTING!!!");
       return;
     }
 
@@ -879,42 +887,31 @@ async saveTraining() {
       title: this.newTraining.title,
       description: this.newTraining.description,
       schedule: combinedSchedule,
-      end_time: this.newTraining.endTime ? `${this.newTraining.date} ${this.newTraining.endTime}` : null, // optional
+      end_time: this.newTraining.endTime ? `${this.newTraining.date} ${this.newTraining.endTime}` : undefined,
       mode: this.newTraining.mode,
-      location: this.newTraining.mode === "On-Site" ? this.newTraining.location || null : null,
-      training_link: this.newTraining.mode === "Online" ? this.newTraining.trainingLink || null : null,
-      Tags: this.newTraining.Tags || []
+      location: this.newTraining.mode === "On-Site" ? this.newTraining.location : undefined,
+      training_link: this.newTraining.mode === "Online" ? this.newTraining.trainingLink : undefined,
+      tags: this.newTraining.Tags || []
     };
 
-    const response = await api.post("/trainings", payload, {
+    const response = await axios.post(import.meta.env.VITE_API_BASE_URL + "/trainings", payload, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json"
       }
     });
 
-    console.log("API Response:", response);
-
-    if (response && response.status >= 200 && response.status < 300 && response.data?.data) {
+    if (response?.status >= 200 && response.status < 300 && response.data?.data) {
       const newTraining = response.data.data;
       this.upcomingtrainings.push(newTraining);
       alert("TRAINING POSTED SUCCESSFULLY!!!");
       this.closeTrainingPopup();
     } else {
-      // CREATE new training
-      response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/trainings`,
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("✅ TRAINING POSTED SUCCESSFULLY!");
+      alert("Something went wrong. Please try again.");
     }
 
-    console.log("API Response:", response);
-
-    // Update trainings list
+    // Refresh trainings
     await this.fetchTrainings();
-    this.closeTrainingPopup();
 
     // Reset edit mode
     this.isEditMode = false;
