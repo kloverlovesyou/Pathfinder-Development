@@ -144,6 +144,7 @@
               <div v-if="openUpcomingMenu === training.trainingID" class="dropdown-menu" @click.stop>
                 <ul>
                   <li @click="deleteTraining(training.trainingID)">Delete Training</li>
+                  <li @click="updateTraining(training.trainingID)">Update Training</li>
                 </ul>
               </div>
             </div>
@@ -375,7 +376,7 @@
           </button>
 
           <!-- Title -->
-          <h2 class="training-popup-title">Post Training</h2>
+          <h2 class="training-popup-title">{{ isEditMode ? "Update Training" : "Post Training" }}</h2>
 
           <!-- Form -->
           <form @submit.prevent="saveTraining" class="training-popup-form">
@@ -520,7 +521,7 @@
 
 
             <!-- Save -->
-            <button type="submit" class="training-post-btn">Post</button>
+            <button type="submit" class="training-post-btn">{{ isEditMode ? "Update" : "Post" }}</button>
           </form>
         </div>
       </div>
@@ -545,6 +546,10 @@ export default {
       showAllCompleted: false,
       activeTrainingQR,  // <-- QR code value (reactive)
       activeTrainingId,  // <-- which training is active
+      isEditMode: false,
+      trainingToEditId: null,
+      qrCodeValue: null,
+      qrExpiresAt: null,
       activeTrainingId: null, // which training shows the QR
       
 
@@ -862,60 +867,56 @@ async saveTraining() {
 
   try {
     // Validate required fields
-    if (
-      !this.newTraining.title ||
-      !this.newTraining.description ||
-      !this.newTraining.date ||
-      !this.newTraining.startTime ||
-      !this.newTraining.endTime ||
-      !this.newTraining.mode
-    ) {
+    if (!this.newTraining.title || !this.newTraining.description || !this.newTraining.date || !this.newTraining.time || !this.newTraining.mode) {
       alert("PLEASE FILL OUT ALL FIELDS BEFORE POSTING!!!");
       return;
     }
 
     // Combine date and time
-    const startSchedule = `${this.newTraining.date} ${this.newTraining.startTime}`;
-    const endSchedule = `${this.newTraining.date} ${this.newTraining.endTime}`;
-
-    // Make sure endTime is after startTime
-    if (new Date(endSchedule) <= new Date(startSchedule)) {
-      alert("End time must be later than start time!");
-      return;
-    }
+    const combinedSchedule = `${this.newTraining.date}T${this.newTraining.time}:00`;
 
     const payload = {
       title: this.newTraining.title,
       description: this.newTraining.description,
-      schedule: startSchedule,
-      end_time: endSchedule, // 👈 NEW
+      schedule: combinedSchedule,
+      end_time: this.newTraining.endTime ? `${this.newTraining.date} ${this.newTraining.endTime}` : null, // optional
       mode: this.newTraining.mode,
-      location: this.newTraining.location || null,
-      training_link: this.newTraining.trainingLink || null,
-      Tags: this.newTraining.Tags
+      location: this.newTraining.mode === "On-Site" ? this.newTraining.location || null : null,
+      training_link: this.newTraining.mode === "Online" ? this.newTraining.trainingLink || null : null,
+      Tags: this.newTraining.Tags || []
     };
 
-    const response = await api.post("/trainings", payload, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
-      }
-    });
+    let response;
+    if (this.isEditMode && this.trainingToEditId) {
+      // UPDATE existing training
+      response = await axios.put(
+        `${import.meta.env.VITE_API_BASE_URL}/trainings/${this.trainingToEditId}`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("✅ TRAINING UPDATED SUCCESSFULLY!");
+    } else {
+      // CREATE new training
+      response = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/trainings`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("✅ TRAINING POSTED SUCCESSFULLY!");
+    }
 
     console.log("API Response:", response);
 
-    if (response && response.status >= 200 && response.status < 300 && response.data?.data) {
-      const newTraining = response.data.data;
-      this.upcomingtrainings.push(newTraining);
-      alert("TRAINING POSTED SUCCESSFULLY!!!");
-      this.closeTrainingPopup();
-    } else {
-      console.error("Unexpected response:", response);
-      alert("Something went wrong while saving the training. Please try again.");
-    }
+    // Update trainings list
+    await this.fetchTrainings();
+    this.closeTrainingPopup();
+
+    // Reset edit mode
+    this.isEditMode = false;
+    this.trainingToEditId = null;
 
   } catch (error) {
-    console.error("ERROR SAVING TRAINING:", error);
+    console.error("ERROR SAVING TRAINING:", error.response?.data || error);
     if (error.response) {
       if (error.response.status === 401) {
         alert("Unauthorized: Please log in again.");
@@ -2482,9 +2483,12 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 }
 
 .global-search-bar::placeholder {
-  color: #9ca3af;       /* same as Tailwind’s text-gray-400 */
-  font-style: italic;   /* optional — match whatever Training uses */
-  opacity: 1;           /* ensures consistent rendering */
+  color: #9ca3af;
+  /* same as Tailwind’s text-gray-400 */
+  font-style: italic;
+  /* optional — match whatever Training uses */
+  opacity: 1;
+  /* ensures consistent rendering */
 }
 
 .global-search-bar:focus {
