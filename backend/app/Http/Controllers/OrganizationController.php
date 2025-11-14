@@ -110,7 +110,7 @@ class OrganizationController extends Controller
     }
     // Delete organization by ID along with related data
     
-    public function destroyById($id)
+   public function destroyById($id)
     {
         $organization = Organization::find($id);
 
@@ -118,15 +118,15 @@ class OrganizationController extends Controller
             return response()->json(['message' => 'Organization not found'], 404);
         }
 
-        // Delete training bookmarks
+        // Delete all bookmarks of trainings
         foreach ($organization->trainings as $training) {
-            $training->bookmarks()->delete(); // assumes hasMany('TrainingBookmark') relationship
+            $training->trainingbookmarks()->delete(); // use correct relationship name
         }
 
         // Delete trainings
         $organization->trainings()->delete();
 
-        // Delete careers
+        // Delete careers if needed
         $organization->careers()->delete();
 
         // Finally, delete the organization
