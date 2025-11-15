@@ -320,8 +320,8 @@ onMounted(async () => {
           class="p-4 bg-blue-gray rounded-lg relative hover:bg-gray-300 transition cursor-pointer"
           @click="openModal(career)"
         >
-          <h3 class="font-semibold text-lg">{{ career.position }}</h3>
-          <p class="text-gray-700 font-medium">
+          <h3 class="font-semibold">{{ career.position }}</h3>
+          <p class="text-gray-700">
             {{ career.organization }}
           </p>
         </div>

@@ -235,8 +235,8 @@ const showModal = ref(false);
         >
           <!-- Left: Training info -->
           <div>
-            <h3 class="font-semibold text-lg">{{ training.title }}</h3>
-            <p class="text-gray-700 font-medium">
+            <h3 class="font-semibold">{{ training.title }}</h3>
+            <p class="text-gray-700">
               {{ training.organization.name }}
             </p>
           </div>
