@@ -3,6 +3,8 @@ import { ref, reactive, computed, onMounted, nextTick, watch } from "vue";
 import axios from "axios";
 import QrcodeVue from "qrcode.vue";
 import { useRegistrationStore } from "@/stores/registrationStore";
+import { useTrainingStore } from "@/stores/trainingStore";
+const trainingStore = useTrainingStore();
 const regStore = useRegistrationStore();
 const myRegistrations = computed(() => regStore.myRegistrations);
 // Remove this local reactive store
@@ -26,7 +28,6 @@ const PH_TIME_OFFSET = 8 * 60; // +8 hours in minutes
 const organizations = ref([]);
 const isSidebarOpen = ref(false);
 // Trainings data
-const trainings = ref([]);
 const qrCountdowns = reactive({});
 let qrIntervals = {};
 const qrCodeValue = ref(null);
@@ -40,14 +41,13 @@ const bookmarkedTrainings = ref([]);
 
 // Computed trainings with org info
 const trainingsWithOrg = computed(() =>
-  trainings.value.map((t) => {
+  trainingStore.trainings.map((t) => {
     const org = organizations.value.find(
       (o) => o.organizationID === t.organizationID
     );
     return {
       ...t,
       organizationName: org ? org.name : "Unknown",
-      displaySchedule: t.schedule || "TBD",
     };
   })
 );
@@ -58,17 +58,12 @@ const trainingsWithOrg = computed(() =>
 async function openTrainingModal(training) {
   selectedTraining.value = training;
   showModal.value = true;
-  isModalOpen.value = true;
 
-  // Start QR countdown if registered
-  if (regStore.registeredPosts[training.trainingID]) {
-    // If attendance_link is missing, fetch it
-    if (!regStore.registeredPosts[training.trainingID].attendance_link) {
-      await regStore.fetchTrainingQRCode(training.trainingID);
-    }
+  // ✅ Generate QR via store
+  await trainingStore.generateQR(training);
 
-    startModalQRCountdown(training);
-  }
+  // Modal will automatically read from trainingStore.qrCodes
+  // No need for local QR logic here
 }
 
 
@@ -191,18 +186,16 @@ async function toggleRegister(training) {
   await regStore.toggleRegister(training.trainingID);
 
 }
-
+const trainings = computed(() => trainingStore.trainings);
 // ---------------------------
 // Lifecycle
 // ---------------------------
 onMounted(async () => {
+  await trainingStore.fetchTrainings(); // store now has trainings and auto-generates QR
   await fetchOrganizations();
-  await fetchTrainings();
-   await regStore.fetchBookmarks();
-
-  // Load registrations via store
+  await regStore.fetchBookmarks();
   await regStore.fetchMyRegistrations();
-  
+  trainingStore.autoGenerateQRs(); // Auto-generate QR codes for current trainings
 });
 
 const calendarOpen = ref(false);
@@ -228,7 +221,7 @@ const showModal = ref(false);
       <!-- Training Cards -->
       <div class="space-y-4">
         <div
-          v-for="training in trainings"
+          v-for="training in trainingsWithOrg"
           :key="training.trainingID"
           class="p-4 bg-blue-gray rounded-lg hover:bg-gray-300 transition cursor-pointer flex justify-between items-center"
           @click="openTrainingModal(training)"
@@ -236,21 +229,23 @@ const showModal = ref(false);
           <!-- Left: Training info -->
           <div>
             <h3 class="font-semibold text-lg">{{ training.title }}</h3>
-            <p class="text-gray-700 font-medium">
-              {{ training.organization?.name || training.organizationName }}
-            </p>
+            <p class="text-gray-700 font-medium">{{ training.organizationName }}</p>
           </div>
 
-          <!-- Right: QR code if registered -->
+          <!-- Right: QR code -->
           <div v-if="myRegistrations.has(training.trainingID)">
             <div
               v-if="
-                training.attendance_key &&
+                trainingStore.qrCodes[training.trainingID]?.value &&
                 new Date(training.end_time) > new Date()
               "
             >
-              <qrcode-vue :value="training.attendance_link" :size="80" />
+              <qrcode-vue
+                :value="trainingStore.qrCodes[training.trainingID].value"
+                :size="80"
+              />
             </div>
+
             <div v-else>
               <p class="text-sm text-gray-500 text-center">
                 QR code not yet generated or expired.
@@ -269,15 +264,15 @@ const showModal = ref(false);
     />
 
     <TrainingModal
-    :isOpen="showModal"
-    :training="selectedTraining"
-    :isRegistered="myRegistrations.has(selectedTraining?.trainingID)"
-    :isBookmarked="bookmarkedTrainings.includes(selectedTraining?.trainingID)"
-    :bookmarkLoading="bookmarkLoading[selectedTraining?.trainingID]"
-    :registerLoading="regStore.loading[selectedTraining?.trainingID]" 
-    @close="showModal = false"
-    @toggle-register="toggleRegister"
-    @bookmark="toggleBookmark"
+  :isOpen="showModal"
+  :training="selectedTraining"
+  :isRegistered="myRegistrations.has(selectedTraining?.trainingID)"
+  :isBookmarked="bookmarkedTrainings.includes(selectedTraining?.trainingID)"
+  :bookmarkLoading="bookmarkLoading[selectedTraining?.trainingID]"
+  :registerLoading="regStore.loading[selectedTraining?.trainingID]" 
+  @close="showModal = false"
+  @toggle-register="toggleRegister"
+  @bookmark="toggleBookmark"
     />
     <!-- Toast Notifications -->
     <div class="toast toast-end toast-top z-50">

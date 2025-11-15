@@ -44,6 +44,11 @@ Route::get('/careers/{careerID}/recommended', [CareerRecommendationController::c
 Route::get('/careers/{careerID}/trainings', [CareerRecommendationController::class, 'recommendedTrainings']);
 Route::get('/careers/{careerID}/details', [CareerRecommendationController::class, 'careerDetails']);
 
+// Attendance check-in
+Route::post('/attendance/checkin', [TrainingController::class, 'attendanceCheckin']);
+Route::post('/trainings/generate-qr', [TrainingController::class, 'generateQRCode']);
+
+
 // Signed application requirements
 Route::get('/signed/applications/{application}/{organization}/requirements',
     [ApplicationFileController::class, 'serveSigned'])
@@ -94,8 +99,8 @@ Route::middleware('auth.custom')->group(function () {
     Route::post('/trainings', [TrainingController::class, 'store']);
     Route::put('/trainings/{id}', [TrainingController::class, 'update']);
     Route::delete('/trainings/{id}', [TrainingController::class, 'destroy']);
-    Route::post('/trainings/generate-qr', [TrainingController::class, 'generateQRCode']);
-    Route::get('/attendance/checkin', [TrainingController::class, 'attendanceCheckin']);
+    
+  
     Route::get('/trainings/{trainingID}', [TrainingController::class, 'show']);
 
     // Careers

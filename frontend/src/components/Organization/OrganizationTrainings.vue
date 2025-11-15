@@ -713,7 +713,7 @@ export default {
         formData.append('certificate', this.selectedRegistrant.uploadedFile);
         
         const response = await axios.put(
-          'http://127.0.0.1:8000/api/registrations/${this.selectedRegistrant.id}/certificate',
+          import.meta.env.VITE_API_BASE_URL + '/registrations/${this.selectedRegistrant.id}/certificate',
           formData,
           {
             headers: {
@@ -784,7 +784,7 @@ export default {
         });
         
         const response = await axios.post(
-          `http://127.0.0.1:8000/api/trainings/${this.selectedTraining.trainingID}/certificates/bulk`,
+          import.meta.env.VITE_API_BASE_URL + `trainings/${this.selectedTraining.trainingID}/certificates/bulk`,
           formData,
           {
             headers: {

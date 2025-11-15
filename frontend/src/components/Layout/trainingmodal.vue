@@ -1,7 +1,11 @@
 <script setup>
 import { ref, watch, onBeforeUnmount } from "vue";
 import QrcodeVue from "qrcode.vue";
+import { useTrainingStore } from "@/stores/trainingStore";
 
+const trainingStore = useTrainingStore();
+
+const qrCode = ref("");
 const props = defineProps({
   isOpen: Boolean,
   training: Object,
@@ -22,13 +26,15 @@ let countdownInterval = null;
 // 🕒 Countdown logic
 watch(
   () => props.training,
-  (t) => {
+  async (t) => {
     if (!t || !t.end_time) {
       countdown.value = "";
       qrExpired.value = true;
+      qrCode.value = "";
       return;
     }
 
+    // Start countdown logic (your existing code)
     const endTime = new Date(t.end_time);
     clearInterval(countdownInterval);
 
@@ -39,14 +45,11 @@ watch(
       if (diff <= 0) {
         countdown.value = "00:00";
         qrExpired.value = true;
+        qrCode.value = "";
         clearInterval(countdownInterval);
       } else {
-        const m = Math.floor(diff / 60000)
-          .toString()
-          .padStart(2, "0");
-        const s = Math.floor((diff % 60000) / 1000)
-          .toString()
-          .padStart(2, "0");
+        const m = Math.floor(diff / 60000).toString().padStart(2, "0");
+        const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, "0");
         countdown.value = `${m}:${s}`;
         qrExpired.value = false;
       }
@@ -54,6 +57,13 @@ watch(
 
     update();
     countdownInterval = setInterval(update, 1000);
+
+    // ✅ Generate QR code via the store
+    if (props.isRegistered) {
+      await trainingStore.generateQR(t);
+      const storedQR = trainingStore.qrCodes[t.trainingID];
+      qrCode.value = storedQR?.value || "";
+    }
   },
   { immediate: true }
 );
@@ -69,6 +79,14 @@ function formatDate(datetime) {
     day: "numeric",
     year: "numeric",
   });
+}
+
+async function generateModalQR(training) {
+  await trainingStore.generateQR(training);
+
+  // Grab the QR for this training from the store
+  const storedQR = trainingStore.qrCodes[training.trainingID];
+  qrCode.value = storedQR?.value || "";
 }
 
 function formatTime(datetime) {
@@ -195,19 +213,12 @@ function formatTime(datetime) {
 
         <!-- QR Code -->
         <div v-if="isRegistered" class="mt-4 text-center">
-          <div
-            v-if="training.attendance_key && !qrExpired"
-            class="flex flex-col items-center"
-          >
-            <qrcode-vue :value="training.attendance_link" :size="120" />
-            <p class="text-sm text-gray-600 mt-1">
-              Expires in: {{ countdown }}
-            </p>
+          <div v-if="qrCode && !qrExpired" class="flex flex-col items-center">
+            <qrcode-vue :value="qrCode" :size="120" />
+            <p class="text-sm text-gray-600 mt-1">Expires in: {{ countdown }}</p>
           </div>
           <div v-else>
-            <p class="text-sm text-gray-500">
-              QR code not yet generated or expired.
-            </p>
+            <p class="text-sm text-gray-500">QR code not yet generated or expired.</p>
           </div>
         </div>
       </template>

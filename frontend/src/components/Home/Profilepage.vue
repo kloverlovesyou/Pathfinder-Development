@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, reactive, nextTick } from "vue";
+import { ref, onMounted, reactive, nextTick, computed } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
 import QrcodeVue from "qrcode.vue";
@@ -112,6 +112,12 @@ async function openTrainingModal(training) {
     console.error("❌ Error opening training modal:", err);
   }
 }
+
+// Computed property for QR code value
+const qrCodeValue = computed(() => {
+  if (!selectedTraining.value) return "";
+  return `${import.meta.env.VITE_API_BASE_URL}/attendance?trainingID=${selectedTraining.value.trainingID}&key=${selectedTraining.value.attendance_key}`;
+});
 
 function closeCareerModal() {
   if (careerModal.value && careerModal.value.open) {
@@ -975,7 +981,7 @@ onMounted(fetchMyActivities);
             </p>
 
             <QrcodeVue
-              :value="`http://127.0.0.1:8000/attendance?trainingID=${selectedTraining.trainingID}&key=${selectedTraining.attendance_key}`"
+              :value="qrCodeValue"
               :size="200"
               level="H"
               class="mx-auto"
