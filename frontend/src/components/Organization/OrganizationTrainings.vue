@@ -544,12 +544,26 @@ export default {
       globalSearchQuery: '',
       showAllUpcoming: false,
       showAllCompleted: false,
+      activeTrainingQR,  // <-- QR code value (reactive)
+      activeTrainingId,  // <-- which training is active
       isEditMode: false,
       trainingToEditId: null,
       qrCodeValue: null,
       qrExpiresAt: null,
       activeTrainingId: null, // which training shows the QR
       
+      showBulkCertModal: false,
+        certificateData: {
+        certTrackingID: '',
+        certGivenDate: '',
+        file: null,
+       },
+       selectedRegistrant: null,
+      bulkCertData: {
+        baseTrackingID: '',
+        certGivenDate: '',
+        certificates: []
+      },
 
       /* ==========================
          ✅ Dropdown Menu States
@@ -600,6 +614,148 @@ export default {
   },
 
   methods: {
+   /* async issueCertificate() {
+      try {
+        if (!this.selectedRegistrant) {
+          alert("No registrant selected.");
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('certTrackingID', this.certificateData.certTrackingID);
+        formData.append('certGivenDate', this.certificateData.certGivenDate);
+        if (this.certificateData.file) {
+          formData.append('certificate', this.certificateData.file);
+        }
+
+        await axios.put(
+          'http://127.0.0.1:8000/api/registrations/' + this.selectedRegistrant.registrationID + '/certificate',
+          formData,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+
+        alert('Certificate issued successfully!');
+        this.showCertUploadModal = false;
+        this.loadRegistrants(); // reload updated data
+      } catch (error) {
+        console.error('Certificate issue failed:', error);
+        alert(
+          error.response?.data?.message ||
+          'Failed to issue certificate. Check required fields and try again.'
+        );
+      }
+    }, */
+
+
+    async sendCertificateDetails() {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please log in to continue.");
+        return;
+      }
+      
+      try {
+        const formData = new FormData();
+        formData.append('certTrackingID', this.selectedRegistrant.certificateTrackingID);
+        formData.append('certGivenDate', this.selectedRegistrant.certificateGivenDate);
+        formData.append('certificate', this.selectedRegistrant.uploadedFile);
+        
+        const response = await axios.put(
+          import.meta.env.VITE_API_BASE_URL + '/registrations/${this.selectedRegistrant.id}/certificate',
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'multipart/form-data',
+            },
+          }
+        );
+        
+        alert("Certificate issued successfully!");
+        this.closeCertUploadModal();
+        await this.openRegistrantsModal(this.selectedTraining); // Refresh list
+      } catch (error) {
+        console.error("Error issuing certificate:", error);
+        if (error.response) {
+          alert(error.response.data.message || "Failed to issue certificate.");
+        } else {
+          alert("An error occurred while issuing the certificate.");
+        }
+      }
+    },
+
+    openBulkCertModal() {
+      const registrantsWithoutCert = this.registrantsList.filter(r => !r.hasCertificate);
+      if (registrantsWithoutCert.length === 0) {
+        alert("All registrants already have certificates.");
+        return;
+      }
+      this.bulkCertData = {
+        baseTrackingID: '',
+        certGivenDate: '',
+        certificates: new Array(registrantsWithoutCert.length).fill(null)
+      };
+      this.showBulkCertModal = true;
+    },
+
+    closeBulkCertModal() {
+      this.showBulkCertModal = false;
+      this.bulkCertData = {
+        baseTrackingID: '',
+        certGivenDate: '',
+        certificates: []
+      };
+    },
+
+    handleBulkFileUpload(event, index) {
+      this.bulkCertData.certificates[index] = event.target.files[0];
+      this.$forceUpdate(); // Force reactivity update
+    },
+
+    async sendBulkCertificates() {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please log in to continue.");
+        return;
+      }
+      
+      try {
+        const formData = new FormData();
+        formData.append('baseTrackingID', this.bulkCertData.baseTrackingID);
+        formData.append('certGivenDate', this.bulkCertData.certGivenDate);
+        
+        this.bulkCertData.certificates.forEach((file, index) => {
+          if (!file) {
+            throw new Error(`Please upload a certificate file for all registrants. Missing file at index ${index}`);
+          }
+          formData.append(`certificates[${index}]`, file);
+        });
+        
+        const response = await axios.post(
+          import.meta.env.VITE_API_BASE_URL + `trainings/${this.selectedTraining.trainingID}/certificates/bulk`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'multipart/form-data',
+            },
+          }
+        );
+        
+        alert("Certificates issued successfully to all registrants!");
+        this.closeBulkCertModal();
+        await this.openRegistrantsModal(this.selectedTraining); // Refresh list
+      } catch (error) {
+        console.error("Error issuing bulk certificates:", error);
+        if (error.response) {
+          alert(error.response.data.message || "Failed to issue certificates.");
+        } else {
+          alert(error.message || "An error occurred while issuing certificates.");
+        }
+      }
+    },
+
+
     async fetchTags() {
       try {
         const response = await axios.get(import.meta.env.VITE_API_BASE_URL +'/tags');

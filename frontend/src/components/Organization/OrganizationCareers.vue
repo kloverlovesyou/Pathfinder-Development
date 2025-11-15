@@ -578,7 +578,7 @@ export default {
       try {
         this.selectedCareer = career;
         const response = await axios.get(
-          `http://127.0.0.1:8000/api/careers/${careerID}/applicants`,
+          import.meta.env.VITE_API_BASE_URL + `/careers/${careerID}/applicants`,
           {
             headers: {
               Authorization: `Bearer ${token.trim()}`,
@@ -640,7 +640,7 @@ export default {
       
       try {
         const response = await axios.put(
-          `http://127.0.0.1:8000/api/applications/${person.id}/status`,
+          import.meta.env.VITE_API_BASE_URL + `/applications/${person.id}/status`,
           { status: person.status },
           {
             headers: {
@@ -694,7 +694,7 @@ export default {
 
         // Call the signed URL API
         const response = await axios.get(
-          `http://127.0.0.1:8000/api/applications/${person.id}/requirements-signed-url`,
+          import.meta.env.VITE_API_BASE_URL + `/applications/${person.id}/requirements-signed-url`,
           {
             headers: {
               Authorization: `Bearer ${token.trim()}`,
@@ -812,7 +812,7 @@ export default {
         console.log("Sending interview schedule payload:", payload);
 
         const response = await axios.put(
-          `http://127.0.0.1:8000/api/applications/${this.selectedPerson.id}/interview`,
+          import.meta.env.VITE_API_BASE_URL + `/applications/${this.selectedPerson.id}/interview`,
           payload,
           {
             headers: {
@@ -998,7 +998,6 @@ export default {
     },
 
     // ✅ OPEN SCHEDULE MODAL (only when status = For Review)
-    // OPEN SCHEDULE MODAL (only when status = for interview)
     openScheduleModal(person) {
       if (person.status === "for interview") {
         this.selectedPerson = person;

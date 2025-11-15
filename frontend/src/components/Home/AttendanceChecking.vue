@@ -104,7 +104,6 @@ const messageBoxClass = computed(() =>
 const messageIcon = computed(() =>
   submittedSuccess.value ? '✅' : '⚠️'
 );
-
 onMounted(async () => {
   trainingID.value = route.query.trainingID;
   key.value = route.query.key;
@@ -119,9 +118,8 @@ onMounted(async () => {
     const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/training/${trainingID.value}`);
     training.value = res.data;
 
-    if (training.value.attendance_key && training.value.attendance_key !== key.value) {
-      invalidQR.value = "❌ QR code key does not match this training.";
-    }
+    // ✅ Remove front-end QR key mismatch check
+    // Backend will handle validation during check-in
   } catch (error) {
     invalidQR.value = "❌ Failed to load training information. Please check the link or try again.";
   } finally {

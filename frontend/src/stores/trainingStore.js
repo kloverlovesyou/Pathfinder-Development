@@ -4,91 +4,72 @@ import axios from "axios";
 export const useTrainingStore = defineStore("trainingStore", {
   state: () => ({
     trainings: [],
-    qrCodeValue: null,
-    qrExpiresAt: null,
+    qrCodes: {},       // { trainingID: { value, expires_at } }
     activeTrainingId: null,
-    qrExpireTimeout: null,
+    qrExpireTimeouts: {}, // per-training timeout
   }),
+
   actions: {
     async fetchTrainings() {
       try {
-        const response = await axios.get(import.meta.env.VITE_API_BASE_URL + "/trainings");
+        const response = await axios.get(
+          import.meta.env.VITE_API_BASE_URL + "/trainings"
+        );
+
         this.trainings = response.data;
 
-        // Schedule QR generation for trainings that are currently active
-        this.autoGenerateQRs(this.trainings);
+        // Auto generate QR for ongoing trainings
+        this.autoGenerateQRs();
       } catch (error) {
         console.error("Error fetching trainings:", error);
       }
     },
 
-    scheduleQR(training) {
+  async generateQR(training) {
+    try {
+      const token = localStorage.getItem("token");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      const response = await axios.post(
+        import.meta.env.VITE_API_BASE_URL + "/trainings/generate-qr",
+        { trainingID: training.trainingID },
+        { headers } // headers will be empty for public users
+      );
+
+      this.qrCodes = {
+      ...this.qrCodes,
+      [training.trainingID]: {
+        value: `${import.meta.env.VITE_FRONTEND_URL}/attendance/checkin?trainingID=${training.trainingID}&key=${response.data.key}`,
+        expires_at: new Date(response.data.expires_at),
+      },
+    };  
+    } catch (error) {
+      console.error("QR GENERATION FAILED:", error.response?.data || error);
+    }
+  },
+
+    autoGenerateQRs() {
       const now = new Date();
-      const startTime = new Date(training.schedule);
-      const endTime = new Date(training.end_time);
 
-      if (now >= startTime && now < endTime) {
-        this.generateQR(training);
-      } else if (now < startTime) {
-        const msUntilStart = startTime - now;
-        setTimeout(() => this.generateQR(training), msUntilStart);
-        console.log(`QR for "${training.title}" will generate in ${msUntilStart / 1000}s`);
-      }
-    },
-
-    async generateQR(training) {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await axios.post(
-          import.meta.env.VITE_API_BASE_URL + "/trainings/generate-qr",
-          { trainingID: training.trainingID },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        this.qrCodeValue =
-          import.meta.env.VITE_API_BASE_URL +
-          `/attendance/checkin?trainingID=${training.trainingID}&key=${response.data.key}`;
-
-        this.qrExpiresAt = new Date(response.data.expires_at);
-        this.activeTrainingId = training.trainingID;
-
-        console.log(`✅ QR Generated for "${training.title}", expires at ${this.qrExpiresAt}`);
-
-        if (this.qrExpireTimeout) clearTimeout(this.qrExpireTimeout);
-
-        const now = new Date();
-        const msUntilExpire = this.qrExpiresAt - now;
-
-        if (msUntilExpire > 0) {
-          this.qrExpireTimeout = setTimeout(() => {
-            this.qrCodeValue = null;
-            this.qrExpiresAt = null;
-            this.activeTrainingId = null;
-            console.log(`QR for "${training.title}" expired.`);
-          }, msUntilExpire);
-        }
-      } catch (error) {
-        console.error("QR GENERATION FAILED:", error.response?.data || error);
-      }
-    },
-
-    autoGenerateQRs(trainings) {
-      const now = new Date();
-      trainings.forEach(training => {
+      this.trainings.forEach((training) => {
         const startTime = new Date(training.schedule);
         const endTime = new Date(training.end_time);
+        const now = new Date();
 
         if (now >= startTime && now < endTime) {
-          if (this.activeTrainingId !== training.trainingID) {
-            this.generateQR(training);
+          if (
+            !this.qrCodes[training.trainingID] ||
+            new Date(this.qrCodes[training.trainingID].expires_at) < now
+          ) {
+            this.generateQR(training); // no need for isPublic flag
           }
         }
       });
     },
 
     startPolling() {
-      this.fetchTrainings(); // initial fetch
-      setInterval(() => this.fetchTrainings(), 30000);
+      this.fetchTrainings(); // initial load
+      setInterval(() => this.fetchTrainings(), 30000); // every 30 sec
     },
   },
 });
