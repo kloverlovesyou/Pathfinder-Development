@@ -11,7 +11,6 @@ function openModalCalendar(event) {
   console.log("Event clicked:", event);
 }
 
-const registeredPosts = reactive({}); // stores registered trainings
 
 async function fetchMyRegistrations() {
   const token = localStorage.getItem("token");
@@ -120,22 +119,6 @@ async function fetchMyApplications() {
   }
 }
 
-async function fetchMyRegistrations() {
-  try {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    const res = await axios.get('http://127.0.0.1:8000/api/registrations', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    myRegistrations.value = new Set(res.data.map(r => r.trainingID));
-    // Also update registeredPosts for UI state
-    res.data.forEach(r => {
-      registeredPosts.value[r.trainingID] = true;
-    });
-  } catch (error) {
-    console.error("Error fetching registrations:", error);
-  }
-}
 
 // Fetch all careers for dropdown
 async function fetchAllCareers() {
@@ -396,70 +379,8 @@ const dayEvents = ref([]);
 
 // Apply modal
 
-function openApplyModal(career) {
-  selectedPost.value = career;
-  applyModalOpen.value = true;
-}
-
-function closeApplyModal() {
-  applyModalOpen.value = false;
-  uploadedFile.value = null;
-  selectedPost.value = null;
-}
-
-function handleFileUpload(e) {
-  uploadedFile.value = e.target.files[0];
-}
 
 // ✅ Submit application with file upload
-async function submitApplication() {
-  if (!uploadedFile.value) {
-    addToast("Please upload a PDF file first.", "accent");
-    return;
-  }
-
-  if (!selectedPost.value) {
-    addToast("No career selected", "error");
-    return;
-  }
-
-  try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      addToast('PLEASE LOG IN FIRST', 'accent');
-      return;
-    }
-
-    const form = new FormData();
-    form.append('careerID', selectedPost.value.careerID);
-    form.append('requirements', uploadedFile.value);
-
-    await axios.post('http://127.0.0.1:8000/api/applications', form, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-
-    addToast('APPLICATION SUBMITTED SUCCESSFULLY', 'success');
-    const id = selectedPost.value.careerID;
-    appliedPosts.value[id] = true;
-    myApplications.value.add(id);
-
-    closeApplyModal();
-  } catch (error) {
-    if (error.response?.status === 409) {
-      addToast('YOU ALREADY APPLIED TO THIS CAREER', 'accent');
-    } else if (error.response?.status === 401) {
-      addToast('UNAUTHORIZED. PLEASE LOG IN AGAIN', 'accent');
-    } else if (error.response?.status === 422) {
-      addToast('INVALID INPUT. ONLY PDF UP TO 5MB', 'accent');
-    } else {
-      addToast('FAILED TO SUBMIT APPLICATION', 'accent');
-    }
-  }
-}
-
 // Helpers
 const isTraining = (post) => !!post.trainingID;
 
@@ -633,11 +554,6 @@ async function fetchEvents() {
   }
 }
 
-function showEvents(date) {
-  selectedDate.value = date;
-  dayEvents.value = events.value[date] || [];
-  console.log("📅 Events for", date, ":", dayEvents.value);
-}
 
 // --- INITIALIZE CALENDAR ---
 onMounted(async () => {

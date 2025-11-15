@@ -24,8 +24,7 @@ use App\Http\Controllers\{
     EventController,
     InterviewController,
     AdminSearchController,
-    ApplicationFileController,
-    CareerRecommendationController
+    ApplicationFileController
 };
 
 // ----------------------
