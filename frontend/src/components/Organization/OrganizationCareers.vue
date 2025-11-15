@@ -139,7 +139,7 @@
               <div v-if="openUpcomingMenu === (career.careerID || career.id)" class="dropdown-menu" @click.stop>
                 <ul>
                   <li @click="deleteCareer(career)">Delete Career</li>
-                  <li @click="updateCareer(career)">Update Career</li>
+                  <li @click="openCareerPopup(career)">Update Career</li>
                 </ul>
               </div>
             </div>
@@ -952,17 +952,20 @@ export default {
       }
     },
 
-    openCareerPopup(career = null) {
-      if (career) {
-        // Editing existing career
-        this.newCareer = { ...career }; // pre-fill the form fields
-        this.isEditingCareer = true;    // flag to differentiate
-      } else {
-        this.resetNewCareer();          // new career
-        this.isEditingCareer = false;   // flag for creating
-      }
-      this.showCareerPopup = true;
-    },
+  openCareerPopup(career = null) {
+    if (career) {
+      // Editing existing career
+      this.newCareer = { ...career };  // prefill form
+      this.isEditingCareer = true;
+    } else {
+      // Creating new
+      this.resetNewCareer();
+      this.isEditingCareer = false;
+    }
+
+    this.showCareerPopup = true;
+    this.fetchTags();  // 👈 always load tags in both edit/create
+  },
     closeCareerPopup() {
       this.showCareerPopup = false;
       this.resetNewCareer();
