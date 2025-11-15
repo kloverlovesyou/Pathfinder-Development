@@ -33,7 +33,7 @@ const organizations = ref({}); // never undefined
 const fetchApplications = async (applicantID) => {
   try {
     const response = await axios.get(
-      `/api/applications?applicantID=${applicantID}`
+       import.meta.env.VITE_API_BASE_URL + `/applications?applicantID=${applicantID}`
     );
     applications.value = response.data;
   } catch (error) {
@@ -82,6 +82,11 @@ async function fetchCareerEvents() {
     console.error("❌ Failed to fetch career events:", error);
   }
 }
+
+const qrCodeValue = computed(() => {
+  if (!selectedTraining.value) return "";
+  return `${import.meta.env.VITE_API_BASE_URL}/attendance?trainingID=${selectedTraining.value.trainingID}&key=${selectedTraining.value.attendance_key}`;
+});
 // 🔹 Fetch complete career details for the modal
 async function fetchCareerDetails(careerID) {
   const token = localStorage.getItem("token");
@@ -773,7 +778,7 @@ watch([trainings, myRegistrations], async () => {
           </p>
 
           <QrcodeVue
-            :value="`http://127.0.0.1:8000/attendance?trainingID=${selectedTraining.trainingID}&key=${selectedTraining.attendance_key}`"
+             :value="qrCodeValue"
             :size="200"
             level="H"
             class="mx-auto"
