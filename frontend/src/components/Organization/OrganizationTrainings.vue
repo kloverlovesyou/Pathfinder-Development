@@ -203,103 +203,42 @@
           <button class="modal-close-btn" @click="closeModal">✕</button>
           <h3 class="modal-title">Registrants for {{ selectedTraining.title }}</h3>
 
-            <!--  <div class="registrants-table-container">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>FULL NAME</th>
-                      <th>REGISTRATION DATE</th>
-                      <th>STATUS</th>
-                      <th class="cert-col-header">CERTIFICATE</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="person in registrantsList" :key="person.id">
-                      <td>
-                        <p class="registrant-name">{{ person.name }}</p>
-                      </td>
-                      <td>
-                        <p class="registration-date">{{ person.dateRegistered }}</p>
-                      </td>
-                      <td :class="{
-                      'status-attended': person.status === 'Attended',
-                      'status-registered': person.status === 'Registered',
-                      'status-did-not-attend': person.status === 'Did not Attend'
-                            }">
-                      {{ person.status }}
-                    </td>
+          <div class="registrants-table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>FULL NAME</th>
+                  <th>REGISTRATION DATE</th>
+                  <th>STATUS</th>
+                  <th class="cert-col-header">CERTIFICATE</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="person in registrantsList" :key="person.id">
+                  <td>
+                    <p class="registrant-name">{{ person.name }}</p>
+                  </td>
+                  <td>
+                    <p class="registration-date">{{ person.dateRegistered }}</p>
+                  </td>
+                  <td :class="{
+                    'status-attended': person.status === 'Attended',
+                    'status-registered': person.status === 'Registered',
+                    'status-did-not-attend': person.status === 'Did not Attend'
+                  }">
+                    {{ person.status }}
+                  </td>
 
-                      <td>
-                        <button
-                          class="action-btn"
-                          :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
-                          :disabled="person.hasCertificate"
-                          @click="openCertUploadModal(person)"
-                        >
-                          {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div> -->
-
-              <div class="registrants-table-container">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>FULL NAME</th>
-                      <th>REGISTRATION DATE</th>
-                      <th>STATUS</th>
-                      <th>CERT TRACKING ID</th>
-                      <th class="cert-col-header">CERTIFICATE</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="person in registrantsList" :key="person.id">
-                      <td>
-                        <p class="registrant-name">{{ person.name }}</p>
-                      </td>
-                      <td>
-                        <p class="registration-date">{{ person.dateRegistered }}</p>
-                      </td>
-                      <td :class="{
-                        'status-attended': person.status === 'Attended',
-                        'status-registered': person.status === 'Registered',
-                        'status-did-not-attend': person.status === 'Did not Attend'
-                      }">
-                        {{ person.status }}
-                      </td>
-                      <td>
-                        <p class="cert-tracking-id">{{ person.certificateTrackingID || '-' }}</p>
-                      </td>
-                      <td>
-                        <button
-                          class="action-btn"
-                          :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
-                          :disabled="person.hasCertificate"
-                          @click="openCertUploadModal(person)"
-                        >
-                          {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-  
-                <!-- Bulk Issue Button -->
-                <div class="bulk-cert-actions" style="margin-top: 20px;">
-                  <button 
-                    class="bulk-issue-btn" 
-                    @click="openBulkCertModal"
-                    :disabled="registrantsList.filter(r => !r.hasCertificate).length === 0"
-                  >
-                    Issue Certificates to All
-                  </button>
-                </div>
-              </div>
-
-            </div>
+                  <td>
+                    <button class="action-btn"
+                      :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
+                      :disabled="person.hasCertificate" @click="openCertUploadModal(person)">
+                      {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -371,62 +310,6 @@
                   <circle cx="12" cy="7" r="4" fill="#a7a7a7" />
                   <path d="M17.5 19.5c0-3.314-2.239-6-5-6s-5 2.686-5 6h10z" fill="#a7a7a7" />
                 </svg>
-                <!-- Bulk Certificate Modal -->
-                  <div v-if="showBulkCertModal" class="modal-overlay" @click.self="closeBulkCertModal">
-                    <div class="certificate-modal">
-                      <button class="cert-close-btn" @click="closeBulkCertModal">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M18 6L6 18M6 6L18 18" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                      </button>
-                      
-                      <h3 class="modal-title">Issue Certificates to All Registrants</h3>
-                      <p class="bulk-info">Number of registrants: {{ registrantsList.filter(r => !r.hasCertificate).length }}</p>
-                      
-                      <form @submit.prevent="sendBulkCertificates" class="cert-form">
-                        <input 
-                          type="text" 
-                          v-model="bulkCertData.baseTrackingID" 
-                          placeholder="Base Certificate Tracking ID (e.g., CERT-2025)"
-                          class="cert-input" 
-                          required 
-                        />
-                        
-                        <div class="cert-input-wrapper">
-                          <input 
-                            type="date" 
-                            v-model="bulkCertData.certGivenDate" 
-                            placeholder="Date Issued"
-                            class="cert-input date-input" 
-                            required 
-                          />
-                          <span class="calendar-icon">
-                            <!-- Calendar SVG icon (same as before) -->
-                          </span>
-                        </div>
-                        
-                        <div class="file-upload-list">
-                          <label>Upload Certificate Files (PNG):</label>
-                          <div v-for="(registrant, index) in registrantsList.filter(r => !r.hasCertificate)" :key="registrant.id" class="file-upload-item">
-                            <span>{{ registrant.name }}</span>
-                            <input 
-                              type="file" 
-                              :id="`bulk-cert-${index}`"
-                              @change="handleBulkFileUpload($event, index)"
-                              accept="image/png"
-                              class="hidden-file-input"
-                              required
-                            />
-                            <label :for="`bulk-cert-${index}`" class="file-upload-label">
-                              {{ bulkCertData.certificates[index]?.name || 'Choose File' }}
-                            </label>
-                          </div>
-                        </div>
-                        
-                        <button type="submit" class="cert-send-btn">Issue All Certificates</button>
-                      </form>
-                    </div>
-                  </div>
               </div>
             </div>
             <p class="registrant-name">{{ selectedRegistrant.name }}</p>
@@ -500,6 +383,8 @@
             <input v-model="newTraining.title" type="text" placeholder="Title" class="training-input" />
             <textarea v-model="newTraining.description" placeholder="Description" class="training-input"></textarea>
 
+
+            <!-- Schedule -->
             <!-- Schedule -->
 <div class="popup-form-group schedule-group">
   <label for="schedule">Schedule</label>
@@ -659,28 +544,16 @@ export default {
       globalSearchQuery: '',
       showAllUpcoming: false,
       showAllCompleted: false,
-      activeTrainingQR,  // <-- QR code value (reactive)
-      activeTrainingId,  // <-- which training is active
       isEditMode: false,
       trainingToEditId: null,
       qrCodeValue: null,
       qrExpiresAt: null,
       activeTrainingId: null, // which training shows the QR
       
-      showBulkCertModal: false,
-        certificateData: {
-        certTrackingID: '',
-        certGivenDate: '',
-        file: null,
-       },
-       selectedRegistrant: null,
-      bulkCertData: {
-        baseTrackingID: '',
-        certGivenDate: '',
-        certificates: []
-      },
 
-    
+      /* ==========================
+         ✅ Dropdown Menu States
+      ========================== */
       openUpcomingMenu: null,
       openCompletedMenu: null,
 
@@ -727,163 +600,12 @@ export default {
   },
 
   methods: {
-   /* async issueCertificate() {
-      try {
-        if (!this.selectedRegistrant) {
-          alert("No registrant selected.");
-          return;
-        }
-
-        const formData = new FormData();
-        formData.append('certTrackingID', this.certificateData.certTrackingID);
-        formData.append('certGivenDate', this.certificateData.certGivenDate);
-        if (this.certificateData.file) {
-          formData.append('certificate', this.certificateData.file);
-        }
-
-        await axios.put(
-          'http://127.0.0.1:8000/api/registrations/' + this.selectedRegistrant.registrationID + '/certificate',
-          formData,
-          { headers: { 'Content-Type': 'multipart/form-data' } }
-        );
-
-        alert('Certificate issued successfully!');
-        this.showCertUploadModal = false;
-        this.loadRegistrants(); // reload updated data
-      } catch (error) {
-        console.error('Certificate issue failed:', error);
-        alert(
-          error.response?.data?.message ||
-          'Failed to issue certificate. Check required fields and try again.'
-        );
-      }
-    }, */
-
-
-    async sendCertificateDetails() {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Please log in to continue.");
-        return;
-      }
-      
-      try {
-        const formData = new FormData();
-        formData.append('certTrackingID', this.selectedRegistrant.certificateTrackingID);
-        formData.append('certGivenDate', this.selectedRegistrant.certificateGivenDate);
-        formData.append('certificate', this.selectedRegistrant.uploadedFile);
-        
-        const response = await axios.put(
-          'http://127.0.0.1:8000/api/registrations/${this.selectedRegistrant.id}/certificate',
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'multipart/form-data',
-            },
-          }
-        );
-        
-        alert("Certificate issued successfully!");
-        this.closeCertUploadModal();
-        await this.openRegistrantsModal(this.selectedTraining); // Refresh list
-      } catch (error) {
-        console.error("Error issuing certificate:", error);
-        if (error.response) {
-          alert(error.response.data.message || "Failed to issue certificate.");
-        } else {
-          alert("An error occurred while issuing the certificate.");
-        }
-      }
-    },
-
-    openBulkCertModal() {
-      const registrantsWithoutCert = this.registrantsList.filter(r => !r.hasCertificate);
-      if (registrantsWithoutCert.length === 0) {
-        alert("All registrants already have certificates.");
-        return;
-      }
-      this.bulkCertData = {
-        baseTrackingID: '',
-        certGivenDate: '',
-        certificates: new Array(registrantsWithoutCert.length).fill(null)
-      };
-      this.showBulkCertModal = true;
-    },
-
-    closeBulkCertModal() {
-      this.showBulkCertModal = false;
-      this.bulkCertData = {
-        baseTrackingID: '',
-        certGivenDate: '',
-        certificates: []
-      };
-    },
-
-    handleBulkFileUpload(event, index) {
-      this.bulkCertData.certificates[index] = event.target.files[0];
-      this.$forceUpdate(); // Force reactivity update
-    },
-
-    async sendBulkCertificates() {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Please log in to continue.");
-        return;
-      }
-      
-      try {
-        const formData = new FormData();
-        formData.append('baseTrackingID', this.bulkCertData.baseTrackingID);
-        formData.append('certGivenDate', this.bulkCertData.certGivenDate);
-        
-        this.bulkCertData.certificates.forEach((file, index) => {
-          if (!file) {
-            throw new Error(`Please upload a certificate file for all registrants. Missing file at index ${index}`);
-          }
-          formData.append(`certificates[${index}]`, file);
-        });
-        
-        const response = await axios.post(
-          `http://127.0.0.1:8000/api/trainings/${this.selectedTraining.trainingID}/certificates/bulk`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'multipart/form-data',
-            },
-          }
-        );
-        
-        alert("Certificates issued successfully to all registrants!");
-        this.closeBulkCertModal();
-        await this.openRegistrantsModal(this.selectedTraining); // Refresh list
-      } catch (error) {
-        console.error("Error issuing bulk certificates:", error);
-        if (error.response) {
-          alert(error.response.data.message || "Failed to issue certificates.");
-        } else {
-          alert(error.message || "An error occurred while issuing certificates.");
-        }
-      }
-    },
-
-
     async fetchTags() {
       try {
         const response = await axios.get(import.meta.env.VITE_API_BASE_URL +'/tags');
         this.tagOptions = response.data; // Update tagOptions correctly
       } catch (error) {
         console.error('Error fetching tags:', error);
-      }
-    },
-    deleteTraining(trainingID) {
-      // Example: call your API to delete the training
-      if (confirm("Are you sure you want to delete this training?")) {
-        // Call API here
-        console.log("Deleting training ID:", trainingID);
-        // After successful deletion, remove it from your local array
-        this.trainings = this.trainings.filter(t => t.trainingID !== trainingID);
       }
     },
 
@@ -1034,38 +756,15 @@ export default {
       }
     },
 
-    updateTraining(trainingID) {
-    const training = this.upcomingtrainings.find(t => t.trainingID === trainingID);
-    if (!training) return alert("Training not found.");
-
-    this.showTrainingPopup = true;
-
-    this.newTraining = {
-      title: training.title || "",
-      description: training.description || "",
-      date: training.schedule ? training.schedule.split(" ")[0] : "",
-      startTime: training.schedule ? training.schedule.split(" ")[1] : "",
-      endTime: training.end_time ? training.end_time.split(" ")[1] : "",
-      mode: training.mode || "",
-      location: training.location || "",
-      trainingLink: training.training_link || "",
-      Tags: training.tags || []
-    };
-
-    this.isEditMode = true;
-    this.trainingToEditId = trainingID;
-
-    // Ensure tags are loaded
-    this.fetchTags();
-  },
-
     closeRegistrantsModal() {
       this.showRegistrantsModal = false;
       this.registrantsList = [];
     },
 
-    
-    /* openCertUploadModal(registrant) {
+    /* ==========================
+       ✅ Certificate Upload Modal
+    ========================== */
+    openCertUploadModal(registrant) {
       this.selectedRegistrant = {
         ...registrant,
         certificateTrackingID: registrant.certificateTrackingID || "",
@@ -1074,14 +773,7 @@ export default {
       };
       this.showCertUploadModal = true;
       this.closeAllMenus();
-    }, */
-
-    openCertUploadModal(person) {
-      this.selectedRegistrant = person;
-      this.certificateData = { certTrackingID: '', certGivenDate: '', file: null };
-      this.showCertUploadModal = true;
     },
-
 
     closeCertUploadModal() {
       this.showCertUploadModal = false;
@@ -1092,10 +784,10 @@ export default {
       this.selectedRegistrant.uploadedFile = event.target.files[0];
     },
 
-   /* sendCertificateDetails() {
+    sendCertificateDetails() {
       console.log("Sending Certificate Details:", this.selectedRegistrant);
       this.closeCertUploadModal();
-   }, */
+    },
 
     dismissModal() {
       this.showCertUploadModal = false;
@@ -1164,118 +856,83 @@ closeTrainingPopup() {
   this.newTagName = ""; // optional: clear the tag input too
 },
 
-  async saveTraining() {
-    const token = localStorage.getItem("token");
-    if (!token) return alert("Please log in to continue.");
-
-    const t = this.newTraining;
-
-    // ✅ Validation
-    const requiredFields = ["title", "description", "date", "startTime", "endTime", "mode"];
-    for (const field of requiredFields) {
-      if (!t[field]?.toString().trim()) {
-        return alert("PLEASE FILL OUT ALL REQUIRED FIELDS BEFORE POSTING!!!");
-      }
-    }
-
-    if (t.mode === "On-Site" && !t.location?.trim()) {
-      return alert("Please provide a location for On-Site trainings.");
-    }
-    if (t.mode === "Online" && !t.trainingLink?.trim()) {
-      return alert("Please provide a training link for Online trainings.");
-    }
-
-    // ✅ Prepare payload
-    const startDateTime = `${t.date} ${t.startTime}`;
-    const endDateTime = `${t.date} ${t.endTime}`;
-    const payload = {
-      title: t.title,
-      description: t.description,
-      schedule: startDateTime,
-      end_time: endDateTime,
-      mode: t.mode,
-      location: t.mode === "On-Site" ? t.location : undefined,
-      training_link: t.mode === "Online" ? t.trainingLink : undefined,
-      tags: t.Tags || []
-    };
-
-    try {
-      let response;
-
-      if (this.isEditMode && this.trainingToEditId) {
-        // ✅ Update existing training
-        response = await api.put(`/trainings/${this.trainingToEditId}`, payload, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        // Update local array
-        const index = this.upcomingtrainings.findIndex(t => t.trainingID === this.trainingToEditId);
-        if (index > -1) this.upcomingtrainings[index] = response.data.data;
-
-        alert("Training updated successfully!");
-      } else {
-        // ✅ Create new training
-        response = await api.post("/trainings", payload, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        if (response?.data?.data) this.upcomingtrainings.push(response.data.data);
-        alert("Training posted successfully!");
-      }
-
-      // Reset form and state
-      this.closeTrainingPopup();
-      this.isEditMode = false;
-      this.trainingToEditId = null;
-
-      // Refresh trainings from API
-      await this.fetchTrainings();
-
-    } catch (error) {
-      console.error("ERROR SAVING TRAINING:", error.response?.data || error);
-      if (error.response?.status === 401) alert("Unauthorized: Please log in again.");
-      else if (error.response?.status === 422) alert("Validation failed. Please check your inputs.");
-      else alert("Something went wrong. Please try again.");
-    }
-  },
-
-async deleteTraining(trainingID) {
-  if (!confirm("Are you sure you want to delete this training?")) return;
+async saveTraining() {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    alert("Please log in to continue.");
+    return;
+  }
 
   try {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("Please log in first.");
+    // Validate required fields
+    if (
+      !this.newTraining.title ||
+      !this.newTraining.description ||
+      !this.newTraining.date ||
+      !this.newTraining.startTime ||
+      !this.newTraining.endTime ||
+      !this.newTraining.mode
+    ) {
+      alert("PLEASE FILL OUT ALL FIELDS BEFORE POSTING!!!");
       return;
     }
 
-    // Call backend API to delete training
-    await api.delete(`/trainings/${trainingID}`, {
-      headers: { Authorization: `Bearer ${token}` }
+    // Combine date and time
+    const startSchedule = `${this.newTraining.date} ${this.newTraining.startTime}`;
+    const endSchedule = `${this.newTraining.date} ${this.newTraining.endTime}`;
+
+    // Make sure endTime is after startTime
+    if (new Date(endSchedule) <= new Date(startSchedule)) {
+      alert("End time must be later than start time!");
+      return;
+    }
+
+    const payload = {
+      title: this.newTraining.title,
+      description: this.newTraining.description,
+      schedule: startSchedule,
+      end_time: endSchedule, // 👈 NEW
+      mode: this.newTraining.mode,
+      location: this.newTraining.location || null,
+      training_link: this.newTraining.trainingLink || null,
+      Tags: this.newTraining.Tags
+    };
+
+    const response = await api.post("/trainings", payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
     });
 
-    // Remove training from local arrays
-    this.upcomingtrainings = this.upcomingtrainings.filter(t => t.trainingID !== trainingID);
-    this.completedtrainings = this.completedtrainings.filter(t => t.trainingID !== trainingID);
+    console.log("API Response:", response);
 
-    alert("Training deleted successfully!");
-
-    // Optionally, refresh trainings from API to stay in sync
-    await this.fetchTrainings();
+    if (response && response.status >= 200 && response.status < 300 && response.data?.data) {
+      const newTraining = response.data.data;
+      this.upcomingtrainings.push(newTraining);
+      alert("TRAINING POSTED SUCCESSFULLY!!!");
+      this.closeTrainingPopup();
+    } else {
+      console.error("Unexpected response:", response);
+      alert("Something went wrong while saving the training. Please try again.");
+    }
 
   } catch (error) {
-    console.error("Error deleting training:", error);
-    if (error.response && error.response.status === 401) {
-      alert("Unauthorized. Please log in again.");
-    } else if (error.response && error.response.status === 403) {
-      alert("You don't have permission to delete this training.");
-    } else if (error.response && error.response.status === 404) {
-      alert("Training not found or already deleted.");
+    console.error("ERROR SAVING TRAINING:", error);
+    if (error.response) {
+      if (error.response.status === 401) {
+        alert("Unauthorized: Please log in again.");
+      } else if (error.response.status === 422) {
+        alert("Validation failed. Please check your inputs.");
+      } else {
+        alert("Something went wrong. Please try again.");
+      }
     } else {
-      alert("Failed to delete training. Please try again.");
+      alert("Unable to connect to the server.");
     }
   }
 },
+
     formatSchedule(schedule) {
       if (!schedule) return "No schedule set";
       try {
@@ -1470,63 +1127,6 @@ const logout = () => {
 </script>
 
 <style scoped>
-.cert-tracking-id {
-  font-size: 0.9rem;
-  color: #666;
-}
-
-.bulk-cert-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.bulk-issue-btn {
-  background-color: #597d9e;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.95rem;
-}
-
-.bulk-issue-btn:hover:not(:disabled) {
-  background-color: #4a6b87;
-}
-
-.bulk-issue-btn:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-.bulk-info {
-  margin-bottom: 15px;
-  color: #666;
-}
-
-.file-upload-list {
-  margin: 15px 0;
-}
-
-.file-upload-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px;
-  margin: 5px 0;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-}
-
-.file-upload-label {
-  cursor: pointer;
-  padding: 5px 10px;
-  background-color: #f0f0f0;
-  border-radius: 4px;
-  font-size: 0.9rem;
-}
-
 .tag-list-wrapper {
   overflow-x: auto; 
   white-space: nowrap; 
