@@ -203,42 +203,103 @@
           <button class="modal-close-btn" @click="closeModal">✕</button>
           <h3 class="modal-title">Registrants for {{ selectedTraining.title }}</h3>
 
-          <div class="registrants-table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>FULL NAME</th>
-                  <th>REGISTRATION DATE</th>
-                  <th>STATUS</th>
-                  <th class="cert-col-header">CERTIFICATE</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="person in registrantsList" :key="person.id">
-                  <td>
-                    <p class="registrant-name">{{ person.name }}</p>
-                  </td>
-                  <td>
-                    <p class="registration-date">{{ person.dateRegistered }}</p>
-                  </td>
-                  <td :class="{
-                    'status-attended': person.status === 'Attended',
-                    'status-registered': person.status === 'Registered',
-                    'status-did-not-attend': person.status === 'Did not Attend'
-                  }">
-                    {{ person.status }}
-                  </td>
+            <!--  <div class="registrants-table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>FULL NAME</th>
+                      <th>REGISTRATION DATE</th>
+                      <th>STATUS</th>
+                      <th class="cert-col-header">CERTIFICATE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="person in registrantsList" :key="person.id">
+                      <td>
+                        <p class="registrant-name">{{ person.name }}</p>
+                      </td>
+                      <td>
+                        <p class="registration-date">{{ person.dateRegistered }}</p>
+                      </td>
+                      <td :class="{
+                      'status-attended': person.status === 'Attended',
+                      'status-registered': person.status === 'Registered',
+                      'status-did-not-attend': person.status === 'Did not Attend'
+                            }">
+                      {{ person.status }}
+                    </td>
 
-                  <td>
-                    <button class="action-btn"
-                      :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
-                      :disabled="person.hasCertificate" @click="openCertUploadModal(person)">
-                      {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                      <td>
+                        <button
+                          class="action-btn"
+                          :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
+                          :disabled="person.hasCertificate"
+                          @click="openCertUploadModal(person)"
+                        >
+                          {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div> -->
+
+              <div class="registrants-table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>FULL NAME</th>
+                      <th>REGISTRATION DATE</th>
+                      <th>STATUS</th>
+                      <th>CERT TRACKING ID</th>
+                      <th class="cert-col-header">CERTIFICATE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="person in registrantsList" :key="person.id">
+                      <td>
+                        <p class="registrant-name">{{ person.name }}</p>
+                      </td>
+                      <td>
+                        <p class="registration-date">{{ person.dateRegistered }}</p>
+                      </td>
+                      <td :class="{
+                        'status-attended': person.status === 'Attended',
+                        'status-registered': person.status === 'Registered',
+                        'status-did-not-attend': person.status === 'Did not Attend'
+                      }">
+                        {{ person.status }}
+                      </td>
+                      <td>
+                        <p class="cert-tracking-id">{{ person.certificateTrackingID || '-' }}</p>
+                      </td>
+                      <td>
+                        <button
+                          class="action-btn"
+                          :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
+                          :disabled="person.hasCertificate"
+                          @click="openCertUploadModal(person)"
+                        >
+                          {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+  
+                <!-- Bulk Issue Button -->
+                <div class="bulk-cert-actions" style="margin-top: 20px;">
+                  <button 
+                    class="bulk-issue-btn" 
+                    @click="openBulkCertModal"
+                    :disabled="registrantsList.filter(r => !r.hasCertificate).length === 0"
+                  >
+                    Issue Certificates to All
+                  </button>
+                </div>
+              </div>
+
+            </div>
           </div>
         </div>
       </div>
@@ -310,6 +371,62 @@
                   <circle cx="12" cy="7" r="4" fill="#a7a7a7" />
                   <path d="M17.5 19.5c0-3.314-2.239-6-5-6s-5 2.686-5 6h10z" fill="#a7a7a7" />
                 </svg>
+                <!-- Bulk Certificate Modal -->
+                  <div v-if="showBulkCertModal" class="modal-overlay" @click.self="closeBulkCertModal">
+                    <div class="certificate-modal">
+                      <button class="cert-close-btn" @click="closeBulkCertModal">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M18 6L6 18M6 6L18 18" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                      </button>
+                      
+                      <h3 class="modal-title">Issue Certificates to All Registrants</h3>
+                      <p class="bulk-info">Number of registrants: {{ registrantsList.filter(r => !r.hasCertificate).length }}</p>
+                      
+                      <form @submit.prevent="sendBulkCertificates" class="cert-form">
+                        <input 
+                          type="text" 
+                          v-model="bulkCertData.baseTrackingID" 
+                          placeholder="Base Certificate Tracking ID (e.g., CERT-2025)"
+                          class="cert-input" 
+                          required 
+                        />
+                        
+                        <div class="cert-input-wrapper">
+                          <input 
+                            type="date" 
+                            v-model="bulkCertData.certGivenDate" 
+                            placeholder="Date Issued"
+                            class="cert-input date-input" 
+                            required 
+                          />
+                          <span class="calendar-icon">
+                            <!-- Calendar SVG icon (same as before) -->
+                          </span>
+                        </div>
+                        
+                        <div class="file-upload-list">
+                          <label>Upload Certificate Files (PNG):</label>
+                          <div v-for="(registrant, index) in registrantsList.filter(r => !r.hasCertificate)" :key="registrant.id" class="file-upload-item">
+                            <span>{{ registrant.name }}</span>
+                            <input 
+                              type="file" 
+                              :id="`bulk-cert-${index}`"
+                              @change="handleBulkFileUpload($event, index)"
+                              accept="image/png"
+                              class="hidden-file-input"
+                              required
+                            />
+                            <label :for="`bulk-cert-${index}`" class="file-upload-label">
+                              {{ bulkCertData.certificates[index]?.name || 'Choose File' }}
+                            </label>
+                          </div>
+                        </div>
+                        
+                        <button type="submit" class="cert-send-btn">Issue All Certificates</button>
+                      </form>
+                    </div>
+                  </div>
               </div>
             </div>
             <p class="registrant-name">{{ selectedRegistrant.name }}</p>
@@ -550,10 +667,20 @@ export default {
       qrExpiresAt: null,
       activeTrainingId: null, // which training shows the QR
       
+      showBulkCertModal: false,
+        certificateData: {
+        certTrackingID: '',
+        certGivenDate: '',
+        file: null,
+       },
+       selectedRegistrant: null,
+      bulkCertData: {
+        baseTrackingID: '',
+        certGivenDate: '',
+        certificates: []
+      },
 
-      /* ==========================
-         ✅ Dropdown Menu States
-      ========================== */
+    
       openUpcomingMenu: null,
       openCompletedMenu: null,
 
@@ -600,6 +727,148 @@ export default {
   },
 
   methods: {
+   /* async issueCertificate() {
+      try {
+        if (!this.selectedRegistrant) {
+          alert("No registrant selected.");
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('certTrackingID', this.certificateData.certTrackingID);
+        formData.append('certGivenDate', this.certificateData.certGivenDate);
+        if (this.certificateData.file) {
+          formData.append('certificate', this.certificateData.file);
+        }
+
+        await axios.put(
+          'http://127.0.0.1:8000/api/registrations/' + this.selectedRegistrant.registrationID + '/certificate',
+          formData,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+
+        alert('Certificate issued successfully!');
+        this.showCertUploadModal = false;
+        this.loadRegistrants(); // reload updated data
+      } catch (error) {
+        console.error('Certificate issue failed:', error);
+        alert(
+          error.response?.data?.message ||
+          'Failed to issue certificate. Check required fields and try again.'
+        );
+      }
+    }, */
+
+
+    async sendCertificateDetails() {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please log in to continue.");
+        return;
+      }
+      
+      try {
+        const formData = new FormData();
+        formData.append('certTrackingID', this.selectedRegistrant.certificateTrackingID);
+        formData.append('certGivenDate', this.selectedRegistrant.certificateGivenDate);
+        formData.append('certificate', this.selectedRegistrant.uploadedFile);
+        
+        const response = await axios.put(
+          'http://127.0.0.1:8000/api/registrations/${this.selectedRegistrant.id}/certificate',
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'multipart/form-data',
+            },
+          }
+        );
+        
+        alert("Certificate issued successfully!");
+        this.closeCertUploadModal();
+        await this.openRegistrantsModal(this.selectedTraining); // Refresh list
+      } catch (error) {
+        console.error("Error issuing certificate:", error);
+        if (error.response) {
+          alert(error.response.data.message || "Failed to issue certificate.");
+        } else {
+          alert("An error occurred while issuing the certificate.");
+        }
+      }
+    },
+
+    openBulkCertModal() {
+      const registrantsWithoutCert = this.registrantsList.filter(r => !r.hasCertificate);
+      if (registrantsWithoutCert.length === 0) {
+        alert("All registrants already have certificates.");
+        return;
+      }
+      this.bulkCertData = {
+        baseTrackingID: '',
+        certGivenDate: '',
+        certificates: new Array(registrantsWithoutCert.length).fill(null)
+      };
+      this.showBulkCertModal = true;
+    },
+
+    closeBulkCertModal() {
+      this.showBulkCertModal = false;
+      this.bulkCertData = {
+        baseTrackingID: '',
+        certGivenDate: '',
+        certificates: []
+      };
+    },
+
+    handleBulkFileUpload(event, index) {
+      this.bulkCertData.certificates[index] = event.target.files[0];
+      this.$forceUpdate(); // Force reactivity update
+    },
+
+    async sendBulkCertificates() {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please log in to continue.");
+        return;
+      }
+      
+      try {
+        const formData = new FormData();
+        formData.append('baseTrackingID', this.bulkCertData.baseTrackingID);
+        formData.append('certGivenDate', this.bulkCertData.certGivenDate);
+        
+        this.bulkCertData.certificates.forEach((file, index) => {
+          if (!file) {
+            throw new Error(`Please upload a certificate file for all registrants. Missing file at index ${index}`);
+          }
+          formData.append(`certificates[${index}]`, file);
+        });
+        
+        const response = await axios.post(
+          `http://127.0.0.1:8000/api/trainings/${this.selectedTraining.trainingID}/certificates/bulk`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'multipart/form-data',
+            },
+          }
+        );
+        
+        alert("Certificates issued successfully to all registrants!");
+        this.closeBulkCertModal();
+        await this.openRegistrantsModal(this.selectedTraining); // Refresh list
+      } catch (error) {
+        console.error("Error issuing bulk certificates:", error);
+        if (error.response) {
+          alert(error.response.data.message || "Failed to issue certificates.");
+        } else {
+          alert(error.message || "An error occurred while issuing certificates.");
+        }
+      }
+    },
+
+
     async fetchTags() {
       try {
         const response = await axios.get(import.meta.env.VITE_API_BASE_URL +'/tags');
@@ -795,10 +1064,8 @@ export default {
       this.registrantsList = [];
     },
 
-    /* ==========================
-       ✅ Certificate Upload Modal
-    ========================== */
-    openCertUploadModal(registrant) {
+    
+    /* openCertUploadModal(registrant) {
       this.selectedRegistrant = {
         ...registrant,
         certificateTrackingID: registrant.certificateTrackingID || "",
@@ -807,7 +1074,14 @@ export default {
       };
       this.showCertUploadModal = true;
       this.closeAllMenus();
+    }, */
+
+    openCertUploadModal(person) {
+      this.selectedRegistrant = person;
+      this.certificateData = { certTrackingID: '', certGivenDate: '', file: null };
+      this.showCertUploadModal = true;
     },
+
 
     closeCertUploadModal() {
       this.showCertUploadModal = false;
@@ -818,10 +1092,10 @@ export default {
       this.selectedRegistrant.uploadedFile = event.target.files[0];
     },
 
-    sendCertificateDetails() {
+   /* sendCertificateDetails() {
       console.log("Sending Certificate Details:", this.selectedRegistrant);
       this.closeCertUploadModal();
-    },
+   }, */
 
     dismissModal() {
       this.showCertUploadModal = false;
@@ -1196,6 +1470,63 @@ const logout = () => {
 </script>
 
 <style scoped>
+.cert-tracking-id {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.bulk-cert-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.bulk-issue-btn {
+  background-color: #597d9e;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.bulk-issue-btn:hover:not(:disabled) {
+  background-color: #4a6b87;
+}
+
+.bulk-issue-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.bulk-info {
+  margin-bottom: 15px;
+  color: #666;
+}
+
+.file-upload-list {
+  margin: 15px 0;
+}
+
+.file-upload-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  margin: 5px 0;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.file-upload-label {
+  cursor: pointer;
+  padding: 5px 10px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
 .tag-list-wrapper {
   overflow-x: auto; 
   white-space: nowrap; 
