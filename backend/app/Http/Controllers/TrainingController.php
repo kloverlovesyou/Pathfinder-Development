@@ -108,13 +108,6 @@ class TrainingController extends Controller
         $key = Str::upper(Str::random(12));
         $expiresAt = now()->addMinutes(15);
 
-        // Save to DB if needed
-        DB::table('attendances')->insert([
-            'training_id' => $training->id,
-            'attendance_key' => $key,
-            'expires_at' => $expiresAt,
-        ]);
-
         return response()->json([
             'key' => $key,
             'expires_at' => $expiresAt,
