@@ -954,17 +954,21 @@ export default {
 
   openCareerPopup(career = null) {
     if (career) {
-      // Editing existing career
-      this.newCareer = { ...career };  // prefill form
+      this.newCareer = { 
+        ...career,
+        tags: career.tags ? [...career.tags] : []   // 👈 FIX HERE
+      };
       this.isEditingCareer = true;
     } else {
-      // Creating new
       this.resetNewCareer();
       this.isEditingCareer = false;
     }
 
+    // make sure newCareer.tags ALWAYS exists
+    if (!this.newCareer.tags) this.newCareer.tags = [];
+
     this.showCareerPopup = true;
-    this.fetchTags();  // 👈 always load tags in both edit/create
+    this.fetchTags();
   },
     closeCareerPopup() {
       this.showCareerPopup = false;
