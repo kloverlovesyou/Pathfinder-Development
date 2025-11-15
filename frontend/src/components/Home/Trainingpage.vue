@@ -4,6 +4,7 @@ import axios from "axios";
 import QrcodeVue from "qrcode.vue";
 import { useRegistrationStore } from "@/stores/registrationStore";
 import { useTrainingStore } from "@/stores/trainingStore";
+import CalendarSidebar from "@/components/Layout/CalendarSidebar.vue";
 const trainingStore = useTrainingStore();
 const regStore = useRegistrationStore();
 const myRegistrations = computed(() => regStore.myRegistrations);
@@ -65,7 +66,6 @@ async function openTrainingModal(training) {
   // Modal will automatically read from trainingStore.qrCodes
   // No need for local QR logic here
 }
-
 
 function closeModal() {
   isModalOpen.value = false;
@@ -139,9 +139,12 @@ function addToast(message, type = "info") {
 async function fetchTrainings() {
   try {
     const token = localStorage.getItem("token");
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/trainings", {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/trainings",
+      {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }
+    );
     trainings.value = res.data;
   } catch (err) {
     console.error("❌ fetchTrainings error:", err.response?.data || err);
@@ -152,18 +155,24 @@ async function fetchTrainings() {
 async function fetchBookmarks() {
   const token = localStorage.getItem("token");
   if (!token) return;
-  const { data } = await axios.get(import.meta.env.VITE_API_BASE_URL + "/bookmarks", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const { data } = await axios.get(
+    import.meta.env.VITE_API_BASE_URL + "/bookmarks",
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
   bookmarkedTrainings.value = data;
 }
 
 async function fetchOrganizations() {
   try {
     const token = localStorage.getItem("token");
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/organization", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/organization",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
     organizations.value = res.data;
   } catch {}
 }
@@ -184,7 +193,6 @@ function closeTrainingListModal() {
 // ---------------------------
 async function toggleRegister(training) {
   await regStore.toggleRegister(training.trainingID);
-
 }
 const trainings = computed(() => trainingStore.trainings);
 // ---------------------------
@@ -205,7 +213,6 @@ function openModalCalendar(event) {
 
 import TrainingModal from "@/components/Layout/TrainingModal.vue";
 const showModal = ref(false);
-
 </script>
 
 <template>
@@ -229,7 +236,9 @@ const showModal = ref(false);
           <!-- Left: Training info -->
           <div>
             <h3 class="font-semibold text-lg">{{ training.title }}</h3>
-            <p class="text-gray-700 font-medium">{{ training.organizationName }}</p>
+            <p class="text-gray-700 font-medium">
+              {{ training.organization.name }}
+            </p>
           </div>
 
           <!-- Right: QR code -->
@@ -264,15 +273,15 @@ const showModal = ref(false);
     />
 
     <TrainingModal
-  :isOpen="showModal"
-  :training="selectedTraining"
-  :isRegistered="myRegistrations.has(selectedTraining?.trainingID)"
-  :isBookmarked="bookmarkedTrainings.includes(selectedTraining?.trainingID)"
-  :bookmarkLoading="bookmarkLoading[selectedTraining?.trainingID]"
-  :registerLoading="regStore.loading[selectedTraining?.trainingID]" 
-  @close="showModal = false"
-  @toggle-register="toggleRegister"
-  @bookmark="toggleBookmark"
+      :isOpen="showModal"
+      :training="selectedTraining"
+      :isRegistered="myRegistrations.has(selectedTraining?.trainingID)"
+      :isBookmarked="bookmarkedTrainings.includes(selectedTraining?.trainingID)"
+      :bookmarkLoading="bookmarkLoading[selectedTraining?.trainingID]"
+      :registerLoading="regStore.loading[selectedTraining?.trainingID]"
+      @close="showModal = false"
+      @toggle-register="toggleRegister"
+      @bookmark="toggleBookmark"
     />
     <!-- Toast Notifications -->
     <div class="toast toast-end toast-top z-50">

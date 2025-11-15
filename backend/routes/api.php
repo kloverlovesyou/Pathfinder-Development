@@ -66,8 +66,11 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/applicants', [ApplicantController::class, 'a_register']);
 Route::post('/applicants/login', [ApplicantController::class, 'login']);
 
+Route::get('/organization/show/{id}', [OrganizationController::class, 'show']);
 Route::post('/organization', [OrganizationController::class, 'o_register']);
 Route::post('/organizations/login', [OrganizationController::class, 'login']);
+Route::get('/organization', [OrganizationController::class, 'index'])->name('organization.index');
+
 
 // ----------------------
 // Resume (authenticated)
