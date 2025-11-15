@@ -10,14 +10,18 @@ use Illuminate\Support\Facades\Hash;
 
 class OrganizationController extends Controller
 {
-
-    public function index()
-    {
-        // Include careers and trainings
+public function index()
+{
+    try {
         $organizations = Organization::with(['careers', 'trainings'])->get();
-
         return response()->json($organizations);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
     }
+}
+
+
+
     // Register Organization
 
     public function o_register(Request $request)
@@ -143,5 +147,18 @@ class OrganizationController extends Controller
 
         return response()->json(['message' => 'Organization and all related data deleted successfully']);
     }
+
+  protected $primaryKey = 'organizationID'; // match your table
+
+    public function careers()
+    {
+        return $this->hasMany(Career::class, 'organizationID', 'organizationID');
+    }
+
+    public function trainings()
+    {
+        return $this->hasMany(Training::class, 'organizationID', 'organizationID');
+    }
+
 
 }

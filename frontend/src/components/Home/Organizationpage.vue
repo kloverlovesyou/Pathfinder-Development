@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, nextTick, reactive } from "vue";
+import { ref, onMounted, nextTick, reactive, computed } from "vue";
 import axios from "axios";
 import CalendarSidebar from "@/components/Layout/CalendarSidebar.vue";
 
@@ -36,7 +36,9 @@ onMounted(async () => {
 
 const qrCodeValue = computed(() => {
   if (!selectedTraining.value) return "";
-  return `${import.meta.env.VITE_API_BASE_URL}/attendance?trainingID=${selectedTraining.value.trainingID}&key=${selectedTraining.value.attendance_key}`;
+  return `${import.meta.env.VITE_API_BASE_URL}/attendance?trainingID=${
+    selectedTraining.value.trainingID
+  }&key=${selectedTraining.value.attendance_key}`;
 });
 
 // ✅ Toggle Bookmark
@@ -86,7 +88,8 @@ async function toggleRegistration(training) {
     } else {
       // Unregister
       await axios.delete(
-        import.meta.env.VITE_API_BASE_URL + `/registrations/${training.trainingID}`,
+        import.meta.env.VITE_API_BASE_URL +
+          `/registrations/${training.trainingID}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       registeredTrainings.delete(training.trainingID);
@@ -141,7 +144,8 @@ async function toggleCareerBookmark(career) {
   try {
     if (isCareerBookmarked(career.careerID)) {
       await axios.delete(
-        import.meta.env.VITE_API_BASE_URL + `/career-bookmarks/${career.careerID}`,
+        import.meta.env.VITE_API_BASE_URL +
+          `/career-bookmarks/${career.careerID}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       careerBookmarks.value = careerBookmarks.value.filter(
@@ -217,7 +221,8 @@ async function openModal(item) {
   if (item.organizationID) {
     try {
       const response = await axios.get(
-        import.meta.env.VITE_API_BASE_URL + `/organizations/${item.organizationID}`
+        import.meta.env.VITE_API_BASE_URL +
+          `/organizations/${item.organizationID}`
       );
       org = response.data;
       console.log("Fetched organization from backend:", org);
@@ -342,7 +347,9 @@ function formatSchedule(dt) {
 // Fetch organizations from backend
 onMounted(async () => {
   try {
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/organization");
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/organization"
+    );
     // Map backend fields to frontend template
 
     // Map backend fields for frontend usage
@@ -449,9 +456,12 @@ async function openCareerModal(career) {
     }
 
     // 🔄 Fetch all applications for the logged-in applicant
-    const response = await axios.get(import.meta.env.VITE_API_BASE_URL + "/applications", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/applications",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
 
     // 🔍 Find if the user applied to this career
     const app = response.data.find((a) => a.careerID === career.id);
@@ -850,7 +860,7 @@ function closeTrainingModal() {
               </p>
 
               <QrcodeVue
-                :value=QRCodeValue
+                :value="QRCodeValue"
                 :size="200"
                 level="H"
                 class="mx-auto"
