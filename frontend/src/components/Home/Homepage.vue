@@ -45,7 +45,7 @@ function addToast(message, type = "info") {
 // ------------------ FETCH DATA ------------------
 async function fetchAllCareers() {
   try {
-    const res = await axios.get("http://127.0.0.1:8000/api/careers");
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/careers");
     allCareers.value = Array.isArray(res.data) ? res.data : [];
   } catch (err) {
     console.error(err);
@@ -58,7 +58,7 @@ async function fetchMyApplications() {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const res = await axios.get("http://127.0.0.1:8000/api/applications", {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/applications", {
       headers: { Authorization: `Bearer ${token}` },
     });
     myApplications.value = new Set(res.data.map((a) => a.careerID));
@@ -73,7 +73,7 @@ async function fetchMyRegistrations() {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const res = await axios.get("http://127.0.0.1:8000/api/registrations", {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/registrations", {
       headers: { Authorization: `Bearer ${token}` },
     });
     myRegistrations.value = new Set(res.data.map((r) => r.trainingID));
@@ -131,14 +131,14 @@ async function toggleCareerBookmark(career) {
 
   try {
     if (isBookmarked) {
-      await axios.delete(`http://127.0.0.1:8000/api/career-bookmarks/${id}`, {
+      await axios.delete(import.meta.env.VITE_API_BASE_URL + `/career-bookmarks/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       bookmarkedPosts.value[id] = false;
       addToast("Bookmark removed", "info");
     } else {
       await axios.post(
-        "http://127.0.0.1:8000/api/career-bookmarks",
+        import.meta.env.VITE_API_BASE_URL + "/career-bookmarks",
         { careerID: id },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -159,14 +159,14 @@ async function toggleTrainingBookmark(training) {
 
   try {
     if (isBookmarked) {
-      await axios.delete(`http://127.0.0.1:8000/api/bookmarks/${id}`, {
+      await axios.delete(import.meta.env.VITE_API_BASE_URL + `/bookmarks/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       bookmarkedPosts.value[id] = false;
       addToast("Bookmark removed", "info");
     } else {
       await axios.post(
-        "http://127.0.0.1:8000/api/bookmarks",
+        import.meta.env.VITE_API_BASE_URL + "/bookmarks",
         { trainingID: id },
         { headers: { Authorization: `Bearer ${token}` } }
       );
