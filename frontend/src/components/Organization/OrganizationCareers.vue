@@ -621,29 +621,32 @@ export default {
 
 
      // Toggle selection of a tag
-      toggleTag(tagID) {
-        const index = this.newCareer.Tags.indexOf(tagID);
-        if (index === -1) {
-          // If the tag is not selected, add it
-          this.newCareer.Tags.push(tagID);
-        } else {
-          // If the tag is already selected, remove it
-          this.newCareer.Tags.splice(index, 1);
-        }
-      },
+    toggleTag(tagID) {
+      if (!Array.isArray(this.newCareer.Tags)) {
+        this.newCareer.Tags = [];
+      }
+
+      if (this.newCareer.Tags.includes(tagID)) {
+        this.newCareer.Tags = this.newCareer.Tags.filter(id => id !== tagID);
+      } else {
+        this.newCareer.Tags.push(tagID);
+      }
+    },
 
       // Check if a tag is selected
       isTagSelected(tagID) {
-        return this.newCareer.Tags.includes(tagID);
+        return Array.isArray(this.newCareer.Tags) && this.newCareer.Tags.includes(tagID);
       },
 
       // Remove a tag directly from the selected tags
-      removeTag(tagID) {
-        const index = this.newCareer.Tags.indexOf(tagID);
-        if (index !== -1) {
-          this.newCareer.Tags.splice(index, 1);
-        }
-      },
+    removeTag(tagID) {
+      if (!Array.isArray(this.newCareer.Tags)) return;  // 👈 prevents crashes
+
+      const index = this.newCareer.Tags.indexOf(tagID);
+      if (index !== -1) {
+        this.newCareer.Tags.splice(index, 1);
+      }
+    },
 
     async fetchTags() {
       try {
@@ -952,24 +955,30 @@ export default {
       }
     },
 
-  openCareerPopup(career = null) {
-    if (career) {
-      this.newCareer = { 
-        ...career,
-        tags: career.tags ? [...career.tags] : []   // 👈 FIX HERE
-      };
-      this.isEditingCareer = true;
-    } else {
-      this.resetNewCareer();
-      this.isEditingCareer = false;
-    }
+    openCareerPopup(career = null) {
+      if (career) {
+        this.newCareer = {
+          ...career,
+          Tags: Array.isArray(career.Tags) ? [...career.Tags] : []   // KEEP CAPITAL T
+        };
+        this.isEditMode = true;
+      } else {
+        // Reset — KEEP capital T
+        this.newCareer = {
+          position: "",
+          details: "",
+          qualifications: "",
+          requirements: "",
+          letterAddress: "",
+          deadline: "",
+          Tags: []
+        };
+        this.isEditMode = false;
+      }
 
-    // make sure newCareer.tags ALWAYS exists
-    if (!this.newCareer.tags) this.newCareer.tags = [];
-
-    this.showCareerPopup = true;
-    this.fetchTags();
-  },
+      this.showCareerPopup = true;
+      this.fetchTags();
+    },
     closeCareerPopup() {
       this.showCareerPopup = false;
       this.resetNewCareer();
