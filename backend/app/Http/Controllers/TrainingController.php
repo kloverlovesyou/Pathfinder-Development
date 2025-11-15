@@ -89,29 +89,17 @@ class TrainingController extends Controller
         $training->attendees = $attendees;
         $training->save();
 
+        // ✅ Update registration status if the user is registered
+        $registration = \App\Models\Registration::where('training_id', $training->id)
+            ->where('email_address', $request->emailAddress) // assuming email identifies registrant
+            ->first();
+
+        if ($registration && $registration->registrationStatus === 'Registered') {
+            $registration->registrationStatus = 'Attended';
+            $registration->save();
+        }
+
         return response()->json(['message' => '✅ Attendance recorded successfully']);
-    }
-    /**
-     * Manually generate QR (optional)
-     */
-    public function generateQRCode(Request $request)
-    {
-        // ✅ Allow anyone (no auth)
-        $request->validate([
-            'trainingID' => 'required|integer',
-        ]);
-
-        $training = Training::find($request->trainingID);
-        if (!$training) return response()->json(['message' => 'Training not found'], 404);
-
-        // Generate a QR key
-        $key = Str::upper(Str::random(12));
-        $expiresAt = now()->addMinutes(15);
-
-        return response()->json([
-            'key' => $key,
-            'expires_at' => $expiresAt,
-        ]);
     }
 
     /**
