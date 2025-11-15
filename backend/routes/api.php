@@ -66,10 +66,11 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/applicants', [ApplicantController::class, 'a_register']);
 Route::post('/applicants/login', [ApplicantController::class, 'login']);
 
-Route::get('/organization/show/{id}', [OrganizationController::class, 'show']);
+
 Route::post('/organization', [OrganizationController::class, 'o_register']);
 Route::post('/organizations/login', [OrganizationController::class, 'login']);
-Route::get('/organization', [OrganizationController::class, 'index'])->name('organization.index');
+Route::get('/organizations', [OrganizationController::class, 'index']);
+Route::get('/organizations/{organizationID}', [OrganizationController::class, 'show']);
 
 
 // ----------------------
@@ -184,7 +185,7 @@ Route::put('/user', [ApplicantController::class, 'update']);
 Route::get('/search', [SearchController::class, 'search']);
 Route::get('/training/{id}', [SearchController::class, 'getTraining']);
 Route::get('/career/{id}', [SearchController::class, 'getCareer']);
-Route::get('/organization/{id}', [SearchController::class, 'getOrganization']);
+Route::get('/organization/{id}/search', [SearchController::class, 'getOrganization']);
 Route::get('/training/{id}', [TrainingController::class, 'show']);
 
 // Optional: Get authenticated user by token
