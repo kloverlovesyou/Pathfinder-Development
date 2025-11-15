@@ -140,6 +140,7 @@
                 <ul>
                   <li @click="deleteCareer(career)">Delete Career</li>
                   <li @click="openCareerPopup(career)">Update Career</li>
+                  <li @click.stop="openApplicantsModal(career)">Applicants</li>
                 </ul>
               </div>
             </div>
@@ -174,6 +175,7 @@
               <div v-if="openCompletedMenu === (career.careerID || career.id)" class="dropdown-menu" @click.stop>
                 <ul>
                   <li @click="deleteCareer(career)">Delete Career</li>
+                  <li @click.stop="openApplicantsModal(career)">Applicants</li>
                 </ul>
               </div>
             </div>
@@ -191,9 +193,7 @@
       <div v-if="showApplicantsModal" class="modal-overlay" @click.self="closeModal">
         <div class="modal-content">
           <button class="modal-close-btn" @click="closeModal">✕</button>
-
-          <h3 class="modal-title">Applicants for {{ selectedCareer.title }}</h3>
-
+          <h3 class="modal-title">Applicants for {{ selectedCareer.title || selectedCareer.position }}</h3>
           <div class="applicants-table-container">
             <table>
               <thead>
@@ -202,10 +202,18 @@
                   <th>DATE SUBMITTED</th>
                   <th>APPLICATION STATUS</th>
                   <th>REQUIREMENTS</th>
-                  <th>INTERVIEW SCHEDULING</th>
+                  <th>SCHEDULE INTERVIEW</th>
+                  <th>VIEW SCHEDULE</th>
                 </tr>
               </thead>
               <tbody>
+                <!-- Check if there are applicants -->
+                <tr v-if="applicantsList.length === 0">
+                  <td colspan="6" style="text-align: center;">
+                    <p>No applicants found for this career.</p>
+                  </td>
+                </tr>
+                <!-- Loop through applicants -->
                 <tr v-for="person in applicantsList" :key="person.id">
                   <td>
                     <p class="applicant-name">{{ person.name }}</p>
@@ -213,50 +221,55 @@
                   <td>
                     <p class="application-date">{{ person.dateSubmitted }}</p>
                   </td>
-
-                  <td :class="{
-                    'status-for-review': person.status === 'For Review',
-                    'status-scheduled': person.status === 'Interview Scheduled',
-                    'status-hired': person.status === 'Hired',
-                    'status-rejected': person.status === 'Rejected'
-                  }">
-                    {{ person.status }}
-                  </td>
-
-                  <!-- Requirements -->
-                  <td class="requirements-col">
-                    <div v-if="person.requirementsSubmitted">
-                      <button class="view-btn" @click="viewRequirements(person)">View</button>
-                      <span class="check-icon">✅</span>
-                    </div>
-                    <div v-else>
-                      <button class="upload-btn" @click="uploadRequirements(person)">Nakalimutan ko ilalagay</button>
-                    </div>
-                  </td>
-
-                  <!-- Interview Scheduling -->
                   <td>
-                    <!-- For Review -->
-                    <button v-if="person.status === 'For Review'" class="schedule-btn"
-                      @click="openScheduleModal(person)">
+                    <select 
+                      v-model="person.status" 
+                      @change="updateApplicationStatus(person)"
+                      class="status-dropdown"
+                    >
+                      <option value="submitted">{{ displayStatus('submitted') }}</option>
+                      <option value="in review">{{ displayStatus('in review') }}</option>
+                      <option value="for interview">{{ displayStatus('for interview') }}</option>
+                      <option value="accepted">{{ displayStatus('accepted') }}</option>
+                      <option value="rejected">{{ displayStatus('rejected') }}</option>
+                    </select>
+                  </td>
+                  <td class="requirements-col">
+                    <button 
+                      v-if="person.requirements" 
+                      class="view-btn" 
+                      @click="viewRequirements(person)"
+                    >
+                      View Requirements
+                    </button>
+                    <span v-else>No requirements</span>
+                  </td>
+                  <td>
+                    <button 
+                      v-if="person.status === 'for interview' && !person.interviewSchedule" 
+                      class="schedule-btn"
+                      @click="openScheduleModal(person)"
+                    >
                       Schedule
                     </button>
-
-                    <!-- Interview Scheduled -->
-                    <button v-else-if="person.status === 'Interview Scheduled'" class="schedule-btn view"
-                      @click="openViewScheduleModal(person)">
+                    <button 
+                      v-else-if="person.status === 'for interview' && person.interviewSchedule" 
+                      class="schedule-btn" 
+                      disabled
+                    >
+                      Scheduled
+                    </button>
+                    <span v-else>-</span>
+                  </td>
+                  <td>
+                    <button 
+                      v-if="person.status === 'for interview' && person.interviewSchedule" 
+                      class="schedule-btn view"
+                      @click="openViewScheduleModal(person)"
+                    >
                       View Schedule
                     </button>
-
-                    <!-- Hired -->
-                    <button v-else-if="person.status === 'Hired'" class="schedule-btn hired" disabled>
-                      Hired
-                    </button>
-
-                    <!-- Rejected -->
-                    <button v-else-if="person.status === 'Rejected'" class="schedule-btn rejected" disabled>
-                      Rejected
-                    </button>
+                    <span v-else>-</span>
                   </td>
                 </tr>
               </tbody>
@@ -264,6 +277,30 @@
           </div>
         </div>
       </div>
+
+      <!-- Requirements View Modal -->
+      <div v-if="showRequirementsModal" class="modal-overlay" @click.self="closeRequirementsModal">
+        <div class="modal-box requirements-modal">
+          <button class="modal-close-btn" @click="closeRequirementsModal">✕</button>
+          <h3>Requirements for {{ selectedPerson?.name }}</h3>
+          
+          <div class="requirements-viewer">
+            <iframe 
+              :src="requirementsUrl" 
+              class="pdf-viewer"
+              v-if="requirementsUrl"
+            ></iframe>
+            <p v-else>Loading requirements...</p>
+          </div>
+          
+          <div class="modal-actions">
+            <button class="confirm-btn" @click="downloadRequirements">Download</button>
+            <button class="confirm-btn" @click="printRequirements">Print</button>
+            <button class="cancel-btn" @click="closeRequirementsModal">Close</button>
+          </div>
+        </div>
+      </div>
+
 
       <!-- Schedule Modal -->
       <div v-if="showScheduleModal" class="modal-overlay" @click.self="closeScheduleModal">
@@ -325,18 +362,21 @@
           <button class="modal-close-btn" @click="closeViewScheduleModal">✕</button>
           <h3>Interview Schedule for {{ selectedPerson?.name }}</h3>
 
-          <div class="view-schedule-info">
-            <p><strong>Date:</strong> {{ selectedPerson?.interviewDate }}</p>
-            <p><strong>Time:</strong> {{ selectedPerson?.interviewTime }}</p>
-            <p><strong>Mode:</strong> {{ selectedPerson?.mode }}</p>
-
-            <p v-if="selectedPerson?.mode === 'On-Site'">
-              <strong>Location:</strong> {{ selectedPerson?.linkOrLocation }}
+          <div class="view-schedule-info" v-if="selectedPerson">
+            <p v-if="selectedPerson.interviewSchedule">
+              <strong>Date & Time:</strong> {{ formatInterviewDateTime(selectedPerson.interviewSchedule) }}
             </p>
-            <p v-else-if="selectedPerson?.mode === 'Online'">
+            <p v-if="selectedPerson.interviewMode">
+              <strong>Mode:</strong> {{ selectedPerson.interviewMode }}
+            </p>
+
+            <p v-if="selectedPerson.interviewMode === 'On-Site' && selectedPerson.interviewLocation">
+              <strong>Location:</strong> {{ selectedPerson.interviewLocation }}
+            </p>
+            <p v-else-if="selectedPerson.interviewMode === 'Online' && selectedPerson.interviewLink">
               <strong>Interview Link:</strong>
-              <a :href="selectedPerson?.linkOrLocation" target="_blank">
-                {{ selectedPerson?.linkOrLocation }}
+              <a :href="selectedPerson.interviewLink" target="_blank" rel="noopener noreferrer">
+                {{ selectedPerson.interviewLink }}
               </a>
             </p>
           </div>
@@ -448,18 +488,33 @@ const fetchTags = async () => {
   }
 }
 
+  // Helper to display readable status names
+  const displayStatus = (status) => {
+      const map = {
+        'submitted': 'Submitted',
+        'in review': 'In Review',
+        'for interview': 'For Interview',
+        'accepted': 'Accepted',
+        'rejected': 'Rejected'
+      }
+      return map[status] || status
+    }
+
 
 export default {
   data() {
     return {
+      showRequirementsModal: false,
+      requirementsUrl: null,
+      selectedCareer: { title: '', careerID: null, position: '' },
       newTagName: '',
       dictLogo,
       globalSearchQuery: '',
       openUpcomingMenu: null,
       openCompletedMenu: null,
 
+
       showCareerDetailsModal: false,
-      selectedCareer: {},
 
       showApplicantsModal: false,
       showViewScheduleModal: false,
@@ -478,81 +533,7 @@ export default {
         detail: "",
       },
 
-      applicantsList: [
-        {
-          id: 1,
-          name: "John Doe",
-          dateSubmitted: "September 10, 2025",
-          status: "For Review",
-          requirements: ["Resume", "Cover Letter", "Portfolio"]
-        },
-        {
-          id: 2,
-          name: "Maria Santos",
-          dateSubmitted: "September 12, 2025",
-          status: "Rejected",
-          requirements: ["Resume", "Transcript of Records"]
-        },
-        {
-          id: 3,
-          name: "David Cruz",
-          dateSubmitted: "September 14, 2025",
-          status: "Interview Scheduled",
-          requirements: ["Resume", "Character Reference"]
-        },
-        {
-          id: 4,
-          name: "Anna Lee",
-          dateSubmitted: "September 16, 2025",
-          status: "Hired",
-          requirements: ["Resume", "NBI Clearance", "Medical Certificate"]
-        },
-        {
-          id: 5,
-          name: "Mark Reyes",
-          dateSubmitted: "September 18, 2025",
-          status: "Rejected",
-          requirements: ["Resume", "Portfolio"]
-        },
-        {
-          id: 6,
-          name: "Sophia Tan",
-          dateSubmitted: "September 19, 2025",
-          status: "For Review",
-          requirements: ["Resume", "Cover Letter"]
-        },
-        {
-          id: 7,
-          name: "James Lim",
-          dateSubmitted: "September 20, 2025",
-          status: "Interview Scheduled",
-          requirements: ["Resume", "Character Reference", "Transcript of Records"]
-        },
-        {
-          id: 8,
-          name: "Christine Dela Cruz",
-          dateSubmitted: "September 21, 2025",
-          status: "Rejected",
-          requirements: ["Resume", "Portfolio"]
-        },
-        {
-          id: 9,
-          name: "Robert Mendoza",
-          dateSubmitted: "September 22, 2025",
-          status: "For Review",
-          requirements: ["Resume", "Cover Letter"]
-        },
-        {
-          id: 10,
-          name: "Isabella Garcia",
-          dateSubmitted: "September 25, 2025",
-          status: "Hired",
-          requirements: ["Resume", "NBI Clearance", "Medical Certificate"]
-        },
-      ],
-
-
-      showApplicantsModal: false,
+      applicantsList: [],
       upcomingCareers: [],
 
       
@@ -577,6 +558,325 @@ export default {
   
 
   methods: {
+    async openApplicantsModal(career) {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please log in to continue.");
+        return;
+      }
+      
+      // Handle both careerID and id properties
+      const careerID = career.careerID || career.id;
+      if (!careerID) {
+        alert("Invalid career selected.");
+        return;
+      }
+      
+      console.log("Fetching applicants for Career ID:", careerID);
+      console.log("Token exists:", !!token, "Token length:", token ? token.length : 0);
+
+      try {
+        this.selectedCareer = career;
+        const response = await axios.get(
+          `http://127.0.0.1:8000/api/careers/${careerID}/applicants`,
+          {
+            headers: {
+              Authorization: `Bearer ${token.trim()}`,
+              Accept: "application/json",
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        console.log(response.data); // Check the response data structure
+
+        // Map the response data to your applicantsList
+        if (response.data && response.data.length > 0) {
+          this.applicantsList = response.data.map(app => ({
+            id: app.id,
+            name: app.name,
+            dateSubmitted: app.dateSubmitted,
+            status: app.status ? app.status.toLowerCase() : 'submitted', // Normalize status to lowercase
+            requirements: app.requirements,
+            interviewSchedule: app.interviewSchedule,
+            interviewMode: app.interviewMode,
+            interviewLocation: app.interviewLocation,
+            interviewLink: app.interviewLink,
+          }));
+        } else {
+          this.applicantsList = []; // Ensure it's cleared if no applicants found
+        }
+
+        this.showApplicantsModal = true; // Show the modal after setting the applicants
+      } catch (error) {
+        console.error("Error fetching applicants:", error);
+        console.error("Error response:", error.response);
+        if (error.response?.status === 401) {
+          alert("Unauthorized. Please log in again. Error: " + (error.response.data?.message || "Token invalid or expired"));
+          // Optionally redirect to login
+        } else if (error.response?.status === 403) {
+          alert("Access denied. You don't have permission to view applicants for this career.");
+        } else {
+          alert(error.response?.data?.message || "An error occurred while fetching applicants. Please try again.");
+        }
+        this.applicantsList = [];
+      }
+    },
+
+
+
+    async updateApplicationStatus(person) {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please log in to continue.");
+        return;
+      }
+      
+      // Store original status in case of error
+      const originalStatus = person.status;
+      
+      console.log("Updating status for application ID:", person.id, "New status:", person.status);
+      console.log("Token exists:", !!token);
+      
+      try {
+        const response = await axios.put(
+          `http://127.0.0.1:8000/api/applications/${person.id}/status`,
+          { status: person.status },
+          {
+            headers: {
+              Authorization: `Bearer ${token.trim()}`,
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+          }
+        );
+
+        // Update local state with response data
+        const index = this.applicantsList.findIndex(a => a.id === person.id);
+        if (index !== -1) {
+          const updatedData = response.data.data || response.data;
+          this.applicantsList[index] = {
+            ...this.applicantsList[index],
+            status: updatedData.applicationStatus ? updatedData.applicationStatus.toLowerCase() : person.status,
+          };
+        }
+      } catch (error) {
+        console.error("Error updating status:", error);
+        console.error("Error response:", error.response);
+        // Revert to original status on error
+        person.status = originalStatus;
+        if (error.response?.status === 401) {
+          alert("Unauthorized. Please log in again. Error: " + (error.response.data?.message || "Token invalid or expired"));
+        } else if (error.response?.status === 403) {
+          alert("Access denied. You don't have permission to update this application status.");
+        } else {
+          alert(error.response?.data?.message || "Failed to update application status. Please try again.");
+        }
+      }
+    },
+
+
+    async viewRequirements(person) {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please log in to continue.");
+        return;
+      }
+
+      if (!person.requirements) {
+        alert("No requirements file available for this applicant.");
+        return;
+      }
+
+      try {
+        this.selectedPerson = person;
+        console.log("Fetching signed URL for application ID:", person.id);
+
+        // Call the signed URL API
+        const response = await axios.get(
+          `http://127.0.0.1:8000/api/applications/${person.id}/requirements-signed-url`,
+          {
+            headers: {
+              Authorization: `Bearer ${token.trim()}`,
+              Accept: 'application/json'
+            }
+          }
+        );
+
+        console.log("Signed URL response received:", response);
+
+        if (!response.data || !response.data.signed_url) {
+          throw new Error("Signed URL not returned from server");
+        }
+
+        // Assign the signed URL directly to iframe
+        this.requirementsUrl = response.data.signed_url;
+        this.showRequirementsModal = true;
+
+      } catch (error) {
+        console.error("Error fetching signed URL:", error);
+        if (error.response?.status === 404) {
+          alert("Requirements file not found. The file may have been deleted or moved.");
+        } else if (error.response?.status === 401) {
+          alert("Unauthorized. Please log in again.");
+        } else if (error.response?.status === 403) {
+          alert("Access denied. You don't have permission to view this file.");
+        } else if (error.message) {
+          alert("Failed to load requirements: " + error.message);
+        } else {
+          alert("Failed to load requirements. Please try again.");
+        }
+      }
+    },
+
+
+
+    closeRequirementsModal() {
+      this.showRequirementsModal = false;
+      this.requirementsUrl = null; // just clear the URL
+      this.selectedPerson = null;   // optional: clear the selected applicant
+    },
+
+    downloadRequirements() {
+      if (this.requirementsUrl && this.selectedPerson) {
+        const link = document.createElement('a');
+        link.href = this.requirementsUrl;
+        link.download = `requirements_${this.selectedPerson.name.replace(/\s+/g, '_')}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        alert("No requirements to download.");
+      }
+    },
+    
+    printRequirements() {
+      if (this.requirementsUrl) {
+        const printWindow = window.open(this.requirementsUrl, '_blank');
+        if (printWindow) {
+          printWindow.onload = () => {
+            printWindow.print();
+          };
+        } else {
+          alert("Please allow pop-ups to print the requirements.");
+        }
+      } else {
+        alert("No requirements to print.");
+      }
+    },
+
+    async confirmSchedule() {
+      if (!this.scheduleData.date || !this.scheduleData.mode || !this.scheduleData.detail) {
+        alert("Please fill out all fields.");
+        return;
+      }
+      
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please log in to continue.");
+        return;
+      }
+
+      if (!this.selectedPerson || !this.selectedPerson.id) {
+        alert("No applicant selected.");
+        return;
+      }
+
+      try {
+        // Format date for backend - Laravel accepts ISO 8601 format or Y-m-d H:i:s
+        const dateObj = new Date(this.scheduleData.date);
+        if (isNaN(dateObj.getTime())) {
+          alert("Invalid date selected. Please try again.");
+          return;
+        }
+        
+        // Format as Y-m-d H:i:s for MySQL datetime
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const hours = String(dateObj.getHours()).padStart(2, '0');
+        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+        const seconds = String(dateObj.getSeconds()).padStart(2, '0');
+        const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        
+        // Map mode values correctly
+        const interviewMode = this.scheduleData.mode === "onSite" ? "On-Site" : "Online";
+        
+        const payload = {
+          interviewSchedule: formattedDate,
+          interviewMode: interviewMode,
+          interviewLocation: this.scheduleData.mode === "onSite" ? this.scheduleData.detail : null,
+          interviewLink: this.scheduleData.mode === "online" ? this.scheduleData.detail : null,
+        };
+        
+        console.log("Sending interview schedule payload:", payload);
+
+        const response = await axios.put(
+          `http://127.0.0.1:8000/api/applications/${this.selectedPerson.id}/interview`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token.trim()}`,
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+          }
+        );
+
+        console.log("Full response:", response);
+        console.log("Response data:", response.data);
+
+        // Check if the request was successful
+        if (response.data.success || response.data.message) {
+          // Update local state with response data
+          const index = this.applicantsList.findIndex(a => a.id === this.selectedPerson.id);
+          if (index !== -1) {
+            const updatedData = response.data.data || response.data;
+            console.log("Received response data:", updatedData);
+            
+            // Update the applicant in the list to ensure reactivity
+            const updatedApplicant = {
+              ...this.applicantsList[index],
+              status: 'for interview',
+              interviewSchedule: updatedData.interviewSchedule || formattedDate,
+              interviewMode: updatedData.interviewMode || interviewMode,
+              interviewLocation: updatedData.interviewLocation || (this.scheduleData.mode === "onSite" ? this.scheduleData.detail : null),
+              interviewLink: updatedData.interviewLink || (this.scheduleData.mode === "online" ? this.scheduleData.detail : null),
+            };
+            
+            console.log("Updated applicant data:", updatedApplicant);
+            
+            // Use Vue.set for Vue 2 compatibility, or direct assignment for Vue 3
+            if (this.$set) {
+              this.$set(this.applicantsList, index, updatedApplicant);
+            } else {
+              this.applicantsList[index] = updatedApplicant;
+              // Force reactivity update for Vue 3
+              this.applicantsList = [...this.applicantsList];
+            }
+          }
+
+          this.closeScheduleModal();
+          alert("✅ Interview scheduled successfully! The schedule has been saved.");
+        } else {
+          throw new Error("Unexpected response format");
+        }
+      } catch (error) {
+        console.error("Error scheduling interview:", error);
+        console.error("Error response:", error.response);
+        if (error.response?.status === 401) {
+          alert("Unauthorized. Please log in again. Error: " + (error.response.data?.message || "Token invalid or expired"));
+        } else if (error.response?.status === 403) {
+          alert("Access denied. You don't have permission to schedule interviews for this application.");
+        } else if (error.response?.status === 422) {
+          alert("Validation error: " + (error.response.data?.message || "Please check your input and try again."));
+        } else {
+          alert(error.response?.data?.message || "Failed to schedule interview. Please try again.");
+        }
+      }
+    },
+
+
     checkToken() {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -686,9 +986,6 @@ export default {
       }
     },
 
-    openApplicantsModal() {
-      this.showApplicantsModal = true;
-    },
     closeModal() {
       this.showApplicantsModal = false;
     },
@@ -702,15 +999,22 @@ export default {
 
     // ✅ OPEN SCHEDULE MODAL (only when status = For Review)
     openScheduleModal(person) {
-      if (person.status === "For Review") {
+      if (person.status === "for interview") {
         this.selectedPerson = person;
         this.showScheduleModal = true;
         this.showViewScheduleModal = false;
+        // Reset schedule data
+        this.scheduleData = {
+          date: "",
+          mode: "",
+          detail: "",
+        };
       }
     },
     closeScheduleModal() {
       this.showScheduleModal = false;
-      this.scheduleData = { date: "", onSite: false, online: false, link: "" };
+      this.scheduleData = { date: "", mode: "", detail: "" };
+      this.selectedPerson = null;
     },
 
     // Delete a career
@@ -860,7 +1164,7 @@ export default {
 
     // ✅ OPEN VIEW SCHEDULE MODAL (only when status = Interview Scheduled)
     openViewScheduleModal(person) {
-      if (person.status === "Interview Scheduled") {
+      if (person.status === "for interview" && person.interviewSchedule) {
         this.selectedPerson = person;
         this.showViewScheduleModal = true;
         this.showScheduleModal = false;
@@ -868,6 +1172,42 @@ export default {
     },
     closeViewScheduleModal() {
       this.showViewScheduleModal = false;
+      this.selectedPerson = null;
+    },
+    
+    formatInterviewDateTime(dateTimeString) {
+      if (!dateTimeString) return 'Not scheduled';
+      try {
+        const date = new Date(dateTimeString);
+        if (isNaN(date.getTime())) {
+          // Try parsing as MySQL datetime format (YYYY-MM-DD HH:mm:ss)
+          const parts = dateTimeString.split(' ');
+          if (parts.length === 2) {
+            const [datePart, timePart] = parts;
+            const [year, month, day] = datePart.split('-');
+            const [hour, minute] = timePart.split(':');
+            const parsedDate = new Date(year, month - 1, day, hour, minute);
+            return parsedDate.toLocaleString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+          }
+          return dateTimeString;
+        }
+        return date.toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      } catch (error) {
+        console.error("Error formatting date:", error);
+        return dateTimeString;
+      }
     },
     openCalendar() {
       const input = this.$refs.dateInput;
@@ -898,47 +1238,6 @@ export default {
 
       // Final fallback: open a small helper so user can still pick — alert as last resort
       console.warn("Native picker was not opened programmatically by the browser. Consider adding a JS datepicker as a reliable fallback.");
-    },
-
-    confirmSchedule() {
-      if (!this.scheduleData.date) {
-        alert("Please select a date and time.");
-        return;
-      }
-
-      if (!this.scheduleData.mode) {
-        alert("Please select interview mode (On-Site or Online).");
-        return;
-      }
-
-      if (!this.scheduleData.detail) {
-        alert(
-          this.scheduleData.mode === "onSite"
-            ? "Please enter the interview location."
-            : "Please enter the interview link."
-        );
-        return;
-      }
-
-      const interviewDate = new Date(this.scheduleData.date);
-      this.selectedPerson.interviewDate = interviewDate.toLocaleDateString();
-      this.selectedPerson.interviewTime = interviewDate.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      this.selectedPerson.mode =
-        this.scheduleData.mode === "onSite" ? "On-Site" : "Online";
-      this.selectedPerson.linkOrLocation = this.scheduleData.detail;
-      this.selectedPerson.status = "Interview Scheduled";
-
-      this.closeScheduleModal();
-    },
-
-    viewRequirements(person) {
-      alert(`Viewing requirements for ${person.name}`);
-    },
-    uploadRequirements(person) {
-      alert(`Uploading requirements for ${person.name}`);
     },
 
     async fetchCareers() {
@@ -1255,6 +1554,48 @@ const logout = () => {
 
 
 <style scoped>
+.status-dropdown {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background-color: white;
+  cursor: pointer;
+}
+
+.view-btn {
+  background-color: #334155;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-btn:hover {
+  background-color: #1e293b;
+  transform: scale(1.03);
+}
+
+.requirements-modal {
+  max-width: 800px;
+  width: 90%;
+}
+
+.pdf-viewer {
+  width: 100%;
+  height: 600px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  margin: 15px 0;
+}
+
+.requirements-viewer {
+  margin: 20px 0;
+}
 
 .tag-list-wrapper {
   overflow-x: auto; 
