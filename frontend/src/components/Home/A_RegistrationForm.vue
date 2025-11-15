@@ -389,8 +389,8 @@
               <option disabled value="">Select your target career</option>
               <option
                 v-for="career in careers"
-                :key="career.id"
-                :value="career.id"
+                :key="career.careerID"
+                :value="career.careerID"
               >
                 {{ career.position }}
               </option>
