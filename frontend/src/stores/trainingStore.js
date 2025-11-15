@@ -37,12 +37,12 @@ export const useTrainingStore = defineStore("trainingStore", {
       );
 
       this.qrCodes = {
-        ...this.qrCodes,
-        [training.trainingID]: {
-          value: `${import.meta.env.BASE_URL}attendance/checkin?trainingID=${training.trainingID}&key=${response.data.key}`,
-          expires_at: new Date(response.data.expires_at),
-        },
-      };
+      ...this.qrCodes,
+      [training.trainingID]: {
+        value: `${import.meta.env.VITE_FRONTEND_URL}/attendance/checkin?trainingID=${training.trainingID}&key=${response.data.key}`,
+        expires_at: new Date(response.data.expires_at),
+      },
+    };  
     } catch (error) {
       console.error("QR GENERATION FAILED:", error.response?.data || error);
     }
