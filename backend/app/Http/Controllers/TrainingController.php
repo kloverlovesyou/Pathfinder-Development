@@ -52,9 +52,31 @@ class TrainingController extends Controller
         return env('FRONTEND_URL') . '/attendance/checkin?trainingID='
             . $training->trainingID . '&key=' . $training->attendance_key;
     }
+
     /**
-     * User attendance check-in via QR code
+     * Manually generate QR (optional)
      */
+    public function generateQRCode(Request $request)
+    {
+        // ✅ Allow anyone (no auth)
+        $request->validate([
+            'trainingID' => 'required|integer',
+        ]);
+
+        $training = Training::find($request->trainingID);
+        if (!$training) return response()->json(['message' => 'Training not found'], 404);
+
+        // Generate a QR key
+        $key = Str::upper(Str::random(12));
+        $expiresAt = now()->addMinutes(15);
+
+
+        return response()->json([
+            'key' => $key,
+            'expires_at' => $expiresAt,
+        ]);
+    }
+
     public function attendanceCheckin(Request $request)
     {
         $request->validate([
@@ -101,7 +123,6 @@ class TrainingController extends Controller
 
         return response()->json(['message' => '✅ Attendance recorded successfully']);
     }
-
     /**
      * List all trainings (QR auto-generated if schedule started)
      */
