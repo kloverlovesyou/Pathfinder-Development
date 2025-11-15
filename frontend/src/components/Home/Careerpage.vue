@@ -32,9 +32,12 @@ async function fetchCareerBookmarks() {
   try {
     const token = localStorage.getItem("token");
     if (!token) return;
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/career-bookmarks", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/career-bookmarks",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
     bookmarkedCareers.value = new Set(res.data.map((b) => b.careerID));
   } catch (error) {
     console.error("Error fetching career bookmarks:", error);
@@ -58,15 +61,22 @@ async function toggleCareerBookmark(careerId) {
 
   try {
     if (bookmarkedCareers.value.has(careerId)) {
-      await axios.delete(import.meta.env.VITE_API_BASE_URL + `/career-bookmarks/${careerId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(
+        import.meta.env.VITE_API_BASE_URL + `/career-bookmarks/${careerId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       bookmarkedCareers.value.delete(careerId);
       addToast("Bookmark removed", "success");
     } else {
-      await axios.post(import.meta.env.VITE_API_BASE_URL + "/career-bookmarks", { careerID: careerId }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.post(
+        import.meta.env.VITE_API_BASE_URL + "/career-bookmarks",
+        { careerID: careerId },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       bookmarkedCareers.value.add(careerId);
       addToast("Bookmark added", "success");
     }
@@ -89,7 +99,9 @@ async function toggleCareerBookmark(careerId) {
 // ✅ Fetch careers
 onMounted(async () => {
   try {
-    const response = await axios.get(import.meta.env.VITE_API_BASE_URL +"/careers");
+    const response = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/careers"
+    );
     careers.value = response.data;
   } catch (error) {
     console.error("Error fetching careers:", error);
@@ -143,12 +155,16 @@ async function submitApplication() {
       form.append("requirements", uploadedFile.value);
     }
 
-    await axios.post(import.meta.env.VITE_API_BASE_URL + "/applications", form, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    await axios.post(
+      import.meta.env.VITE_API_BASE_URL + "/applications",
+      form,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
 
     addToast("APPLICATION SUBMITTED SUCCESSFULLY", "success");
     const id = selectedCareer.value.careerID ?? selectedCareer.value.id;
@@ -246,6 +262,7 @@ const showModal = ref(false);
 function openModal(career) {
   selectedCareer.value = career;
   showModal.value = true;
+  console.log("Opening modal for career:", career);
 }
 
 function closeModal() {
@@ -256,18 +273,24 @@ function closeModal() {
 async function fetchMyApplications() {
   const token = localStorage.getItem("token");
   if (!token) return;
-  const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/applications", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await axios.get(
+    import.meta.env.VITE_API_BASE_URL + "/applications",
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
   myApplications.value = new Set(res.data.map((a) => a.careerID));
 }
 
 async function fetchBookmarks() {
   const token = localStorage.getItem("token");
   if (!token) return;
-  const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/career-bookmarks", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await axios.get(
+    import.meta.env.VITE_API_BASE_URL + "/career-bookmarks",
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
   bookmarkedCareers.value = new Set(res.data.map((b) => b.careerID));
 }
 
@@ -297,9 +320,9 @@ onMounted(async () => {
           class="p-4 bg-blue-gray rounded-lg relative hover:bg-gray-300 transition cursor-pointer"
           @click="openModal(career)"
         >
-          <h3 class="font-semibold text-lg">{{ career.position }}</h3>
-          <p class="text-gray-700 font-medium">
-            {{ career.organizationName }}
+          <h3 class="font-semibold">{{ career.position }}</h3>
+          <p class="text-gray-700">
+            {{ career.organization }}
           </p>
         </div>
       </div>
