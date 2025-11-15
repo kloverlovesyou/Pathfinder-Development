@@ -23,7 +23,9 @@ use App\Http\Controllers\{
     MyActivityController,
     EventController,
     InterviewController,
-    AdminSearchController
+    AdminSearchController,
+    ApplicationFileController,
+    CareerRecommendationController
 };
 
 // ----------------------
@@ -40,6 +42,17 @@ Route::post('/tags', [TagController::class, 'store']);
 
 // Careers with recommendations
 Route::get('/careers/{id}/details', [CareerRecommendationController::class, 'getCareerWithRecommendations']);
+
+//career-training recommendation
+Route::get('/careers', [CareerRecommendationController::class, 'index']);
+Route::get('/careers/{careerID}/recommended', [CareerRecommendationController::class, 'recommendedCareers']);
+Route::get('/careers/{careerID}/trainings', [CareerRecommendationController::class, 'recommendedTrainings']);
+Route::get('/careers/{careerID}/details', [CareerRecommendationController::class, 'careerDetails']);
+
+Route::get('/signed/applications/{application}/{organization}/requirements',
+    [ApplicationFileController::class, 'serveSigned'])
+    ->name('signed.requirements.view')
+    ->middleware('signed');
 
 // ----------------------
 // Auth routes
@@ -83,8 +96,19 @@ Route::middleware('auth.custom')->group(function () {
 // Protected routes (auth.custom)
 // ----------------------
 Route::middleware('auth.custom')->group(function () {
+// Certificate issuance
+    Route::put('/registrations/{registrationID}/certificate', [RegistrationController::class, 'updateCertificate']);
+    Route::post('/trainings/{trainingID}/certificates/bulk', [RegistrationController::class, 'issueBulkCertificates']);
+
 
     // Trainings
+
+       // Applicant monitoring
+    Route::get('/careers/{careerID}/applicants', [ApplicationController::class, 'getApplicantsByCareer']);
+    Route::put('/applications/{applicationID}/status', [ApplicationController::class, 'updateStatus']);
+    Route::put('/applications/{applicationID}/interview', [ApplicationController::class, 'updateInterview']);
+    //Route::get('/applications/{applicationID}/requirements', [ApplicationController::class, 'getRequirements']);
+    Route::get('/applications/{applicationID}/requirements/signed-url', [ApplicationFileController::class, 'generateSignedUrl']);
     Route::post('/trainings', [TrainingController::class, 'store']);
     Route::put('/trainings/{id}', [TrainingController::class, 'update']);
     Route::delete('/trainings/{id}', [TrainingController::class, 'destroy']);
