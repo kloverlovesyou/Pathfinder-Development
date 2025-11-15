@@ -1,15 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'laravel/laravel',
-<<<<<<< HEAD
         'pretty_version' => 'dev-Option-2-QR-Attendance-with-links',
         'version' => 'dev-Option-2-QR-Attendance-with-links',
         'reference' => 'feb5812b9c2c1704fa56e6b1518600dd373cd4a4',
-=======
-        'pretty_version' => 'dev-jerald',
-        'version' => 'dev-jerald',
-        'reference' => 'ee7ce919b5a3c3da1e42f3ceb6061bd40006e509',
->>>>>>> c5aaa607d9df97a3a9c63fa9448c70bba54911c1
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
