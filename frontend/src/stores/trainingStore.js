@@ -39,9 +39,7 @@ export const useTrainingStore = defineStore("trainingStore", {
       this.qrCodes = {
         ...this.qrCodes,
         [training.trainingID]: {
-          value:
-            import.meta.env.VITE_API_BASE_URL +
-            `/attendance/checkin?trainingID=${training.trainingID}&key=${response.data.key}`,
+          value: `${import.meta.env.BASE_URL}attendance/checkin?trainingID=${training.trainingID}&key=${response.data.key}`,
           expires_at: new Date(response.data.expires_at),
         },
       };
