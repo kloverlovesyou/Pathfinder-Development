@@ -32,7 +32,7 @@ class TrainingController extends Controller
     {
         $now = now();
 
-        // Clear QR after the training ends
+        // Clear QR if training ended
         if ($training->attendance_key && $now->greaterThanOrEqualTo($training->end_time)) {
             $training->attendance_key = null;
             $training->qr_generated_at = null;
@@ -41,44 +41,31 @@ class TrainingController extends Controller
             return null;
         }
 
-        // Always generate QR if missing
-        if (!$training->attendance_key) {
+        // Generate QR key if schedule started
+        if ($now->greaterThanOrEqualTo($training->schedule)
+            && !$training->attendance_key
+            && $now->lessThan($training->end_time)) 
+        {
             $training->attendance_key = $this->generateSafeKey(16);
             $training->qr_generated_at = $now;
             $training->attendance_expires_at = $training->end_time;
             $training->save();
         }
 
-        return env('FRONTEND_URL') . '/attendance/checkin?trainingID='
-            . $training->trainingID . '&key=' . $training->attendance_key;
-    }
+        if ($training->attendance_key) {
+            // ✅ Return a full link for QR scanning
+            return env('FRONTEND_URL') . '/attendance/checkin?trainingID='
+                . $training->trainingID . '&key=' . $training->attendance_key;
+        }
 
+        return null;
+    }
     /**
-     * Manually generate QR (optional)
+     * User attendance check-in via QR code
      */
-    public function generateQRCode(Request $request)
-    {
-        // ✅ Allow anyone (no auth)
-        $request->validate([
-            'trainingID' => 'required|integer',
-        ]);
-
-        $training = Training::find($request->trainingID);
-        if (!$training) return response()->json(['message' => 'Training not found'], 404);
-
-        // Generate a QR key
-        $key = Str::upper(Str::random(12));
-        $expiresAt = now()->addMinutes(15);
-
-
-        return response()->json([
-            'key' => $key,
-            'expires_at' => $expiresAt,
-        ]);
-    }
-
     public function attendanceCheckin(Request $request)
     {
+        // ✅ Validate the input
         $request->validate([
             'trainingID' => 'required|integer',
             'key' => 'required|string',
@@ -88,41 +75,84 @@ class TrainingController extends Controller
             'phoneNumber' => 'required|string',
         ]);
 
-        // Find the training and validate key
-        $training = Training::find($request->trainingID);
-        if (!$training) {
-            return response()->json(['message' => '❌ Training not found.'], 404);
-        }
-
-        if ($training->attendance_key !== $request->key) {
-            return response()->json(['message' => '❌ Invalid attendance key.'], 400);
-        }
-
-        // Save user attendance (inside your trainings table or a JSON/array field)
-        $attendees = $training->attendees ?? [];
-        $attendees[] = [
-            'firstName' => $request->firstName,
-            'lastName' => $request->lastName,
-            'email' => $request->emailAddress,
-            'phone' => $request->phoneNumber,
-            'checked_in_at' => now(),
-        ];
-
-        $training->attendees = $attendees;
-        $training->save();
-
-        // ✅ Update registration status if the user is registered
-        $registration = \App\Models\Registration::where('training_id', $training->id)
-            ->where('email_address', $request->emailAddress) // assuming email identifies registrant
+        // Find the training with the QR key
+        $training = DB::table('training')
+            ->where('trainingID', $request->trainingID)
+            ->where('attendance_key', $request->key)
             ->first();
 
-        if ($registration && $registration->registrationStatus === 'Registered') {
-            $registration->registrationStatus = 'Attended';
-            $registration->save();
+        if (!$training) {
+            return response()->json(['message' => 'Invalid or fake QR code'], 400);
         }
 
-        return response()->json(['message' => '✅ Attendance recorded successfully']);
+        if (now()->greaterThanOrEqualTo($training->end_time)) {
+            return response()->json(['message' => 'QR Code Expired'], 400);
+        }
+
+        // ✅ Step 1: find applicant by email and training
+        $applicant = DB::table('applicant')
+            ->join('registration', 'registration.applicantID', '=', 'applicant.applicantID')
+            ->where('registration.trainingID', $request->trainingID)
+            ->where('applicant.emailAddress', $request->emailAddress)
+            ->select('applicant.*', 'registration.registrationID')
+            ->first();
+
+        if (!$applicant) {
+            return response()->json(['message' => '⚠️ No registration found with this email.'], 404);
+        }
+
+        // ✅ Step 2: check first/last name
+        if ($applicant->firstName !== $request->firstName || $applicant->lastName !== $request->lastName) {
+            return response()->json(['message' => '⚠️ Name does not match our records.'], 400);
+        }
+
+        // ✅ Step 3: check phone number
+        if ($applicant->phoneNumber !== $request->phoneNumber) {
+            return response()->json(['message' => '⚠️ Phone number does not match our records.'], 400);
+        }
+
+        // ✅ Step 4: update attendance
+        DB::table('registration')
+            ->where('registrationID', $applicant->registrationID)
+            ->update([
+                'checked_in_at' => now(),
+                'registrationStatus' => 'Attended',
+                'certTrackingID' => $request->key
+            ]);
+
+        return response()->json(['message' => '✅ Attendance Recorded Successfully']);
     }
+    /**
+     * Manually generate QR (optional)
+     */
+    public function generateQRCode(Request $request)
+    {
+        $training = Training::find($request->trainingID);
+
+        if (!$training) {
+            return response()->json(['message' => 'Training not found'], 404);
+        }
+
+        if (now()->lessThan($training->end_time)) {
+            $training->attendance_key = $this->generateSafeKey(16);
+            $training->qr_generated_at = now();
+            $training->attendance_expires_at = $training->end_time;
+            $training->save();
+
+            // ✅ Create full attendance URL
+            $attendanceUrl = env('FRONTEND_URL') . '/attendance/checkin?trainingID='
+                            . $training->trainingID . '&key=' . $training->attendance_key;
+
+            return response()->json([
+                'key' => $training->attendance_key,
+                'attendance_link' => $attendanceUrl,
+                'expires_at' => $training->end_time,
+            ]);
+        }
+
+        return response()->json(['message' => 'Cannot generate QR — training already ended'], 400);
+    }
+
     /**
      * List all trainings (QR auto-generated if schedule started)
      */
