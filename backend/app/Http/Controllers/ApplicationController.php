@@ -53,40 +53,49 @@ class ApplicationController extends Controller
 
         $validated = $request->validate([
             'careerID' => 'required|exists:career,careerID',
-            'requirements' => 'nullable|file|mimes:pdf|max:5120',
+            'requirements' => 'nullable|file|mimes:pdf|max:5120', //5mb
         ]);
 
-        // Prevent duplicate application
+        //prevent duplicates
         $existing = Application::where('applicantID', $user->applicantID)
             ->where('careerID', (int) $validated['careerID'])
             ->first();
-
-        if ($existing) {
+        
+        if($existing){
             return response()->json([
                 'message' => 'ALREADY APPLIED',
                 'applicationID' => $existing->applicationID,
             ], 409);
         }
 
+        //store requirements pdf
         $requirementsPath = null;
-        if ($request->hasFile('requirements')) {
+        if($request->hasFile('requirements')){
+            //uses public disk, ensure filesystems.php has public disk configured
             $file = $request->file('requirements');
+            // Use Storage facade to ensure correct path format
             $requirementsPath = Storage::disk('public')->putFile('requirements', $file);
+            
+            // Log the stored path for debugging
             Log::info('Requirements file stored', [
-                'path' => $requirementsPath,
-                'exists' => Storage::disk('public')->exists($requirementsPath)
+                'stored_path' => $requirementsPath,
+                'full_path' => Storage::disk('public')->path($requirementsPath),
+                'file_exists' => Storage::disk('public')->exists($requirementsPath)
             ]);
         }
-
-        $career = \App\Models\Career::find((int) $validated['careerID']);
 
         $app = Application::create([
             'requirements' => $requirementsPath,
             'dateSubmitted' => Carbon::now(),
             'applicationStatus' => 'Submitted',
-            'careerID' => $career->careerID,
+            'interviewSchedule' => null,
+            'interviewMode' => null,
+            'interviewLocation' => null,
+            'interviewLink' => null,
+
+            'careerID' => (int) $validated['careerID'],
             'applicantID' => $user->applicantID,
-            'organization' => $career->organization->name ?? 'Unknown Organization',
+            'organization' => $app->career->organization ?? 'Unknown Organization',
         ]);
 
         return response()->json([
