@@ -383,8 +383,6 @@
             <input v-model="newTraining.title" type="text" placeholder="Title" class="training-input" />
             <textarea v-model="newTraining.description" placeholder="Description" class="training-input"></textarea>
 
-
-            <!-- Schedule -->
             <!-- Schedule -->
             <div class="popup-form-group schedule-group">
               <label for="schedule">Schedule</label>
@@ -964,17 +962,20 @@ export default {
     },
 
     openTrainingPopup(training = null) {
-      console.log("training passed in:", training);
+
+      // 🔍 ADD THESE LOGS HERE
+      console.log("RAW TRAINING:", training);
+      console.log("RAW TAGS:", training ? training.Tags : null);
+      console.log("TAG TYPE:", training ? typeof training.Tags : null);
+      // 🔍 END LOGS
 
       if (training) {
         this.isEditMode = true;
 
         this.newTraining = {
           ...training,
-
-          // 🔵 Ensure Tags exists (convert objects → TagID array)
           Tags: training.Tags
-            ? training.Tags.map(tag => tag.TagID)   // backend returns objects
+            ? training.Tags.map(tag => tag.TagID)
             : []
         };
 
@@ -989,7 +990,7 @@ export default {
           mode: "",
           location: "",
           trainingLink: "",
-          Tags: [] // must exist
+          Tags: []
         };
       }
 
