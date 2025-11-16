@@ -964,10 +964,20 @@ export default {
     },
 
     openTrainingPopup(training = null) {
-      console.log("training passed in:", training); // ← add this
+      console.log("training passed in:", training);
+
       if (training) {
         this.isEditMode = true;
-        this.newTraining = { ...training };
+
+        this.newTraining = {
+          ...training,
+
+          // 🔵 Ensure Tags exists (convert objects → TagID array)
+          Tags: training.Tags
+            ? training.Tags.map(tag => tag.TagID)   // backend returns objects
+            : []
+        };
+
       } else {
         this.isEditMode = false;
         this.newTraining = {
@@ -979,9 +989,10 @@ export default {
           mode: "",
           location: "",
           trainingLink: "",
-          Tags: []
+          Tags: [] // must exist
         };
       }
+
       this.showTrainingPopup = true;
     },
 
