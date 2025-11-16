@@ -123,7 +123,7 @@
             <span class="count-badge">{{ sortedUpcomingTrainings.length }}</span>
           </h2>
 
-          <button class="plus-btn-text" @click="openTrainingPopup">+</button>
+          <button class="plus-btn-text" @click="openTrainingPopup()">+</button>
         </div>
 
         <!-- ✅ Grid Layout -->
@@ -256,7 +256,8 @@
             <strong>Date and Start Time:</strong> {{ formatSchedule(selectedTraining.schedule) }}
           </p>
           <p class="training-info">
-            <strong>End Time:</strong> {{ formatSchedule(selectedTraining.end_time) }}</p> <!-- 👈 Show end_time -->
+            <strong>End Time:</strong> {{ formatSchedule(selectedTraining.end_time) }}
+          </p> <!-- 👈 Show end_time -->
           <p class="training-info">
             <strong>Mode:</strong> {{ selectedTraining.mode }}
           </p>
@@ -281,12 +282,11 @@
           </div>
           <!-- ✅ Show QR only if training is live/upcoming within allowed time -->
           <div
-              v-if="activeTrainingQR && activeTrainingId === selectedTraining.trainingID && isTrainingActive(selectedTraining)"
-              class="qr-container"
-            >
-              <h3>QR Code (Expires at: {{ activeTrainingQRExpiresAt }})</h3>
-              <qrcode-vue :value="activeTrainingQR" :size="200" />
-            </div>
+            v-if="activeTrainingQR && activeTrainingId === selectedTraining.trainingID && isTrainingActive(selectedTraining)"
+            class="qr-container">
+            <h3>QR Code (Expires at: {{ activeTrainingQRExpiresAt }})</h3>
+            <qrcode-vue :value="activeTrainingQR" :size="200" />
+          </div>
         </div>
       </div>
 
@@ -386,81 +386,61 @@
 
             <!-- Schedule -->
             <!-- Schedule -->
-<div class="popup-form-group schedule-group">
-  <label for="schedule">Schedule</label>
-  <div class="schedule-input-wrapper">
-    <!-- Date input with calendar icon -->
-    <div class="date-input-wrapper">
-      <input
-        type="date"
-        id="schedule"
-        v-model="newTraining.date"
-        :min="todayDate"
-        placeholder="Schedule"
-      />
-      <span class="calendar-icon">
-        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path
-            d="M2.16669 9.41675C2.16669 7.53113 2.16669 6.58832 2.75247 6.00253C3.33826 5.41675 4.28107 5.41675 6.16669 5.41675H19.8334C21.719 5.41675 22.6618 5.41675 23.2476 6.00253C23.8334 6.58832 23.8334 7.53113 23.8334 9.41675V9.83342C23.8334 10.3048 23.8334 10.5405 23.6869 10.687C23.5405 10.8334 23.3048 10.8334 22.8334 10.8334H3.16669C2.69528 10.8334 2.45958 10.8334 2.31313 10.687C2.16669 10.5405 2.16669 10.3048 2.16669 9.83341V9.41675Z"
-            fill="black"
-          />
-          <path
-            d="M22.833 13C23.3042 13 23.5401 13.0002 23.6865 13.1465C23.833 13.2929 23.833 13.5286 23.833 14V19.833C23.833 21.7186 23.8329 22.6613 23.2471 23.2471C22.6613 23.8329 21.7186 23.833 19.833 23.833H6.16699C4.28137 23.833 3.33872 23.8329 2.75293 23.2471C2.16714 22.6613 2.16699 21.7186 2.16699 19.833V14C2.16699 13.5286 2.16703 13.2929 2.31348 13.1465C2.45994 13.0002 2.69576 13 3.16699 13H22.833Z"
-            fill="black"
-          />
-          <path d="M7.58331 3.25L7.58331 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
-          <path d="M18.4167 3.25L18.4167 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
-        </svg>
-      </span>
-    </div>
+            <div class="popup-form-group schedule-group">
+              <label for="schedule">Schedule</label>
+              <div class="schedule-input-wrapper">
+                <!-- Date input with calendar icon -->
+                <div class="date-input-wrapper">
+                  <input type="date" id="schedule" v-model="newTraining.date" :min="todayDate" placeholder="Schedule" />
+                  <span class="calendar-icon">
+                    <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M2.16669 9.41675C2.16669 7.53113 2.16669 6.58832 2.75247 6.00253C3.33826 5.41675 4.28107 5.41675 6.16669 5.41675H19.8334C21.719 5.41675 22.6618 5.41675 23.2476 6.00253C23.8334 6.58832 23.8334 7.53113 23.8334 9.41675V9.83342C23.8334 10.3048 23.8334 10.5405 23.6869 10.687C23.5405 10.8334 23.3048 10.8334 22.8334 10.8334H3.16669C2.69528 10.8334 2.45958 10.8334 2.31313 10.687C2.16669 10.5405 2.16669 10.3048 2.16669 9.83341V9.41675Z"
+                        fill="black" />
+                      <path
+                        d="M22.833 13C23.3042 13 23.5401 13.0002 23.6865 13.1465C23.833 13.2929 23.833 13.5286 23.833 14V19.833C23.833 21.7186 23.8329 22.6613 23.2471 23.2471C22.6613 23.8329 21.7186 23.833 19.833 23.833H6.16699C4.28137 23.833 3.33872 23.8329 2.75293 23.2471C2.16714 22.6613 2.16699 21.7186 2.16699 19.833V14C2.16699 13.5286 2.16703 13.2929 2.31348 13.1465C2.45994 13.0002 2.69576 13 3.16699 13H22.833Z"
+                        fill="black" />
+                      <path d="M7.58331 3.25L7.58331 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
+                      <path d="M18.4167 3.25L18.4167 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                  </span>
+                </div>
 
-    <!-- Start Time -->
-    <div class="time-input-wrapper">
-      <label for="startTime">Start Time</label>
-      <div class="date-input-wrapper">
-        <input
-          type="time"
-          id="startTime"
-          v-model="newTraining.startTime"
-          placeholder="Start Time"
-        />
-        <span class="calendar-icon">
-          <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
-              fill="black"
-            />
-            <path d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
-              fill="black" />
-          </svg>
-        </span>
-      </div>
-    </div>
+                <!-- Start Time -->
+                <div class="time-input-wrapper">
+                  <label for="startTime">Start Time</label>
+                  <div class="date-input-wrapper">
+                    <input type="time" id="startTime" v-model="newTraining.startTime" placeholder="Start Time" />
+                    <span class="calendar-icon">
+                      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                          d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
+                          fill="black" />
+                        <path d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
+                          fill="black" />
+                      </svg>
+                    </span>
+                  </div>
+                </div>
 
-          <!-- End Time -->
-          <div class="time-input-wrapper">
-            <label for="endTime">End Time</label>
-            <div class="date-input-wrapper">
-              <input
-                type="time"
-                id="endTime"
-                v-model="newTraining.endTime"
-                placeholder="End Time"
-              />
-              <span class="calendar-icon">
-                <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path
-                    d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
-                    fill="black"
-                  />
-                  <path d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
-                    fill="black" />
-                </svg>
-              </span>
+                <!-- End Time -->
+                <div class="time-input-wrapper">
+                  <label for="endTime">End Time</label>
+                  <div class="date-input-wrapper">
+                    <input type="time" id="endTime" v-model="newTraining.endTime" placeholder="End Time" />
+                    <span class="calendar-icon">
+                      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                          d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
+                          fill="black" />
+                        <path d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
+                          fill="black" />
+                      </svg>
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
 
             <!-- On-Site / Online -->
             <div class="training-radio-group">
@@ -483,40 +463,27 @@
 
             <!-- Tag selection -->
             <div class="relative mb-4">
-                <label class="block font-semibold text-gray-600 mb-2">Tags</label>
-                <!-- Tag List Wrapper for horizontal scrolling -->
-                <div class="tag-list-wrapper">
-                    <div class="tag-list">
-                        <span
-                            v-for="tag in tagOptions"
-                            :key="tag.TagID"
-                            class="tag-chip"
-                            @click="toggleTag(tag.TagID)"
-                            :class="{ 'tag-chip-selected': isTagSelected(tag.TagID) }"
-                        >
-                            {{ tag.TagName }}
-                        </span>
-                    </div>
+              <label class="block font-semibold text-gray-600 mb-2">Tags</label>
+              <!-- Tag List Wrapper for horizontal scrolling -->
+              <div class="tag-list-wrapper">
+                <div class="tag-list">
+                  <span v-for="tag in tagOptions" :key="tag.TagID" class="tag-chip" @click="toggleTag(tag.TagID)"
+                    :class="{ 'tag-chip-selected': isTagSelected(tag.TagID) }">
+                    {{ tag.TagName }}
+                  </span>
                 </div>
-                <!-- Display Selected Tags as Chips -->
-                <div v-if="newTraining.Tags.length" class="flex flex-wrap gap-2 mt-2">
-                    <span
-                        v-for="tagID in newTraining.Tags"
-                        :key="tagID"
-                        class="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-full"
-                    >
-                        {{ getTagName(tagID) }}
-                        <button @click.stop="removeTag(tagID)" class="ml-1 text-red-500">×</button> <!-- Remove Button -->
-                    </span>
-                </div>
-                <!-- Input for New Tag -->
-                <input
-                    v-model="newTagName"
-                    type="text"
-                    placeholder="Add new tag"
-                    class="training-input mt-2"
-                />
-                <button @click.prevent="addTag" class="training-save-btn mt-2">Add Tag</button>
+              </div>
+              <!-- Display Selected Tags as Chips -->
+              <div v-if="newTraining.Tags.length" class="flex flex-wrap gap-2 mt-2">
+                <span v-for="tagID in newTraining.Tags" :key="tagID"
+                  class="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-full">
+                  {{ getTagName(tagID) }}
+                  <button @click.stop="removeTag(tagID)" class="ml-1 text-red-500">×</button> <!-- Remove Button -->
+                </span>
+              </div>
+              <!-- Input for New Tag -->
+              <input v-model="newTagName" type="text" placeholder="Add new tag" class="training-input mt-2" />
+              <button @click.prevent="addTag" class="training-save-btn mt-2">Add Tag</button>
             </div>
 
 
@@ -551,14 +518,14 @@ export default {
       qrCodeValue: null,
       qrExpiresAt: null,
       activeTrainingId: null, // which training shows the QR
-      
+
       showBulkCertModal: false,
-        certificateData: {
+      certificateData: {
         certTrackingID: '',
         certGivenDate: '',
         file: null,
-       },
-       selectedRegistrant: null,
+      },
+      selectedRegistrant: null,
       bulkCertData: {
         baseTrackingID: '',
         certGivenDate: '',
@@ -593,17 +560,17 @@ export default {
 
       // Popup state + form
       showTrainingPopup: false,
-        newTraining: {
-          title: "",
-          description: "",
-          date: "",
-          startTime: "",
-          endTime: "",
-          mode: "",
-          location: "",
-          trainingLink: "",
-          Tags: []
-        },
+      newTraining: {
+        title: "",
+        description: "",
+        date: "",
+        startTime: "",
+        endTime: "",
+        mode: "",
+        location: "",
+        trainingLink: "",
+        Tags: []
+      },
 
       QrcodeVue: "",
       qrExpiresAt: "",
@@ -614,37 +581,37 @@ export default {
   },
 
   methods: {
-   /* async issueCertificate() {
-      try {
-        if (!this.selectedRegistrant) {
-          alert("No registrant selected.");
-          return;
-        }
-
-        const formData = new FormData();
-        formData.append('certTrackingID', this.certificateData.certTrackingID);
-        formData.append('certGivenDate', this.certificateData.certGivenDate);
-        if (this.certificateData.file) {
-          formData.append('certificate', this.certificateData.file);
-        }
-
-        await axios.put(
-          'http://127.0.0.1:8000/api/registrations/' + this.selectedRegistrant.registrationID + '/certificate',
-          formData,
-          { headers: { 'Content-Type': 'multipart/form-data' } }
-        );
-
-        alert('Certificate issued successfully!');
-        this.showCertUploadModal = false;
-        this.loadRegistrants(); // reload updated data
-      } catch (error) {
-        console.error('Certificate issue failed:', error);
-        alert(
-          error.response?.data?.message ||
-          'Failed to issue certificate. Check required fields and try again.'
-        );
-      }
-    }, */
+    /* async issueCertificate() {
+       try {
+         if (!this.selectedRegistrant) {
+           alert("No registrant selected.");
+           return;
+         }
+ 
+         const formData = new FormData();
+         formData.append('certTrackingID', this.certificateData.certTrackingID);
+         formData.append('certGivenDate', this.certificateData.certGivenDate);
+         if (this.certificateData.file) {
+           formData.append('certificate', this.certificateData.file);
+         }
+ 
+         await axios.put(
+           'http://127.0.0.1:8000/api/registrations/' + this.selectedRegistrant.registrationID + '/certificate',
+           formData,
+           { headers: { 'Content-Type': 'multipart/form-data' } }
+         );
+ 
+         alert('Certificate issued successfully!');
+         this.showCertUploadModal = false;
+         this.loadRegistrants(); // reload updated data
+       } catch (error) {
+         console.error('Certificate issue failed:', error);
+         alert(
+           error.response?.data?.message ||
+           'Failed to issue certificate. Check required fields and try again.'
+         );
+       }
+     }, */
 
 
     async sendCertificateDetails() {
@@ -653,13 +620,13 @@ export default {
         alert("Please log in to continue.");
         return;
       }
-      
+
       try {
         const formData = new FormData();
         formData.append('certTrackingID', this.selectedRegistrant.certificateTrackingID);
         formData.append('certGivenDate', this.selectedRegistrant.certificateGivenDate);
         formData.append('certificate', this.selectedRegistrant.uploadedFile);
-        
+
         const response = await axios.put(
           import.meta.env.VITE_API_BASE_URL + '/registrations/${this.selectedRegistrant.id}/certificate',
           formData,
@@ -670,7 +637,7 @@ export default {
             },
           }
         );
-        
+
         alert("Certificate issued successfully!");
         this.closeCertUploadModal();
         await this.openRegistrantsModal(this.selectedTraining); // Refresh list
@@ -718,19 +685,19 @@ export default {
         alert("Please log in to continue.");
         return;
       }
-      
+
       try {
         const formData = new FormData();
         formData.append('baseTrackingID', this.bulkCertData.baseTrackingID);
         formData.append('certGivenDate', this.bulkCertData.certGivenDate);
-        
+
         this.bulkCertData.certificates.forEach((file, index) => {
           if (!file) {
             throw new Error(`Please upload a certificate file for all registrants. Missing file at index ${index}`);
           }
           formData.append(`certificates[${index}]`, file);
         });
-        
+
         const response = await axios.post(
           import.meta.env.VITE_API_BASE_URL + `trainings/${this.selectedTraining.trainingID}/certificates/bulk`,
           formData,
@@ -741,7 +708,7 @@ export default {
             },
           }
         );
-        
+
         alert("Certificates issued successfully to all registrants!");
         this.closeBulkCertModal();
         await this.openRegistrantsModal(this.selectedTraining); // Refresh list
@@ -758,7 +725,7 @@ export default {
 
     async fetchTags() {
       try {
-        const response = await axios.get(import.meta.env.VITE_API_BASE_URL +'/tags');
+        const response = await axios.get(import.meta.env.VITE_API_BASE_URL + '/tags');
         this.tagOptions = response.data; // Update tagOptions correctly
       } catch (error) {
         console.error('Error fetching tags:', error);
@@ -790,7 +757,7 @@ export default {
       if (newTag) {
         try {
           // Send the new tag to the backend
-          const response = await axios.post(import.meta.env.VITE_API_BASE_URL +'/tags', {
+          const response = await axios.post(import.meta.env.VITE_API_BASE_URL + '/tags', {
             TagName: newTag
           });
 
@@ -875,7 +842,7 @@ export default {
 
         // Fetch registrants from API
         const response = await axios.get(
-          import.meta.env.VITE_API_BASE_URL +`/trainings/${training.trainingID}/registrants`,
+          import.meta.env.VITE_API_BASE_URL + `/trainings/${training.trainingID}/registrants`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -968,126 +935,182 @@ export default {
       this.openRegistrantsModal(training); // pass training to fetch registrants
     },
 
-    
+
     async fetchTrainings() {
-    try {
-      const response = await api.get("/trainings");
-      const newTrainings = response.data;
+      try {
+        const response = await api.get("/trainings");
+        const newTrainings = response.data;
 
-      newTrainings.forEach(training => {
-        const existingIndex = this.upcomingtrainings.findIndex(t => t.trainingID === training.trainingID);
+        newTrainings.forEach(training => {
+          const existingIndex = this.upcomingtrainings.findIndex(t => t.trainingID === training.trainingID);
 
-        if (existingIndex > -1) {
-          this.upcomingtrainings[existingIndex] = { ...this.upcomingtrainings[existingIndex], ...training };
-        } else {
-          this.upcomingtrainings.push(training);
-        }
+          if (existingIndex > -1) {
+            this.upcomingtrainings[existingIndex] = { ...this.upcomingtrainings[existingIndex], ...training };
+          } else {
+            this.upcomingtrainings.push(training);
+          }
 
-        // ✅ Schedule QR using composable
-        scheduleQR(training);
-      });
-    } catch (error) {
-      console.error("Error fetching trainings:", error);
-    }
-  },
+          // ✅ Schedule QR using composable
+          scheduleQR(training);
+        });
+      } catch (error) {
+        console.error("Error fetching trainings:", error);
+      }
+    },
 
     openTrainingPopup() {
       this.showTrainingPopup = true;
       this.fetchTags(); // Load tags into dropdown
     },
 
-closeTrainingPopup() {
-  this.showTrainingPopup = false;
-  this.newTraining = {
-    title: "",
-    description: "",
-    date: "",
-    startTime: "",
-    endTime: "",
-    mode: "",
-    location: "",
-    trainingLink: "",
-    Tags: []
-  };
-  this.newTagName = ""; // optional: clear the tag input too
-},
-
-async saveTraining() {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    alert("Please log in to continue.");
-    return;
-  }
-
-  try {
-    // Validate required fields
-    if (
-      !this.newTraining.title ||
-      !this.newTraining.description ||
-      !this.newTraining.date ||
-      !this.newTraining.startTime ||
-      !this.newTraining.endTime ||
-      !this.newTraining.mode
-    ) {
-      alert("PLEASE FILL OUT ALL FIELDS BEFORE POSTING!!!");
-      return;
-    }
-
-    // Combine date and time
-    const startSchedule = `${this.newTraining.date} ${this.newTraining.startTime}`;
-    const endSchedule = `${this.newTraining.date} ${this.newTraining.endTime}`;
-
-    // Make sure endTime is after startTime
-    if (new Date(endSchedule) <= new Date(startSchedule)) {
-      alert("End time must be later than start time!");
-      return;
-    }
-
-    const payload = {
-      title: this.newTraining.title,
-      description: this.newTraining.description,
-      schedule: startSchedule,
-      end_time: endSchedule, // 👈 NEW
-      mode: this.newTraining.mode,
-      location: this.newTraining.location || null,
-      training_link: this.newTraining.trainingLink || null,
-      Tags: this.newTraining.Tags
-    };
-
-    const response = await api.post("/trainings", payload, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
-      }
-    });
-
-    console.log("API Response:", response);
-
-    if (response && response.status >= 200 && response.status < 300 && response.data?.data) {
-      const newTraining = response.data.data;
-      this.upcomingtrainings.push(newTraining);
-      alert("TRAINING POSTED SUCCESSFULLY!!!");
-      this.closeTrainingPopup();
-    } else {
-      console.error("Unexpected response:", response);
-      alert("Something went wrong while saving the training. Please try again.");
-    }
-
-  } catch (error) {
-    console.error("ERROR SAVING TRAINING:", error);
-    if (error.response) {
-      if (error.response.status === 401) {
-        alert("Unauthorized: Please log in again.");
-      } else if (error.response.status === 422) {
-        alert("Validation failed. Please check your inputs.");
+    openTrainingPopup(training = null) {
+      console.log("training passed in:", training); // ← add this
+      if (training) {
+        this.isEditMode = true;
+        this.newTraining = { ...training };
       } else {
-        alert("Something went wrong. Please try again.");
+        this.isEditMode = false;
+        this.newTraining = {
+          title: "",
+          description: "",
+          date: "",
+          startTime: "",
+          endTime: "",
+          mode: "",
+          location: "",
+          trainingLink: "",
+          Tags: []
+        };
       }
-    } else {
-      alert("Unable to connect to the server.");
-    }
-  }
-},
+      this.showTrainingPopup = true;
+    },
+
+    closeTrainingPopup() {
+      this.showTrainingPopup = false;
+      this.newTraining = {
+        title: "",
+        description: "",
+        date: "",
+        startTime: "",
+        endTime: "",
+        mode: "",
+        location: "",
+        trainingLink: "",
+        Tags: []
+      };
+      this.newTagName = ""; // optional: clear the tag input too
+    },
+
+    updateTraining(trainingID) {
+      const training = this.upcomingtrainings.find(t => t.trainingID === trainingID);
+      if (!training) {
+        alert("Training not found.");
+        return;
+      }
+
+      const scheduleParts = training.schedule?.includes("T")
+        ? training.schedule.split("T")
+        : training.schedule?.split(" ") || [];
+
+      // Prefill form without replacing reactive object
+      this.newTraining.title = training.title;
+      this.newTraining.description = training.description;
+      this.newTraining.date = scheduleParts[0] || "";
+      this.newTraining.startTime = scheduleParts[1]?.slice(0, 5) || "";
+      this.newTraining.endTime = training.end_time
+        ? (training.end_time.includes("T") ? training.end_time.split("T")[1] : training.end_time.split(" ")[1])?.slice(0, 5)
+        : "";
+      this.newTraining.mode = training.mode;
+      this.newTraining.location = training.location || "";
+      this.newTraining.trainingLink = training.training_link || "";
+      this.newTraining.Tags = training.Tags || [];
+
+      this.isEditMode = true;
+      this.trainingToEditId = trainingID;
+      this.showTrainingPopup = true;
+      this.closeAllMenus();
+
+      console.log("Prefilled training:", this.newTraining);
+    },
+
+    // For saving (create/update) training
+    async saveTraining() {
+      try {
+        if (!this.newTraining.date || !this.newTraining.startTime) {
+          alert("PLEASE SELECT BOTH A DATE AND TIME FOR THE TRAINING");
+          return;
+        }
+
+        const combinedSchedule = `${this.newTraining.date} ${this.newTraining.startTime}`; // NO :00
+        const endTimeSchedule = this.newTraining.endTime ? `${this.newTraining.date} ${this.newTraining.endTime}` : null;
+
+        const payload = {
+          title: this.newTraining.title,
+          description: this.newTraining.description,
+          schedule: combinedSchedule,
+          end_time: endTimeSchedule,
+          mode: this.newTraining.mode,
+          location: this.newTraining.mode === "On-Site" ? this.newTraining.location || null : null,
+          training_link: this.newTraining.mode === "Online" ? this.newTraining.trainingLink || null : null,
+          Tags: this.newTraining.Tags || []
+        };
+
+        const token = localStorage.getItem("token");
+
+        if (this.isEditMode && this.trainingToEditId) {
+          await axios.put(
+            `${import.meta.env.VITE_API_BASE_URL}/trainings/${this.trainingToEditId}`,
+            payload,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          alert("✅ TRAINING UPDATED SUCCESSFULLY!");
+        } else {
+          await axios.post(
+            `${import.meta.env.VITE_API_BASE_URL}/trainings`,
+            payload,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          alert("✅ TRAINING POSTED SUCCESSFULLY!");
+        }
+
+        await this.fetchTrainings();
+        this.closeTrainingPopup();
+        this.isEditMode = false;
+        this.trainingToEditId = null;
+
+      } catch (error) {
+        console.error("ERROR SAVING TRAINING:", error.response?.data || error);
+        alert("❌ SOMETHING WENT WRONG WHILE SAVING THE TRAINING");
+      }
+    },
+
+    // For deleting training
+    async deleteTraining(trainingID) {
+      try {
+        if (!confirm("Are you sure you want to delete this training?")) return;
+
+        const token = localStorage.getItem("token");
+
+        await axios.delete(
+          `${import.meta.env.VITE_API_BASE_URL}/trainings/${trainingID}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        alert("✅ Training deleted successfully!");
+        await this.fetchTrainings();
+
+        if (this.activeTrainingId === trainingID) {
+          this.qrCodeValue = null;
+          this.qrExpiresAt = null;
+          this.activeTrainingId = null;
+          if (this.qrExpireTimeout) clearTimeout(this.qrExpireTimeout);
+        }
+
+      } catch (error) {
+        console.error("Failed to delete training:", error.response?.data || error);
+        alert("❌ Something went wrong while deleting the training.");
+      }
+    },
 
     formatSchedule(schedule) {
       if (!schedule) return "No schedule set";
@@ -1122,17 +1145,17 @@ async saveTraining() {
 
     /* ✅ ADD THIS FUNCTION HERE */
 
-},
+  },
 
 
   mounted() {
     this.fetchTrainings();
     document.addEventListener("click", this.handleOutsideClick);
 
-      // Poll every 30 seconds to update trainings
-  this.trainingPollInterval = setInterval(() => {
-    this.fetchTrainings();
-  }, 30000);
+    // Poll every 30 seconds to update trainings
+    this.trainingPollInterval = setInterval(() => {
+      this.fetchTrainings();
+    }, 30000);
   },
 
   beforeUnmount() {
@@ -1194,37 +1217,37 @@ async saveTraining() {
         ? this.filteredCompleted
         : this.filteredCompleted.slice(0, 4);
     },
-  
-  visibleUpcomingTrainings() {
-    const orgId = this.currentOrganizationId;
-    const list = this.sortedUpcomingTrainings.filter(
-      training => training.organization_id === orgId
-    );
-    return this.showAllUpcoming ? list : list.slice(0, 4);
-  },
 
-  visibleCompletedTrainings() {
-    const orgId = this.currentOrganizationId;
-    const list = this.sortedCompletedTrainings.filter(
-      training => training.organization_id === orgId
-    );
-    return this.showAllCompleted ? list : list.slice(0, 4);
-  },
+    visibleUpcomingTrainings() {
+      const orgId = this.currentOrganizationId;
+      const list = this.sortedUpcomingTrainings.filter(
+        training => training.organization_id === orgId
+      );
+      return this.showAllUpcoming ? list : list.slice(0, 4);
+    },
 
-  sortedUpcomingTrainings() {
-    const now = new Date();
-    return this.upcomingtrainings
-      .filter(t => new Date(t.schedule) >= now)
-      .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
-  },
+    visibleCompletedTrainings() {
+      const orgId = this.currentOrganizationId;
+      const list = this.sortedCompletedTrainings.filter(
+        training => training.organization_id === orgId
+      );
+      return this.showAllCompleted ? list : list.slice(0, 4);
+    },
 
-  sortedCompletedTrainings() {
-    const now = new Date();
-    return this.upcomingtrainings
-      .filter(t => new Date(t.schedule) < now)
-      .sort((a, b) => new Date(b.schedule) - new Date(a.schedule));
+    sortedUpcomingTrainings() {
+      const now = new Date();
+      return this.upcomingtrainings
+        .filter(t => new Date(t.schedule) >= now)
+        .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
+    },
+
+    sortedCompletedTrainings() {
+      const now = new Date();
+      return this.upcomingtrainings
+        .filter(t => new Date(t.schedule) < now)
+        .sort((a, b) => new Date(b.schedule) - new Date(a.schedule));
+    },
   },
-},
 };
 </script>
 
@@ -1284,32 +1307,32 @@ const logout = () => {
 
 <style scoped>
 .tag-list-wrapper {
-  overflow-x: auto; 
-  white-space: nowrap; 
-  padding: 5px 0; 
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 5px 0;
 }
 
 .tag-list {
-  display: flex; 
+  display: flex;
 }
 
 .tag-chip {
   cursor: pointer;
-  background-color: #e2e8f0; 
-  padding: 8px 12px; 
+  background-color: #e2e8f0;
+  padding: 8px 12px;
   border-radius: 16px;
-  margin-right: 8px; 
+  margin-right: 8px;
   transition: background-color 0.2s;
-  flex-shrink: 0; 
+  flex-shrink: 0;
 }
 
 .tag-chip:hover {
-  background-color: #cbd5e0; 
+  background-color: #cbd5e0;
 }
 
 .tag-chip-selected {
-  background-color: #4a5568; 
-  color: white; 
+  background-color: #4a5568;
+  color: white;
 }
 
 /* Optional fade animation */
