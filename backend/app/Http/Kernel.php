@@ -40,33 +40,4 @@ class Kernel extends HttpKernel
         'apitoken' => \App\Http\Middleware\ApiTokenAuth::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class, // ✅ Add this line
     ];
-
-    // ✅ Auto-generate QR key 1 minute before or right at schedule
-        protected function schedule(Schedule $schedule)
-    {
-        $schedule->call(function () {
-            $now = now();
-
-            $trainings = Training::where('schedule', '<=', $now)
-                ->whereNull('attendance_key')
-                ->get();
-
-            foreach ($trainings as $training) {
-                $training->attendance_key = Str::random(16);
-                $training->attendance_expires_at = now()->addMinutes(30);
-                $training->save();
-            }
-
-            // Optional: remove expired keys
-            $expiredTrainings = Training::whereNotNull('attendance_expires_at')
-                ->where('attendance_expires_at', '<', $now)
-                ->get();
-
-            foreach ($expiredTrainings as $training) {
-                $training->attendance_key = null;
-                $training->attendance_expires_at = null;
-                $training->save();
-            }
-        })->everyMinute();
-    }
 }
