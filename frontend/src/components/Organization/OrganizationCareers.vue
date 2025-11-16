@@ -123,7 +123,7 @@
             Open Careers
             <span class="count-badge">{{ sortedUpcomingCareers.length }}</span>
           </h2>
-          <button class="plus-btn-text" @click="openCareerPopup">+</button>
+          <button class="plus-btn-text" @click="openCareerPopup()">+</button>
         </div>
 
         <div class="career-grid">
@@ -140,7 +140,6 @@
                 <ul>
                   <li @click="deleteCareer(career)">Delete Career</li>
                   <li @click="openCareerPopup(career)">Update Career</li>
-                  <li @click.stop="openApplicantsModal(career)">Applicants</li>
                 </ul>
               </div>
             </div>
@@ -175,7 +174,6 @@
               <div v-if="openCompletedMenu === (career.careerID || career.id)" class="dropdown-menu" @click.stop>
                 <ul>
                   <li @click="deleteCareer(career)">Delete Career</li>
-                  <li @click.stop="openApplicantsModal(career)">Applicants</li>
                 </ul>
               </div>
             </div>
@@ -222,11 +220,7 @@
                     <p class="application-date">{{ person.dateSubmitted }}</p>
                   </td>
                   <td>
-                    <select 
-                      v-model="person.status" 
-                      @change="updateApplicationStatus(person)"
-                      class="status-dropdown"
-                    >
+                    <select v-model="person.status" @change="updateApplicationStatus(person)" class="status-dropdown">
                       <option value="submitted">{{ displayStatus('submitted') }}</option>
                       <option value="in review">{{ displayStatus('in review') }}</option>
                       <option value="for interview">{{ displayStatus('for interview') }}</option>
@@ -235,38 +229,25 @@
                     </select>
                   </td>
                   <td class="requirements-col">
-                    <button 
-                      v-if="person.requirements" 
-                      class="view-btn" 
-                      @click="viewRequirements(person)"
-                    >
+                    <button v-if="person.requirements" class="view-btn" @click="viewRequirements(person)">
                       View Requirements
                     </button>
                     <span v-else>No requirements</span>
                   </td>
                   <td>
-                    <button 
-                      v-if="person.status === 'for interview' && !person.interviewSchedule" 
-                      class="schedule-btn"
-                      @click="openScheduleModal(person)"
-                    >
+                    <button v-if="person.status === 'for interview' && !person.interviewSchedule" class="schedule-btn"
+                      @click="openScheduleModal(person)">
                       Schedule
                     </button>
-                    <button 
-                      v-else-if="person.status === 'for interview' && person.interviewSchedule" 
-                      class="schedule-btn" 
-                      disabled
-                    >
+                    <button v-else-if="person.status === 'for interview' && person.interviewSchedule"
+                      class="schedule-btn" disabled>
                       Scheduled
                     </button>
                     <span v-else>-</span>
                   </td>
                   <td>
-                    <button 
-                      v-if="person.status === 'for interview' && person.interviewSchedule" 
-                      class="schedule-btn view"
-                      @click="openViewScheduleModal(person)"
-                    >
+                    <button v-if="person.status === 'for interview' && person.interviewSchedule"
+                      class="schedule-btn view" @click="openViewScheduleModal(person)">
                       View Schedule
                     </button>
                     <span v-else>-</span>
@@ -283,16 +264,12 @@
         <div class="modal-box requirements-modal">
           <button class="modal-close-btn" @click="closeRequirementsModal">✕</button>
           <h3>Requirements for {{ selectedPerson?.name }}</h3>
-          
+
           <div class="requirements-viewer">
-            <iframe 
-              :src="requirementsUrl" 
-              class="pdf-viewer"
-              v-if="requirementsUrl"
-            ></iframe>
+            <iframe :src="requirementsUrl" class="pdf-viewer" v-if="requirementsUrl"></iframe>
             <p v-else>Loading requirements...</p>
           </div>
-          
+
           <div class="modal-actions">
             <button class="confirm-btn" @click="downloadRequirements">Download</button>
             <button class="confirm-btn" @click="printRequirements">Print</button>
@@ -392,12 +369,12 @@
       <div v-if="showCareerPopup" class="career-popup-overlay">
         <div class="career-popup">
           <!-- Close Button -->
-          <button @click="closeCareerPopup" class="career-popup-close">
-            ✕
-          </button>
+          <button @click="closeCareerPopup" class="career-popup-close">✕</button>
 
           <!-- Title -->
-          <h2 class="career-popup-title">{{ isEditMode ? 'Update Career' : 'Post Career' }}</h2>
+          <h2 class="career-popup-title">
+            {{ isEditMode ? 'Update Career' : 'Post Career' }}
+          </h2>
 
           <form @submit.prevent="saveCareer" class="Career-popup-form">
             <!-- Inputs -->
@@ -405,11 +382,13 @@
             <input v-model="newCareer.details" type="text" placeholder="Details and Instruction" class="career-input" />
             <textarea v-model="newCareer.qualifications" placeholder="Qualifications" class="career-input"></textarea>
             <textarea v-model="newCareer.requirements" placeholder="Requirements" class="career-input"></textarea>
-            <input v-model="newCareer.letterAddress" type="text" placeholder="Application Letter Address" class="career-input" />
-            
+            <input v-model="newCareer.letterAddress" type="text" placeholder="Application Letter Address"
+              class="career-input" />
+
             <!-- Deadline -->
             <div class="deadline-input-wrapper">
-              <input type="date" v-model="newCareer.deadline" :min="todayDate" placeholder="Deadline of Submission" class="career-input" />
+              <input type="date" v-model="newCareer.deadline" :min="todayDate" placeholder="Deadline of Submission"
+                class="career-input" />
               <span class="calendar-icon"> <!-- SVG omitted for brevity --> </span>
             </div>
 
@@ -418,20 +397,16 @@
               <label class="block font-semibold text-gray-600 mb-2">Tags</label>
               <div class="tag-list-wrapper">
                 <div class="tag-list">
-                  <span
-                    v-for="tag in tagOptions"
-                    :key="tag.TagID"
-                    class="tag-chip"
-                    @click="toggleTag(tag.TagID)"
-                    :class="{ 'tag-chip-selected': isTagSelected(tag.TagID) }"
-                  >
+                  <span v-for="tag in tagOptions" :key="tag.TagID" class="tag-chip" @click="toggleTag(tag.TagID)"
+                    :class="{ 'tag-chip-selected': isTagSelected(tag.TagID) }">
                     {{ tag.TagName }}
                   </span>
                 </div>
               </div>
 
               <div v-if="newCareer.Tags.length" class="flex flex-wrap gap-2 mt-2">
-                <span v-for="tagID in newCareer.Tags" :key="tagID" class="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-full">
+                <span v-for="tagID in newCareer.Tags" :key="tagID"
+                  class="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-full">
                   {{ getTagName(tagID) }}
                   <button @click.stop="removeTag(tagID)" class="ml-1 text-red-500">×</button>
                 </span>
@@ -442,12 +417,13 @@
             </div>
 
             <!-- Submit -->
-            <button type="submit" class="career-save-btn">Post</button>
-            <!-- Save -->
-            <button type="submit" class="career-save-btn">{{ isEditMode ? 'Update' : 'Post' }}</button>
+            <button type="submit" class="career-save-btn">
+              {{ isEditMode ? 'Update' : 'Post' }}
+            </button>
           </form>
         </div>
       </div>
+
 
       <!-- Career Details Modal -->
       <div v-if="showCareerDetailsModal" class="modal-overlay" @click.self="closeCareerDetails">
@@ -462,7 +438,7 @@
           <p class="career-info"><strong>Deadline:</strong> {{ formatdeadline(selectedCareer.deadlineOfSubmission) }}
           </p>
           <div class="career-actions">
-            <button class="btn-view-applicants" @click="handleViewApplicants">
+            <button class="btn-view-applicants" @click="handleViewApplicants(selectedCareer)">
               View Applicants
             </button>
           </div>
@@ -480,7 +456,7 @@ import api from "@/api/axios";
 
 const fetchTags = async () => {
   try {
-    const response = await axios.get(import.meta.env.VITE_API_BASE_URL +'/tags');
+    const response = await axios.get(import.meta.env.VITE_API_BASE_URL + '/tags');
     console.log(response.data); // Log the API response
     this.tagOptions = response.data; // Update tagOptions
   } catch (error) {
@@ -488,17 +464,17 @@ const fetchTags = async () => {
   }
 }
 
-  // Helper to display readable status names
-  const displayStatus = (status) => {
-      const map = {
-        'submitted': 'Submitted',
-        'in review': 'In Review',
-        'for interview': 'For Interview',
-        'accepted': 'Accepted',
-        'rejected': 'Rejected'
-      }
-      return map[status] || status
-    }
+// Helper to display readable status names
+const displayStatus = (status) => {
+  const map = {
+    'submitted': 'Submitted',
+    'in review': 'In Review',
+    'for interview': 'For Interview',
+    'accepted': 'Accepted',
+    'rejected': 'Rejected'
+  }
+  return map[status] || status
+}
 
 
 export default {
@@ -536,7 +512,7 @@ export default {
       applicantsList: [],
       upcomingCareers: [],
 
-      
+
 
       // Popup state + form
       showCareerPopup: false,
@@ -550,70 +526,88 @@ export default {
         Tags: []
       },
       tagOptions: []
-     
-      
+
+
 
     };
   },
-  
+
 
   methods: {
     async openApplicantsModal(career) {
-      const token = localStorage.getItem("token");
+      // Prefer the passed career; fallback to selectedCareer in component state
+      career = career || this.selectedCareer || null;
+
+      // Ensure token exists and trim it (remove stray quotes/spaces)
+      let token = localStorage.getItem("token");
       if (!token) {
         alert("Please log in to continue.");
         return;
       }
-      
-      // Handle both careerID and id properties
-      const careerID = career.careerID || career.id;
+      token = token.trim().replace(/^"(.*)"$/, "$1");
+
+      // Try multiple common property names, but prefer careerID (per your system)
+      const careerID =
+        career?.careerID ??
+        career?.careerId ??
+        career?.id ??
+        career?._id ??
+        this.selectedCareer?.careerID ??
+        this.selectedCareer?.careerId ??
+        null;
+
       if (!careerID) {
-        alert("Invalid career selected.");
+        console.error("Career object missing careerID:", career);
         return;
       }
-      
+
       console.log("Fetching applicants for Career ID:", careerID);
       console.log("Token exists:", !!token, "Token length:", token ? token.length : 0);
 
       try {
-        this.selectedCareer = career;
+        // Normalize selectedCareer to always include careerID for future clicks
+        this.selectedCareer = {
+          ...(this.selectedCareer || {}),
+          ...(career || {}),
+          careerID: career?.careerID ?? career?.careerId ?? career?.id ?? career?._id ?? this.selectedCareer?.careerID ?? null,
+        };
+
         const response = await axios.get(
           import.meta.env.VITE_API_BASE_URL + `/careers/${careerID}/applicants`,
           {
             headers: {
-              Authorization: `Bearer ${token.trim()}`,
+              Authorization: `Bearer ${token}`,
               Accept: "application/json",
-              'Content-Type': 'application/json',
+              "Content-Type": "application/json",
             },
           }
         );
 
-        console.log(response.data); // Check the response data structure
+        console.log("Applicants API response:", response.data);
 
-        // Map the response data to your applicantsList
-        if (response.data && response.data.length > 0) {
-          this.applicantsList = response.data.map(app => ({
-            id: app.id,
-            name: app.name,
-            dateSubmitted: app.dateSubmitted,
-            status: app.status ? app.status.toLowerCase() : 'submitted', // Normalize status to lowercase
-            requirements: app.requirements,
-            interviewSchedule: app.interviewSchedule,
-            interviewMode: app.interviewMode,
-            interviewLocation: app.interviewLocation,
-            interviewLink: app.interviewLink,
+        // Normalize response -> applicantsList
+        if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+          this.applicantsList = response.data.map((app) => ({
+            id: app.id ?? app.applicationId ?? app._id,
+            name: app.name ?? `${app.firstName || ""} ${app.lastName || ""}`.trim(),
+            dateSubmitted: app.dateSubmitted ?? app.created_at ?? app.createdAt,
+            status: app.status ? String(app.status).toLowerCase() : "submitted",
+            requirements: app.requirements ?? [],
+            interviewSchedule: app.interviewSchedule ?? null,
+            interviewMode: app.interviewMode ?? null,
+            interviewLocation: app.interviewLocation ?? null,
+            interviewLink: app.interviewLink ?? null,
           }));
         } else {
-          this.applicantsList = []; // Ensure it's cleared if no applicants found
+          this.applicantsList = [];
         }
 
-        this.showApplicantsModal = true; // Show the modal after setting the applicants
+        this.showApplicantsModal = true;
       } catch (error) {
         console.error("Error fetching applicants:", error);
         console.error("Error response:", error.response);
         if (error.response?.status === 401) {
           alert("Unauthorized. Please log in again. Error: " + (error.response.data?.message || "Token invalid or expired"));
-          // Optionally redirect to login
         } else if (error.response?.status === 403) {
           alert("Access denied. You don't have permission to view applicants for this career.");
         } else {
@@ -623,21 +617,19 @@ export default {
       }
     },
 
-
-
     async updateApplicationStatus(person) {
       const token = localStorage.getItem("token");
       if (!token) {
         alert("Please log in to continue.");
         return;
       }
-      
+
       // Store original status in case of error
       const originalStatus = person.status;
-      
+
       console.log("Updating status for application ID:", person.id, "New status:", person.status);
       console.log("Token exists:", !!token);
-      
+
       try {
         const response = await axios.put(
           import.meta.env.VITE_API_BASE_URL + `/applications/${person.id}/status`,
@@ -749,7 +741,7 @@ export default {
         alert("No requirements to download.");
       }
     },
-    
+
     printRequirements() {
       if (this.requirementsUrl) {
         const printWindow = window.open(this.requirementsUrl, '_blank');
@@ -770,7 +762,7 @@ export default {
         alert("Please fill out all fields.");
         return;
       }
-      
+
       const token = localStorage.getItem("token");
       if (!token) {
         alert("Please log in to continue.");
@@ -789,7 +781,7 @@ export default {
           alert("Invalid date selected. Please try again.");
           return;
         }
-        
+
         // Format as Y-m-d H:i:s for MySQL datetime
         const year = dateObj.getFullYear();
         const month = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -798,17 +790,17 @@ export default {
         const minutes = String(dateObj.getMinutes()).padStart(2, '0');
         const seconds = String(dateObj.getSeconds()).padStart(2, '0');
         const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-        
+
         // Map mode values correctly
         const interviewMode = this.scheduleData.mode === "onSite" ? "On-Site" : "Online";
-        
+
         const payload = {
           interviewSchedule: formattedDate,
           interviewMode: interviewMode,
           interviewLocation: this.scheduleData.mode === "onSite" ? this.scheduleData.detail : null,
           interviewLink: this.scheduleData.mode === "online" ? this.scheduleData.detail : null,
         };
-        
+
         console.log("Sending interview schedule payload:", payload);
 
         const response = await axios.put(
@@ -833,7 +825,7 @@ export default {
           if (index !== -1) {
             const updatedData = response.data.data || response.data;
             console.log("Received response data:", updatedData);
-            
+
             // Update the applicant in the list to ensure reactivity
             const updatedApplicant = {
               ...this.applicantsList[index],
@@ -843,9 +835,9 @@ export default {
               interviewLocation: updatedData.interviewLocation || (this.scheduleData.mode === "onSite" ? this.scheduleData.detail : null),
               interviewLink: updatedData.interviewLink || (this.scheduleData.mode === "online" ? this.scheduleData.detail : null),
             };
-            
+
             console.log("Updated applicant data:", updatedApplicant);
-            
+
             // Use Vue.set for Vue 2 compatibility, or direct assignment for Vue 3
             if (this.$set) {
               this.$set(this.applicantsList, index, updatedApplicant);
@@ -885,7 +877,7 @@ export default {
       }
       return token; // Token is valid
     },
-    
+
     async addTag() {
       if (!this.newTagName) {
         alert("Please enter a tag name.");
@@ -897,7 +889,7 @@ export default {
 
       try {
         // Send the new tag to the backend
-        const response = await axios.post(import.meta.env.VITE_API_BASE_URL +'/tags', {
+        const response = await axios.post(import.meta.env.VITE_API_BASE_URL + '/tags', {
           TagName: this.newTagName
         }, {
           headers: {
@@ -920,7 +912,7 @@ export default {
     },
 
 
-     // Toggle selection of a tag
+    // Toggle selection of a tag
     toggleTag(tagID) {
       if (!Array.isArray(this.newCareer.Tags)) {
         this.newCareer.Tags = [];
@@ -933,12 +925,12 @@ export default {
       }
     },
 
-      // Check if a tag is selected
-      isTagSelected(tagID) {
-        return Array.isArray(this.newCareer.Tags) && this.newCareer.Tags.includes(tagID);
-      },
+    // Check if a tag is selected
+    isTagSelected(tagID) {
+      return Array.isArray(this.newCareer.Tags) && this.newCareer.Tags.includes(tagID);
+    },
 
-      // Remove a tag directly from the selected tags
+    // Remove a tag directly from the selected tags
     removeTag(tagID) {
       if (!Array.isArray(this.newCareer.Tags)) return;  // 👈 prevents crashes
 
@@ -950,7 +942,7 @@ export default {
 
     async fetchTags() {
       try {
-        const response = await axios.get(import.meta.env.VITE_API_BASE_URL +'/tags');
+        const response = await axios.get(import.meta.env.VITE_API_BASE_URL + '/tags');
         this.tagOptions = response.data; // Update tagOptions correctly
         console.log(this.tagOptions); // Log the tags to see if they are fetched correctly
       } catch (error) {
@@ -962,13 +954,6 @@ export default {
       const tag = this.tagOptions.find(t => t.TagID === id);
       return tag ? tag.TagName : '';
     },
-
-
-    openCareerPopup() {
-      this.showCareerPopup = true;
-      this.fetchTags(); // 👈 Load tags into dropdown
-    },
-    
 
     toggleUpcomingMenu(id) {
       this.openUpcomingMenu = this.openUpcomingMenu === id ? null : id;
@@ -1157,6 +1142,7 @@ export default {
         requirements: "",
         letterAddress: "",
         deadline: "",
+        Tags: []
       };
       this.isEditMode = false;
       this.careerToEditId = null;
@@ -1174,7 +1160,7 @@ export default {
       this.showViewScheduleModal = false;
       this.selectedPerson = null;
     },
-    
+
     formatInterviewDateTime(dateTimeString) {
       if (!dateTimeString) return 'Not scheduled';
       try {
@@ -1242,27 +1228,33 @@ export default {
 
     async fetchCareers() {
       try {
-        const response = await axios.get(import.meta.env.VITE_API_BASE_URL +"/careers");
+        const response = await axios.get(import.meta.env.VITE_API_BASE_URL + "/careers");
 
         // Normalize so every career has a careerID
         this.upcomingCareers = response.data.map(career => ({
           ...career,
-          careerID: career.id, // if backend uses 'id', map it to 'careerID'
+          careerID: career.careerID ?? career.id ?? career._id, // take whichever exists
         }));
       } catch (error) {
         console.error("ERROR FETCHING CAREERS:", error);
       }
     },
-
     openCareerPopup(career = null) {
       if (career) {
+        // Editing existing career
         this.newCareer = {
-          ...career,
-          Tags: Array.isArray(career.Tags) ? [...career.Tags] : []   // KEEP CAPITAL T
+          position: career.position || '',
+          details: career.detailsAndInstructions || '',
+          qualifications: career.qualifications || '',
+          requirements: career.requirements || '',
+          letterAddress: career.applicationLetterAddress || '',
+          deadline: career.deadlineOfSubmission || '',
+          Tags: Array.isArray(career.Tags) ? [...career.Tags] : []
         };
-        this.isEditMode = true;
+        this.isEditMode = true;  // editing
+        this.careerToEditId = career.careerID || career.id;
       } else {
-        // Reset — KEEP capital T
+        // Posting new career
         this.newCareer = {
           position: "",
           details: "",
@@ -1273,8 +1265,8 @@ export default {
           Tags: []
         };
         this.isEditMode = false;
+        this.careerToEditId = null;
       }
-
       this.showCareerPopup = true;
       this.fetchTags();
     },
@@ -1282,113 +1274,117 @@ export default {
       this.showCareerPopup = false;
       this.resetNewCareer();
     },
-    openCareerDetails(Career) {
-      this.selectedCareer = Career;
+    openCareerDetails(career) {
+      this.selectedCareer = {
+        ...career,
+        careerID: career.careerID,   // keep the correct ID
+        _id: career.careerID         // mirror for safety
+      };
       this.showCareerDetailsModal = true;
     },
     closeCareerDetails() {
       this.showCareerDetailsModal = false;
     },
-    handleViewApplicants() {
+    handleViewApplicants(career) {
       this.closeCareerDetails();
-      this.openApplicantsModal();
+      this.openApplicantsModal(career);
     },
 
     async saveCareer() {
-    try {
-      // 🔹 0. Get token from localStorage
-      let token = localStorage.getItem("token");
-      console.log("🔹 Raw token read from localStorage:", token);
-      if (!token) {
-        alert("🔒 Please log in to continue.");
-        return;
-      }
-
-      // Remove extra spaces or surrounding quotes
-      token = token.trim().replace(/^"(.*)"$/, '$1');
-      console.log("🔹 Using token:", token);
-
-      // 🔹 1. Validate required fields
-      const requiredFields = [
-        "position",
-        "details",
-        "qualifications",
-        "requirements",
-        "letterAddress",
-        "deadline"
-      ];
-
-      for (const field of requiredFields) {
-        if (!this.newCareer[field]) {
-          alert(`Please fill out the field: ${field}`);
+      try {
+        // 🔹 0. Get token from localStorage
+        let token = localStorage.getItem("token");
+        console.log("🔹 Raw token read from localStorage:", token);
+        if (!token) {
+          alert("🔒 Please log in to continue.");
           return;
         }
-      }
 
-      // 🔹 2. Optional tags confirmation
-      if (!this.newCareer.Tags || this.newCareer.Tags.length === 0) {
-        const proceed = confirm("No tags selected. Continue without tags?");
-        if (!proceed) return;
-      }
+        // Remove extra spaces or surrounding quotes
+        token = token.trim().replace(/^"(.*)"$/, '$1');
+        console.log("🔹 Using token:", token);
 
-      // 🔹 3. Prepare payload
-      const payload = {
-        position: this.newCareer.position,
-        details: this.newCareer.details,
-        qualifications: this.newCareer.qualifications,
-        requirements: this.newCareer.requirements,
-        letterAddress: this.newCareer.letterAddress,
-        deadline: this.newCareer.deadline,
-        Tags: this.newCareer.Tags || []
-      };
-      console.log("🔹 Payload:", payload);
+        // 🔹 1. Validate required fields
+        const requiredFields = [
+          "position",
+          "details",
+          "qualifications",
+          "requirements",
+          "letterAddress",
+          "deadline"
+        ];
 
-      // 🔹 4. Send POST request
-      const response = await axios.post(
-        import.meta.env.VITE_API_BASE_URL + "/careers",
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
+        for (const field of requiredFields) {
+          if (!this.newCareer[field]) {
+            alert(`Please fill out the field: ${field}`);
+            return;
           }
         }
-      );
 
-      // 🔹 5. Handle success
-      if (response?.status >= 200 && response?.status < 300) {
-        console.log("✅ Career saved:", response.data);
-        alert("Career posted successfully!");
-        this.upcomingCareers.push(response.data.data || response.data);
-        this.closeCareerPopup();
-        this.resetNewCareer();
-        await this.fetchCareers();
-      }
-
-    } catch (error) {
-      console.error("❌ ERROR SAVING CAREER:", error);
-
-      if (error.response) {
-        console.log("🔹 Server response:", error.response.data);
-        if (error.response.status === 401) {
-          alert(
-            "Unauthorized: Your token is invalid or expired. Please log in again."
-          );
-          localStorage.removeItem("token"); // Optional: force logout
-        } else if (error.response.status === 422) {
-          alert("Validation failed. Check your inputs.");
-        } else if (error.response.status === 409) {
-          alert("This career already exists!");
-        } else {
-          alert("Server error: " + (error.response.data.message || "Please try again."));
+        // 🔹 2. Optional tags confirmation
+        if (!this.newCareer.Tags || this.newCareer.Tags.length === 0) {
+          const proceed = confirm("No tags selected. Continue without tags?");
+          if (!proceed) return;
         }
-      } else if (error.request) {
-        alert("No response from server. Check your network or server.");
-      } else {
-        alert("Error: " + error.message);
+
+        // 🔹 3. Prepare payload
+        const payload = {
+          position: this.newCareer.position,
+          details: this.newCareer.details,
+          qualifications: this.newCareer.qualifications,
+          requirements: this.newCareer.requirements,
+          letterAddress: this.newCareer.letterAddress,
+          deadline: this.newCareer.deadline,
+          Tags: this.newCareer.Tags || []
+        };
+        console.log("🔹 Payload:", payload);
+
+        // 🔹 4. Send POST request
+        const response = await axios.post(
+          import.meta.env.VITE_API_BASE_URL + "/careers",
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json"
+            }
+          }
+        );
+
+        // 🔹 5. Handle success
+        if (response?.status >= 200 && response?.status < 300) {
+          console.log("✅ Career saved:", response.data);
+          alert("Career posted successfully!");
+          this.upcomingCareers.push(response.data.data || response.data);
+          this.closeCareerPopup();
+          this.resetNewCareer();
+          await this.fetchCareers();
+        }
+
+      } catch (error) {
+        console.error("❌ ERROR SAVING CAREER:", error);
+
+        if (error.response) {
+          console.log("🔹 Server response:", error.response.data);
+          if (error.response.status === 401) {
+            alert(
+              "Unauthorized: Your token is invalid or expired. Please log in again."
+            );
+            localStorage.removeItem("token"); // Optional: force logout
+          } else if (error.response.status === 422) {
+            alert("Validation failed. Check your inputs.");
+          } else if (error.response.status === 409) {
+            alert("This career already exists!");
+          } else {
+            alert("Server error: " + (error.response.data.message || "Please try again."));
+          }
+        } else if (error.request) {
+          alert("No response from server. Check your network or server.");
+        } else {
+          alert("Error: " + error.message);
+        }
       }
-    }
-  },
+    },
     resetNewCareer() {
       this.newCareer = {
         position: "",
@@ -1493,7 +1489,7 @@ export default {
     },
   },
 
-  
+
 
   mounted() {
     this.fetchCareers();
@@ -1505,7 +1501,7 @@ export default {
     document.removeEventListener("click", this.handleClickOutside);
   },
 
-  
+
 };
 </script>
 
@@ -1598,33 +1594,33 @@ const logout = () => {
 }
 
 .tag-list-wrapper {
-  overflow-x: auto; 
-  white-space: nowrap; 
-  padding: 5px 0; 
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 5px 0;
 }
 
 .tag-list {
-  display: flex; 
+  display: flex;
 }
 
 
 .tag-chip {
   cursor: pointer;
-  background-color: #e2e8f0; 
-  padding: 8px 12px; 
+  background-color: #e2e8f0;
+  padding: 8px 12px;
   border-radius: 16px;
-  margin-right: 8px; 
+  margin-right: 8px;
   transition: background-color 0.2s;
-  flex-shrink: 0; 
+  flex-shrink: 0;
 }
 
 .tag-chip:hover {
-  background-color: #cbd5e0; 
+  background-color: #cbd5e0;
 }
 
 .tag-chip-selected {
-  background-color: #4a5568; 
-  color: white; 
+  background-color: #4a5568;
+  color: white;
 }
 
 /* Optional fade animation */
