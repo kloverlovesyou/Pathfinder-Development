@@ -6,14 +6,17 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    'allowed_origins' => [
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+        'https://pathfinder-development-production.up.railway.app',
+        'https://ingenious-manifestation-production.up.railway.app'
+    ],
 
     'allowed_origins_patterns' => [],
 
-    // ✅ Allow all headers (including Authorization)
     'allowed_headers' => ['*'],
 
-    // ✅ Make Authorization visible to browser / pass through proxy
     'exposed_headers' => ['Authorization'],
 
     'max_age' => 0,
