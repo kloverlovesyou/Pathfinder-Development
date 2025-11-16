@@ -27,7 +27,7 @@ class CareerController extends Controller
            ->get()
            ->map(function ($career){
                   return[
-                    'id' => $career->careerID,
+                    'careerID' => $career->careerID,
                     'position' => $career->position,
                     'deadlineOfSubmission' => $career->deadlineOfSubmission,
                     'detailsAndInstructions' => $career->detailsAndInstructions,
