@@ -29,7 +29,6 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
-            \Illuminate\Http\Middleware\HandleCors::class, 
             'throttle:api', // ✅ Correct syntax
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
