@@ -16,48 +16,50 @@ class TrainingController extends Controller
      * QR stays valid for 30 minutes from creation.
      */
 
-public function autoGenerateQR(Training $training)
-{
-    $now = now();
+     private function generateSafeKey($length = 16)
+    {
+        $characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        $key = '';
 
-    // Clear QR if training ended
-    if ($training->attendance_key && $now->greaterThanOrEqualTo($training->end_time)) {
-        $training->attendance_key = null;
-        $training->qr_generated_at = null;
-        $training->attendance_expires_at = null;
-        $training->save();
+        for ($i = 0; $i < $length; $i++) {
+            $key .= $characters[random_int(0, strlen($characters) - 1)];
+        }
+
+        return $key;
+    }
+
+    public function autoGenerateQR(Training $training)
+    {
+        $now = now();
+
+        // Clear QR if training ended
+        if ($training->attendance_key && $now->greaterThanOrEqualTo($training->end_time)) {
+            $training->attendance_key = null;
+            $training->qr_generated_at = null;
+            $training->attendance_expires_at = null;
+            $training->save();
+            return null;
+        }
+
+        // Generate QR key if schedule started
+        if ($now->greaterThanOrEqualTo($training->schedule)
+            && !$training->attendance_key
+            && $now->lessThan($training->end_time)) 
+        {
+            $training->attendance_key = $this->generateSafeKey(16);
+            $training->qr_generated_at = $now;
+            $training->attendance_expires_at = $training->end_time;
+            $training->save();
+        }
+
+        if ($training->attendance_key) {
+            // ✅ Return a full link for QR scanning
+            return env('FRONTEND_URL') . '/attendance/checkin?trainingID='
+                . $training->trainingID . '&key=' . $training->attendance_key;
+        }
+
         return null;
     }
-
-    // Generate QR key if schedule started
-    if ($now->greaterThanOrEqualTo($training->schedule)
-        && !$training->attendance_key
-        && $now->lessThan($training->end_time)) 
-    {
-        $training->attendance_key = $this->generateSafeKey();
-        $training->qr_generated_at = $now;
-        $training->attendance_expires_at = $training->end_time;
-        $training->save();
-    }
-
-    if ($training->attendance_key) {
-        return env('FRONTEND_URL') . '/attendance/checkin?trainingID='
-            . $training->trainingID . '&key=' . $training->attendance_key;
-    }
-
-    return null;
-}
-
-private function generateSafeKey(int $length = 16): string
-{
-    $characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    $key = '';
-    for ($i = 0; $i < $length; $i++) {
-        $key .= $characters[random_int(0, strlen($characters) - 1)];
-    }
-    return $key;
-}
-
     /**
      * User attendance check-in via QR code
      */
@@ -165,10 +167,11 @@ private function generateSafeKey(int $length = 16): string
         $trainings = $query->get();
 
         foreach ($trainings as $training) {
-            $this->autoGenerateQR($training); // ✅ generate QR if needed
+            $this->autoGenerateQR($training);
         }
 
         return response()->json($trainings->map(function ($training) {
+            // ✅ Generate attendance link if key exists
             $attendanceLink = $training->attendance_key
                 ? env('FRONTEND_URL') . '/attendance/checkin?trainingID='
                 . $training->trainingID . '&key=' . $training->attendance_key
@@ -184,7 +187,7 @@ private function generateSafeKey(int $length = 16): string
                 'location' => $training->location,
                 'trainingLink' => $training->trainingLink,
                 'attendance_key' => $training->attendance_key,
-                'attendance_link' => $attendanceLink,
+                'attendance_link' => $attendanceLink, // ✅ here
                 'attendance_expires_at' => $training->attendance_expires_at,
                 'organizationID' => $training->organizationID,
                 'organization' => [
