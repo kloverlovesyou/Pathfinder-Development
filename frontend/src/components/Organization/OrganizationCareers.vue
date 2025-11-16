@@ -669,57 +669,58 @@ export default {
 
 
     async viewRequirements(person) {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Please log in to continue.");
-        return;
-      }
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Please log in to continue.");
+      return;
+    }
 
-      if (!person.requirements) {
-        alert("No requirements file available for this applicant.");
-        return;
-      }
+    if (!person.requirements) {
+      alert("No requirements file available for this applicant.");
+      return;
+    }
 
-      try {
-        this.selectedPerson = person;
-        console.log("Fetching signed URL for application ID:", person.id);
+    try {
+      this.selectedPerson = person;
+      console.log("Fetching signed URL for application ID:", person.id);
 
-        // Call the signed URL API
-        const response = await axios.get(
-          import.meta.env.VITE_API_BASE_URL + `/applications/${person.id}/requirements-signed-url`,
-          {
-            headers: {
-              Authorization: `Bearer ${token.trim()}`,
-              Accept: 'application/json'
-            }
+      // Call the signed URL API
+      const response = await axios.get(
+        import.meta.env.VITE_API_BASE_URL + `/applications/${person.id}/requirements-signed-url`,
+        {
+          headers: {
+            Authorization: `Bearer ${token.trim()}`,
+            Accept: 'application/json'
           }
-        );
-
-        console.log("Signed URL response received:", response);
-
-        if (!response.data || !response.data.signed_url) {
-          throw new Error("Signed URL not returned from server");
         }
+      );
 
-        // Assign the signed URL directly to iframe
-        this.requirementsUrl = response.data.signed_url;
-        this.showRequirementsModal = true;
+      console.log("Signed URL response received:", response);
 
-      } catch (error) {
-        console.error("Error fetching signed URL:", error);
-        if (error.response?.status === 404) {
-          alert("Requirements file not found. The file may have been deleted or moved.");
-        } else if (error.response?.status === 401) {
-          alert("Unauthorized. Please log in again.");
-        } else if (error.response?.status === 403) {
-          alert("Access denied. You don't have permission to view this file.");
-        } else if (error.message) {
-          alert("Failed to load requirements: " + error.message);
-        } else {
-          alert("Failed to load requirements. Please try again.");
-        }
+      // ✅ Use 'url', not 'signed_url'
+      if (!response.data || !response.data.url) {
+        throw new Error("Signed URL not returned from server");
       }
-    },
+
+      // Assign the signed URL directly to iframe
+      this.requirementsUrl = response.data.url;
+      this.showRequirementsModal = true;
+
+    } catch (error) {
+      console.error("Error fetching signed URL:", error);
+      if (error.response?.status === 404) {
+        alert("Requirements file not found. The file may have been deleted or moved.");
+      } else if (error.response?.status === 401) {
+        alert("Unauthorized. Please log in again.");
+      } else if (error.response?.status === 403) {
+        alert("Access denied. You don't have permission to view this file.");
+      } else if (error.message) {
+        alert("Failed to load requirements: " + error.message);
+      } else {
+        alert("Failed to load requirements. Please try again.");
+      }
+    }
+  },
 
 
 
