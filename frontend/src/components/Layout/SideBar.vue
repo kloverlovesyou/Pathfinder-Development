@@ -116,29 +116,7 @@
               <span v-if="isExpanded">Career</span>
             </button>
           </li>
-          <li>
-            <button
-              class="text-white gap-3 p-3 py-2 hover:bg-slate-700 rounded-lg w-full flex items-center justify-start"
-              @click="$router.push({ name: 'Organizationpage' })"
-            >
-              <svg
-                class="size-6 flex-shrink-0"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M22.5882 22.5V21H21.1765V12H22.5882V10.5H18.3529V12H19.7647V21H15.5294V12H16.9412V10.5H12.7059V12H14.1176V21H9.88235V12H11.2941V10.5H7.05882V12H8.47059V21H4.23529V12H5.64706V10.5H1.41176V12H2.82353V21H1.41176V22.5H0V24H24V22.5H22.5882Z"
-                  fill="white"
-                />
-                <path
-                  d="M11.2941 0H12.7059L24 7.5V9H0V7.5L11.2941 0Z"
-                  fill="white"
-                />
-              </svg>
-              <span v-if="isExpanded">Organizations</span>
-            </button>
-          </li>
+
           <li>
             <button
               class="text-white gap-3 p-3 py-2 hover:bg-slate-700 rounded-lg w-full flex items-center justify-start"

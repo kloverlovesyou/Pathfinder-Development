@@ -25,7 +25,8 @@ async function toggleRegisterWithLoading(post) {
 
 // ✅ Toggle bookmark using store
 async function toggleBookmark(post) {
-  const trainingID = post.TrainingID ?? post.trainingID ?? post.CareerID ?? post.ID ?? post.id;
+  const trainingID =
+    post.TrainingID ?? post.trainingID ?? post.CareerID ?? post.ID ?? post.id;
   if (!trainingID) return;
 
   const result = await regStore.toggleBookmark(trainingID);
@@ -57,7 +58,8 @@ async function handleBookmark(post) {
 
 // ✅ Helper function in template
 function isBookmarked(post) {
-  const trainingID = post.TrainingID ?? post.trainingID ?? post.CareerID ?? post.ID ?? post.id;
+  const trainingID =
+    post.TrainingID ?? post.trainingID ?? post.CareerID ?? post.ID ?? post.id;
   return regStore.isTrainingBookmarked(trainingID);
 }
 
@@ -92,7 +94,8 @@ async function toggleRegister(training) {
   const token = localStorage.getItem("token");
   if (!token) return showToast("Please log in first.", "error");
 
-  const trainingID = training.trainingID ?? training.TrainingID ?? training.ID ?? training.id;
+  const trainingID =
+    training.trainingID ?? training.TrainingID ?? training.ID ?? training.id;
 
   try {
     await regStore.toggleRegister(training);
@@ -220,8 +223,7 @@ async function openOrganizationModal(orgItem) {
     };
 
     const response = await axios.get(
-      import.meta.env.VITE_API_BASE_URL +
-        `/organization/${orgItem.ID}/posts`
+      import.meta.env.VITE_API_BASE_URL + `/organization/${orgItem.ID}/posts`
     );
     selectedOrg.value.careers = response.data.careers || [];
     selectedOrg.value.trainings = response.data.trainings || [];
@@ -229,8 +231,6 @@ async function openOrganizationModal(orgItem) {
     console.error("Failed to fetch organization details:", error);
   }
 }
-
-
 
 function resetModals() {
   selectedPost.value = null;
@@ -263,7 +263,6 @@ async function openTrainingModal(post) {
   }
 }
 
-
 function closeTrainingModal() {
   selectedPost.value = {};
   isTrainingModalOpen.value = false;
@@ -282,7 +281,6 @@ function openApplyModal(post) {
 }
 function closeApplyModal() {
   applyModalOpen.value = false;
-  selectedPost.value = {};
 }
 function openOrgModal(org) {
   selectedOrg.value = org;
@@ -294,6 +292,8 @@ function closeOrgModal() {
 }
 
 async function handleResultClick(item) {
+  console.log("👉 Item clicked:", item);
+  console.log("📌 Detected Type:", item.Type);
   if (item.Type === "Training" || item.Type.includes("Training")) {
     selectedPost.value = item;
     isTrainingModalOpen.value = true;
@@ -549,25 +549,6 @@ async function handleResultClick(item) {
               </button>
             </div>
 
-            <div
-              v-if="activeMains.includes('Career')"
-              class="flex flex-wrap gap-2 justify-start"
-            >
-              <button
-                v-for="sub in ['Position']"
-                :key="sub"
-                @mousedown.prevent="toggleExclusiveSub(sub)"
-                :class="[
-                  'px-4 py-1 rounded-full text-sm font-medium border transition-colors',
-                  activeSubs.includes(sub)
-                    ? 'bg-dark-slate text-white border-dark-slate'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300',
-                ]"
-              >
-                {{ sub }}
-              </button>
-            </div>
-
             <!-- Search Results -->
             <div v-if="results.length" class="mt-2 max-h-60 overflow-y-auto">
               <div
@@ -580,7 +561,7 @@ async function handleResultClick(item) {
                   {{ item.Title || item.Position || item.Name }}
                 </div>
                 <div class="text-sm text-gray-500">
-                  {{ item.OrganizationName || item.Location || "" }}
+                  {{ item.OrganizationName || item.location || "" }}
                 </div>
               </div>
             </div>
@@ -613,14 +594,13 @@ async function handleResultClick(item) {
 
         <!-- Buttons -->
         <div class="my-4 flex justify-end gap-2">
-
           <!-- Bookmark -->
-        <button
-          class="btn btn-outline btn-sm"
-          @click="handleBookmark(selectedPost)"
-        >
-          {{ isBookmarked(selectedPost) ? "Bookmarked" : "Bookmark" }}
-        </button>
+          <button
+            class="btn btn-outline btn-sm"
+            @click="handleBookmark(selectedPost)"
+          >
+            {{ isBookmarked(selectedPost) ? "Bookmarked" : "Bookmark" }}
+          </button>
 
           <!-- Register -->
           <button
@@ -629,9 +609,9 @@ async function handleResultClick(item) {
             :class="
               regStore.registeredPosts[
                 selectedPost.trainingID ??
-                selectedPost.TrainingID ??
-                selectedPost.id ??
-                selectedPost.ID
+                  selectedPost.TrainingID ??
+                  selectedPost.id ??
+                  selectedPost.ID
               ]
                 ? 'bg-gray-500'
                 : 'bg-customButton'
@@ -640,7 +620,10 @@ async function handleResultClick(item) {
             @click="toggleRegisterWithLoading(selectedPost)"
           >
             <!-- Loading Spinner Only -->
-            <span v-if="isRegisterLoading" class="flex items-center justify-center">
+            <span
+              v-if="isRegisterLoading"
+              class="flex items-center justify-center"
+            >
               <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
                 <circle
                   class="opacity-25"
@@ -664,16 +647,15 @@ async function handleResultClick(item) {
               {{
                 regStore.registeredPosts[
                   selectedPost.trainingID ??
-                  selectedPost.TrainingID ??
-                  selectedPost.id ??
-                  selectedPost.ID
+                    selectedPost.TrainingID ??
+                    selectedPost.id ??
+                    selectedPost.ID
                 ]
                   ? "Unregister"
                   : "Register"
               }}
             </span>
           </button>
-
         </div>
 
         <!-- ✅ ✅ QR CODE SECTION -->
@@ -721,44 +703,52 @@ async function handleResultClick(item) {
 
         <!-- Buttons -->
         <div class="my-4 flex justify-end gap-2">
-            <!-- Bookmark -->
-            <button
-                class="btn btn-outline btn-sm flex items-center gap-2"
-                @click="toggleBookmark(selectedPost)"
-                :disabled="bookmarkLoading[selectedPost.TrainingID || selectedPost.CareerID]"
-              >
-                <!-- Loading spinner -->
-                <span v-if="bookmarkLoading[selectedPost.TrainingID || selectedPost.CareerID]" class="animate-spin h-4 w-4 border-2 border-gray-400 rounded-full border-t-transparent"></span>
+          <!-- Bookmark -->
+          <button
+            class="btn btn-outline btn-sm flex items-center gap-2"
+            @click="toggleBookmark(selectedPost)"
+            :disabled="
+              bookmarkLoading[selectedPost.TrainingID || selectedPost.CareerID]
+            "
+          >
+            <!-- Loading spinner -->
+            <span
+              v-if="
+                bookmarkLoading[
+                  selectedPost.TrainingID || selectedPost.CareerID
+                ]
+              "
+              class="animate-spin h-4 w-4 border-2 border-gray-400 rounded-full border-t-transparent"
+            ></span>
 
-                <!-- Text -->
-                <span v-else>
-                  {{
-                    bookmarkedPosts[selectedPost.TrainingID || selectedPost.CareerID]
-                      ? "Bookmarked"
-                      : "Bookmark"
-                  }}
-                </span>
-              </button>
+            <!-- Text -->
+            <span v-else>
+              {{
+                bookmarkedPosts[
+                  selectedPost.TrainingID || selectedPost.CareerID
+                ]
+                  ? "Bookmarked"
+                  : "Bookmark"
+              }}
+            </span>
+          </button>
+          <!-- Apply / Cancel -->
+          <button
+            v-if="!appliedPosts[selectedPost.ID]"
+            class="btn btn-sm bg-customButton text-white"
+            @click="openApplyModal(selectedPost)"
+          >
+            Apply
+          </button>
 
-            <!-- Register (training only) -->
-            <button
-                v-if="isTraining(selectedPost)"
-                class="btn btn-sm text-white flex items-center justify-center gap-2"
-                :class="regStore.registeredPosts[selectedPost.trainingID ?? selectedPost.TrainingID ?? selectedPost.id ?? selectedPost.ID] ? 'bg-gray-500' : 'bg-customButton'"
-                :disabled="regStore.loadingPosts[selectedPost.trainingID ?? selectedPost.TrainingID ?? selectedPost.id ?? selectedPost.ID]"
-                @click="toggleRegister(selectedPost)"
-              >
-                <template v-if="regStore.loadingPosts[selectedPost.trainingID ?? selectedPost.TrainingID ?? selectedPost.id ?? selectedPost.ID]">
-                  <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                  </svg>
-                </template>
-                <template v-else>
-                  {{ regStore.registeredPosts[selectedPost.trainingID ?? selectedPost.TrainingID ?? selectedPost.id ?? selectedPost.ID] ? 'Unregister' : 'Register' }}
-                </template>
-              </button>
-          </div>
+          <button
+            v-else
+            class="btn btn-sm bg-gray-500 text-white"
+            @click="cancelApplication(selectedPost)"
+          >
+            Cancel Application
+          </button>
+        </div>
 
         <!-- Career Info -->
         <p>
@@ -776,29 +766,6 @@ async function handleResultClick(item) {
         <p>
           <strong>Deadline:</strong> {{ selectedPost.DeadlineofSubmission }}
         </p>
-
-        <!-- Recommended Trainings -->
-        <div class="mt-6">
-          <h3 class="text-base font-semibold mb-3">Recommended Trainings</h3>
-          <div
-            class="flex overflow-x-auto space-x-3 pb-2 snap-x snap-mandatory"
-            style="scrollbar-width: thin"
-          >
-            <div
-              v-for="post in posts.filter((p) => isTraining(p))"
-              :key="post.TrainingID"
-              class="snap-start w-[180px] flex-shrink-0 p-3 bg-blue-gray rounded-lg cursor-pointer hover:bg-gray-200 transition shadow-sm"
-              @click.stop="openTrainingModal(post)"
-            >
-              <h4 class="font-semibold text-sm leading-snug mb-1">
-                {{ post.Title }}
-              </h4>
-              <p class="text-[11px] text-gray-600 truncate">
-                {{ organizations[post.OrganizationID] }}
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
     </dialog>
 
@@ -857,7 +824,7 @@ async function handleResultClick(item) {
         :class="{
           'bg-green-600': t.type === 'success',
           'bg-red-600': t.type === 'error',
-          'bg-blue-600': t.type === 'info'
+          'bg-blue-600': t.type === 'info',
         }"
       >
         {{ t.message }}

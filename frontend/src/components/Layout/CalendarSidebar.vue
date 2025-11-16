@@ -10,9 +10,12 @@ async function fetchMyRegistrations() {
   if (!token) return;
 
   try {
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/registrations", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/registrations",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
 
     // Fill registeredPosts (for quick lookup)
     res.data.forEach((r) => {
@@ -33,7 +36,8 @@ const organizations = ref({}); // never undefined
 const fetchApplications = async (applicantID) => {
   try {
     const response = await axios.get(
-       import.meta.env.VITE_API_BASE_URL + `/applications?applicantID=${applicantID}`
+      import.meta.env.VITE_API_BASE_URL +
+        `/applications?applicantID=${applicantID}`
     );
     applications.value = response.data;
   } catch (error) {
@@ -85,7 +89,9 @@ async function fetchCareerEvents() {
 
 const qrCodeValue = computed(() => {
   if (!selectedTraining.value) return "";
-  return `${import.meta.env.VITE_API_BASE_URL}/attendance?trainingID=${selectedTraining.value.trainingID}&key=${selectedTraining.value.attendance_key}`;
+  return `${import.meta.env.VITE_API_BASE_URL}/attendance?trainingID=${
+    selectedTraining.value.trainingID
+  }&key=${selectedTraining.value.attendance_key}`;
 });
 // 🔹 Fetch complete career details for the modal
 async function fetchCareerDetails(careerID) {
@@ -139,7 +145,7 @@ async function toggleRegister(training) {
       const registrationID =
         registeredPosts[training.trainingID].registrationID;
       await axios.delete(
-        import.meta.env.VITE_API_BASE_URL +`/registrations/${registrationID}`,
+        import.meta.env.VITE_API_BASE_URL + `/registrations/${registrationID}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -428,7 +434,9 @@ function startQRCountdown(training) {
   const endTime = new Date(training.end_time || training.end_Time); // supports both snakeCase or camelCase
 
   // Generate QR (you can change this to your full URL if needed)
-  qrCodeValue.value = import.meta.env.VITE_API_BASE_URL + `/attendance/submit?trainingID=${training.trainingID}&key=${training.attendance_key}`;
+  qrCodeValue.value =
+    import.meta.env.VITE_API_BASE_URL +
+    `/attendance/submit?trainingID=${training.trainingID}&key=${training.attendance_key}`;
   qrExpiresAt.value = endTime;
   qrActiveTrainingId.value = training.trainingID;
 
@@ -576,7 +584,9 @@ onMounted(async () => {
 
 async function fetchTrainings() {
   try {
-    const response = await axios.get(import.meta.env.VITE_API_BASE_URL +"/trainings");
+    const response = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/trainings"
+    );
     trainings.value = response.data;
   } catch (error) {
     console.error("Error fetching trainings:", error);
@@ -743,7 +753,7 @@ watch([trainings, myRegistrations], async () => {
           Organization: {{ selectedTraining.organization }}
         </p>
 
-        <p><strong>Mode:</strong> {{ selectedTraining.Mode }}</p>
+        <p><strong>Mode:</strong> {{ selectedTraining.mode }}</p>
         <!-- Description -->
         <p><strong>Description: </strong>{{ selectedTraining.description }}</p>
 
@@ -778,7 +788,7 @@ watch([trainings, myRegistrations], async () => {
           </p>
 
           <QrcodeVue
-             :value="qrCodeValue"
+            :value="qrCodeValue"
             :size="200"
             level="H"
             class="mx-auto"
