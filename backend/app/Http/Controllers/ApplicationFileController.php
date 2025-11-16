@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\Application;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 
 class ApplicationFileController extends Controller
 {
@@ -29,7 +32,7 @@ class ApplicationFileController extends Controller
             now()->addMinutes(5),
             [
                 'application' => $application->applicationID,
-                'org' => $user->organizationID,
+                'organization' => $user->organizationID, // must match route param
             ]
         );
 
@@ -41,7 +44,7 @@ class ApplicationFileController extends Controller
 
     public function serveSigned(Request $request, Application $application)
     {
-        $orgID = $request->route('org');
+        $orgID = $request->route('organization'); // match route param
 
         if ($application->career->organizationID !== (int)$orgID) {
             abort(403, 'Invalid signer');
@@ -61,6 +64,4 @@ class ApplicationFileController extends Controller
             ]
         );
     }
-
-
 }
