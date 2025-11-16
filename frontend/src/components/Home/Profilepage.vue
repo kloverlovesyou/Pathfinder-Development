@@ -32,8 +32,9 @@ async function openModal(activity) {
       );
 
       // Find the full application for this career
+
       const app = res.data.find(
-        (a) => a.careerID === activity.careerID || a.id === activity.id
+        (a) => a.applicationID === activity.applicationID
       );
 
       if (app) {
@@ -116,7 +117,9 @@ async function openTrainingModal(training) {
 // Computed property for QR code value
 const qrCodeValue = computed(() => {
   if (!selectedTraining.value) return "";
-  return `${import.meta.env.VITE_API_BASE_URL}/attendance?trainingID=${selectedTraining.value.trainingID}&key=${selectedTraining.value.attendance_key}`;
+  return `${import.meta.env.VITE_API_BASE_URL}/attendance?trainingID=${
+    selectedTraining.value.trainingID
+  }&key=${selectedTraining.value.attendance_key}`;
 });
 
 function closeCareerModal() {
@@ -899,6 +902,13 @@ onMounted(fetchMyActivities);
                 )
               }}
             </p>
+            <div class="divider"></div>
+            <p
+              v-if="!selectedCareer.interviewSchedule"
+              class="text-center text-gray-500 text-sm mb-2"
+            >
+              Application is still being processed.
+            </p>
 
             <!-- ✅ Interview Info (only if the applicant has one) -->
             <div
@@ -909,7 +919,6 @@ onMounted(fetchMyActivities);
                 selectedCareer.interviewLocation
               "
             >
-              <div class="divider"></div>
               <p v-if="selectedCareer.interviewSchedule">
                 <strong>Interview Schedule:</strong>
                 {{ formatDateTime(selectedCareer.interviewSchedule) }}
