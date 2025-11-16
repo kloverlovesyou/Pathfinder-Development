@@ -962,40 +962,38 @@ export default {
     },
 
     openTrainingPopup(training = null) {
+    this.fetchTags(); // Load tags into dropdown
 
-      // 🔍 ADD THESE LOGS HERE
-      console.log("RAW TRAINING:", training);
-      console.log("RAW TAGS:", training ? training.Tags : null);
-      console.log("TAG TYPE:", training ? typeof training.Tags : null);
-      // 🔍 END LOGS
+    console.log("RAW TRAINING:", training);
+    console.log("RAW TAGS:", training ? training.Tags : null);
+    console.log("TAG TYPE:", training ? typeof training.Tags : null);
 
-      if (training) {
-        this.isEditMode = true;
+    if (training) {
+      this.isEditMode = true;
 
-        this.newTraining = {
-          ...training,
-          Tags: training.Tags
-            ? training.Tags.map(tag => tag.TagID)
-            : []
-        };
+      this.newTraining = {
+        ...training,
+        Tags: training.Tags
+          ? training.Tags.map(tag => tag.TagID)
+          : []
+      };
+    } else {
+      this.isEditMode = false;
+      this.newTraining = {
+        title: "",
+        description: "",
+        date: "",
+        startTime: "",
+        endTime: "",
+        mode: "",
+        location: "",
+        trainingLink: "",
+        Tags: []
+      };
+    }
 
-      } else {
-        this.isEditMode = false;
-        this.newTraining = {
-          title: "",
-          description: "",
-          date: "",
-          startTime: "",
-          endTime: "",
-          mode: "",
-          location: "",
-          trainingLink: "",
-          Tags: []
-        };
-      }
-
-      this.showTrainingPopup = true;
-    },
+    this.showTrainingPopup = true;
+  },
 
     closeTrainingPopup() {
       this.showTrainingPopup = false;
@@ -1024,7 +1022,6 @@ export default {
         ? training.schedule.split("T")
         : training.schedule?.split(" ") || [];
 
-      // Prefill form without replacing reactive object
       this.newTraining.title = training.title;
       this.newTraining.description = training.description;
       this.newTraining.date = scheduleParts[0] || "";
@@ -1035,7 +1032,11 @@ export default {
       this.newTraining.mode = training.mode;
       this.newTraining.location = training.location || "";
       this.newTraining.trainingLink = training.training_link || "";
-      this.newTraining.Tags = training.Tags || [];
+
+      // ✅ Fix for tags
+      this.newTraining.Tags = training.Tags
+        ? training.Tags.map(tag => tag.TagID)
+        : [];
 
       this.isEditMode = true;
       this.trainingToEditId = trainingID;
