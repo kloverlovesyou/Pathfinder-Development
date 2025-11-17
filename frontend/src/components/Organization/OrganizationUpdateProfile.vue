@@ -186,13 +186,17 @@ export default {
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
+import axios from "axios";
 
 const router = useRouter();
+
+// Form data
 const form = ref({
     organizationName: "",
     organizationLocation: "",
     organizationWebsiteURL: "",
     organizationPhoneNumber: "",
+    organizationPassword: "",
     organizationConfirmPassword: "",
 });
 
@@ -202,8 +206,10 @@ const toggleSidebar = () => {
     isSidebarOpen.value = !isSidebarOpen.value;
 };
 
-// Organization name
+// Organization name (sidebar)
 const organizationName = ref("Loading...");
+
+// Fetch organization details on mount
 onMounted(() => {
     const stored = localStorage.getItem("user");
     if (stored) {
@@ -211,7 +217,45 @@ onMounted(() => {
         organizationName.value =
             user.organizationName || user.displayName || user.name || "Unknown Org";
     }
+
+    getOrgDetails();
 });
+
+// ✅ Fetch organization details from backend
+const getOrgDetails = async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+        alert("Please log in again.");
+        router.push({ name: "OrgLogin" });
+        return;
+    }
+
+    try {
+        const response = await axios.get(
+            import.meta.env.VITE_API_BASE_URL + "/organization/details",
+            {
+                headers: { Authorization: `Bearer ${token}` }
+            }
+        );
+
+        const org = response.data.organization;
+
+        // Fill form with data from backend
+        form.value.organizationName = org.organizationName || "";
+        form.value.organizationLocation = org.location || "";
+        form.value.organizationWebsiteURL = org.websiteURL || "";
+        form.value.organizationPhoneNumber = org.phoneNumber || "";
+
+        // Leave password fields empty for security
+        form.value.organizationPassword = "";
+        form.value.organizationConfirmPassword = "";
+
+    } catch (error) {
+        console.error("Error fetching organization details:", error);
+        alert("Failed to load organization details.");
+    }
+};
 
 // Navigation
 const navigateTo = (route) => {

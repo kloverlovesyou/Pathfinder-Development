@@ -74,7 +74,7 @@ Route::post('/organization', [OrganizationController::class, 'o_register']);
 Route::post('/organizations/login', [OrganizationController::class, 'login']);
 Route::get('/organizations', [OrganizationController::class, 'index']);
 Route::get('/organizations/{organizationID}', [OrganizationController::class, 'show']);
-
+Route::get('/organizations/{organizationID}', [OrganizationController::class, 'getOrgDetails']);
 
 // ----------------------
 // Resume (authenticated)
@@ -170,6 +170,8 @@ Route::middleware('auth.custom')->group(function () {
     Route::get('/career-bookmarks', [CareerBookmarkController::class, 'index']);
     Route::post('/career-bookmarks', [CareerBookmarkController::class, 'store']);
     Route::delete('/career-bookmarks/{careerID}', [CareerBookmarkController::class, 'destroy']);
+
+    Route::get('/organization/details', [OrganizationController::class, 'getOrgDetails']);
 });
 
 // ----------------------
