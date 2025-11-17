@@ -36,6 +36,9 @@ Route::get('/dashboard', [DashboardController::class, 'getChartData']);
 // Trainings
 Route::get('/trainings', [TrainingController::class, 'index']);
 
+
+
+
 // Tags
 Route::get('/tags', [TagController::class, 'index']);
 Route::post('/tags', [TagController::class, 'store']);
@@ -130,7 +133,7 @@ Route::middleware('auth.custom')->group(function () {
     Route::get('/applications/interviews', [InterviewController::class, 'index']);
     Route::put('/applications/{applicationID}/interview', [ApplicationController::class, 'updateInterview']);
     Route::get('/applications/{applicationID}/requirements/signed-url', [ApplicationFileController::class, 'generateSignedUrl']);
-
+    
     // Registrations
     Route::get('/registrations', [RegistrationController::class, 'index']);
     Route::post('/registrations', [RegistrationController::class, 'store']);
@@ -142,6 +145,7 @@ Route::middleware('auth.custom')->group(function () {
     Route::post('/applications', [ApplicationController::class, 'store']);
     Route::delete('/applications/{id}', [ApplicationController::class, 'destroy']);
     Route::get('/applications/{id}/requirement', [ApplicationController::class, 'viewRequirement']);
+    Route::get('/applications', [ApplicationController::class, 'getApplications']);
 
     // Certificates
     Route::get('/certificates/{applicantID}', [CertificateController::class, 'index']);
