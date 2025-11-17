@@ -145,10 +145,13 @@
               </div>
               <div class="calendar-legend">
                 <div class="legend-item">
-                  <span class="training">🟦</span> Training
+                  <span class="training">🟦</span> Trainings
                 </div>
                 <div class="legend-item">
-                  <span class="career">🟨</span> Career
+                  <span class="career">🟨</span> Careers
+                </div>
+                <div class="legend-item">
+                  <span class="interview">🟥</span> Scheduled Interviews
                 </div>
               </div>
             </div>
@@ -156,7 +159,8 @@
             <!-- Right-side Panel -->
             <div class="calendar-side">
               <!-- When there are events -->
-              <template v-if="selectedEvents && (selectedEvents.trainings?.length || selectedEvents.careers?.length)">
+              <template
+                v-if="selectedEvents && (selectedEvents.trainings?.length || selectedEvents.careers?.length || selectedEvents.interviews?.length)">
                 <h3>Events on {{ selectedDate }}</h3>
 
                 <!-- Trainings -->
@@ -164,6 +168,10 @@
                   <h4 class="group-title">🟦 Trainings</h4>
                   <div v-for="(event, i) in selectedEvents.trainings" :key="'t-' + i" class="event-details-card">
                     <h5>{{ event.title }}</h5>
+                    <p class="event-info" v-if="event.startTime"><strong>Start Time:</strong> {{
+                      formatTime12Hour(event.startTime) }}</p>
+                    <p class="event-info" v-if="event.endTime"><strong>End Time:</strong> {{
+                      formatTime12Hour(event.endTime) }}</p>
                     <p class="event-info" v-if="event.mode"><strong>Mode:</strong> {{ event.mode }}</p>
                     <p class="event-info" v-if="event.location"><strong>Location:</strong> {{ event.location }}</p>
                     <p class="event-info" v-if="event.description"><strong>Description:</strong></p>
@@ -182,6 +190,22 @@
                     <p class="event-info" v-if="event.requirements">{{ event.requirements }}</p>
                     <p class="event-info" v-if="event.details"><strong>Details:</strong></p>
                     <p class="event-info" v-if="event.details">{{ event.details }}</p>
+                  </div>
+                </div>
+
+                <!-- Scheduled Interviews -->
+                <div v-if="selectedEvents.interviews.length" class="event-group">
+                  <h4 class="group-title">🟥 Scheduled Interviews</h4>
+                  <div v-for="(event, i) in selectedEvents.interviews" :key="'i-' + i" class="event-details-card">
+                    <h5>{{ event.title }}</h5>
+                    <p class="event-info"><strong>Applicant:</strong> {{ event.applicant || 'N/A' }}</p>
+                    <p class="event-info"><strong>Time:</strong> {{formatTime12Hour (event.time) || 'TBD' }}</p>
+                    <p class="event-info" v-if="event.mode"><strong>Mode:</strong> {{ event.mode }}</p>
+                    <p class="event-info" v-if="event.location"><strong>Location:</strong> {{ event.location }}</p>
+                    <p class="event-info" v-if="event.interviewLink"><strong>Link:</strong>
+                      <a :href="event.interviewLink" target="_blank" rel="noopener noreferrer">{{ event.interviewLink
+                      }}</a>
+                    </p>
                   </div>
                 </div>
 
@@ -210,21 +234,49 @@ export default {
     return {
       dictLogo,
       currentDate: new Date(),
-      selectedEvents: { trainings: [], careers: [] },
+      selectedEvents: { trainings: [], careers: [], interviews: [] },
       isSidebarOpen: true,
       dayNames: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
 
       // 👇 added for modal functionality
       showModal: false,
       selectedDate: null,
-      selectedEvents: [],
       showMenu: false,
 
-      // Hardcoded upcoming trainings
       trainings: [],
-
-      // Hardcoded on-going careers
-      careers: []
+      careers: [],
+      scheduledInterviews: [
+        {
+          id: 1,
+          title: "Interview: Frontend Developer",
+          applicant: "John Doe",
+          date: "2025-12-01",
+          time: "09:30",
+          mode: "On-Site",
+          location: "Tuguegarao City",
+          careerID: 35
+        },
+        {
+          id: 2,
+          title: "Interview: IT Support",
+          applicant: "Jane Smith",
+          date: "2025-11-28",
+          time: "01:00",
+          mode: "On-Site",
+          location: "Tuguegarao City",
+          careerID: 39
+        },
+        {
+          id: 3,
+          title: "Interview: Graphic Designer",
+          applicant: "Mark Reyes",
+          date: "2025-11-25",
+          time: "13:00",
+          mode: "Online",
+          interviewLink: "https://meet.example.com/xyz",
+          careerID: 40
+        }
+      ],
     }
   },
   computed: {
@@ -260,31 +312,62 @@ export default {
     }
   },
   methods: {
+
+    formatTime12Hour(time) {
+      if (!time) return "";
+
+      // Remove seconds if present
+      const [hourStr, minuteStr] = time.split(":");
+
+      // Parse hours and minutes
+      const hours = parseInt(hourStr, 10);
+      const minutes = parseInt(minuteStr, 10);
+
+      // Determine AM/PM
+      const ampm = hours >= 12 ? "PM" : "AM";
+
+      // Convert to 12-hour format
+      const displayHour = hours % 12 === 0 ? 12 : hours % 12;
+
+      // Return formatted time
+      return `${displayHour}:${minutes.toString().padStart(2, "0")} ${ampm}`;
+    },
+
     async fetchTrainings() {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/trainings", {
+      const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/trainings", {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       });
 
-      this.trainings = res.data.map(t => ({
-        id: t.trainingID,
-        title: t.title,
-        description: t.description,
-        date: t.schedule.split(" ")[0],
-        mode: t.mode,
-        location: t.location,
-        link: t.trainingLink,
-        organizationID: t.organization.organizationID,
-      }));
+      console.log(res.data);  // <-- check what schedule and end_time actually look like
+
+      this.trainings = res.data.map(t => {
+        const start = t.schedule ? new Date(t.schedule) : null;
+        const end = t.end_time ? new Date(t.end_time) : null;
+
+        return {
+          id: t.trainingID,
+          title: t.title,
+          description: t.description,
+          date: start ? start.toISOString().split("T")[0] : "", // "2025-12-03"
+          startTime: start ? start.toTimeString().slice(0, 5) : "", // "07:30"
+          endTime: end ? end.toTimeString().slice(0, 5) : "",       // "12:00"
+          mode: t.mode,
+          location: t.location,
+          link: t.trainingLink,
+          organizationID: t.organization.organizationID,
+        };
+      });
+
     },
 
     async fetchCareers() {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const res = await axios.get(import.meta.env.VITE_API_BASE_URL +"/careers", {
+      const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/careers", {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       });
 
@@ -330,11 +413,14 @@ export default {
     },
     hasEvent(date) {
       if (!date) return false;
+      const formatted = this.formatDate(date); // ✅ define formatted here
       return (
-        this.trainings.some(t => t.date === this.formatDate(date)) ||
-        this.careers.some(c => c.date === this.formatDate(date))
+        this.trainings.some(t => t.date === formatted) ||
+        this.careers.some(c => c.date === formatted) ||
+        this.scheduledInterviews.some(i => i.date === formatted)
       );
     },
+
     getEventTitles(date) {
       if (!date) return [];
 
@@ -348,13 +434,18 @@ export default {
         .filter(c => c.date === formatted)
         .map(c => ({ type: "career", title: "🟨 " + c.title }));
 
-      return [...trainings, ...careers];
+      const interviews = this.scheduledInterviews
+        .filter(i => i.date === formatted)
+        .map(i => ({ type: "interview", title: "🟥 " + i.title }));
+
+      return [...trainings, ...careers, ...interviews];
     },
     getEventColor(date) {
       if (!date) return "";
       const formatted = this.formatDate(date);
-      if (this.trainings.some(t => t.date === formatted)) return "#F5F5F5"; 
-      if (this.careers.some(c => c.date === formatted)) return "#F5F5F5"; 
+      if (this.trainings.some(t => t.date === formatted)) return "#F5F5F5";
+      if (this.careers.some(c => c.date === formatted)) return "#F5F5F5";
+      if (this.scheduledInterviews.some(i => i.date === formatted)) return "#FFE5E5";
       return "";
     },
     formatDate(date) {
@@ -369,8 +460,9 @@ export default {
 
       const trainings = this.trainings?.filter(t => t.date === formatted) || [];
       const careers = this.careers?.filter(c => c.date === formatted) || [];
+      const interviews = this.scheduledInterviews?.filter(i => i.date === formatted) || [];
 
-      return [...trainings, ...careers];
+      return [...trainings, ...careers, ...interviews];
     },
     openEventDetails(event) {
       this.selectedEvent = event;
@@ -390,8 +482,12 @@ export default {
         .filter(c => c.date === formatted)
         .map(c => ({ ...c, type: "Career" }));
 
+      const interviews = this.scheduledInterviews
+        .filter(i => i.date === formatted)
+        .map(i => ({ ...i, type: "Interview" }));
+
       this.selectedDate = formatted;
-      this.selectedEvents = { trainings, careers };
+      this.selectedEvents = { trainings, careers, interviews };
     },
 
     closeSidebar() {
@@ -844,6 +940,16 @@ const isToday = (date) => {
   /* allows text to wrap */
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.interview {
+  color: #ef4444;
+  /* emoji color fallback */
+}
+
+.event-title.interview {
+  color: #ef4444;
+  font-weight: 600;
 }
 
 /* Animate position when sidebar opens */
