@@ -145,7 +145,7 @@ Route::middleware('auth.custom')->group(function () {
     Route::post('/applications', [ApplicationController::class, 'store']);
     Route::delete('/applications/{id}', [ApplicationController::class, 'destroy']);
     Route::get('/applications/{id}/requirement', [ApplicationController::class, 'viewRequirement']);
-    Route::get('/applications', [ApplicationController::class, 'getApplications']);
+    Route::get('/interviews', [InterviewController::class, 'index']);
 
     // Certificates
     Route::get('/certificates/{applicantID}', [CertificateController::class, 'index']);

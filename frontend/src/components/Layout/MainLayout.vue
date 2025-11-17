@@ -5,12 +5,12 @@
     <!-- Main Area -->
     <div class="flex flex-col flex-1">
       <!-- Header -->
-      <header class="h-16 text-dark-slate flex items-center px-8">
+      <header class="h-16 text-dark-slate flex items-center px-12">
         <TopBar />
       </header>
 
       <!-- Page Content -->
-      <main class="flex-1 overflow-x-auto px-2">
+      <main class="flex-1 overflow-x-auto px-12">
         <div class="w-full max-w-full">
           <router-view v-slot="{ Component }">
             <keep-alive>
