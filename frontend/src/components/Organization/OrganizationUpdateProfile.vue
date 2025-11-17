@@ -142,11 +142,10 @@
                         <input type="text" v-model="form.organizationConfirmPassword"
                             placeholder="Enter confirm password" />
                     </div>
-
+                    
                     <button type="submit" class="save-btn">Save Changes</button>
                 </form>
             </div>
-
         </main>
     </div>
 </template>
