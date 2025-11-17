@@ -25,7 +25,7 @@
           <div v-if="isSidebarOpen" class="profile-section">
             <h3 class="org-name">{{ organizationName }}</h3>
             <div class="profile-actions">
-              <div class="action" @click="navigateTo({ name: 'OrgProfile' })">
+              <div class="action" @click="navigateTo({ name: 'OrgUpdateProfile' })">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M11.7278 8.27191C12.7534 9.87525 14.1247 11.2375 15.7464 12.2534L8.85673 19.144C8.43166 19.569 8.21841 19.7816 7.95731 19.9213C7.69637 20.0609 7.40171 20.1199 6.81278 20.2377L3.73563 20.853C3.40302 20.9195 3.23649 20.9525 3.14188 20.8578C3.04759 20.7632 3.08035 20.5971 3.14677 20.2651L3.76298 17.1879C3.88087 16.5985 3.93965 16.3035 4.07938 16.0424C4.21912 15.7814 4.43173 15.569 4.85673 15.144L11.7278 8.27191ZM16.1116 4.03656C16.6711 3.75929 17.3284 3.75931 17.888 4.03656C18.1821 4.18229 18.455 4.45518 19.0003 5.00043C19.5453 5.54545 19.8184 5.81774 19.9641 6.11175C20.2414 6.67123 20.2413 7.32861 19.9641 7.88812C19.8184 8.18221 19.5455 8.45517 19.0003 9.00043L17.2034 10.7963C15.5308 9.84498 14.1456 8.46859 13.1819 6.81781L15.0003 5.00043C15.5453 4.45539 15.8176 4.18234 16.1116 4.03656Z"
@@ -109,10 +109,10 @@
 
       <!-- 🧾 Summary Cards -->
       <section class="cards-container">
-          <div class="card">
-            <h4 class="cards-title">Total Trainings</h4>
-            <span class="cards-counter">{{ totalTrainings }}</span>
-          </div>
+        <div class="card">
+          <h4 class="cards-title">Total Trainings</h4>
+          <span class="cards-counter">{{ totalTrainings }}</span>
+        </div>
         <div class="card">
           <h4 class="cards-title">Upcoming Trainings</h4>
           <span class="cards-counter">{{ upcomingTrainings }}</span>
@@ -129,10 +129,10 @@
           <h4 class="cards-title">Open Careers</h4>
           <span class="cards-counter">{{ ongoingCareers }}</span>
         </div>
-          <div class="card">
-            <h4 class="cards-title">Closed Careers</h4>
-            <span class="cards-counter">{{ filledOutCareers }}</span>
-          </div>
+        <div class="card">
+          <h4 class="cards-title">Closed Careers</h4>
+          <span class="cards-counter">{{ filledOutCareers }}</span>
+        </div>
       </section>
 
       <!-- Chart Section -->
@@ -189,78 +189,73 @@ export default {
 import { ref, nextTick, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Chart from 'chart.js/auto';
-import axios from 'axios'
+import axios from 'axios';
 
-
+// ----------------------
+// Router & Sidebar
+// ----------------------
 const router = useRouter();
 const isSidebarOpen = ref(true);
-const organizationName = ref('');
+const toggleSidebar = () => isSidebarOpen.value = !isSidebarOpen.value;
 
-// reactive totals
-const totalTrainings = ref(0);
-const totalCareers = ref(0);
-
-// reactive count
-const upcomingTrainings = ref(0)
-const completedTrainings = ref(0)
-const ongoingCareers = ref(0)
-const filledOutCareers = ref(0)
-
-// Helper to compare dates ignoring time
-function isFuture(dateStr) {
-  const today = new Date();
-  const d = new Date(dateStr);
-  today.setHours(0, 0, 0, 0);
-  d.setHours(0, 0, 0, 0);
-  return d >= today;
-}
-
-function isPast(dateStr) {
-  const today = new Date();
-  const d = new Date(dateStr);
-  today.setHours(0, 0, 0, 0);
-  d.setHours(0, 0, 0, 0);
-  return d < today;
-}
-
-const fetchTotals = async () => {
-  try {
-    const trainingsResp = await axios.get(import.meta.env.VITE_API_BASE_URL + '/trainings/total')
-    const careersResp = await axios.get(import.meta.env.VITE_API_BASE_URL + 'careers/total')
-
-    totalTrainings.value = trainingsResp.data.totalTrainings
-    totalCareers.value = careersResp.data.totalCareers
-  } catch (err) {
-    console.error(err)
-  }
-}
-
-// fetch totals when component mounts
-onMounted(async () => {
-  try {
-    const trainingsRes = await axios.get(import.meta.env.VITE_API_BASE_URL + "/trainings/total");
-    const careersRes = await axios.get(import.meta.env.VITE_API_BASE_URL + "/careers/total");
-
-    totalTrainings.value = trainingsRes.data.totalTrainings;
-    totalCareers.value = careersRes.data.totalCareers;
-  } catch (error) {
-    console.error("Failed to fetch totals:", error.response?.data || error);
+// ----------------------
+// Organization & User Info
+// ----------------------
+const organizationName = ref('Loading...');
+onMounted(() => {
+  const storedUser = localStorage.getItem("user");
+  if (storedUser) {
+    const user = JSON.parse(storedUser);
+    organizationName.value = user.organizationName || user.displayName || user.name || "Unknown Org";
   }
 });
 
-// Sidebar navigation functions
-const goToProfile = () => router.push('/profile');
-const goToHome = () => router.push('/organization');
-const goToTrainings = () => router.push({ name: 'OrgTrainings' });
-const goToCareers = () => router.push({ name: 'OrgCareers' });
-const goToCalendar = () => router.push('/app/calendar');
+// ----------------------
+// Counters / Totals
+// ----------------------
+const totalTrainings = ref(0);
+const upcomingTrainings = ref(0);
+const completedTrainings = ref(0);
 
-// Generic navigation function
-const navigateTo = (route) => {
-  router.push(route);
-}
+const totalCareers = ref(0);
+const ongoingCareers = ref(0);
+const filledOutCareers = ref(0);
 
-// For Charts
+const fetchTotals = async () => {
+  try {
+    const trainingsRes = await axios.get(import.meta.env.VITE_API_BASE_URL + "/trainings/total");
+    totalTrainings.value = trainingsRes.data.totalTrainings;
+
+    const careersRes = await axios.get(import.meta.env.VITE_API_BASE_URL + "/careers/total");
+    totalCareers.value = careersRes.data.totalCareers;
+  } catch (err) {
+    console.error("Failed to fetch totals:", err);
+  }
+};
+
+// Fetch training and career counts
+const fetchCounts = async () => {
+  try {
+    // Trainings
+    const { data: trainingCounts } = await axios.get(import.meta.env.VITE_API_BASE_URL + "/trainings/counts-partial");
+    // Only update upcoming/completed, not total
+    upcomingTrainings.value = trainingCounts.upcoming;
+    completedTrainings.value = trainingCounts.completed;
+
+    // Careers
+    const { data: careerCounts } = await axios.get(import.meta.env.VITE_API_BASE_URL + "/careers/counts-partial");
+    ongoingCareers.value = careerCounts.ongoing;
+    filledOutCareers.value = careerCounts.filled;
+
+  } catch (err) {
+    console.error("Failed to fetch counts:", err);
+  }
+};
+
+// ----------------------
+// Charts
+// ----------------------
+const charts = ref({});
 const activeChart = ref({ id: "chart1", title: "General Overview" });
 const sideCharts = ref([
   { id: "chart2", title: "Training Summary" },
@@ -268,161 +263,124 @@ const sideCharts = ref([
   { id: "chart4", title: "Career Insights" },
 ]);
 
-const charts = ref({});
-
-const chartConfigs = {
+// Chart configurations
+const chartConfigs = ref({
   chart1: {
     type: "line",
     data: {
-      labels: ["Jan", "Feb", "Mar", "Apr", "May"],
-      datasets: [
-        {
-          label: "Training Registrants",
-          data: [120, 200, 180, 250, 300],
-          borderColor: "#44576D",
-          backgroundColor: "rgba(68, 87, 109, 0.2)",
-          tension: 0.3,
-          fill: true,
-        },
-        {
-          label: "Career Applicants",
-          data: [80, 140, 110, 350, 400],
-          borderColor: "#A7B1C2",
-          backgroundColor: "rgba(68, 87, 109, 0.2)",
-          tension: 0.3,
-          fill: true,
-        },
-      ],
-    },
+      labels: [], datasets: [
+        { label: "Training Registrants", data: [], borderColor: "#44576D", backgroundColor: "rgba(68,87,109,0.2)", tension: 0.3, fill: true },
+        { label: "Career Applicants", data: [], borderColor: "#A7B1C2", backgroundColor: "rgba(68,87,109,0.2)", tension: 0.3, fill: true }
+      ]
+    }
   },
   chart2: {
     type: "pie",
-    data: {
-      labels: ["Onsite", "Online", "Hybrid"],
-      datasets: [
-        {
-          label: "Training Types",
-          data: [40, 35, 25],
-          backgroundColor: ["#44576D", "#A7B1C2", "#DFE3EA"],
-        },
-      ],
-    },
+    data: { labels: ["Onsite", "Online", "Hybrid"], datasets: [{ data: [], backgroundColor: ["#44576D", "#A7B1C2", "#DFE3EA"] }] }
   },
   chart3: {
     type: "bar",
-    data: {
-      labels: ["Internships", "Jobs", "Trainings"],
-      datasets: [
-        {
-          label: "Applications",
-          data: [300, 500, 200],
-          backgroundColor: "#44576D",
-        },
-      ],
-    },
+    data: { labels: ["Internships", "Jobs", "Trainings"], datasets: [{ label: "Applications", data: [], backgroundColor: "#44576D" }] }
   },
   chart4: {
     type: "doughnut",
-    data: {
-      labels: ["Accepted", "Pending", "Rejected"],
-      datasets: [
-        {
-          label: "Career Outcomes",
-          data: [60, 25, 15],
-          backgroundColor: ["#44576D", "#A7B1C2", "#DFE3EA"],
-        },
-      ],
-    },
-  },
-};
+    data: { labels: ["Accepted", "Pending", "Rejected"], datasets: [{ data: [], backgroundColor: ["#44576D", "#A7B1C2", "#DFE3EA"] }] }
+  }
+});
 
-const fetchCounts = async () => {
+// Fetch chart data from backend
+const fetchChartData = async () => {
   try {
-    // Trainings counts
-    const { data: trainingCounts } = await axios.get(import.meta.env.VITE_API_BASE_URL +"/trainings/counts-partial");
-    upcomingTrainings.value = trainingCounts.upcoming;
-    completedTrainings.value = trainingCounts.completed;
+    const token = localStorage.getItem('token');
 
-    // Careers counts
-    const { data: careerCounts } = await axios.get(import.meta.env.VITE_API_BASE_URL +"/careers/counts-partial");
-    ongoingCareers.value = careerCounts.ongoing;
-    filledOutCareers.value = careerCounts.filled;
+    const { data } = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/dashboard",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
 
-    console.log("Training counts:", trainingCounts);
-    console.log("Career counts:", careerCounts);
-  } catch (error) {
-    console.error("Error fetching counts:", error);
+    chartConfigs.value.chart1.data.labels = data.months;
+    chartConfigs.value.chart1.data.datasets[0].data = data.trainingRegistrants;
+    chartConfigs.value.chart1.data.datasets[1].data = data.careerApplicants;
+
+    chartConfigs.value.chart2.data.datasets[0].data = [
+      data.trainingTypes.onsite,
+      data.trainingTypes.online,
+      data.trainingTypes.hybrid
+    ];
+
+    chartConfigs.value.chart4.data.datasets[0].data = [
+      data.careerOutcomes.accepted,
+      data.careerOutcomes.pending,
+      data.careerOutcomes.rejected
+    ];
+
+  } catch (err) {
+    console.error("Failed to fetch chart data:", err);
   }
 };
 
-onMounted(() => {
-  fetchCounts();
-});
 
-// For total cards counter
-onMounted(async () => {
-  await trainingStore.fetchTrainings();
-  await careerStore.fetchCareers();
-});
-
+// Render a single chart
 function renderChart(id) {
   const ctx = document.getElementById(id);
-  if (ctx) charts.value[id] = new Chart(ctx, chartConfigs[id]);
+  if (!ctx) return;
+
+  if (charts.value[id]) charts.value[id].destroy();
+  charts.value[id] = new Chart(ctx, chartConfigs.value[id]);
 }
 
-onMounted(async () => {
-  await nextTick();
-  renderChart(activeChart.value.id);
-  sideCharts.value.forEach((chart) => renderChart(chart.id));
-});
-
+// Swap active and side charts
 function swapChart(clickedChart) {
   const oldMain = { ...activeChart.value };
   activeChart.value = clickedChart;
-  sideCharts.value = sideCharts.value.map((chart) =>
-    chart.id === clickedChart.id ? oldMain : chart
-  );
+  sideCharts.value = sideCharts.value.map(c => c.id === clickedChart.id ? oldMain : c);
 
   nextTick(() => {
-    Object.values(charts.value).forEach((chart) => chart.destroy());
+    Object.values(charts.value).forEach(chart => chart.destroy());
     charts.value = {};
     renderChart(activeChart.value.id);
-    sideCharts.value.forEach((chart) => renderChart(chart.id));
+    sideCharts.value.forEach(chart => renderChart(chart.id));
   });
 }
 
-onMounted(() => {
-  const storedUser = localStorage.getItem("user");
-  if (storedUser) {
-    const user = JSON.parse(storedUser);
-    if (user.role === "organization") {
-      organizationName.value = user.organizationName || user.displayName || user.name || "Unknown Org";
-    }
-  }
+// ----------------------
+// Lifecycle
+// ----------------------
+onMounted(async () => {
+  await fetchTotals();   // ← sets totalTrainings & totalCareers
+  await fetchCounts();   // ← sets only upcoming/completed/ongoing/filled
+  await fetchCounts();
+  await fetchChartData();
+  await nextTick();
 
-  const ctx = document.getElementById("applicantChart");
-  if (ctx) {
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-        datasets: [
-          { label: "Training Applicants", data: [10, 20, 15, 25, 40, 30], borderColor: "#3182ce", fill: false, tension: 0.4 },
-          { label: "Job Applicants", data: [5, 15, 20, 22, 50, 35], borderColor: "#9f7aea", fill: false, tension: 0.4 }
-        ]
-      },
-      options: { responsive: true, plugins: { legend: { display: false } } }
-    });
-  }
+  renderChart(activeChart.value.id);
+  sideCharts.value.forEach(chart => renderChart(chart.id));
 });
 
-const toggleSidebar = () => isSidebarOpen.value = !isSidebarOpen.value;
+// ----------------------
+// Navigation
+// ----------------------
+const goToProfile = () => router.push('/profile');
+const goToHome = () => router.push('/organization');
+const goToTrainings = () => router.push({ name: 'OrgTrainings' });
+const goToCareers = () => router.push({ name: 'OrgCareers' });
+const goToCalendar = () => router.push('/app/calendar');
+const navigateTo = (route) => router.push(route);
+
+// ----------------------
+// Logout
+// ----------------------
 const logout = () => {
   localStorage.removeItem('user');
   localStorage.removeItem('token');
   router.push({ name: 'Login' });
-}
+};
 </script>
+
 
 <style scoped>
 /* Optional fade animation */
@@ -1124,10 +1082,12 @@ canvas {
 .cards-container {
   display: flex;
   justify-content: space-between;
-  align-items: stretch; /* 🔹 important for equal height */
+  align-items: stretch;
+  /* 🔹 important for equal height */
   margin: 20px;
   gap: 20px;
-  flex-wrap: nowrap; /* keep left/right alignment */
+  flex-wrap: nowrap;
+  /* keep left/right alignment */
 }
 
 .card {
