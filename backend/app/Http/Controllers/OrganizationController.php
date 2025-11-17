@@ -170,4 +170,24 @@ class OrganizationController extends Controller
 
         return response()->json(['message' => 'Organization and all related data deleted successfully']);
     }
+
+    public function getOrgDetails(Request $request)
+    {
+        // Get the currently authenticated organization
+        $organization = $request->user(); // if using Sanctum
+        if (!$organization) {
+            return response()->json(['message' => 'Organization not found'], 404);
+        }
+
+        return response()->json([
+            'organization' => [
+                'organizationName' => $organization->name,
+                'location'         => $organization->location,
+                'websiteURL'       => $organization->websiteURL,
+                'emailAddress'     => $organization->emailAddress,
+                'phoneNumber'      => $organization->phoneNumber ?? '',
+                'password'         => '' // never send hashed password
+            ]
+        ]);
+    }
 }
