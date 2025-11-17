@@ -250,6 +250,11 @@ export default {
       scheduledInterviews: [],
     }
   },
+  setup() {
+    const events = ref({}); // calendar events by date
+
+    return { events };
+  },
   computed: {
     monthYear() {
       return this.currentDate.toLocaleString("default", {
@@ -305,44 +310,76 @@ export default {
     },
 
     async fetchApplications() {
+      try {
+        const user = JSON.parse(localStorage.getItem("user"));
+        const token = localStorage.getItem("token");
+        if (!user || !token) return;
+
+        // Call the API that returns applications with interview schedule
+        const { data: apps } = await axios.get(
+          import.meta.env.VITE_API_BASE_URL + "/applications",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        // Filter only applications that have an interview schedule
+        const careerEvents = apps
+          .filter((app) => app.interviewSchedule) // skip applications without interviews
+          .map((app) => ({
+            id: app.applicationID,
+            careerID: app.careerID,
+            title: app.career?.position || "Career Interview",
+            date: new Date(app.interviewSchedule).toISOString().split("T")[0],
+            type: "career",
+            interviewSchedule: app.interviewSchedule,
+            interviewMode: app.interviewMode,
+            interviewLink: app.interviewLink,
+            interviewLocation: app.interviewLocation,
+            organization: app.career?.organization,
+          }));
+
+        // Merge career events into your existing events map
+        careerEvents.forEach((event) => {
+          if (!events.value[event.date]) events.value[event.date] = [];
+          events.value[event.date].push(event);
+        });
+
+        console.log("📅 Career events merged:", careerEvents);
+      } catch (err) {
+        console.error("Failed to fetch applications:", err);
+      }
+    },
+
+    async fetchInterviews() {
       const token = localStorage.getItem("token");
       if (!token) return;
 
       try {
-        const res = await axios.get(
-          import.meta.env.VITE_API_BASE_URL + "/applications",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: "application/json",
-            },
-          }
-        );
+        const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/applications/interviews", {
+          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        });
+        console.log("API /applications/interviews response:", res.data);
 
-        console.log("Applications response:", res.data);
-
-        this.applications = res.data.map(a => {
-          const interview = a.interviewSchedule ? new Date(a.interviewSchedule) : null;
+        const interviews = res.data.map((interview) => {
+          const schedule = interview.interviewSchedule || interview.schedule || null;
+          const scheduleDate = schedule ? new Date(schedule) : null;
 
           return {
-            id: a.applicationID,
-            requirements: a.requirements,
-            dateSubmitted: a.dateSubmitted,
-            applicationStatus: a.applicationStatus,
-
-            interviewDate: interview ? interview.toISOString().split("T")[0] : "",
-            interviewTime: interview ? interview.toTimeString().slice(0, 5) : "",
-            interviewMode: a.interviewMode,
-            interviewLocation: a.interviewLocation,
-            interviewLink: a.interviewLink,
-
-            careerID: a.careerID,
-            applicantID: a.applicantID,
+            id: interview.id || interview.applicationID || interview.interviewID,
+            applicantID: interview.applicantID || interview.applicant_id || null,
+            title: interview.title || interview.interwiewStatus || "For Interview",
+            date: scheduleDate ? scheduleDate.toISOString().split("T")[0] : "",
+            interviewSchedule: schedule,
+            interviewMode: interview.interviewMode || interview.mode || null,
+            interviewLink: interview.interviewLink || interview.link || null,
+            interviewLocation: interview.interviewLocation || interview.location || null,
+            organization: interview.organizationName || interview.organization || null,
           };
         });
 
+        this.scheduledInterviews = interviews;
+        console.log("📅 Scheduled interviews loaded:", interviews.length);
       } catch (err) {
-        console.error("Failed to fetch applications:", err);
+        console.error("Error fetching interviews:", err);
       }
     },
 
@@ -537,6 +574,7 @@ export default {
     this.fetchTrainings();
     this.fetchCareers();
     this.fetchApplications();
+    this.fetchInterviews();
   },
 };
 </script>
