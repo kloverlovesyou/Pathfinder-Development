@@ -60,11 +60,10 @@ async function openTrainingModal(training) {
   selectedTraining.value = training;
   showModal.value = true;
 
-  // ✅ Generate QR via store
-  await trainingStore.generateQR(training);
-
-  // Modal will automatically read from trainingStore.qrCodes
-  // No need for local QR logic here
+  // ✅ Only generate QR if training has started
+  if (myRegistrations.value.has(training.trainingID) && hasTrainingStarted(training.schedule)) {
+    await trainingStore.generateQR(training);
+  }
 }
 
 function closeModal() {
@@ -175,6 +174,13 @@ async function fetchOrganizations() {
     );
     organizations.value = res.data;
   } catch {}
+}
+
+function hasTrainingStarted(schedule) {
+  if (!schedule) return false;
+  const now = new Date();
+  const trainingTime = new Date(schedule);
+  return now >= trainingTime;
 }
 
 // ---------------------------
