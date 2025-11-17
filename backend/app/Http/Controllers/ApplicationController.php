@@ -85,18 +85,20 @@ class ApplicationController extends Controller
         }
 
         $app = Application::create([
-            'requirements' => $requirementsPath,
-            'dateSubmitted' => Carbon::now(),
-            'applicationStatus' => 'Submitted',
-            'interviewSchedule' => null,
-            'interviewMode' => null,
-            'interviewLocation' => null,
-            'interviewLink' => null,
+        'requirements' => $requirementsPath,
+        'dateSubmitted' => Carbon::now(),
+        'applicationStatus' => 'Submitted',
+        'interviewSchedule' => null,
+        'interviewMode' => null,
+        'interviewLocation' => null,
+        'interviewLink' => null,
 
-            'careerID' => (int) $validated['careerID'],
-            'applicantID' => $user->applicantID,
-            'organization' => $app->career->organization ?? 'Unknown Organization',
+        'careerID' => (int) $validated['careerID'],
+        'applicantID' => $user->applicantID,
         ]);
+
+        $app->organization = $app->career->organization->name ?? 'Unknown Organization';
+        $app->save();
 
         return response()->json([
             'message' => 'APPLICATION SUBMITTED SUCCESSFULLY!!!',
@@ -125,19 +127,19 @@ public function viewRequirement($id)
 {
     $application = Application::findOrFail($id);
 
-    // Check if a requirement exists
     if (!$application->requirements) {
         return response()->json(['message' => 'No requirement found.'], 404);
     }
 
-    // Convert BLOB to PDF response
-    return response($application->requirements)
-        ->header('Content-Type', 'application/pdf')
-        ->header('Cache-Control', 'no-cache, must-revalidate')
-        ->header('Content-Disposition', 'inline; filename="requirement.pdf"');
+    $pdfData = $application->requirements; // raw binary from DB
+
+    return response()->make($pdfData, 200, [
+        'Content-Type' => 'application/pdf',
+        'Content-Disposition' => 'inline; filename="requirement.pdf"',
+        'Content-Length' => strlen($pdfData),
+        'Cache-Control' => 'no-cache, must-revalidate',
+    ]);
 }
-
-
 
     public function getApplicantsByCareer(Request $request, $careerID)
     {
@@ -286,60 +288,54 @@ public function viewRequirement($id)
     }
 
     public function getRequirements(Request $request, $applicationID)
-    {
-        $user = $request->user(); // Must be Organization (handled by middleware or check here)
-    
-        $application = Application::find($applicationID);
-        if (!$application) {
-            return response()->json(['message' => 'Application not found'], 404);
-        }
-    
-        // Ownership check (can be offloaded to middleware)
-        if ($application->career->organizationID !== $user->organizationID) {
-            return response()->json(['message' => 'Access denied'], 403);
-        }
-    
-        if (!$application->requirements) {
-            Log::warning('Requirements missing', [
-                'application_id' => $applicationID,
-                'raw_path' => $application->requirements,
-            ]);
-            return response()->json(['message' => 'Requirements not found'], 404);
-        }
-    
-        $path = $application->requirements;
-    
-        try {
-            if (!Storage::disk('public')->exists($path)) {
-                Log::error('Requirements file not found', [
-                    'application_id' => $applicationID,
-                    'path' => $path,
-                ]);
-                return response()->json(['message' => 'File not found on disk'], 404);
-            }
-    
-            $fullPath = Storage::disk('public')->path($path);
-    
-            Log::info('Serving applicant requirements', [
-                'application_id' => $applicationID,
-                'path' => $path,
-            ]);
-    
-            return response()->file($fullPath, [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'inline; filename="'.basename($path).'"'
-            ]);
-    
-        } catch (\Exception $e) {
-            Log::error('Error serving requirements', [
-                'application_id' => $applicationID,
-                'path' => $path,
-                'error' => $e->getMessage()
-            ]);
-            return response()->json(['message' => 'Error serving file'], 500);
-        }
+{
+    $user = $request->user(); 
+
+    $application = Application::find($applicationID);
+    if (!$application) {
+        return response()->json(['message' => 'Application not found'], 404);
     }
-    
+
+    if ($application->career->organizationID !== $user->organizationID) {
+        return response()->json(['message' => 'Access denied'], 403);
+    }
+
+    $path = $application->requirements;
+
+    // Check if path exists in storage
+    if (!$path || !Storage::disk('public')->exists($path)) {
+        return response()->json(['message' => 'File not found'], 404);
+    }
+
+    $fullPath = Storage::disk('public')->path($path);
+
+    // Double-check file exists and is readable
+    if (!file_exists($fullPath) || !is_readable($fullPath)) {
+        return response()->json(['message' => 'File missing or not readable'], 404);
+    }
+
+    try {
+
+        // 🔥 FIX: Return real binary content directly from storage
+        return Storage::disk('public')->download($path, basename($path), [
+            'Content-Type' => 'application/pdf'
+        ]);
+
+        // (Your previous return is untouched below, but now unreachable)
+        return response()->download($fullPath, basename($path), [
+            'Content-Type' => 'application/pdf',
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Download failed: ' . $e->getMessage());
+        return response()->json([
+            'message' => 'Failed to download file',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+
 
 
 }
