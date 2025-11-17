@@ -127,6 +127,27 @@ function handleFileUpload(e) {
   uploadedFile.value = e.target.files[0];
 }
 
+async function fetchRecommendedCareers() {
+  if (!selectedCareerId.value) {
+    posts.value = [];
+    return;
+  }
+
+  try {
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL +
+        `/careers/recommend/${selectedCareerId.value}`
+    );
+
+    // API SHOULD RETURN LIST OF CAREERS
+    posts.value = Array.isArray(res.data) ? res.data : [];
+
+  } catch (err) {
+    console.error("Error fetching recommended careers:", err);
+    posts.value = [];
+    addToast("Failed to load recommended careers", "error");
+  }
+}
 // ------------------ ACTIONS ------------------
 async function toggleCareerBookmark(career) {
   const token = localStorage.getItem("token");
@@ -204,6 +225,8 @@ function formatDateTime(dt) {
     timeStyle: "short",
   });
 }
+
+
 
 function formatDate(d) {
   if (!d) return "";

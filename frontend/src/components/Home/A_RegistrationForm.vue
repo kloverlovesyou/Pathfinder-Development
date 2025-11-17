@@ -314,6 +314,132 @@
 
         <div class="divider"></div>
 
+        <!--
+        <div class="relative mb-4">
+          <label class="block font-semibold text-gray-500"
+            >To help us personalize recommendations for you,
+          </label>
+          <p class="text-gray-500 mb-2">fill up the fields below.</p>
+
+        
+          <div @click="focusInput">
+            <input
+              ref="inputEl"
+              v-model="search"
+              type="text"
+              @focus="showDropdown = true"
+              @blur="hideDropdown"
+              @keydown.enter.prevent="addCustomJob"
+              placeholder="Type or select desired positions"
+              class="input w-full focus:outline-none focus:border-transparent bg-gray-100 text-gray-800 rounded-lg px-3 py-2"
+            />
+          </div>
+
+          
+          <ul
+            v-if="showDropdown"
+            class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-auto"
+          >
+            <li
+              v-for="(job, index) in filteredJobs.length
+                ? filteredJobs
+                : jobOptions"
+              :key="index"
+              @mousedown.prevent="selectJob(job)"
+              class="px-4 py-2 hover:bg-blue-100 cursor-pointer"
+            >
+              {{ job }}
+            </li>
+          </ul>
+
+          
+          <div
+            v-if="selectedJobs.length"
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-3 rounded-lg"
+          >
+            <div
+              v-for="(job, index) in selectedJobs"
+              :key="index"
+              class="flex items-center justify-between bg-customButton text-white text-sm px-3 py-1 rounded-full"
+            >
+              <span class="truncate">{{ job }}</span>
+              <button
+                @click.stop="removeJob(job)"
+                class="text-white hover:text-gray-200 font-bold ml-2"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        </div> -->
+
+        <div class="relative mb-4">
+          <label class="block font-semibold text-gray-500">
+            To help us personalize recommendations for you,
+          </label>
+          <p class="text-gray-500 mb-2">please select your target career below.</p>
+
+          <!-- Dropdown -->
+          <div class="relative">
+            <select
+              v-model.number="form.careerID"
+              @focus="showDropdown = true"
+              class="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              required
+            >
+              <option disabled value="">Select your target career</option>
+              <option
+                v-for="career in careers"
+                :key="career.careerID"
+                :value="career.careerID"
+              >
+                {{ career.position }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+
+        <div class="w-full">
+          
+          <div>
+            <input
+              v-model="newSkill"
+              @keydown.enter.prevent="addSkill"
+              class="input w-full bg-gray-100 focus:outline-none focus:border-transparent"
+              type="text"
+              placeholder="Type skills here (e.g., Java, Python, Communication)"
+            />
+          </div>
+
+          <!-- Skill Bubbles -->
+          <div
+            class="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2 p-3 rounded-lg mb-4 mt-2"
+          >
+            <div
+              v-for="(skill, index) in skills"
+              :key="index"
+              class="flex items-center justify-between bg-customButton text-white px-3 py-1 text-sm rounded-full overflow-hidden"
+            >
+              <span class="truncate">{{ skill }}</span>
+              <button
+                @click="removeSkill(index)"
+                class="ml-2 text-white hover:text-gray-200 font-bold"
+              >
+                ×
+              </button>
+            </div>
+
+            <!-- Shown if no skills left -->
+            <p
+              v-if="!skills.length"
+              class="text-gray-400 italic text-sm col-span-full"
+            >
+              No skills added yet.
+            </p>
+          </div>
+        </div>
+
         <div>
           <label class="flex items-center space-x-2 cursor-pointer mb-2">
             <input
@@ -431,6 +557,11 @@ const handleSubmit = async () => {
     return;
   }
 
+  if (!form.value.careerID) {
+    alert("Please select a target career.");
+    return;
+  }
+
   if (form.value.password !== form.value.confirmPassword) {
     alert("Passwords do not match.");
     return;
@@ -439,9 +570,8 @@ const handleSubmit = async () => {
   try {
     await axios.post(import.meta.env.VITE_API_BASE_URL + "/applicants", {
       ...form.value,
+      careerID: Number(form.value.careerID), // ensure number
     });
-
-    // ✅ Show success modal instead of redirecting immediately
     showSuccessModal.value = true;
   } catch (error) {
     if (error.response && error.response.data.errors) {
