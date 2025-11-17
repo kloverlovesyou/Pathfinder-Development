@@ -19,6 +19,7 @@ import MainLayout from "@/components/Layout/MainLayout.vue";
 import AuthLayout from "@/components/Layout/AuthLayout.vue";
 import OrgCalendar from "@/components/Organization/OrganizationCalendar.vue";
 import OrgProfile from "@/components/Organization/Profile.vue";
+import OrgUpdateProfile from "@/components/Organization/OrganizationUpdateProfile.vue";
 import AdminHomePage from "@/components/Admin/AdminHomePage.vue";
 import AttendanceCheckin from "@/components/Home/AttendanceChecking.vue";
 import AdminUpdateDelete from "@/components/Admin/AdminUpdateDelete.vue";
@@ -34,7 +35,7 @@ const router = createRouter({
       path: "/",
       redirect: "/auth/login",
     },
-        // ✅ Attendance scan route
+    // ✅ Attendance scan route
     {
       path: "/attendance/checkin",
       name: "AttendanceCheckin",
@@ -129,6 +130,12 @@ const router = createRouter({
       path: "/organization/org-profile",
       name: "OrgProfile",
       component: OrgProfile,
+      meta: { requiresAuth: true, role: "organization" },
+    },
+    {
+      path: "/organization/org-updateprofile",
+      name: "OrgUpdateProfile",
+      component: OrgUpdateProfile,
       meta: { requiresAuth: true, role: "organization" },
     },
     // Admin Home Page - Public Access

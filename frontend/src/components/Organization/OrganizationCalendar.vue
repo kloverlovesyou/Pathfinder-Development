@@ -25,7 +25,7 @@
             <div v-if="isSidebarOpen" class="profile-section">
               <h3 class="org-name">{{ organizationName }}</h3>
               <div class="profile-actions">
-                <div class="action" @click="navigateTo({ name: 'OrgProfile' })">
+                <div class="action" @click="navigateTo({ name: 'OrgUpdateProfile' })">
                   <!-- Update Profile Icon -->
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path
