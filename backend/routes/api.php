@@ -26,10 +26,12 @@ use App\Http\Controllers\MyActivityController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\InterviewController;
 use App\Http\Controllers\AdminSearchController;
+use App\Http\Controllers\DashboardController;
 
 // ----------------------
 // Public routes (no auth)
 // ----------------------
+Route::get('/dashboard', [DashboardController::class, 'getChartData']);
 
 // Trainings
 Route::get('/trainings', [TrainingController::class, 'index']);
@@ -43,6 +45,7 @@ Route::get('/careers', [CareerRecommendationController::class, 'index']);
 Route::get('/careers/{careerID}/recommended', [CareerRecommendationController::class, 'recommendedCareers']);
 Route::get('/careers/{careerID}/trainings', [CareerRecommendationController::class, 'recommendedTrainings']);
 Route::get('/careers/{careerID}/details', [CareerRecommendationController::class, 'careerDetails']);
+
 
 // Attendance check-in
 Route::post('/attendance/checkin', [TrainingController::class, 'attendanceCheckin']);
@@ -124,6 +127,7 @@ Route::middleware('auth.custom')->group(function () {
     // Applicant monitoring
     Route::get('/careers/{careerID}/applicants', [ApplicationController::class, 'getApplicantsByCareer']);
     Route::put('/applications/{applicationID}/status', [ApplicationController::class, 'updateStatus']);
+    Route::get('/applications/interviews', [InterviewController::class, 'index']);
     Route::put('/applications/{applicationID}/interview', [ApplicationController::class, 'updateInterview']);
     Route::get('/applications/{applicationID}/requirements/signed-url', [ApplicationFileController::class, 'generateSignedUrl']);
 
@@ -166,9 +170,6 @@ Route::middleware('auth.custom')->group(function () {
     Route::get('/career-bookmarks', [CareerBookmarkController::class, 'index']);
     Route::post('/career-bookmarks', [CareerBookmarkController::class, 'store']);
     Route::delete('/career-bookmarks/{careerID}', [CareerBookmarkController::class, 'destroy']);
-
-    // Interviews
-    Route::get('/interviews', [InterviewController::class, 'index']);
 });
 
 // ----------------------
