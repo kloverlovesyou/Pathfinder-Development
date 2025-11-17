@@ -340,6 +340,29 @@ public function viewRequirement($id)
         }
     }
     
+        /**
+     * Fetch all applications (scheduled interviews) for the organization
+     */
+       public function getApplications()
+{
+    // Check if controller is reached
+    // REMOVE after testing
+    // dd("Controller reached");
+
+    // Step 1: try singular table
+    $test1 = DB::table('application')->get();
+    if ($test1->isNotEmpty()) {
+        dd($test1);
+    }
+
+    // Step 2: try plural table
+    $test2 = DB::table('applications')->get();
+    if ($test2->isNotEmpty()) {
+        dd($test2);
+    }
+
+    dd("Both application and applications returned empty!");
+}
 
 
 }
