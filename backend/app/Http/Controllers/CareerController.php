@@ -149,6 +149,22 @@ public function countsPartial()
             return response()->json(['message' => 'Career not found'], 404);
         }
 
+        $user = $request->user();
+        if (!$user || !isset($user->organizationID) || $career->organizationID !== $user->organizationID) {
+            return response()->json(['message' => 'Unauthorized - Organization access required'], 401);
+        }
+
+        // Map legacy field names to the validated keys
+        if (!$request->has('detailsAndInstructions') && $request->has('details')) {
+            $request->merge(['detailsAndInstructions' => $request->input('details')]);
+        }
+        if (!$request->has('applicationLetterAddress') && $request->has('letterAddress')) {
+            $request->merge(['applicationLetterAddress' => $request->input('letterAddress')]);
+        }
+        if (!$request->has('deadlineOfSubmission') && $request->has('deadline')) {
+            $request->merge(['deadlineOfSubmission' => $request->input('deadline')]);
+        }
+
         // Validate request (optional but recommended)
         $validated = $request->validate([
             'position' => 'required|string|max:255',
@@ -157,6 +173,8 @@ public function countsPartial()
             'requirements' => 'required|string',
             'applicationLetterAddress' => 'required|string',
             'deadlineOfSubmission' => 'required|date',
+            'Tags' => 'sometimes|array',
+            'Tags.*' => 'integer|exists:tag,TagID',
         ]);
 
         $career->position = $validated['position'];
@@ -168,9 +186,13 @@ public function countsPartial()
 
         $career->save();
 
+        if (isset($validated['Tags'])) {
+            $career->tags()->sync($validated['Tags']);
+        }
+
         return response()->json([
             'message' => 'Career updated successfully',
-            'data' => $career
+            'data' => $career->load('tags', 'organization')
         ]);
     }
 
