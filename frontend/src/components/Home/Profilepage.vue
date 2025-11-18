@@ -355,15 +355,12 @@ const pdfUrl = ref("");
 const viewRequirement = (activity, event) => {
   event?.stopPropagation(); // prevent parent modal opening
 
-  if (!activity.requirements) return;
+  if (!activity.requirement_directory) return;
 
   const applicationID = activity.applicationID;
-
-  // ✅ Use your backend URL (adjust if your route is in api.php)
   pdfUrl.value = `${
     import.meta.env.VITE_API_URL
   }/api/applications/${applicationID}/requirement`;
-
   showPdfModal.value = true;
 };
 
@@ -486,10 +483,10 @@ onMounted(fetchMyActivities);
                   </span>
                   <button
                     v-if="activity.type === 'career'"
-                    :disabled="!activity.requirements"
+                    :disabled="!activity.requirement_directory"
                     :class="[
                       'px-3 py-1 rounded text-white',
-                      activity.requirements
+                      activity.requirement_directory
                         ? 'bg-blue-500 hover:bg-blue-600'
                         : 'bg-gray-300 cursor-not-allowed',
                     ]"
@@ -752,10 +749,10 @@ onMounted(fetchMyActivities);
                   <td class="px-6 py-4 whitespace-nowrap text-sm">
                     <button
                       v-if="activity.type === 'career'"
-                      :disabled="!activity.requirements"
+                      :disabled="!activity.requirement_directory"
                       :class="[
                         'px-3 py-1 rounded text-white',
-                        activity.requirements
+                        activity.requirement_directory
                           ? 'bg-blue-500 hover:bg-blue-600'
                           : 'bg-gray-300 cursor-not-allowed',
                       ]"
@@ -828,8 +825,8 @@ onMounted(fetchMyActivities);
               }}
             </p>
             <p>
-              <strong>Requirements:</strong>
-              {{ selectedCareer.career?.requirements }}
+              <strong>Requirements: </strong>
+              {{ selectedCareer.requirements }}
             </p>
             <p>
               <strong>Application Address:</strong>
