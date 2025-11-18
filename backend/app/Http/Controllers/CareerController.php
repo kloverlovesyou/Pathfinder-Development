@@ -21,21 +21,18 @@ class CareerController extends Controller
     
     public function index(Request $request)
     {
-        //fetch careers
-        $query = Career::with('organization')
-            ->orderByDesc('deadlineOfSubmission');
-
         $user = $request->user();
-        if ($user && isset($user->organizationID)) {
-            $query->where('organizationID', $user->organizationID);
-        } elseif ($request->has('organizationID')) {
-            $query->where('organizationID', $request->organizationID);
+
+        if (!$user || !isset($user->organizationID)) {
+            return response()->json(['message' => 'Unauthorized - Organization access required'], 401);
         }
 
-        $careers = $query
-           ->get()
-           ->map(function ($career){
-                  return[
+        $careers = Career::with('organization')
+            ->where('organizationID', $user->organizationID)
+            ->orderByDesc('deadlineOfSubmission')
+            ->get()
+            ->map(function ($career){
+                return[
                     'careerID' => $career->careerID,
                     'position' => $career->position,
                     'deadlineOfSubmission' => $career->deadlineOfSubmission,
@@ -45,9 +42,8 @@ class CareerController extends Controller
                     'applicationLetterAddress' => $career->applicationLetterAddress,
                     'organizationID' => $career->organizationID,
                     'organizationName' => $career->organization->name ?? 'Unknown'
-                  ];
-
-           });
+                ];
+            });
 
         return response()->json($careers);
     }
