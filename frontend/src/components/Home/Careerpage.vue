@@ -150,13 +150,14 @@ async function submitApplication() {
     form.append("requirement_directory", uploadedFile.value);
 
   try {
+    // Don't set Content-Type manually - axios will set it with boundary for FormData
     await axios.post(
       import.meta.env.VITE_API_BASE_URL + "/applications",
       form,
       {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
+          // Content-Type will be set automatically by axios for FormData
         },
       }
     );

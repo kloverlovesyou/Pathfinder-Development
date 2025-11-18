@@ -49,17 +49,51 @@ class ApplicationController extends Controller
     //create application
    public function store(Request $request)
 {
+    // Log immediately to verify method is called
+    \Log::info('=== APPLICATION STORE METHOD CALLED ===', [
+        'timestamp' => now()->toDateTimeString(),
+        'method' => $request->method(),
+        'url' => $request->fullUrl(),
+    ]);
+    
     $user = $request->user();
 
+    // Log all request data for debugging
+    \Log::info('Application submission request', [
+        'has_file' => $request->hasFile('requirement_directory'),
+        'all_files' => array_keys($request->allFiles()),
+        'careerID' => $request->input('careerID'),
+        'content_type' => $request->header('Content-Type'),
+        'request_keys' => array_keys($request->all()),
+        'all_input' => $request->all(),
+        'files_count' => count($request->allFiles())
+    ]);
+
   if ($request->hasFile('requirement_directory')) {
-        Log::info('File received: ' . $request->file('requirement_directory')->getClientOriginalName());
+        $file = $request->file('requirement_directory');
+        Log::info('File received', [
+            'original_name' => $file->getClientOriginalName(),
+            'mime_type' => $file->getMimeType(),
+            'size' => $file->getSize(),
+            'is_valid' => $file->isValid(),
+            'error' => $file->getError()
+        ]);
     } else {
-        Log::warning('No file received in request.');
+        Log::warning('No file received in request', [
+            'all_input_keys' => array_keys($request->all()),
+            'files_in_request' => $request->allFiles()
+        ]);
     }
 
     $validated = $request->validate([
         'careerID' => 'required|exists:career,careerID',
         'requirement_directory' => 'nullable|file|mimes:pdf|max:5120',
+    ]);
+
+    // Log after validation to see if file is still present
+    Log::info('After validation check', [
+        'has_file' => $request->hasFile('requirement_directory'),
+        'validated_keys' => array_keys($validated)
     ]);
 
     // prevent duplicates
@@ -76,21 +110,105 @@ class ApplicationController extends Controller
 
     // store uploaded file
     $requirementsPath = null;
-  if ($request->hasFile('requirement_directory')) {
-    $file = $request->file('requirement_directory');
-    $filename = time() . '_' . $file->getClientOriginalName();
-
-    // store the file in storage/app/public/requirement_directory
-    $requirementsPath = $file->storeAs('public/requirement_directory', $filename);
-
-    // store relative path in DB (remove 'public/')
-    $requirementsPathForDB = str_replace('public/', '', $requirementsPath);
-
-    Log::info('Requirements file stored', [
-        'stored_path' => $requirementsPathForDB,
-        'full_path' => Storage::disk('public')->path($requirementsPathForDB),
-        'file_exists' => Storage::disk('public')->exists($requirementsPathForDB)
+    
+    \Log::info('About to check for file', [
+        'has_file_check' => $request->hasFile('requirement_directory'),
+        'file_method_result' => $request->file('requirement_directory') ? 'exists' : 'null',
+        'all_files_debug' => array_keys($request->allFiles())
     ]);
+    
+  if ($request->hasFile('requirement_directory')) {
+    \Log::info('File check passed, entering file upload block');
+    try {
+        $file = $request->file('requirement_directory');
+        $filename = time() . '_' . $file->getClientOriginalName();
+
+        // Ensure the requirement_directory exists in public/storage
+        $destinationPath = public_path('storage/requirement_directory');
+        
+        Log::info('Attempting to store file', [
+            'destination' => $destinationPath,
+            'filename' => $filename,
+            'file_size' => $file->getSize(),
+            'file_valid' => $file->isValid(),
+            'public_path' => public_path(),
+        ]);
+
+        if (!file_exists($destinationPath)) {
+            $created = mkdir($destinationPath, 0755, true);
+            Log::info('Directory creation attempt', [
+                'path' => $destinationPath,
+                'created' => $created,
+                'exists' => file_exists($destinationPath),
+                'writable' => is_writable(dirname($destinationPath))
+            ]);
+        }
+
+        // Move the file to public/storage/requirement_directory
+        $fullDestinationPath = $destinationPath . DIRECTORY_SEPARATOR . $filename;
+        
+        // Ensure destination directory is writable
+        if (!is_writable($destinationPath)) {
+            Log::error('Destination directory is not writable', [
+                'destination' => $destinationPath,
+                'permissions' => substr(sprintf('%o', fileperms($destinationPath)), -4)
+            ]);
+            throw new \Exception('Destination directory is not writable');
+        }
+        
+        // Try using Laravel's move method first
+        try {
+            $movedFile = $file->move($destinationPath, $filename);
+        } catch (\Exception $moveException) {
+            // Fallback to PHP's native move_uploaded_file
+            Log::warning('Laravel move failed, trying native move_uploaded_file', [
+                'error' => $moveException->getMessage()
+            ]);
+            
+            $tempPath = $file->getPathname();
+            if (!move_uploaded_file($tempPath, $fullDestinationPath)) {
+                Log::error('Native move_uploaded_file also failed', [
+                    'temp_path' => $tempPath,
+                    'destination' => $fullDestinationPath,
+                    'error' => error_get_last()
+                ]);
+                throw new \Exception('Failed to move uploaded file: ' . (error_get_last()['message'] ?? 'Unknown error'));
+            }
+        }
+        
+        // Verify file was actually moved
+        if (file_exists($fullDestinationPath)) {
+            // Store relative path in DB (storage/requirement_directory/filename)
+            $requirementsPath = 'storage/requirement_directory/' . $filename;
+            $fullPath = public_path($requirementsPath);
+
+            Log::info('Requirements file stored successfully', [
+                'stored_path' => $requirementsPath,
+                'full_path' => $fullPath,
+                'file_exists' => file_exists($fullPath),
+                'file_size' => file_exists($fullPath) ? filesize($fullPath) : 0
+            ]);
+        } else {
+            Log::error('File move failed - file does not exist at destination', [
+                'destination' => $destinationPath,
+                'full_destination' => $fullDestinationPath,
+                'filename' => $filename,
+                'temp_path' => $file->getPathname(),
+                'error' => error_get_last()
+            ]);
+            throw new \Exception('Failed to move uploaded file to destination directory');
+        }
+    } catch (\Exception $e) {
+        Log::error('Error storing requirement file', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        // Re-throw exception to prevent application creation if file upload fails
+        return response()->json([
+            'message' => 'Failed to upload requirement file: ' . $e->getMessage(),
+            'error' => 'FILE_UPLOAD_FAILED'
+        ], 500);
+    }
 }
 
 
@@ -140,7 +258,8 @@ public function viewRequirement($id)
         return response()->json(['message' => 'No requirement found.'], 404);
     }
 
-    $filePath = storage_path('app/public/' . $application->requirement_directory);
+    // Build full path to public/storage/requirement_directory
+    $filePath = public_path($application->requirement_directory);
 
     if (!file_exists($filePath)) {
         return response()->json(['message' => 'File not found'], 404);
@@ -311,12 +430,19 @@ public function viewRequirement($id)
 
     $path = $application->requirement_directory;
 
-    if (!$path || !Storage::disk('public')->exists($path)) {
+    if (!$path) {
+        return response()->json(['message' => 'File not found'], 404);
+    }
+
+    // Build full path to public/storage/requirement_directory
+    $fullPath = public_path($path);
+
+    if (!file_exists($fullPath)) {
         return response()->json(['message' => 'File not found'], 404);
     }
 
     try {
-        return Storage::disk('public')->download($path, basename($path), [
+        return response()->download($fullPath, basename($path), [
             'Content-Type' => 'application/pdf'
         ]);
     } catch (\Exception $e) {
