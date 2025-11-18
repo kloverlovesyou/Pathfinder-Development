@@ -32,7 +32,7 @@ class ApplicationController extends Controller
             'interviewLocation' => $app->interviewLocation,
             'detailsAndInstructions' => $app->career->detailsAndInstructions ?? null,
             'qualifications' => $app->career->qualifications ?? null,
-            'requirements' => $app->career->requirements ?? null,
+            'requirement_directory' => $app->career->requirement_directory ?? null,
             'applicationLetterAddress' => $app->career->applicationLetterAddress ?? null,
             'deadlineOfSubmission' => $app->career->deadlineOfSubmission ?? null,
             'status' => $app->applicationStatus,
@@ -53,7 +53,7 @@ class ApplicationController extends Controller
 
         $validated = $request->validate([
             'careerID' => 'required|exists:career,careerID',
-            'requirements' => 'nullable|file|mimes:pdf|max:5120', //5mb
+            'requirement_directory' => 'nullable|file|mimes:pdf|max:5120', //5mb
         ]);
 
         //prevent duplicates
@@ -70,11 +70,11 @@ class ApplicationController extends Controller
 
         //store requirements pdf
         $requirementsPath = null;
-        if($request->hasFile('requirements')){
+        if($request->hasFile('requirement_directory')){
             //uses public disk, ensure filesystems.php has public disk configured
-            $file = $request->file('requirements');
+            $file = $request->file('requirement_directory');
             // Use Storage facade to ensure correct path format
-            $requirementsPath = Storage::disk('public')->putFile('requirements', $file);
+            $requirementsPath = Storage::disk('public')->putFile('requirement_directory', $file);
             
             // Log the stored path for debugging
             Log::info('Requirements file stored', [
@@ -85,7 +85,7 @@ class ApplicationController extends Controller
         }
 
         $app = Application::create([
-        'requirements' => $requirementsPath,
+        'requirement_directory' => $requirementsPath,
         'dateSubmitted' => Carbon::now(),
         'applicationStatus' => 'Submitted',
         'interviewSchedule' => null,
@@ -127,11 +127,11 @@ public function viewRequirement($id)
 {
     $application = Application::findOrFail($id);
 
-    if (!$application->requirements) {
+    if (!$$application->requirement_directory) {
         return response()->json(['message' => 'No requirement found.'], 404);
     }
 
-    $pdfData = $application->requirements; // raw binary from DB
+    $pdfData = $application->requirement_directory; // raw binary from DB
 
     return response()->make($pdfData, 200, [
         'Content-Type' => 'application/pdf',
@@ -177,7 +177,7 @@ public function viewRequirement($id)
                     'name' => $applicantName,
                     'dateSubmitted' => $app->dateSubmitted ? $app->dateSubmitted->format('M d, Y') : null,
                     'status' => $app->applicationStatus ? strtolower($app->applicationStatus) : 'submitted',
-                    'requirements' => $app->requirements,
+                    'requirement_directory' => $app->requirement_directory,
                     'interviewSchedule' => $app->interviewSchedule ? $app->interviewSchedule->format('Y-m-d H:i:s') : null,
                     'interviewMode' => $app->interviewMode,
                     'interviewLocation' => $app->interviewLocation,
@@ -300,7 +300,7 @@ public function viewRequirement($id)
         return response()->json(['message' => 'Access denied'], 403);
     }
 
-    $path = $application->requirements;
+    $path = $application->requirement_directory;
 
     // Check if path exists in storage
     if (!$path || !Storage::disk('public')->exists($path)) {

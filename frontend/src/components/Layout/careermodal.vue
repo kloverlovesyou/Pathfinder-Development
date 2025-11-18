@@ -130,7 +130,8 @@ async function submitApplication() {
 
   const form = new FormData();
   form.append("careerID", props.career.careerID ?? props.career.id);
-  if (uploadedFile.value) form.append("requirements", uploadedFile.value);
+  if (uploadedFile.value)
+    form.append("requirement_directory", uploadedFile.value);
 
   try {
     await axios.post(
