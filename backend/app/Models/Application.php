@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Model;
  * Class Application
  * 
  * @property int $applicationID
- * @property string $requirements
+ * @property string $requirement_directory
  * @property Carbon $dateSubmitted
  * @property string $applicationStatus
  * @property Carbon|null $interviewSchedule
@@ -42,7 +42,7 @@ class Application extends Model
 	];
 
 	protected $fillable = [
-		'requirements',
+		'requirement_directory',
 		'dateSubmitted',
 		'applicationStatus',
 		'interviewSchedule',
