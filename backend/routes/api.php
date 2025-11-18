@@ -38,9 +38,12 @@ Route::get('/trainings', [TrainingController::class, 'index']);
 
 // Careers with recommendations
 Route::get('/careers', [CareerRecommendationController::class, 'index']);
-Route::get('/careers/recommend/{careerID}', [CareerRecommendationController::class, 'getCareerWithRecommendations'])
+Route::get('/careers/recommend/{careerID}', [CareerRecommendationController::class, 'recommendedCareers'])
      ->name('careers.recommendation');
 Route::get('/careers/{careerID}/trainings', [CareerRecommendationController::class, 'recommendedTrainings']);
+Route::get('/careers/{id}/details', [CareerRecommendationController::class, 'getCareerWithRecommendations']);
+
+
 
 
 // CareerController
@@ -118,6 +121,10 @@ Route::middleware('auth.custom')->group(function () {
     
   
     Route::get('/trainings/{trainingID}', [TrainingController::class, 'show']);
+    Route::get('/organization/trainings', [TrainingController::class, 'organizationIndex']);
+
+    // Organization-specific listings
+    Route::get('/organization/careers', [CareerController::class, 'index']);
 
     // Careers
     Route::post('/careers', [CareerController::class, 'store']);

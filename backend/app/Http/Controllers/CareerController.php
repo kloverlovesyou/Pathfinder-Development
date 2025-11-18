@@ -19,14 +19,20 @@ class CareerController extends Controller
         ]);
     }
     
-    public function index()
+    public function index(Request $request)
     {
-        //fetch all careers
-        $careers = Career::with('organization')
-           ->orderByDesc('deadlineOfSubmission')
-           ->get()
-           ->map(function ($career){
-                  return[
+        $user = $request->user();
+
+        if (!$user || !isset($user->organizationID)) {
+            return response()->json(['message' => 'Unauthorized - Organization access required'], 401);
+        }
+
+        $careers = Career::with(['organization', 'tags'])
+            ->where('organizationID', $user->organizationID)
+            ->orderByDesc('deadlineOfSubmission')
+            ->get()
+            ->map(function ($career){
+                return[
                     'careerID' => $career->careerID,
                     'position' => $career->position,
                     'deadlineOfSubmission' => $career->deadlineOfSubmission,
@@ -35,10 +41,15 @@ class CareerController extends Controller
                     'requirements' => $career->requirements,
                     'applicationLetterAddress' => $career->applicationLetterAddress,
                     'organizationID' => $career->organizationID,
-                    'organizationName' => $career->organization->name ?? 'Unknown'
-                  ];
-
-           });
+                    'organizationName' => $career->organization->name ?? 'Unknown',
+                    'Tags' => $career->tags->map(function ($tag) {
+                        return [
+                            'TagID' => $tag->TagID ?? $tag->tagID ?? $tag->id,
+                            'tagName' => $tag->tagName ?? $tag->name ?? '',
+                        ];
+                    }),
+                ];
+            });
 
         return response()->json($careers);
     }
@@ -179,7 +190,7 @@ public function countsPartial()
         ]);
     }
 
-    public function recommend($id)
+public function recommend($id)
     {
         $career = Career::find($id);
 

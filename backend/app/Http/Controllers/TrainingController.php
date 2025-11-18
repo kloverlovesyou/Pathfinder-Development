@@ -158,9 +158,12 @@ class TrainingController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Training::with('organization');
+        $query = Training::with(['organization', 'tags']);
 
-        if ($request->has('organizationID')) {
+        $user = $request->user();
+        if ($user && isset($user->organizationID)) {
+            $query->where('organizationID', $user->organizationID);
+        } elseif ($request->has('organizationID')) {
             $query->where('organizationID', $request->organizationID);
         }
 
@@ -170,31 +173,60 @@ class TrainingController extends Controller
             $this->autoGenerateQR($training);
         }
 
-        return response()->json($trainings->map(function ($training) {
-            // ✅ Generate attendance link if key exists
-            $attendanceLink = $training->attendance_key
-                ? env('FRONTEND_URL') . '/attendance/checkin?trainingID='
-                . $training->trainingID . '&key=' . $training->attendance_key
-                : null;
+        return response()->json($trainings->map(fn ($training) => $this->formatTraining($training)));
+    }
 
-            return [
-                'trainingID' => $training->trainingID,
-                'title' => $training->title,
-                'description' => $training->description,
-                'schedule' => $training->schedule?->format('Y-m-d H:i'),
-                'end_time' => $training->end_time?->format('Y-m-d H:i'),
-                'mode' => $training->mode,
-                'location' => $training->location,
-                'trainingLink' => $training->trainingLink,
-                'attendance_key' => $training->attendance_key,
-                'attendance_link' => $attendanceLink, // ✅ here
-                'attendance_expires_at' => $training->attendance_expires_at,
-                'organizationID' => $training->organizationID,
-                'organization' => [
-                    'name' => optional($training->organization)->name ?? 'Unknown',
-                ],
-            ];
-        }));
+    /**
+     * Trainings for authenticated organization
+     */
+    public function organizationIndex(Request $request)
+    {
+        $user = $request->user();
+        if (!$user || !isset($user->organizationID)) {
+            return response()->json(['message' => 'Unauthorized - Organization access required'], 401);
+        }
+
+        $trainings = Training::with(['organization', 'tags'])
+            ->where('organizationID', $user->organizationID)
+            ->get();
+
+        foreach ($trainings as $training) {
+            $this->autoGenerateQR($training);
+        }
+
+        return response()->json($trainings->map(fn ($training) => $this->formatTraining($training)));
+    }
+
+    protected function formatTraining(Training $training)
+    {
+        $attendanceLink = $training->attendance_key
+            ? env('FRONTEND_URL') . '/attendance/checkin?trainingID='
+            . $training->trainingID . '&key=' . $training->attendance_key
+            : null;
+
+        return [
+            'trainingID' => $training->trainingID,
+            'title' => $training->title,
+            'description' => $training->description,
+            'schedule' => $training->schedule?->format('Y-m-d H:i'),
+            'end_time' => $training->end_time?->format('Y-m-d H:i'),
+            'mode' => $training->mode,
+            'location' => $training->location,
+            'trainingLink' => $training->trainingLink,
+            'attendance_key' => $training->attendance_key,
+            'attendance_link' => $attendanceLink,
+            'attendance_expires_at' => $training->attendance_expires_at,
+            'organizationID' => $training->organizationID,
+            'organization' => [
+                'name' => optional($training->organization)->name ?? 'Unknown',
+            ],
+            'Tags' => $training->tags->map(function ($tag) {
+                return [
+                    'TagID' => $tag->TagID ?? $tag->tagID ?? $tag->id,
+                    'tagName' => $tag->tagName ?? $tag->name ?? '',
+                ];
+            }),
+        ];
     }
     /**
      * Store new training

@@ -91,11 +91,17 @@ async function fetchMyRegistrations() {
 
 // ------------------ MODALS ------------------
 function openCareerModal(career) {
+  console.log("Career Data:", career);
   selectedCareerDetails.value = career;
-  recommendedTrainings.value = career.recommended_trainings || [];
+
+  recommendedTrainings.value =
+    career.recommended_trainings ||
+    career.recommendedTrainings ||     // maybe this?
+    career.trainings ||                // maybe this?
+    [];
+
   showCareerPopup.value = true;
 }
-
 function closeCareerModal() {
   showCareerPopup.value = false;
   selectedCareerDetails.value = null;
