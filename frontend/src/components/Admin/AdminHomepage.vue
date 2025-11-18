@@ -4,17 +4,26 @@ import axios from "axios";
 
 const organizations = ref([]);
 const selectedOrg = ref(null);
+
+// Reject modal state
 const rejectModal = ref(false);
 const rejectReason = ref("");
-const rejectTargetID = ref(null);
+const rejectOrgID = ref(null); // target organization being rejected
 
+// Open reject modal
 function openRejectModal(id) {
-  rejectTargetID.value = id;
+  rejectOrgID.value = id;
   rejectReason.value = "";
   rejectModal.value = true;
 }
 
+// Submit rejection with reason
 async function submitRejection() {
+  if (!rejectReason.value.trim()) {
+    alert("Please enter a reason for rejection.");
+    return;
+  }
+
   try {
     const res = await axios.post(
       import.meta.env.VITE_API_BASE_URL + `/organization/${rejectOrgID.value}/reject`,
@@ -24,6 +33,7 @@ async function submitRejection() {
     // Optional: show a toast with reason
     showToast(`Rejected: ${res.data.rejectionReason}`);
 
+    // Remove rejected org from list
     organizations.value = organizations.value.filter(
       (o) => o.organizationID !== rejectOrgID.value
     );
@@ -31,6 +41,7 @@ async function submitRejection() {
     rejectModal.value = false;
     rejectReason.value = "";
     selectedOrg.value = null;
+    rejectOrgID.value = null;
 
   } catch (err) {
     console.error("Rejection failed:", err);
@@ -47,6 +58,7 @@ async function loadPendingOrganizations() {
   }
 }
 
+// Open details modal
 function openModal(org) {
   selectedOrg.value = org;
 }
@@ -59,17 +71,6 @@ async function acceptOrg(id) {
     selectedOrg.value = null;
   } catch (err) {
     console.error("Approval failed:", err);
-  }
-}
-
-// Reject Organization
-async function rejectOrg(id) {
-  try {
-    await axios.post(import.meta.env.VITE_API_BASE_URL + `/organization/${id}/reject`);
-    organizations.value = organizations.value.filter((o) => o.organizationID !== id);
-    selectedOrg.value = null;
-  } catch (err) {
-    console.error("Rejection failed:", err);
   }
 }
 
