@@ -631,7 +631,14 @@ export default {
         requirements: career.requirements,
         letterAddress: career.applicationLetterAddress,
         deadline: career.deadlineOfSubmission,
+        Tags: Array.isArray(career.Tags)
+          ? career.Tags.map((tag) => tag.TagID ?? tag.tagID ?? tag.id)
+          : [],
       };
+
+      if (!Array.isArray(this.newCareer.Tags)) {
+        this.newCareer.Tags = [];
+      }
     },
 
     // Save career (create or update)
@@ -851,7 +858,9 @@ export default {
           requirements: career.requirements || "",
           letterAddress: career.applicationLetterAddress || "",
           deadline: career.deadlineOfSubmission || "",
-          Tags: Array.isArray(career.Tags) ? [...career.Tags] : [],
+          Tags: Array.isArray(career.Tags)
+            ? career.Tags.map((tag) => tag.TagID ?? tag.tagID ?? tag.id)
+            : [],
         };
         this.isEditMode = true; // editing
         this.careerToEditId = career.careerID || career.id;
@@ -868,6 +877,9 @@ export default {
         };
         this.isEditMode = false;
         this.careerToEditId = null;
+      }
+      if (!Array.isArray(this.newCareer.Tags)) {
+        this.newCareer.Tags = [];
       }
       this.showCareerPopup = true;
       this.fetchTags();

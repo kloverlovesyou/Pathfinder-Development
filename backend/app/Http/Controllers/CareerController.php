@@ -27,7 +27,7 @@ class CareerController extends Controller
             return response()->json(['message' => 'Unauthorized - Organization access required'], 401);
         }
 
-        $careers = Career::with('organization')
+        $careers = Career::with(['organization', 'tags'])
             ->where('organizationID', $user->organizationID)
             ->orderByDesc('deadlineOfSubmission')
             ->get()
@@ -41,7 +41,13 @@ class CareerController extends Controller
                     'requirements' => $career->requirements,
                     'applicationLetterAddress' => $career->applicationLetterAddress,
                     'organizationID' => $career->organizationID,
-                    'organizationName' => $career->organization->name ?? 'Unknown'
+                    'organizationName' => $career->organization->name ?? 'Unknown',
+                    'Tags' => $career->tags->map(function ($tag) {
+                        return [
+                            'TagID' => $tag->TagID ?? $tag->tagID ?? $tag->id,
+                            'tagName' => $tag->tagName ?? $tag->name ?? '',
+                        ];
+                    }),
                 ];
             });
 

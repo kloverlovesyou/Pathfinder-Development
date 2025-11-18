@@ -158,7 +158,7 @@ class TrainingController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Training::with('organization');
+        $query = Training::with(['organization', 'tags']);
 
         $user = $request->user();
         if ($user && isset($user->organizationID)) {
@@ -186,7 +186,7 @@ class TrainingController extends Controller
             return response()->json(['message' => 'Unauthorized - Organization access required'], 401);
         }
 
-        $trainings = Training::with('organization')
+        $trainings = Training::with(['organization', 'tags'])
             ->where('organizationID', $user->organizationID)
             ->get();
 
@@ -220,6 +220,12 @@ class TrainingController extends Controller
             'organization' => [
                 'name' => optional($training->organization)->name ?? 'Unknown',
             ],
+            'Tags' => $training->tags->map(function ($tag) {
+                return [
+                    'TagID' => $tag->TagID ?? $tag->tagID ?? $tag->id,
+                    'tagName' => $tag->tagName ?? $tag->name ?? '',
+                ];
+            }),
         ];
     }
     /**
