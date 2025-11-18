@@ -31,7 +31,7 @@ async function submitRejection() {
     );
 
     // Optional: show a toast with reason
-    showToast(`Rejected: ${res.data.rejectionReason}`);
+    alert(`Rejected: ${res.data.rejectionReason}`);
 
     // Remove rejected org from list
     organizations.value = organizations.value.filter(
