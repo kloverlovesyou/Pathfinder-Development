@@ -53,6 +53,47 @@ class Application extends Model
 		'applicantID'
 	];
 
+	protected $guarded = ['organization']; // Prevent setting organization field (it doesn't exist in the table)
+
+	/**
+	 * Prevent setting organization attribute (it doesn't exist in the table)
+	 */
+	public function setOrganizationAttribute($value)
+	{
+		// Silently ignore - organization doesn't exist as a column
+		return;
+	}
+
+	/**
+	 * Override setAttribute to prevent organization from being set
+	 */
+	public function setAttribute($key, $value)
+	{
+		if ($key === 'organization') {
+			return $this; // Silently ignore
+		}
+		return parent::setAttribute($key, $value);
+	}
+
+	/**
+	 * Override update to ensure organization is never updated
+	 */
+	public function update(array $attributes = [], array $options = [])
+	{
+		unset($attributes['organization']);
+		return parent::update($attributes, $options);
+	}
+
+	/**
+	 * Override save to ensure organization is never saved
+	 */
+	public function save(array $options = [])
+	{
+		unset($this->attributes['organization']);
+		unset($this->original['organization']);
+		return parent::save($options);
+	}
+
 	public function career()
 	{
 		return $this->belongsTo(Career::class, 'careerID');

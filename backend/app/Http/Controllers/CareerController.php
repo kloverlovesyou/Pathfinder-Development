@@ -6,6 +6,8 @@ use App\Models\Career;
 use Carbon\Carbon;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CareerController extends Controller
 {
@@ -197,19 +199,82 @@ public function countsPartial()
     }
 
     // Delete career
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
+        $user = $request->user();
+        
+        // Check if user is authenticated
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+        
+        // Check if user is an Organization
+        if (!($user instanceof \App\Models\Organization)) {
+            return response()->json(['message' => 'Unauthorized - Organization access required'], 401);
+        }
+
         $career = Career::find($id);
 
         if (!$career) {
             return response()->json(['message' => 'Career not found'], 404);
         }
+        
+        // Verify career belongs to the organization
+        if ($career->organizationID !== $user->organizationID) {
+            return response()->json(['message' => 'Access denied - You can only delete your own careers'], 403);
+        }
 
-        $career->delete();
+        try {
+            // Use database transaction to ensure all deletions happen atomically
+            DB::beginTransaction();
+            
+            // Temporarily disable foreign key checks to avoid constraint issues
+            DB::statement('SET FOREIGN_KEY_CHECKS=0');
+            
+            // Delete related records first to avoid foreign key constraint violations
+            // Delete all applications for this career
+            $applicationsDeleted = \App\Models\Application::where('careerID', $career->careerID)->delete();
+            Log::info('Deleted applications for career', ['careerID' => $career->careerID, 'count' => $applicationsDeleted]);
+            
+            // Delete all career bookmarks for this career
+            $bookmarksDeleted = \App\Models\Careerbookmark::where('careerID', $career->careerID)->delete();
+            Log::info('Deleted career bookmarks for career', ['careerID' => $career->careerID, 'count' => $bookmarksDeleted]);
+            
+            // Delete from pivot table directly (career_tag)
+            $pivotDeleted = DB::table('career_tag')->where('careerID', $career->careerID)->delete();
+            Log::info('Deleted career_tag pivot records', ['careerID' => $career->careerID, 'count' => $pivotDeleted]);
+            
+            // Delete the career itself
+            $career->delete();
+            Log::info('Career deleted successfully', ['careerID' => $id]);
+            
+            // Re-enable foreign key checks
+            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            
+            DB::commit();
 
-        return response()->json([
-            'message' => 'Career deleted successfully'
-        ]);
+            return response()->json([
+                'message' => 'Career deleted successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            // Re-enable foreign key checks even if there's an error
+            try {
+                DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            } catch (\Exception $e2) {
+                // Ignore errors when re-enabling
+            }
+            
+            DB::rollBack();
+            Log::error('Failed to delete career', [
+                'careerID' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'message' => 'Failed to delete career: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
 public function recommend($id)
