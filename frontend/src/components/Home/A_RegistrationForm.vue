@@ -509,6 +509,18 @@ const form = ref({
 const termsAccepted = ref(false);
 const showTermsModal = ref(false); // terms modal
 const showSuccessModal = ref(false); // ✅ success modal
+const careers = ref([]);
+
+onMounted(async () => {
+  try {
+    const response = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/careers"
+    );
+    careers.value = response.data;
+  } catch (error) {
+    console.error("Error fetching careers:", error);
+  }
+});
 
 const handleSubmit = async () => {
   if (!termsAccepted.value) {
