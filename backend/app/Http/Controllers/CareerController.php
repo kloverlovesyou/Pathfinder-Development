@@ -179,7 +179,7 @@ public function countsPartial()
         ]);
     }
 
-    public function recommend($id)
+public function recommend($id)
     {
         $career = Career::find($id);
 
