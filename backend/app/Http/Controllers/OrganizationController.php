@@ -90,7 +90,10 @@ class OrganizationController extends Controller
         }
 
         if ($organization->status === 'rejected') {
-            return response()->json(['message' => 'Your registration was rejected.'], 403);
+            return response()->json([
+                'message' => 'Your registration was rejected.',
+                'reason' => $organization->rejectionReason // <--- include rejection reason
+            ], 403);
         }
 
         if (!$organization->api_token) {
@@ -120,14 +123,23 @@ class OrganizationController extends Controller
     // ----------------------
     // Reject organization
     // ----------------------
-    public function reject($id)
-    {
-        $org = Organization::findOrFail($id);
-        $org->status = 'rejected';
-        $org->save();
+    public function reject($id, Request $request)
+{
+    $org = Organization::findOrFail($id);
 
-        return response()->json(['message' => 'Organization rejected']);
-    }
+    $validated = $request->validate([
+        'reason' => 'required|string|max:1000',
+    ]);
+
+    $org->status = 'rejected';
+    $org->rejectionReason = $validated['reason'];
+    $org->save();
+
+    return response()->json([
+        'message' => 'Organization rejected successfully',
+        'rejectionReason' => $org->rejectionReason
+    ]);
+}
 
     // ----------------------
     // List pending organizations
