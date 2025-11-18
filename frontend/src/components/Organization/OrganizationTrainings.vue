@@ -483,8 +483,6 @@
               <input v-model="newTagName" type="text" placeholder="Add new tag" class="training-input mt-2" />
               <button @click.prevent="addTag" class="training-save-btn mt-2">Add Tag</button>
             </div>
-
-
             <!-- Save -->
             <button type="submit" class="training-post-btn">{{ isEditMode ? "Update" : "Post" }}</button>
           </form>
@@ -731,20 +729,23 @@ export default {
     },
 
     toggleTag(tagID) {
-      const index = this.newTraining.Tags.indexOf(tagID);
+      const normalizedId = Number(tagID);
+      const index = this.newTraining.Tags.indexOf(normalizedId);
       if (index > -1) {
         this.newTraining.Tags.splice(index, 1); // Remove tag if already selected
       } else {
-        this.newTraining.Tags.push(tagID); // Add tag if not selected
+        this.newTraining.Tags.push(normalizedId); // Add tag if not selected
       }
     },
 
     isTagSelected(tagID) {
-      return this.newTraining.Tags.includes(tagID);
+      const normalizedId = Number(tagID);
+      return this.newTraining.Tags.includes(normalizedId);
     },
 
     removeTag(tagID) {
-      const index = this.newTraining.Tags.indexOf(tagID);
+      const normalizedId = Number(tagID);
+      const index = this.newTraining.Tags.indexOf(normalizedId);
       if (index > -1) {
         this.newTraining.Tags.splice(index, 1); // Remove the tag
       }
@@ -761,7 +762,7 @@ export default {
 
           // Add the new tag to the tagOptions and newTraining.Tags
           this.tagOptions.push(response.data); // Assuming response.data returns the new tag object
-          this.newTraining.Tags.push(response.data.TagID); // Add the new tag ID to the selected tags
+          this.newTraining.Tags.push(Number(response.data.TagID)); // Add the new tag ID to the selected tags
 
           // Clear the input field
           this.newTagName = '';
@@ -776,8 +777,9 @@ export default {
     },
 
     getTagName(tagID) {
-      const tag = this.tagOptions.find(t => t.TagID === tagID);
-      return tag ? tag.TagName : tagID; // Return the tag name or ID if not found
+      const normalizedId = Number(tagID);
+      const tag = this.tagOptions.find(t => Number(t.TagID) === normalizedId);
+      return tag ? tag.TagName : normalizedId; // Return the tag name or ID if not found
     },
 
     toggleSidebar() {
@@ -979,38 +981,38 @@ export default {
     },
 
     openTrainingPopup(training = null) {
-    this.fetchTags(); // Load tags into dropdown
+      this.fetchTags(); // Load tags into dropdown
 
-    console.log("RAW TRAINING:", training);
-    console.log("RAW TAGS:", training ? training.Tags : null);
-    console.log("TAG TYPE:", training ? typeof training.Tags : null);
+      if (training) {
+        this.isEditMode = true;
+        this.trainingToEditId = training.trainingID;
+        this.newTraining = {
+          ...training,
+          Tags: training.Tags
+            ? training.Tags.map(tag => Number(tag.TagID ?? tag.tagID ?? tag.id))
+            : []
+        };
+      } else {
+        this.isEditMode = false;
+        this.newTraining = {
+          title: "",
+          description: "",
+          date: "",
+          startTime: "",
+          endTime: "",
+          mode: "",
+          location: "",
+          trainingLink: "",
+          Tags: []
+        };
+      }
 
-    if (training) {
-      this.isEditMode = true;
+      if (!Array.isArray(this.newTraining.Tags)) {
+        this.newTraining.Tags = [];
+      }
 
-      this.newTraining = {
-        ...training,
-        Tags: training.Tags
-          ? training.Tags.map(tag => tag.TagID)
-          : []
-      };
-    } else {
-      this.isEditMode = false;
-      this.newTraining = {
-        title: "",
-        description: "",
-        date: "",
-        startTime: "",
-        endTime: "",
-        mode: "",
-        location: "",
-        trainingLink: "",
-        Tags: []
-      };
-    }
-
-    this.showTrainingPopup = true;
-  },
+      this.showTrainingPopup = true;
+    },
 
     closeTrainingPopup() {
       this.showTrainingPopup = false;
@@ -1052,8 +1054,12 @@ export default {
 
       // ✅ Fix for tags
       this.newTraining.Tags = training.Tags
-        ? training.Tags.map(tag => tag.TagID)
+        ? training.Tags.map(tag => Number(tag.TagID ?? tag.tagID ?? tag.id))
         : [];
+
+      if (!Array.isArray(this.newTraining.Tags)) {
+        this.newTraining.Tags = [];
+      }
 
       this.isEditMode = true;
       this.trainingToEditId = trainingID;
