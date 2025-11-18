@@ -28,7 +28,7 @@ const newEducation = reactive({
   major: "",
   institutionName: "",
   institutionAddress: "",
-  graduationYear: "",
+  graduationYear: null,
 });
 
 // ✅ Resume Data
@@ -178,7 +178,13 @@ async function addEducation() {
     );
 
     resume.education.push(data);
-    Object.keys(newEducation).forEach((key) => (newEducation[key] = ""));
+        Object.keys(newEducation).forEach((key) => {
+      if (key === "graduationYear") {
+        newEducation[key] = null; // keep as number
+      } else {
+        newEducation[key] = ""; // string fields
+      }
+    });
     showNewEducationForm.value = false;
     alert("Education added successfully!");
   } catch (error) {
@@ -971,6 +977,8 @@ onMounted(fetchSelectedCertificates);
                   <input
                     v-model="newEducation.graduationYear"
                     type="number"
+                    min="1900"
+                    max="2099"
                     placeholder="e.g. 2025"
                     class="input-field border rounded w-full p-2"
                   />
