@@ -202,12 +202,17 @@ const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
     const token = response.data.token;
     const role = userData.role || (userData.adminID ? "organization" : "applicant");
 
-    // Continue only if approved
-    if (role === "organization" && userData.status !== "approved") {
-      // Check if the backend returned a rejection reason
-      const reason = response.data.reason || "Your organization account is not yet approved by the admin.";
-      showToast(reason);
-      return; // stop login
+    // STOP login if pending
+    if (role === "organization" && userData.status === "pending") {
+      showToast("Your organization account is not yet approved by the admin.");
+      return;
+    }
+
+    // STOP login if rejected
+    if (role === "organization" && userData.status === "rejected") {
+      // show the actual reason returned by backend
+      showToast(response.data.reason || "Your registration was rejected.");
+      return;
     }
 
     let displayName = "";
@@ -241,9 +246,7 @@ const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
     console.error(err.response?.data || err.message);
 
     if (err.response?.status === 403) {
-      // Show rejection reason from backend if available
-      const reason = err.response.data.reason || err.response.data.message;
-      showToast(reason);
+      showToast(err.response.data.reason || err.response.data.message);
       return;
     }
 
