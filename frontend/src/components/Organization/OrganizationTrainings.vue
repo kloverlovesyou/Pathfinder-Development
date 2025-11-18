@@ -980,8 +980,8 @@ export default {
       this.fetchTags(); // Load tags into dropdown
     },
 
-    openTrainingPopup(training = null) {
-      this.fetchTags(); // Load tags into dropdown
+    async openTrainingPopup(training = null) {
+      await this.fetchTags(); // Load tags into dropdown
 
       if (training) {
         this.isEditMode = true;
@@ -1030,7 +1030,7 @@ export default {
       this.newTagName = ""; // optional: clear the tag input too
     },
 
-    updateTraining(trainingID) {
+    async updateTraining(trainingID) {
       const training = this.upcomingtrainings.find(t => t.trainingID === trainingID);
       if (!training) {
         alert("Training not found.");
@@ -1051,6 +1051,7 @@ export default {
       this.newTraining.mode = training.mode;
       this.newTraining.location = training.location || "";
       this.newTraining.trainingLink = training.training_link || "";
+      await this.fetchTags();
 
       // ✅ Fix for tags
       this.newTraining.Tags = training.Tags

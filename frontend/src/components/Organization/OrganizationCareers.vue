@@ -477,7 +477,7 @@ export default {
 
         // Add the new tag to the tagOptions and newCareer.Tags
         this.tagOptions.push(response.data);
-        this.newCareer.Tags.push(response.data.TagID);
+        this.newCareer.Tags.push(Number(response.data.TagID));
 
         // Clear the input field
         this.newTagName = "";
@@ -493,19 +493,20 @@ export default {
       if (!Array.isArray(this.newCareer.Tags)) {
         this.newCareer.Tags = [];
       }
-
-      if (this.newCareer.Tags.includes(tagID)) {
-        this.newCareer.Tags = this.newCareer.Tags.filter((id) => id !== tagID);
+      const normalizedId = Number(tagID);
+      if (this.newCareer.Tags.includes(normalizedId)) {
+        this.newCareer.Tags = this.newCareer.Tags.filter((id) => id !== normalizedId);
       } else {
-        this.newCareer.Tags.push(tagID);
+        this.newCareer.Tags.push(normalizedId);
       }
     },
 
     // Check if a tag is selected
     isTagSelected(tagID) {
+      const normalizedId = Number(tagID);
       return (
         Array.isArray(this.newCareer.Tags) &&
-        this.newCareer.Tags.includes(tagID)
+        this.newCareer.Tags.includes(normalizedId)
       );
     },
 
@@ -513,7 +514,8 @@ export default {
     removeTag(tagID) {
       if (!Array.isArray(this.newCareer.Tags)) return; // 👈 prevents crashes
 
-      const index = this.newCareer.Tags.indexOf(tagID);
+      const normalizedId = Number(tagID);
+      const index = this.newCareer.Tags.indexOf(normalizedId);
       if (index !== -1) {
         this.newCareer.Tags.splice(index, 1);
       }
@@ -532,7 +534,8 @@ export default {
     },
 
     getTagName(id) {
-      const tag = this.tagOptions.find((t) => t.TagID === id);
+      const normalizedId = Number(id);
+      const tag = this.tagOptions.find((t) => Number(t.TagID) === normalizedId);
       return tag ? tag.TagName : "";
     },
 
@@ -618,12 +621,17 @@ export default {
       }
     },
 
+
     // Open career in edit mode
-    updateCareer(career) {
+    async updateCareer(career) {
+      // Load tag options first (same as trainings)
+      await this.fetchTags();
+
       this.showCareerPopup = true;
       this.isEditMode = true;
       this.careerToEditId = career.careerID || career.id;
 
+      // Prefill career data
       this.newCareer = {
         position: career.position,
         details: career.detailsAndInstructions,
@@ -631,14 +639,20 @@ export default {
         requirements: career.requirements,
         letterAddress: career.applicationLetterAddress,
         deadline: career.deadlineOfSubmission,
+
+        // Same fix used in training tab
         Tags: Array.isArray(career.Tags)
-          ? career.Tags.map((tag) => tag.TagID ?? tag.tagID ?? tag.id)
+          ? career.Tags.map(tag =>
+            Number(tag.TagID ?? tag.tagID ?? tag.id)
+          )
           : [],
       };
 
       if (!Array.isArray(this.newCareer.Tags)) {
         this.newCareer.Tags = [];
       }
+
+      console.log("Prefilled career:", this.newCareer);
     },
 
     // Save career (create or update)
@@ -944,32 +958,42 @@ export default {
         // 🔹 3. Prepare payload
         const payload = {
           position: this.newCareer.position,
+          // include both legacy and new field names to satisfy either endpoint
           details: this.newCareer.details,
+          detailsAndInstructions: this.newCareer.details,
           qualifications: this.newCareer.qualifications,
           requirements: this.newCareer.requirements,
           letterAddress: this.newCareer.letterAddress,
+          applicationLetterAddress: this.newCareer.letterAddress,
           deadline: this.newCareer.deadline,
+          deadlineOfSubmission: this.newCareer.deadline,
           Tags: this.newCareer.Tags || [],
         };
         console.log("🔹 Payload:", payload);
 
         // 🔹 4. Send POST request
-        const response = await axios.post(
-          import.meta.env.VITE_API_BASE_URL + "/careers",
-          payload,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        const url = this.isEditMode && this.careerToEditId
+          ? import.meta.env.VITE_API_BASE_URL + `/careers/${this.careerToEditId}`
+          : import.meta.env.VITE_API_BASE_URL + "/careers";
+        const method = this.isEditMode && this.careerToEditId ? "put" : "post";
+
+        const response = await axios({
+          method,
+          url,
+          data: payload,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
 
         // 🔹 5. Handle success
         if (response?.status >= 200 && response?.status < 300) {
           console.log("✅ Career saved:", response.data);
-          alert("Career posted successfully!");
-          this.upcomingCareers.push(response.data.data || response.data);
+          alert(this.isEditMode ? "Career updated successfully!" : "Career posted successfully!");
+          if (!this.isEditMode) {
+            this.upcomingCareers.push(response.data.data || response.data);
+          }
           this.closeCareerPopup();
           this.resetNewCareer();
           await this.fetchCareers();
