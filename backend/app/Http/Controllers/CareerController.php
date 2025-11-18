@@ -178,4 +178,18 @@ public function countsPartial()
             'message' => 'Career deleted successfully'
         ]);
     }
+
+    public function recommend($id)
+    {
+        $career = Career::find($id);
+
+        if (!$career) {
+            return response()->json(['message' => 'Career not found'], 404);
+        }
+
+        // Replace with your logic ↓
+        return response()->json([
+            'recommendedCareer' => $career
+        ]);
+    }
 }
