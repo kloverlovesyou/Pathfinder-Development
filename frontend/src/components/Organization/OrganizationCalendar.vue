@@ -229,6 +229,7 @@
 <script>
 import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
 import axios from "axios";
+import api from "@/composables/api";
 
 export default {
   name: "OrganizationCalendar",
@@ -384,16 +385,27 @@ export default {
     },
 
     async fetchTrainings() {
-      const token = localStorage.getItem("token");
-      if (!token) return;
+      let res;
+      try {
+        res = await api.get("/organization/trainings");
+      } catch (err) {
+        console.warn("Org trainings endpoint unavailable for calendar, falling back:", err?.response?.status);
+        const token = localStorage.getItem("token");
+        if (!token) return;
 
-      const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/trainings", {
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      });
+        const storedUser = localStorage.getItem("user");
+        const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+        const organizationID = parsedUser?.organizationID ?? parsedUser?.organization?.organizationID ?? null;
+
+        res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/trainings", {
+          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+          params: organizationID ? { organizationID } : {},
+        });
+      }
 
       this.trainings = res.data.map(t => {
-        const start = t.schedule ? new Date(t.schedule) : null;
-        const end = t.end_time ? new Date(t.end_time) : null;
+        const start = t.schedule ? new Date(t.schedule + " UTC") : null;
+        const end = t.end_time ? new Date(t.end_time + " UTC") : null;
 
         return {
           id: t.trainingID,
@@ -412,12 +424,7 @@ export default {
     },
 
     async fetchCareers() {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-
-      const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/careers", {
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      });
+      const res = await api.get("/organization/careers");
 
       this.careers = res.data.map(c => ({
         id: c.careerID,

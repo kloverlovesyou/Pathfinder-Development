@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\Log;
 class CareerRecommendationController extends Controller
 {
     // Display list of careers
-    public function index()
+    public function index(Request $request)
     {
-        $careers = DB::table('career as c')
+        $query = DB::table('career as c')
             ->join('organization as o', 'c.organizationID', '=', 'o.organizationID')
             ->select(
                 'c.careerID',
@@ -23,8 +23,13 @@ class CareerRecommendationController extends Controller
                 'c.requirements',
                 'c.applicationLetterAddress',
                 'c.deadlineOfSubmission'
-            )
-            ->get();
+            );
+
+        if ($request->has('organizationID')) {
+            $query->where('c.organizationID', $request->organizationID);
+        }
+
+        $careers = $query->get();
 
         return response()->json($careers);
     }
@@ -93,7 +98,6 @@ class CareerRecommendationController extends Controller
                  $training->organizationName = 'Unknown';
                  $training->provider = 'Unknown';
              }
-             
              return $training;
          });
  
@@ -164,7 +168,7 @@ class CareerRecommendationController extends Controller
     // Log the careerID to verify its value
     Log::info('Career ID: ' . $careerID);
             // Call the stored procedure with the careerID
-            $results = DB::select('CALL sp_get_career_with_recommendations(?)', [$careerID]);
+            $results = DB::select('CALL sp_GetRecommendedCareers_ByTags(?)', [$careerID]);
             
             // Check if results are returned
             if (empty($results)) {

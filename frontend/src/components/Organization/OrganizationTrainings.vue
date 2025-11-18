@@ -936,8 +936,25 @@ export default {
 
     async fetchTrainings() {
       try {
-        const response = await api.get("/trainings");
-        const newTrainings = response.data;
+        const storedUser = localStorage.getItem("user");
+        const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+        const organizationID = parsedUser?.organizationID ?? parsedUser?.organization?.organizationID ?? null;
+
+        let newTrainings = [];
+        try {
+          const { data } = await api.get("/organization/trainings");
+          newTrainings = data;
+        } catch (err) {
+          console.warn("Org trainings endpoint unavailable, falling back:", err?.response?.status);
+          const storedUser = localStorage.getItem("user");
+          const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+          const organizationID = parsedUser?.organizationID ?? parsedUser?.organization?.organizationID ?? null;
+
+          const { data } = await api.get("/trainings", {
+            params: organizationID ? { organizationID } : {},
+          });
+          newTrainings = data;
+        }
 
         newTrainings.forEach(training => {
           const existingIndex = this.upcomingtrainings.findIndex(t => t.trainingID === training.trainingID);
@@ -1622,7 +1639,7 @@ const logout = () => {
   display: grid;
   gap: 1.5rem;
   margin-top: 1rem;
-  overflow: hidden;
+  overflow: visible;
   transition: max-height 0.4s ease;
 }
 
