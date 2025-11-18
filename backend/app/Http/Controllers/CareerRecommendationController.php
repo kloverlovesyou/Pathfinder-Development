@@ -164,7 +164,7 @@ class CareerRecommendationController extends Controller
     // Log the careerID to verify its value
     Log::info('Career ID: ' . $careerID);
             // Call the stored procedure with the careerID
-            $results = DB::select('CALL sp_get_career_with_recommendations(?)', [$careerID]);
+            $results = DB::select('CALL sp_GetRecommendedCareers_ByTags(?)', [$careerID]);
             
             // Check if results are returned
             if (empty($results)) {
