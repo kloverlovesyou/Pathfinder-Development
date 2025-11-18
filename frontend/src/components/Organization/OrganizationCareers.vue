@@ -2219,7 +2219,7 @@ async function viewRequirement(id) {
   display: grid;
   gap: 1.5rem;
   margin-top: 1rem;
-  overflow: hidden;
+  overflow: visible;
   transition: max-height 0.4s ease;
 }
 
