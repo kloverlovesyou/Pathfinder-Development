@@ -4,6 +4,33 @@ import axios from "axios";
 
 const organizations = ref([]);
 const selectedOrg = ref(null);
+const rejectModal = ref(false);
+const rejectReason = ref("");
+const rejectTargetID = ref(null);
+
+function openRejectModal(id) {
+  rejectTargetID.value = id;
+  rejectReason.value = "";
+  rejectModal.value = true;
+}
+
+async function submitRejection() {
+  try {
+    await axios.post(
+      import.meta.env.VITE_API_BASE_URL + `/organization/${rejectTargetID.value}/reject`,
+      { reason: rejectReason.value }
+    );
+
+    organizations.value = organizations.value.filter(
+      (o) => o.organizationID !== rejectTargetID.value
+    );
+
+    rejectModal.value = false;
+    selectedOrg.value = null;
+  } catch (err) {
+    console.error("Rejection failed:", err);
+  }
+}
 
 // Fetch all pending organizations
 async function loadPendingOrganizations() {
