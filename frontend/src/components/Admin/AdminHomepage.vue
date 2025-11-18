@@ -18,36 +18,71 @@ function openRejectModal(id) {
 }
 
 // Submit rejection with reason
-async function submitRejection() {
-  if (!rejectReason.value.trim()) {
-    alert("Please enter a reason for rejection.");
-    return;
-  }
+const handleLogin = async () => {
+  emailError.value = !validateEmail(email.value);
+  passwordError.value = !validatePassword(password.value);
+  loginError.value = "";
+
+  if (emailError.value || passwordError.value) return;
 
   try {
-    const res = await axios.post(
-      import.meta.env.VITE_API_BASE_URL + `/organization/${rejectOrgID.value}/reject`,
-      { reason: rejectReason.value }
+    const response = await axios.post(
+      import.meta.env.VITE_API_BASE_URL + "/login",
+      {
+        emailAddress: email.value,
+        password: password.value,
+      }
     );
 
-    // Optional: show a toast with reason
-    alert(`Rejected: ${res.data.rejectionReason}`);
+    // Successful login
+    const userData = response.data.user || response.data.organization;
+    const token = response.data.token;
+    const role = userData.role || (userData.adminID ? "organization" : "applicant");
 
-    // Remove rejected org from list
-    organizations.value = organizations.value.filter(
-      (o) => o.organizationID !== rejectOrgID.value
+    let displayName = "";
+    if (role === "organization") {
+      displayName = userData.organizationName || userData.name || "Organization";
+    } else if (role === "admin") {
+      displayName = userData.name || "Admin";
+    } else {
+      displayName = `${userData.firstName} ${userData.lastName}`;
+    }
+
+    // Save token + user
+    localStorage.setItem("token", token);
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ ...userData, role, displayName })
     );
 
-    rejectModal.value = false;
-    rejectReason.value = "";
-    selectedOrg.value = null;
-    rejectOrgID.value = null;
+    await regStore.fetchMyRegistrations();
+
+    // Redirect
+    if (role === "organization") {
+      router.push("/organization");
+    } else if (role === "admin") {
+      router.push("/admin");
+    } else {
+      router.push("/app");
+    }
 
   } catch (err) {
-    console.error("Rejection failed:", err);
-  }
-}
+    console.error(err.response?.data || err.message);
 
+    // Handle rejected or pending organization
+    if (err.response?.status === 403) {
+      const reason = err.response.data?.reason; // ✅ optional chaining
+      const msg = reason
+        ? `Your registration was rejected. Reason: ${reason}`
+        : err.response.data?.message || "Your registration is not approved.";
+
+      showToast(msg);
+      return;
+    }
+
+    showToast("Invalid credentials. Please try again.");
+  }
+};
 // Fetch all pending organizations
 async function loadPendingOrganizations() {
   try {
