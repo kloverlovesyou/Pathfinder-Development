@@ -116,6 +116,7 @@ function closeUploadModal() {
 
 function handleFileUpload(event) {
   uploadedFile.value = event.target.files[0];
+  console.log("Uploaded file:", uploadedFile.value);
 }
 
 // --- Submit Application ---
