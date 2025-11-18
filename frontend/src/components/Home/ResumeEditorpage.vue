@@ -178,7 +178,13 @@ async function addEducation() {
     );
 
     resume.education.push(data);
-    Object.keys(newEducation).forEach((key) => (newEducation[key] = ""));
+        Object.keys(newEducation).forEach((key) => {
+      if (key === "graduationYear") {
+        newEducation[key] = null; // keep as number
+      } else {
+        newEducation[key] = ""; // string fields
+      }
+    });
     showNewEducationForm.value = false;
     alert("Education added successfully!");
   } catch (error) {
