@@ -18,18 +18,10 @@ class EducationController extends Controller
         // was originally stored as a full date string (legacy data) or if
         // the front-end strictly expects a string representation of the year.
         $education->transform(function ($edu) {
-<<<<<<< HEAD
         if (!empty($edu->graduationYear)) {
             $edu->graduationYear = (int) $edu->graduationYear; // ensure number
         }
         return $edu;
-=======
-            if (!empty($edu->graduationYear)) {
-                // If it's a number (2024), strtotime() is safe. If it's a date string, it converts to 'YYYY'.
-                $edu->graduationYear = date('Y', strtotime($edu->graduationYear));
-            }
-            return $edu;
->>>>>>> 3af466ce5c440df0e24ecdfa40d9d0c0d4bc9a70
         });
 
         return response()->json($education);
@@ -39,7 +31,6 @@ class EducationController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-<<<<<<< HEAD
     'educationLevel' => 'required|string|max:255',
     'major' => 'nullable|string|max:255',
     'institutionName' => 'required|string|max:255',
@@ -57,24 +48,6 @@ $education = Education::create($validated);
 
 
 
-=======
-            'educationLevel' => 'required|string|max:255',
-            'major' => 'nullable|string|max:255',
-            'institutionName' => 'required|string|max:255',
-            'institutionAddress' => 'nullable|string|max:255',
-            // Validation ensures it is a 4-digit year, which is correct for an INT column.
-            'graduationYear' => 'nullable|digits:4', 
-            'resumeID' => 'required|exists:resume,resumeID',
-        ]);
-
-        // ❌ FIX: Removed the concatenation to '-01-01'. 
-        // Since the DB column is INT, we must only pass the 4-digit year number.
-        // The `$validated['graduationYear']` already holds the correct integer year.
-        
-        $education = Education::create($validated);
-
-        // We return the year directly as it was saved as an INT.
->>>>>>> 3af466ce5c440df0e24ecdfa40d9d0c0d4bc9a70
         return response()->json($education, 201);
     }
 
@@ -91,22 +64,12 @@ $education = Education::create($validated);
             'graduationYear' => 'nullable|digits:4',
         ]);
 
-<<<<<<< HEAD
          if (!empty($validated['graduationYear'])) {
         $validated['graduationYear'] = (int) $validated['graduationYear'];
     }
 
     $education->update($validated);
 
-=======
-        // ❌ FIX: Removed the concatenation to '-01-01'. 
-        // Since the DB column is INT, we must only pass the 4-digit year number.
-        // The `$validated['graduationYear']` already holds the correct integer year.
-
-        $education->update($validated);
-
-        // We return the year directly as it was updated as an INT.
->>>>>>> 3af466ce5c440df0e24ecdfa40d9d0c0d4bc9a70
         return response()->json($education);
     }
 
