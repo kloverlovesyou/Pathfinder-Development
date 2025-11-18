@@ -98,7 +98,6 @@ class CareerRecommendationController extends Controller
                  $training->organizationName = 'Unknown';
                  $training->provider = 'Unknown';
              }
-             
              return $training;
          });
  
