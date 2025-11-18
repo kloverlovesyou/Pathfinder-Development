@@ -145,7 +145,7 @@
           </p>
         </div>
                 <!-- Toast (bottom-right) -->
-        <div class="toast toast-end" v-if="toastMessage">
+        <div class="toast toast-end toast-top z-50" v-if="toastMessage">
           <div class="alert alert-error text-white">
             <span>{{ toastMessage }}</span>
           </div>
