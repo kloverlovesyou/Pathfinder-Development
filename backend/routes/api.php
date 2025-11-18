@@ -143,6 +143,7 @@ Route::middleware('auth.custom')->group(function () {
     Route::put('/applications/{applicationID}/interview', [ApplicationController::class, 'updateInterview']);
     Route::get('/applications/{applicationID}/requirements/signed-url', [ApplicationFileController::class, 'generateSignedUrl']);
     Route::get('/applications/{id}/requirements', [ApplicationController::class, 'getRequirements']);
+Route::post('/applications/{id}/upload-requirement', [ApplicationController::class, 'uploadRequirement']);
 
 
     // Registrations

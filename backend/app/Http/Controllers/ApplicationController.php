@@ -51,30 +51,16 @@ class ApplicationController extends Controller
 {
     $user = $request->user();
 
+  if ($request->hasFile('requirement_directory')) {
+        Log::info('File received: ' . $request->file('requirement_directory')->getClientOriginalName());
+    } else {
+        Log::warning('No file received in request.');
+    }
+
     $validated = $request->validate([
         'careerID' => 'required|exists:career,careerID',
-        'requirement_directory' => 'required|file|mimes:pdf|max:5120', // PDF required, max 5MB
-    ], [
-        'requirement_directory.required' => 'PDF file is required',
-        'requirement_directory.mimes' => 'Only PDF files are allowed',
-        'requirement_directory.max' => 'File size must be less than 5MB',
+        'requirement_directory' => 'nullable|file|mimes:pdf|max:5120',
     ]);
-    
-    // Log file info for debugging
-    if ($request->hasFile('requirement_directory')) {
-        $file = $request->file('requirement_directory');
-        Log::info('File received in request', [
-            'original_name' => $file->getClientOriginalName(),
-            'mime_type' => $file->getMimeType(),
-            'size' => $file->getSize(),
-            'is_valid' => $file->isValid(),
-        ]);
-    } else {
-        Log::warning('No file received in request', [
-            'has_file' => $request->hasFile('requirement_directory'),
-            'all_files' => $request->allFiles(),
-        ]);
-    }
 
     // prevent duplicates
     $existing = Application::where('applicantID', $user->applicantID)
@@ -90,131 +76,42 @@ class ApplicationController extends Controller
 
     // store uploaded file
     $requirementsPath = null;
-    if ($request->hasFile('requirement_directory')) {
-        $file = $request->file('requirement_directory');
-        
-        // Ensure the requirements directory exists with proper permissions
-        $requirementsDir = storage_path('app/public/requirements');
-        if (!file_exists($requirementsDir)) {
-            if (!mkdir($requirementsDir, 0755, true)) {
-                Log::error('Failed to create requirements directory', ['path' => $requirementsDir]);
-                return response()->json(['message' => 'Failed to create storage directory'], 500);
-            }
-        }
-        
-        // Check if directory is writable
-        if (!is_writable($requirementsDir)) {
-            Log::error('Requirements directory is not writable', ['path' => $requirementsDir]);
-            return response()->json(['message' => 'Storage directory is not writable'], 500);
-        }
-        
-        try {
-            // Store the file - putFile returns the path relative to the disk root
-            $requirementsPath = Storage::disk('public')->putFile('requirements', $file);
-            
-            if (!$requirementsPath) {
-                throw new \Exception('Failed to store file - putFile returned null');
-            }
-            
-            // Verify file was actually saved - check both possible locations
-            $fullPath = Storage::disk('public')->path($requirementsPath);
-            $alternatePath = storage_path('app/public/' . $requirementsPath);
-            
-            $fileExists = file_exists($fullPath) || file_exists($alternatePath);
-            
-            if (!$fileExists) {
-                throw new \Exception('File was not saved to disk. Expected at: ' . $fullPath . ' or ' . $alternatePath);
-            }
-            
-            // Use the path that actually exists
-            $actualPath = file_exists($fullPath) ? $fullPath : $alternatePath;
+  if ($request->hasFile('requirement_directory')) {
+    $file = $request->file('requirement_directory');
+    $filename = time() . '_' . $file->getClientOriginalName();
 
-            Log::info('Requirements file stored successfully', [
-                'stored_path' => $requirementsPath,
-                'full_path' => $actualPath,
-                'file_exists' => $fileExists,
-                'file_size' => filesize($actualPath),
-                'original_name' => $file->getClientOriginalName(),
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Failed to store requirements file', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'file_name' => $file->getClientOriginalName() ?? 'unknown',
-                'file_size' => $file->getSize() ?? 0,
-            ]);
-            // Return error - file is required
-            return response()->json([
-                'message' => 'Failed to save file: ' . $e->getMessage()
-            ], 500);
-        }
-    }
+    // store the file in storage/app/public/requirement_directory
+    $requirementsPath = $file->storeAs('public/requirement_directory', $filename);
 
-    try {
-        $app = Application::create([
-            'requirement_directory' => $requirementsPath,
-            'dateSubmitted' => Carbon::now(),
-            'applicationStatus' => 'Submitted',
+    // store relative path in DB (remove 'public/')
+    $requirementsPathForDB = str_replace('public/', '', $requirementsPath);
 
-            'interviewSchedule' => null,
-            'interviewMode' => null,
-            'interviewLocation' => null,
-            'interviewLink' => null,
+    Log::info('Requirements file stored', [
+        'stored_path' => $requirementsPathForDB,
+        'full_path' => Storage::disk('public')->path($requirementsPathForDB),
+        'file_exists' => Storage::disk('public')->exists($requirementsPathForDB)
+    ]);
+}
 
-            'careerID' => (int) $validated['careerID'],
-            'applicantID' => $user->applicantID,
-        ]);
 
-        // Get ID immediately from attributes to avoid property access issues
-        $appId = $app->getAttributes()['applicationID'] ?? null;
-        // Unset model immediately to prevent any further access
-        unset($app);
-        
-        // Build response from values we already have
-        return response()->json([
-            'message' => 'APPLICATION SUBMITTED SUCCESSFULLY!!!',
-            'data' => [
-                'applicationID' => $appId,
-                'careerID' => (int) $validated['careerID'],
-                'applicantID' => $user->applicantID,
-                'requirement_directory' => $requirementsPath,
-                'dateSubmitted' => Carbon::now()->toDateTimeString(),
-                'applicationStatus' => 'Submitted',
-                'interviewSchedule' => null,
-                'interviewMode' => null,
-                'interviewLocation' => null,
-                'interviewLink' => null,
-            ],
-        ], 201);
-    } catch (\Exception $e) {
-        // Log the error for debugging
-        Log::error('Application submission error', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString(),
-            'careerID' => $validated['careerID'] ?? null,
-            'applicantID' => $user->applicantID ?? null,
-        ]);
-        
-        // Check if application was actually created (might have been saved before error)
-        $existing = Application::where('applicantID', $user->applicantID)
-            ->where('careerID', (int) ($validated['careerID'] ?? 0))
-            ->first();
-        
-        if ($existing) {
-            // Application was saved, return success even though there was an error
-            return response()->json([
-                'message' => 'APPLICATION SUBMITTED SUCCESSFULLY!!!',
-                'data' => [
-                    'applicationID' => $existing->applicationID,
-                    'careerID' => (int) $validated['careerID'],
-                    'applicantID' => $user->applicantID,
-                ],
-            ], 201);
-        }
-        
-        // If application wasn't saved, re-throw the error
-        throw $e;
-    }
+    $app = Application::create([
+        'requirement_directory' => $requirementsPath,
+        'dateSubmitted' => Carbon::now(),
+        'applicationStatus' => 'Submitted',
+
+        'interviewSchedule' => null,
+        'interviewMode' => null,
+        'interviewLocation' => null,
+        'interviewLink' => null,
+
+        'careerID' => (int) $validated['careerID'],
+        'applicantID' => $user->applicantID,
+    ]);
+
+    return response()->json([
+        'message' => 'APPLICATION SUBMITTED SUCCESSFULLY!!!',
+        'data' => $app,
+    ], 201);
 }
 
 

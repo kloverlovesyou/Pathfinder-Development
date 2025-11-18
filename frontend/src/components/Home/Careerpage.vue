@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from "vue";
 import axios from "axios";
-
 import CalendarSidebar from "@/components/Layout/CalendarSidebar.vue";
 
 const calendarOpen = ref(false);
@@ -131,30 +130,26 @@ function closeUploadModal() {
   showUploadModal.value = false;
   uploadedFile.value = null;
 }
-
 function handleFileUpload(event) {
   uploadedFile.value = event.target.files[0];
 }
 
+// --- Submit Application ---
 async function submitApplication() {
-  if (!selectedCareer.value) return;
+  if (!props.career) return;
+
+  const token = localStorage.getItem("token");
+  if (!token) {
+    addToast("PLEASE LOG IN FIRST", "accent");
+    return;
+  }
+
+  const form = new FormData();
+  form.append("careerID", props.career.careerID ?? props.career.id);
+  if (uploadedFile.value)
+    form.append("requirement_directory", uploadedFile.value);
 
   try {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      addToast("PLEASE LOG IN FIRST", "accent");
-      return;
-    }
-
-    const form = new FormData();
-    form.append(
-      "careerID",
-      selectedCareer.value.careerID ?? selectedCareer.value.id
-    );
-    if (uploadedFile.value) {
-      form.append("requirements", uploadedFile.value);
-    }
-
     await axios.post(
       import.meta.env.VITE_API_BASE_URL + "/applications",
       form,
@@ -167,10 +162,12 @@ async function submitApplication() {
     );
 
     addToast("APPLICATION SUBMITTED SUCCESSFULLY", "success");
-    const id = selectedCareer.value.careerID ?? selectedCareer.value.id;
-    myApplications.value.add(id);
+    const id = props.career.careerID ?? props.career.id;
+    props.myApplications.add(id);
+    emits("update-applications", new Set(props.myApplications));
+
     closeUploadModal();
-    closeModal();
+    emits("close");
   } catch (error) {
     if (error.response?.status === 409) {
       addToast("YOU ALREADY APPLIED TO THIS CAREER", "accent");
