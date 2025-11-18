@@ -160,7 +160,10 @@ class TrainingController extends Controller
     {
         $query = Training::with('organization');
 
-        if ($request->has('organizationID')) {
+        $user = $request->user();
+        if ($user && isset($user->organizationID)) {
+            $query->where('organizationID', $user->organizationID);
+        } elseif ($request->has('organizationID')) {
             $query->where('organizationID', $request->organizationID);
         }
 

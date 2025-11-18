@@ -19,11 +19,20 @@ class CareerController extends Controller
         ]);
     }
     
-    public function index()
+    public function index(Request $request)
     {
-        //fetch all careers
-        $careers = Career::with('organization')
-           ->orderByDesc('deadlineOfSubmission')
+        //fetch careers
+        $query = Career::with('organization')
+            ->orderByDesc('deadlineOfSubmission');
+
+        $user = $request->user();
+        if ($user && isset($user->organizationID)) {
+            $query->where('organizationID', $user->organizationID);
+        } elseif ($request->has('organizationID')) {
+            $query->where('organizationID', $request->organizationID);
+        }
+
+        $careers = $query
            ->get()
            ->map(function ($career){
                   return[
