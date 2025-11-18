@@ -183,70 +183,73 @@ const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
   };
 
   const handleLogin = async () => {
-    emailError.value = !validateEmail(email.value);
-    passwordError.value = !validatePassword(password.value);
-    loginError.value = "";
+  emailError.value = !validateEmail(email.value);
+  passwordError.value = !validatePassword(password.value);
+  loginError.value = "";
 
-    if (emailError.value || passwordError.value) return;
+  if (emailError.value || passwordError.value) return;
 
-    try {
-      const response = await axios.post(
-        import.meta.env.VITE_API_BASE_URL + "/login",
-        {
-          emailAddress: email.value,
-          password: password.value,
-        }
-      );
-
-      const userData = response.data.user || response.data.organization;
-      const token = response.data.token;
-      const role = userData.role || (userData.adminID ? "organization" : "applicant");
-
-      // ⛔ BLOCK UNAPPROVED ORGANIZATIONS
-      if (role === "organization" && userData.status !== "approved") {
-        showToast("Your organization account is not yet approved by the admin.");
-        return;
+  try {
+    const response = await axios.post(
+      import.meta.env.VITE_API_BASE_URL + "/login",
+      {
+        emailAddress: email.value,
+        password: password.value,
       }
+    );
 
-      // Continue only if approved
-      let displayName = "";
-      if (role === "organization") {
-        displayName = userData.organizationName || userData.name || "Organization";
-      } else if (role === "admin") {
-        displayName = userData.name || "Admin";
-      } else {
-        displayName = `${userData.firstName} ${userData.lastName}`;
-      }
+    const userData = response.data.user || response.data.organization;
+    const token = response.data.token;
+    const role = userData.role || (userData.adminID ? "organization" : "applicant");
 
-      // Save token + user
-      localStorage.setItem("token", token);
-      localStorage.setItem(
-        "user",
-        JSON.stringify({ ...userData, role, displayName })
-      );
-
-      await regStore.fetchMyRegistrations();
-
-      // Redirect
-      if (role === "organization") {
-        router.push("/organization");
-      } else if (role === "admin") {
-        router.push("/admin");
-      } else {
-        router.push("/app");
-      }
-
-    } catch (err) {
-      console.error(err.response?.data || err.message);
-
-      if (err.response?.status === 403) {
-        showToast(err.response.data.message);
-        return;
-      }
-
-      showToast("Invalid credentials. Please try again.");
+    // Continue only if approved
+    if (role === "organization" && userData.status !== "approved") {
+      // Check if the backend returned a rejection reason
+      const reason = response.data.reason || "Your organization account is not yet approved by the admin.";
+      showToast(reason);
+      return; // stop login
     }
-  };
+
+    let displayName = "";
+    if (role === "organization") {
+      displayName = userData.organizationName || userData.name || "Organization";
+    } else if (role === "admin") {
+      displayName = userData.name || "Admin";
+    } else {
+      displayName = `${userData.firstName} ${userData.lastName}`;
+    }
+
+    // Save token + user
+    localStorage.setItem("token", token);
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ ...userData, role, displayName })
+    );
+
+    await regStore.fetchMyRegistrations();
+
+    // Redirect
+    if (role === "organization") {
+      router.push("/organization");
+    } else if (role === "admin") {
+      router.push("/admin");
+    } else {
+      router.push("/app");
+    }
+
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+
+    if (err.response?.status === 403) {
+      // Show rejection reason from backend if available
+      const reason = err.response.data.reason || err.response.data.message;
+      showToast(reason);
+      return;
+    }
+
+    showToast("Invalid credentials. Please try again.");
+  }
+};
 
 </script>
 
