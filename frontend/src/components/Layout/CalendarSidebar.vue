@@ -72,7 +72,7 @@ async function fetchCareerEvents() {
           title: app.title,
           careerPosition: app.career?.position,
           hasCareer: !!app.career,
-          allKeys: Object.keys(app)
+          allKeys: Object.keys(app),
         });
 
         return {
@@ -85,7 +85,11 @@ async function fetchCareerEvents() {
           interviewMode: app.interviewMode,
           interviewLink: app.interviewLink,
           interviewLocation: app.interviewLocation,
-          organization: app.organizationName || app.career?.organization?.name || app.career?.organization || "Unknown Organization",
+          organization:
+            app.organizationName ||
+            app.career?.organization?.name ||
+            app.career?.organization ||
+            "Unknown Organization",
         };
       });
 

@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $major
  * @property string $institutionName
  * @property string $institutionAddress
- * @property Carbon $graduationYear
+ * @property int $graduationYear
  * @property int|null $resumeID
  * 
  * @property Resume|null $resume
@@ -31,7 +31,7 @@ class Education extends Model
 	public $timestamps = false;
 
 	protected $casts = [
-		'graduationYear' => 'datetime',
+		'graduationYear' => 'int',
 		'resumeID' => 'int'
 	];
 
