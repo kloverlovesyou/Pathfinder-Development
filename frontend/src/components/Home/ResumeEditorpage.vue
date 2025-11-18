@@ -11,6 +11,7 @@ const router = useRouter();
 const userName = ref("");
 const upcomingCount = ref(0);
 const completedCount = ref(0);
+const toasts = ref([]);
 
 // --- Forms ---
 const showNewExperienceForm = ref(false);
@@ -28,7 +29,7 @@ const newEducation = reactive({
   major: "",
   institutionName: "",
   institutionAddress: "",
-  graduationYear: "",
+  graduationYear: null,
 });
 
 // ✅ Resume Data
@@ -93,7 +94,7 @@ async function saveResume() {
   try {
     const token = localStorage.getItem("token");
     const response = await axios.post(
-      import.meta.env.VITE_API_BASE_URL +"/resume",
+      import.meta.env.VITE_API_BASE_URL + "/resume",
       {
         summary: resume.summary,
         professionalLink: resume.url,
@@ -102,20 +103,36 @@ async function saveResume() {
     );
 
     resume.resumeID = response.data.resumeID;
-    alert("Resume saved successfully!");
+    showToast("Resume saved successfully!");
   } catch (error) {
     console.error("Error saving resume:", error.response?.data || error);
-    alert("Failed to save resume.");
+    showToast("Failed to save resume.");
   }
+}
+function showToast(message, type = "info") {
+  const toastId = Date.now();
+
+  toasts.value.push({
+    id: toastId,
+    message,
+    type,
+  });
+
+  setTimeout(() => {
+    toasts.value = toasts.value.filter((t) => t.id !== toastId);
+  }, 3000);
 }
 
 // --- Load Resume ---
 async function loadResume() {
   try {
     const token = localStorage.getItem("token");
-    const { data } = await axios.get(import.meta.env.VITE_API_BASE_URL +"/resume", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const { data } = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/resume",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
 
     if (data) {
       resume.summary = data.summary || "";
@@ -124,7 +141,7 @@ async function loadResume() {
     }
 
     const { data: expData } = await axios.get(
-      import.meta.env.VITE_API_BASE_URL +"/experiences",
+      import.meta.env.VITE_API_BASE_URL + "/experiences",
       {
         headers: { Authorization: `Bearer ${token}` },
       }
@@ -141,16 +158,16 @@ async function loadResume() {
 async function deleteResume() {
   try {
     const token = localStorage.getItem("token");
-    await axios.delete(import.meta.env.VITE_API_BASE_URL +"/resume", {
+    await axios.delete(import.meta.env.VITE_API_BASE_URL + "/resume", {
       headers: { Authorization: `Bearer ${token}` },
     });
 
     resume.summary = "";
     resume.url = "";
-    alert("Resume deleted successfully!");
+    showToast("Resume deleted successfully!");
   } catch (error) {
     console.error("Error deleting resume:", error.response?.data || error);
-    alert("Failed to delete resume.");
+    showToast("Failed to delete resume.");
   }
 }
 
@@ -158,10 +175,14 @@ async function deleteResume() {
 async function addEducation() {
   try {
     const token = localStorage.getItem("token");
+    console.log("Sending education:", {
+      ...newEducation,
+      resumeID: resume.resumeID,
+    });
 
     if (!resume.resumeID) {
       const resumeRes = await axios.post(
-        import.meta.env.VITE_API_BASE_URL +"/resume",
+        import.meta.env.VITE_API_BASE_URL + "/resume",
         {
           summary: resume.summary || "",
           professionalLink: resume.url || "",
@@ -172,7 +193,7 @@ async function addEducation() {
     }
 
     const { data } = await axios.post(
-      import.meta.env.VITE_API_BASE_URL +"/education",
+      import.meta.env.VITE_API_BASE_URL + "/education",
       { ...newEducation, resumeID: resume.resumeID },
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -180,10 +201,10 @@ async function addEducation() {
     resume.education.push(data);
     Object.keys(newEducation).forEach((key) => (newEducation[key] = ""));
     showNewEducationForm.value = false;
-    alert("Education added successfully!");
+    showToast("Education added successfully!");
   } catch (error) {
     console.error("Error adding education:", error.response?.data || error);
-    alert("Failed to add education.");
+    showToast("Failed to add education.");
   }
 }
 
@@ -193,7 +214,7 @@ async function loadEducation() {
     const resumeID = resume.resumeID || localStorage.getItem("resumeID");
 
     const { data } = await axios.get(
-      import.meta.env.VITE_API_BASE_URL +`/education?resumeID=${resumeID}`,
+      import.meta.env.VITE_API_BASE_URL + `/education?resumeID=${resumeID}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
@@ -210,7 +231,7 @@ async function removeEducation(index) {
     const edu = resume.education[index];
     if (edu.educationID) {
       await axios.delete(
-        import.meta.env.VITE_API_BASE_URL +`/education/${edu.educationID}`,
+        import.meta.env.VITE_API_BASE_URL + `/education/${edu.educationID}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -219,7 +240,7 @@ async function removeEducation(index) {
     resume.education.splice(index, 1);
   } catch (error) {
     console.error("Error deleting education:", error.response?.data || error);
-    alert("Failed to delete education.");
+    showToast("Failed to delete education.");
   }
 }
 
@@ -230,7 +251,7 @@ async function addExperience() {
     !newExperience.companyName.trim() ||
     !newExperience.companyAddress.trim()
   ) {
-    alert("Please fill out all fields before adding experience.");
+    showToast("Please fill out all fields before adding experience.");
     return;
   }
 
@@ -239,7 +260,7 @@ async function addExperience() {
 
     if (!resume.resumeID) {
       const resumeRes = await axios.post(
-        import.meta.env.VITE_API_BASE_URL +"/resume",
+        import.meta.env.VITE_API_BASE_URL + "/resume",
         {
           summary: resume.summary || "",
           professionalLink: resume.url || "",
@@ -250,7 +271,7 @@ async function addExperience() {
     }
 
     const { data } = await axios.post(
-      import.meta.env.VITE_API_BASE_URL +"/experiences",
+      import.meta.env.VITE_API_BASE_URL + "/experiences",
       {
         ...newExperience,
         startYear: `${newExperience.startYear}-01-01`,
@@ -269,10 +290,10 @@ async function addExperience() {
       endYear: new Date().getFullYear(),
     });
     showNewExperienceForm.value = false;
-    alert("Experience added successfully!");
+    showToast("Experience added successfully!");
   } catch (error) {
     console.error("Error adding experience:", error.response?.data || error);
-    alert("Failed to add experience.");
+    showToast("Failed to add experience.");
   }
 }
 
@@ -282,7 +303,7 @@ async function removeExperience(index) {
     const exp = resume.experience[index];
     if (exp.experienceID) {
       await axios.delete(
-        import.meta.env.VITE_API_BASE_URL +`/experiences/${exp.experienceID}`,
+        import.meta.env.VITE_API_BASE_URL + `/experiences/${exp.experienceID}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -291,7 +312,7 @@ async function removeExperience(index) {
     resume.experience.splice(index, 1);
   } catch (error) {
     console.error("Error deleting experience:", error.response?.data || error);
-    alert("Failed to delete experience.");
+    showToast("Failed to delete experience.");
   }
 }
 
@@ -300,7 +321,7 @@ async function loadSkills(resumeID) {
   try {
     const token = localStorage.getItem("token");
     const { data } = await axios.get(
-      import.meta.env.VITE_API_BASE_URL +`/skills/${resumeID}`,
+      import.meta.env.VITE_API_BASE_URL + `/skills/${resumeID}`,
       {
         headers: { Authorization: `Bearer ${token}` },
       }
@@ -318,12 +339,12 @@ async function addSkill() {
   try {
     const token = localStorage.getItem("token");
     if (!resume.resumeID) {
-      alert("Please save your resume first before adding skills.");
+      showToast("Please save your resume first before adding skills.");
       return;
     }
 
     const { data } = await axios.post(
-      import.meta.env.VITE_API_BASE_URL +"/skills",
+      import.meta.env.VITE_API_BASE_URL + "/skills",
       { skillName: newSkill.value.trim(), resumeID: resume.resumeID },
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -340,9 +361,12 @@ async function removeSkill(index) {
     const token = localStorage.getItem("token");
     const skill = resume.skills[index];
     if (skill.skillID) {
-      await axios.delete(import.meta.env.VITE_API_BASE_URL +`/skills/${skill.skillID}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(
+        import.meta.env.VITE_API_BASE_URL + `/skills/${skill.skillID}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
     }
     resume.skills.splice(index, 1);
   } catch (error) {
@@ -369,10 +393,8 @@ async function generatePdf() {
   const margin = 20;
   let y = 20;
 
-  function getYearOnly(dateStr) {
-    if (!dateStr) return "";
-    const year = new Date(dateStr).getFullYear();
-    return isNaN(year) ? "" : year.toString();
+  function getYearOnly(value) {
+    return value ? String(value) : "";
   }
 
   function addWrappedText(text, x, y, maxWidth, lineHeight = 6) {
@@ -401,12 +423,10 @@ async function generatePdf() {
   // Header
   doc.setFont("times", "bold");
   doc.setFontSize(20);
-  doc.text(
-    `${form.firstName} ${form.middleName} ${form.lastName}`,
-    pageWidth / 2,
-    y,
-    { align: "center" }
-  );
+  const fullName = [form.firstName, form.middleName, form.lastName]
+    .filter((name) => name && name.trim() !== "") // remove empty strings or null
+    .join(" ");
+  doc.text(fullName, pageWidth / 2, y, { align: "center" });
   y += 8;
 
   doc.setFont("times", "regular");
@@ -532,7 +552,8 @@ async function fetchSelectedCertificates() {
 
   try {
     const response = await axios.get(
-      import.meta.env.VITE_API_BASE_URL +`/certificates/${user.applicantID}/selected`,
+      import.meta.env.VITE_API_BASE_URL +
+        `/certificates/${user.applicantID}/selected`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
@@ -965,8 +986,10 @@ onMounted(fetchSelectedCertificates);
                 <div>
                   <label class="block font-medium mb-1">Graduation Year</label>
                   <input
-                    v-model="newEducation.graduationYear"
+                    v-model.number="newEducation.graduationYear"
                     type="number"
+                    min="1900"
+                    max="2099"
                     placeholder="e.g. 2025"
                     class="input-field border rounded w-full p-2"
                   />
@@ -1123,6 +1146,20 @@ onMounted(fetchSelectedCertificates);
               </div>
             </div>
           </div>
+        </div>
+      </div>
+      <div class="toast toast-end toast-top z-50">
+        <div
+          v-for="toast in toasts"
+          :key="toast.id"
+          class="alert"
+          :class="{
+            'alert-info': toast.type === 'info',
+            'alert-success': toast.type === 'success',
+            'alert-accent': toast.type === 'accent',
+          }"
+        >
+          {{ toast.message }}
         </div>
       </div>
     </div>
