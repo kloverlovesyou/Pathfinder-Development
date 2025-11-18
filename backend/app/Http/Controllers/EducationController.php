@@ -15,10 +15,10 @@ class EducationController extends Controller
 
         // Format graduationYear to just the year (YYYY)
         $education->transform(function ($edu) {
-            if (!empty($edu->graduationYear)) {
-                $edu->graduationYear = date('Y', strtotime($edu->graduationYear));
-            }
-            return $edu;
+        if (!empty($edu->graduationYear)) {
+            $edu->graduationYear = (int) $edu->graduationYear; // ensure number
+        }
+        return $edu;
         });
 
         return response()->json($education);
@@ -28,24 +28,22 @@ class EducationController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'educationLevel' => 'required|string|max:255',
-            'major' => 'nullable|string|max:255',
-            'institutionName' => 'required|string|max:255',
-            'institutionAddress' => 'nullable|string|max:255',
-            'graduationYear' => 'nullable|digits:4', // only 4-digit year
-            'resumeID' => 'required|exists:resume,resumeID',
-        ]);
+    'educationLevel' => 'required|string|max:255',
+    'major' => 'nullable|string|max:255',
+    'institutionName' => 'required|string|max:255',
+    'institutionAddress' => 'nullable|string|max:255',
+    'graduationYear' => 'nullable|digits:4',
+    'resumeID' => 'required|exists:resume,resumeID',
+]);
 
-        if (!empty($validated['graduationYear'])) {
-            $validated['graduationYear'] = $validated['graduationYear'] . '-01-01';
-        }
+// Save year as integer, do NOT append -01-01
+if (!empty($validated['graduationYear'])) {
+    $validated['graduationYear'] = (int) $validated['graduationYear'];
+}
 
-        $education = Education::create($validated);
+$education = Education::create($validated);
 
-        // Return year only
-        if (!empty($education->graduationYear)) {
-            $education->graduationYear = date('Y', strtotime($education->graduationYear));
-        }
+
 
         return response()->json($education, 201);
     }
@@ -63,16 +61,11 @@ class EducationController extends Controller
             'graduationYear' => 'nullable|digits:4',
         ]);
 
-        if (!empty($validated['graduationYear'])) {
-            $validated['graduationYear'] = $validated['graduationYear'] . '-01-01';
-        }
+         if (!empty($validated['graduationYear'])) {
+        $validated['graduationYear'] = (int) $validated['graduationYear'];
+    }
 
-        $education->update($validated);
-
-        // Return year only
-        if (!empty($education->graduationYear)) {
-            $education->graduationYear = date('Y', strtotime($education->graduationYear));
-        }
+    $education->update($validated);
 
         return response()->json($education);
     }

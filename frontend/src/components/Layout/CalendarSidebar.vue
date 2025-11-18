@@ -685,9 +685,9 @@ watch([trainings, myRegistrations], async () => {
               <div>
                 <h3 class="font-semibold text-sm">
                   {{
-                    event.title ??
+                    event.title ||
                     (event.type === "career"
-                      ? "Career Event"
+                      ? selectedPost.title || "Career Event"
                       : "Training Event")
                   }}
                 </h3>

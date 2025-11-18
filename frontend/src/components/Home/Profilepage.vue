@@ -459,7 +459,7 @@ onMounted(fetchMyActivities);
 
                 <!-- Status -->
                 <div class="text-sm">
-                  <span class="font-semibold">Status:</span>
+                  <span class="font-semibold">Status: </span>
                   <span
                     :class="{
                       'text-green-600': [
@@ -509,30 +509,6 @@ onMounted(fetchMyActivities);
                     :disabled="!activity.certificate"
                   >
                     {{ activity.certificate ? "View Certificate" : "Pending" }}
-                  </button>
-                </div>
-
-                <!-- Attendance Input (Training only) Mobile View-->
-                <div v-if="activity.type === 'training'" class="mt-3">
-                  <input
-                    v-model="activity.qrInput"
-                    type="text"
-                    placeholder="Enter attendance code"
-                    class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    :disabled="!isAttendanceEnabled(activity)"
-                    @click.stop
-                  />
-                  <button
-                    class="mt-2 w-full text-white py-2 rounded"
-                    :class="
-                      isAttendanceEnabled(activity)
-                        ? 'bg-customButton hover:bg-dark-slate'
-                        : 'bg-gray-400 cursor-not-allowed'
-                    "
-                    :disabled="!isAttendanceEnabled(activity)"
-                    @click.stop="submitAttendance(activity)"
-                  >
-                    Submit Attendance
                   </button>
                 </div>
               </div>
@@ -737,12 +713,6 @@ onMounted(fetchMyActivities);
                   >
                     Requirement/Certificate
                   </th>
-                  <th
-                    scope="col"
-                    class="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider"
-                  >
-                    Attendance
-                  </th>
                 </tr>
               </thead>
 
@@ -810,31 +780,6 @@ onMounted(fetchMyActivities);
                           : "Certificate Pending"
                       }}
                     </button>
-                  </td>
-
-                  <!-- Attendance input (training only) Desktop -->
-                  <td class="px-6 py-4 whitespace-nowrap text-sm">
-                    <div v-if="activity.type === 'training'" class="flex gap-2">
-                      <input
-                        v-model="activity.qrInput"
-                        type="text"
-                        placeholder="Enter attendance code"
-                        class="w-full px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                        :disabled="!isAttendanceEnabled(activity)"
-                      />
-                      <button
-                        @click="submitAttendance(activity)"
-                        :class="[
-                          'px-3 py-1 text-white rounded',
-                          isAttendanceEnabled(activity)
-                            ? 'bg-customButton hover:bg-blue-600'
-                            : 'bg-gray-400 cursor-not-allowed',
-                        ]"
-                        :disabled="!isAttendanceEnabled(activity)"
-                      >
-                        Submit
-                      </button>
-                    </div>
                   </td>
                 </tr>
               </tbody>
