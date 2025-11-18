@@ -172,7 +172,7 @@ export default {
         if (error.response?.status === 401) {
           alert(
             "Unauthorized. Please log in again. Error: " +
-              (error.response.data?.message || "Token invalid or expired")
+            (error.response.data?.message || "Token invalid or expired")
           );
         } else if (error.response?.status === 403) {
           alert(
@@ -181,7 +181,7 @@ export default {
         } else {
           alert(
             error.response?.data?.message ||
-              "An error occurred while fetching applicants. Please try again."
+            "An error occurred while fetching applicants. Please try again."
           );
         }
         this.applicantsList = [];
@@ -209,7 +209,7 @@ export default {
       try {
         const response = await axios.put(
           import.meta.env.VITE_API_BASE_URL +
-            `/applications/${person.id}/status`,
+          `/applications/${person.id}/status`,
           { status: person.status },
           {
             headers: {
@@ -239,7 +239,7 @@ export default {
         if (error.response?.status === 401) {
           alert(
             "Unauthorized. Please log in again. Error: " +
-              (error.response.data?.message || "Token invalid or expired")
+            (error.response.data?.message || "Token invalid or expired")
           );
         } else if (error.response?.status === 403) {
           alert(
@@ -248,7 +248,7 @@ export default {
         } else {
           alert(
             error.response?.data?.message ||
-              "Failed to update application status. Please try again."
+            "Failed to update application status. Please try again."
           );
         }
       }
@@ -277,9 +277,8 @@ export default {
 
     downloadRequirements(applicationID) {
       axios({
-        url: `${
-          import.meta.env.VITE_API_BASE_URL
-        }/applications/${applicationID}/requirement`,
+        url: `${import.meta.env.VITE_API_BASE_URL
+          }/applications/${applicationID}/requirement`,
         method: "GET",
         responseType: "mediumblob",
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -355,7 +354,7 @@ export default {
 
         const response = await axios.put(
           import.meta.env.VITE_API_BASE_URL +
-            `/applications/${this.selectedPerson.id}/interview`,
+          `/applications/${this.selectedPerson.id}/interview`,
           payload,
           {
             headers: {
@@ -422,7 +421,7 @@ export default {
         if (error.response?.status === 401) {
           alert(
             "Unauthorized. Please log in again. Error: " +
-              (error.response.data?.message || "Token invalid or expired")
+            (error.response.data?.message || "Token invalid or expired")
           );
         } else if (error.response?.status === 403) {
           alert(
@@ -431,13 +430,13 @@ export default {
         } else if (error.response?.status === 422) {
           alert(
             "Validation error: " +
-              (error.response.data?.message ||
-                "Please check your input and try again.")
+            (error.response.data?.message ||
+              "Please check your input and try again.")
           );
         } else {
           alert(
             error.response?.data?.message ||
-              "Failed to schedule interview. Please try again."
+            "Failed to schedule interview. Please try again."
           );
         }
       }
@@ -683,7 +682,7 @@ export default {
 
           const response = await axios.put(
             import.meta.env.VITE_API_BASE_URL +
-              `/careers/${this.careerToEditId}`,
+            `/careers/${this.careerToEditId}`,
             payload,
             { headers: { Authorization: `Bearer ${token}` } }
           );
@@ -826,15 +825,18 @@ export default {
 
     async fetchCareers() {
       try {
-        const response = await axios.get(
-          import.meta.env.VITE_API_BASE_URL + "/careers"
-        );
+        const response = await api.get("/organization/careers");
+        const newCareers = response.data;
 
-        // Normalize so every career has a careerID
-        this.upcomingCareers = response.data.map((career) => ({
-          ...career,
-          careerID: career.careerID ?? career.id ?? career._id, // take whichever exists
-        }));
+        newCareers.forEach(career => {
+          const existingIndex = this.upcomingCareers.findIndex(c => c.careerID === career.careerID);
+
+          if (existingIndex > -1) {
+            this.upcomingCareers[existingIndex] = { ...this.upcomingCareers[existingIndex], ...career };
+          } else {
+            this.upcomingCareers.push(career);
+          }
+        });
       } catch (error) {
         console.error("ERROR FETCHING CAREERS:", error);
       }
@@ -977,7 +979,7 @@ export default {
           } else {
             alert(
               "Server error: " +
-                (error.response.data.message || "Please try again.")
+              (error.response.data.message || "Please try again.")
             );
           }
         } else if (error.request) {
@@ -1168,11 +1170,7 @@ async function viewRequirement(id) {
 <template>
   <div class="organization-careers">
     <!-- Hamburger Toggle -->
-    <button
-      class="hamburger"
-      @click="toggleSidebar"
-      :class="{ open: isSidebarOpen, shifted: isSidebarOpen }"
-    >
+    <button class="hamburger" @click="toggleSidebar" :class="{ open: isSidebarOpen, shifted: isSidebarOpen }">
       <span></span>
       <span></span>
       <span></span>
@@ -1194,17 +1192,10 @@ async function viewRequirement(id) {
             <div class="profile-actions">
               <div class="action" @click="navigateTo({ name: 'OrgProfile' })">
                 <!-- Update Profile Icon -->
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M11.7278 8.27191C12.7534 9.87525 14.1247 11.2375 15.7464 12.2534L8.85673 19.144C8.43166 19.569 8.21841 19.7816 7.95731 19.9213C7.69637 20.0609 7.40171 20.1199 6.81278 20.2377L3.73563 20.853C3.40302 20.9195 3.23649 20.9525 3.14188 20.8578C3.04759 20.7632 3.08035 20.5971 3.14677 20.2651L3.76298 17.1879C3.88087 16.5985 3.93965 16.3035 4.07938 16.0424C4.21912 15.7814 4.43173 15.569 4.85673 15.144L11.7278 8.27191ZM16.1116 4.03656C16.6711 3.75929 17.3284 3.75931 17.888 4.03656C18.1821 4.18229 18.455 4.45518 19.0003 5.00043C19.5453 5.54545 19.8184 5.81774 19.9641 6.11175C20.2414 6.67123 20.2413 7.32861 19.9641 7.88812C19.8184 8.18221 19.5455 8.45517 19.0003 9.00043L17.2034 10.7963C15.5308 9.84498 14.1456 8.46859 13.1819 6.81781L15.0003 5.00043C15.5453 4.45539 15.8176 4.18234 16.1116 4.03656Z"
-                    fill="#FFFDFD"
-                  />
+                    fill="#FFFDFD" />
                 </svg>
                 <span>Update Profile</span>
               </div>
@@ -1213,98 +1204,49 @@ async function viewRequirement(id) {
         </transition>
 
         <div class="icon" @click="navigateTo('/organization')">
-          <svg
-            width="30"
-            height="30"
-            viewBox="0 0 30 30"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+          <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M6.25 17.0585C6.25 16.0494 6.25 15.5448 6.47166 15.1141C6.69333 14.6833 7.1039 14.3901 7.92505 13.8035L13.8375 9.58034C14.3989 9.17938 14.6795 8.9789 15 8.9789C15.3205 8.9789 15.6011 9.17938 16.1625 9.58034L22.075 13.8035C22.8961 14.3901 23.3067 14.6833 23.5283 15.1141C23.75 15.5448 23.75 16.0494 23.75 17.0585V24.25C23.75 25.1928 23.75 25.6642 23.4571 25.9571C23.1642 26.25 22.6928 26.25 21.75 26.25H8.25C7.30719 26.25 6.83579 26.25 6.54289 25.9571C6.25 25.6642 6.25 25.1928 6.25 24.25V17.0585Z"
-              fill="white"
-            />
+              fill="white" />
             <path
               d="M3.75 15.6366C3.75 15.9035 3.75 16.0369 3.8341 16.0781C3.91819 16.1192 4.02352 16.0373 4.23418 15.8734L13.7721 8.45502C14.362 7.99625 14.6569 7.76686 15 7.76686C15.3431 7.76686 15.638 7.99625 16.2279 8.45502L25.7658 15.8734C25.9765 16.0373 26.0818 16.1192 26.1659 16.0781C26.25 16.0369 26.25 15.9035 26.25 15.6366V14.7282C26.25 14.2478 26.25 14.0076 26.1483 13.7997C26.0466 13.5918 25.857 13.4444 25.4779 13.1495L16.2279 5.95502C15.638 5.49625 15.3431 5.26686 15 5.26686C14.6569 5.26686 14.362 5.49625 13.7721 5.95502L4.52212 13.1495C4.14295 13.4444 3.95337 13.5918 3.85168 13.7997C3.75 14.0076 3.75 14.2478 3.75 14.7282V15.6366Z"
-              fill="white"
-            />
+              fill="white" />
             <path
               d="M16.125 18.75H13.875C12.7704 18.75 11.875 19.6454 11.875 20.75V26.1C11.875 26.1828 11.9422 26.25 12.025 26.25H17.975C18.0578 26.25 18.125 26.1828 18.125 26.1V20.75C18.125 19.6454 17.2296 18.75 16.125 18.75Z"
-              fill="white"
-            />
-            <rect
-              x="20"
-              y="6.25"
-              width="2.5"
-              height="5"
-              rx="0.5"
-              fill="white"
-            />
+              fill="white" />
+            <rect x="20" y="6.25" width="2.5" height="5" rx="0.5" fill="white" />
           </svg>
           <span>Home</span>
         </div>
         <div class="icon" @click="navigateTo({ name: 'OrgTrainings' })">
-          <svg
-            width="29"
-            height="29"
-            viewBox="0 0 29 29"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+          <svg width="29" height="29" viewBox="0 0 29 29" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M20.5837 3.625C23.4119 3.625 24.8261 3.62526 25.7048 4.50391C26.5833 5.3826 26.5837 6.79675 26.5837 9.625V19.375C26.5837 22.2033 26.5833 23.6174 25.7048 24.4961C24.8261 25.3747 23.4119 25.375 20.5837 25.375H8.41666C5.58824 25.375 4.17425 25.3748 3.29557 24.4961C2.41689 23.6174 2.41666 22.2034 2.41666 19.375V9.625C2.41666 6.79657 2.41689 5.38259 3.29557 4.50391C4.17425 3.62523 5.58824 3.625 8.41666 3.625H20.5837ZM9.66666 12.292C9.11438 12.292 8.66666 12.7397 8.66666 13.292V20.542L8.67155 20.6445C8.72303 21.1485 9.1491 21.542 9.66666 21.542C10.1842 21.542 10.6103 21.1485 10.6618 20.6445L10.6667 20.542V13.292C10.6667 12.7397 10.2189 12.292 9.66666 12.292ZM19.3337 9.875C18.7814 9.875 18.3337 10.3227 18.3337 10.875V20.542L18.3385 20.6436C18.3896 21.148 18.8158 21.542 19.3337 21.542C19.8514 21.5418 20.2778 21.1479 20.3288 20.6436L20.3337 20.542V10.875C20.3337 10.3228 19.8858 9.87518 19.3337 9.875ZM14.4997 14.708C13.9476 14.7082 13.4998 15.156 13.4997 15.708V20.541L13.5046 20.6436C13.5557 21.1477 13.982 21.5408 14.4997 21.541C15.0175 21.541 15.4436 21.1478 15.4948 20.6436L15.4997 20.541V15.708C15.4995 15.1559 15.0518 14.708 14.4997 14.708Z"
-              fill="white"
-            />
+              fill="white" />
           </svg>
           <span>Trainings</span>
         </div>
         <div class="icon" @click="navigateTo({ name: 'OrgCareers' })">
-          <svg
-            width="25"
-            height="25"
-            viewBox="0 0 25 25"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+          <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M22.8798 11.0484C23.4046 10.8642 23.9845 11.1431 24.1081 11.6855C24.4792 13.3134 24.4217 15.0018 23.9268 16.6191C23.4739 18.0989 22.6698 19.4685 21.5787 20.6449C21.2148 21.0372 20.6017 21.0197 20.2239 20.6408L14.9487 15.3495C14.4292 14.8284 14.6314 13.9436 15.3257 13.6999L22.8798 11.0484ZM13 4.0826C13 3.50231 13.4932 3.04057 14.0672 3.12592C15.8633 3.39302 17.5788 4.00579 19.085 4.93161C20.3794 5.72731 21.4793 6.72976 22.3343 7.87824C22.709 8.38157 22.4513 9.07932 21.8592 9.28718L14.3313 11.9301C13.6809 12.1584 13 11.6758 13 10.9865V4.0826Z"
-              fill="white"
-            />
+              fill="white" />
             <path
               d="M11.9511 13.2908C11.9512 13.5763 12.0581 13.8518 12.25 14.0632L19.2677 21.7886C19.6714 22.233 19.5963 22.9337 19.0759 23.2331C18.245 23.7112 17.354 24.0924 16.4209 24.365C14.5402 24.9144 12.5476 25.0087 10.6201 24.6394C8.69236 24.2701 6.88846 23.4478 5.36911 22.2468C3.84993 21.0459 2.66126 19.5025 1.90915 17.7537C1.15711 16.0048 0.864996 14.1043 1.05759 12.2205C1.25024 10.3365 1.92171 8.52693 3.01364 6.95288C4.1056 5.37884 5.58398 4.08845 7.31735 3.19605C8.43484 2.62073 9.63633 2.22318 10.8757 2.01305C11.4515 1.91541 11.9511 2.37876 11.9511 2.96284V13.2908Z"
-              fill="white"
-            />
+              fill="white" />
           </svg>
           <span>Career</span>
         </div>
         <div class="icon" @click="navigateTo({ name: 'OrgCalendar' })">
-          <svg
-            width="26"
-            height="26"
-            viewBox="0 0 26 26"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M2.16675 9.4165C2.16675 7.53089 2.16675 6.58808 2.75253 6.00229C3.33832 5.4165 4.28113 5.4165 6.16675 5.4165H19.8334C21.719 5.4165 22.6618 5.4165 23.2476 6.00229C23.8334 6.58808 23.8334 7.53089 23.8334 9.4165V9.83317C23.8334 10.3046 23.8334 10.5403 23.687 10.6867C23.5405 10.8332 23.3048 10.8332 22.8334 10.8332H3.16675C2.69534 10.8332 2.45964 10.8332 2.31319 10.6867C2.16675 10.5403 2.16675 10.3046 2.16675 9.83317V9.4165Z"
-              fill="white"
-            />
+              fill="white" />
             <path
               d="M22.833 13C23.3042 13 23.5401 13.0002 23.6865 13.1465C23.833 13.2929 23.833 13.5286 23.833 14V19.833C23.833 21.7186 23.8329 22.6613 23.2471 23.2471C22.6613 23.8329 21.7186 23.833 19.833 23.833H6.16699C4.28137 23.833 3.33872 23.8329 2.75293 23.2471C2.16714 22.6613 2.16699 21.7186 2.16699 19.833V14C2.16699 13.5286 2.16703 13.2929 2.31348 13.1465C2.45994 13.0002 2.69576 13 3.16699 13H22.833ZM8.58301 19.5C8.11182 19.5 7.87591 19.5001 7.72949 19.6465C7.58321 19.7929 7.58301 20.0288 7.58301 20.5V20.667C7.58301 21.1382 7.58308 21.3741 7.72949 21.5205C7.87591 21.6669 8.11182 21.667 8.58301 21.667H10.917C11.3882 21.667 11.6241 21.6669 11.7705 21.5205C11.9169 21.3741 11.917 21.1382 11.917 20.667V20.5C11.917 20.0288 11.9168 19.7929 11.7705 19.6465C11.6241 19.5001 11.3882 19.5 10.917 19.5H8.58301ZM15.083 19.5C14.6118 19.5 14.3759 19.5001 14.2295 19.6465C14.0832 19.7929 14.083 20.0288 14.083 20.5V20.667C14.083 21.1382 14.0831 21.3741 14.2295 21.5205C14.3759 21.6669 14.6118 21.667 15.083 21.667H17.417C17.8882 21.667 18.1241 21.6669 18.2705 21.5205C18.4169 21.3741 18.417 21.1382 18.417 20.667V20.5C18.417 20.0288 18.4168 19.7929 18.2705 19.6465C18.1241 19.5001 17.8882 19.5 17.417 19.5H15.083ZM8.58301 15.167C8.11182 15.167 7.87591 15.1671 7.72949 15.3135C7.58337 15.4599 7.58301 15.6959 7.58301 16.167V16.333C7.58301 16.8041 7.58337 17.0401 7.72949 17.1865C7.87591 17.3329 8.11182 17.333 8.58301 17.333H10.917C11.3882 17.333 11.6241 17.3329 11.7705 17.1865C11.9166 17.0401 11.917 16.8041 11.917 16.333V16.167C11.917 15.6959 11.9166 15.4599 11.7705 15.3135C11.6241 15.1671 11.3882 15.167 10.917 15.167H8.58301ZM15.083 15.167C14.6118 15.167 14.3759 15.1671 14.2295 15.3135C14.0834 15.4599 14.083 15.6959 14.083 16.167V16.333C14.083 16.8041 14.0834 17.0401 14.2295 17.1865C14.3759 17.3329 14.6118 17.333 15.083 17.333H17.417C17.8882 17.333 18.1241 17.3329 18.2705 17.1865C18.4166 17.0401 18.417 16.8041 18.417 16.333V16.167C18.417 15.6959 18.4166 15.4599 18.2705 15.3135C18.1241 15.1671 17.8882 15.167 17.417 15.167H15.083Z"
-              fill="white"
-            />
-            <path
-              d="M7.58325 3.25L7.58325 6.5"
-              stroke="white"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-            <path
-              d="M18.4167 3.25L18.4167 6.5"
-              stroke="white"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
+              fill="white" />
+            <path d="M7.58325 3.25L7.58325 6.5" stroke="white" stroke-width="2" stroke-linecap="round" />
+            <path d="M18.4167 3.25L18.4167 6.5" stroke="white" stroke-width="2" stroke-linecap="round" />
           </svg>
           <span>Calendar</span>
         </div>
@@ -1312,17 +1254,8 @@ async function viewRequirement(id) {
         <div class="spacer"></div>
         <!-- pushes signout down -->
         <div class="icon signout" @click="logout">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
             <polyline points="16 17 21 12 16 7"></polyline>
             <line x1="21" y1="12" x2="9" y2="12"></line>
@@ -1343,12 +1276,8 @@ async function viewRequirement(id) {
       <!-- ✅ GLOBAL SEARCH -->
       <section class="global-search-section">
         <div class="flex justify-center my-6 px-4">
-          <input
-            type="text"
-            v-model="globalSearchQuery"
-            placeholder=" Search careers..."
-            class="global-search-bar text-black px-4 py-2 rounded-lg w-full sm:w-3/4 md:w-1/2 lg:w-1/3"
-          />
+          <input type="text" v-model="globalSearchQuery" placeholder=" Search careers..."
+            class="global-search-bar text-black px-4 py-2 rounded-lg w-full sm:w-3/4 md:w-1/2 lg:w-1/3" />
         </div>
       </section>
 
@@ -1363,12 +1292,8 @@ async function viewRequirement(id) {
         </div>
 
         <div class="career-grid">
-          <div
-            class="career-card"
-            v-for="career in visibleFilteredUpcoming"
-            :key="career.careerID || career.id"
-            @click="openCareerDetails(career)"
-          >
+          <div class="career-card" v-for="career in visibleFilteredUpcoming" :key="career.careerID || career.id"
+            @click="openCareerDetails(career)">
             <div class="career-right">
               <h3 class="career-title">{{ career.position }}</h3>
               <p class="career-deadline">
@@ -1377,17 +1302,10 @@ async function viewRequirement(id) {
             </div>
 
             <div class="menu">
-              <div
-                class="menu-icon"
-                @click.stop="toggleUpcomingMenu(career.careerID || career.id)"
-              >
+              <div class="menu-icon" @click.stop="toggleUpcomingMenu(career.careerID || career.id)">
                 ⋮
               </div>
-              <div
-                v-if="openUpcomingMenu === (career.careerID || career.id)"
-                class="dropdown-menu"
-                @click.stop
-              >
+              <div v-if="openUpcomingMenu === (career.careerID || career.id)" class="dropdown-menu" @click.stop>
                 <ul>
                   <li @click="deleteCareer(career)">Delete Career</li>
                   <li @click="openCareerPopup(career)">Update Career</li>
@@ -1397,11 +1315,8 @@ async function viewRequirement(id) {
           </div>
         </div>
 
-        <button
-          v-if="sortedUpcomingCareers.length > 4"
-          class="show-more-btn"
-          @click="showAllUpcoming = !showAllUpcoming"
-        >
+        <button v-if="sortedUpcomingCareers.length > 4" class="show-more-btn"
+          @click="showAllUpcoming = !showAllUpcoming">
           {{ showAllUpcoming ? "Show Less" : "Show More" }}
         </button>
       </section>
@@ -1416,12 +1331,8 @@ async function viewRequirement(id) {
         </div>
 
         <div class="career-grid">
-          <div
-            class="career-card"
-            v-for="career in visibleFilteredCompleted"
-            :key="career.careerID || career.id"
-            @click="openCareerDetails(career)"
-          >
+          <div class="career-card" v-for="career in visibleFilteredCompleted" :key="career.careerID || career.id"
+            @click="openCareerDetails(career)">
             <div class="career-right">
               <h3 class="career-title">
                 {{ career.title || career.position }}
@@ -1432,17 +1343,10 @@ async function viewRequirement(id) {
             </div>
 
             <div class="menu">
-              <div
-                class="menu-icon"
-                @click.stop="toggleCompletedMenu(career.careerID || career.id)"
-              >
+              <div class="menu-icon" @click.stop="toggleCompletedMenu(career.careerID || career.id)">
                 ⋮
               </div>
-              <div
-                v-if="openCompletedMenu === (career.careerID || career.id)"
-                class="dropdown-menu"
-                @click.stop
-              >
+              <div v-if="openCompletedMenu === (career.careerID || career.id)" class="dropdown-menu" @click.stop>
                 <ul>
                   <li @click="deleteCareer(career)">Delete Career</li>
                 </ul>
@@ -1451,21 +1355,14 @@ async function viewRequirement(id) {
           </div>
         </div>
 
-        <button
-          v-if="sortedCompletedCareers.length > 4"
-          class="show-more-btn"
-          @click="showAllCompleted = !showAllCompleted"
-        >
+        <button v-if="sortedCompletedCareers.length > 4" class="show-more-btn"
+          @click="showAllCompleted = !showAllCompleted">
           {{ showAllCompleted ? "Show Less" : "Show More" }}
         </button>
       </section>
 
       <!-- Applicants Modal -->
-      <div
-        v-if="showApplicantsModal"
-        class="modal-overlay"
-        @click.self="closeModal"
-      >
+      <div v-if="showApplicantsModal" class="modal-overlay" @click.self="closeModal">
         <div class="modal-content">
           <button class="modal-close-btn" @click="closeModal">✕</button>
           <h3 class="modal-title">
@@ -1499,11 +1396,7 @@ async function viewRequirement(id) {
                     <p class="application-date">{{ person.dateSubmitted }}</p>
                   </td>
                   <td>
-                    <select
-                      v-model="person.status"
-                      @change="updateApplicationStatus(person)"
-                      class="status-dropdown"
-                    >
+                    <select v-model="person.status" @change="updateApplicationStatus(person)" class="status-dropdown">
                       <option value="submitted">
                         {{ displayStatus("submitted") }}
                       </option>
@@ -1522,51 +1415,35 @@ async function viewRequirement(id) {
                     </select>
                   </td>
                   <td class="requirements-col">
-                    <button
-                      v-if="person.requirements"
-                      class="download-btn"
-                      @click="
-                        console.log('PERSON OBJECT:', person);
-                        downloadRequirements(person.id, person.requirements);
-                      "
-                    >
+                    <button v-if="person.requirements" class="download-btn" @click="
+                      console.log('PERSON OBJECT:', person);
+                    downloadRequirements(person.id, person.requirements);
+                    ">
                       Download Requirements
                     </button>
 
                     <span v-else>No requirements</span>
                   </td>
                   <td>
-                    <button
-                      v-if="
-                        person.status === 'for interview' &&
-                        !person.interviewSchedule
-                      "
-                      class="schedule-btn"
-                      @click="openScheduleModal(person)"
-                    >
+                    <button v-if="
+                      person.status === 'for interview' &&
+                      !person.interviewSchedule
+                    " class="schedule-btn" @click="openScheduleModal(person)">
                       Schedule
                     </button>
-                    <button
-                      v-else-if="
-                        person.status === 'for interview' &&
-                        person.interviewSchedule
-                      "
-                      class="schedule-btn"
-                      disabled
-                    >
+                    <button v-else-if="
+                      person.status === 'for interview' &&
+                      person.interviewSchedule
+                    " class="schedule-btn" disabled>
                       Scheduled
                     </button>
                     <span v-else>-</span>
                   </td>
                   <td>
-                    <button
-                      v-if="
-                        person.status === 'for interview' &&
-                        person.interviewSchedule
-                      "
-                      class="schedule-btn view"
-                      @click="openViewScheduleModal(person)"
-                    >
+                    <button v-if="
+                      person.status === 'for interview' &&
+                      person.interviewSchedule
+                    " class="schedule-btn view" @click="openViewScheduleModal(person)">
                       View Schedule
                     </button>
                     <span v-else>-</span>
@@ -1579,11 +1456,7 @@ async function viewRequirement(id) {
       </div>
 
       <!-- Schedule Modal -->
-      <div
-        v-if="showScheduleModal"
-        class="modal-overlay"
-        @click.self="closeScheduleModal"
-      >
+      <div v-if="showScheduleModal" class="modal-overlay" @click.self="closeScheduleModal">
         <div class="modal-box">
           <button class="modal-close-btn" @click="closeScheduleModal">✕</button>
           <h3>Schedule Interview for {{ selectedPerson?.name }}</h3>
@@ -1592,86 +1465,40 @@ async function viewRequirement(id) {
             <!-- Date & Time -->
             <label for="scheduleDate">Date & Time:</label>
             <div class="date-input-wrapper">
-              <input
-                id="scheduleDate"
-                ref="dateInput"
-                type="datetime-local"
-                v-model="scheduleData.date"
-                @keydown.prevent
-                @keypress.prevent
-                @paste.prevent
-                @input="$event.target.value = $event.target.value"
-              />
+              <input id="scheduleDate" ref="dateInput" type="datetime-local" v-model="scheduleData.date"
+                @keydown.prevent @keypress.prevent @paste.prevent @input="$event.target.value = $event.target.value" />
               <span class="calendar-icon" @click.prevent="openCalendar">
                 <!-- SVG icon (click target is the span) -->
-                <svg
-                  width="26"
-                  height="26"
-                  viewBox="0 0 26 26"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+                <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M2.16669 9.41675C2.16669 7.53113 2.16669 6.58832 2.75247 6.00253C3.33826 5.41675 4.28107 5.41675 6.16669 5.41675H19.8334C21.719 5.41675 22.6618 5.41675 23.2476 6.00253C23.8334 6.58832 23.8334 7.53113 23.8334 9.41675V9.83342C23.8334 10.3048 23.8334 10.5405 23.6869 10.687C23.5405 10.8334 23.3048 10.8334 22.8334 10.8334H3.16669C2.69528 10.8334 2.45958 10.8334 2.31313 10.687C2.16669 10.5405 2.16669 10.3048 2.16669 9.83341V9.41675Z"
-                    fill="black"
-                  />
+                    fill="black" />
                   <path
                     d="M22.833 13C23.3042 13 23.5401 13.0002 23.6865 13.1465C23.833 13.2929 23.833 13.5286 23.833 14V19.833C23.833 21.7186 23.8329 22.6613 23.2471 23.2471C22.6613 23.8329 21.7186 23.833 19.833 23.833H6.16699C4.28137 23.833 3.33872 23.8329 2.75293 23.2471C2.16714 22.6613 2.16699 21.7186 2.16699 19.833V14C2.16699 13.5286 2.16703 13.2929 2.31348 13.1465C2.45994 13.0002 2.69576 13 3.16699 13H22.833Z"
-                    fill="black"
-                  />
-                  <path
-                    d="M7.58331 3.25L7.58331 6.5"
-                    stroke="black"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  />
-                  <path
-                    d="M18.4167 3.25L18.4167 6.5"
-                    stroke="black"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  />
+                    fill="black" />
+                  <path d="M7.58331 3.25L7.58331 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
+                  <path d="M18.4167 3.25L18.4167 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
                 </svg>
               </span>
             </div>
 
             <!-- Interview Mode -->
             <div class="mode-selection">
-              <label
-                ><input
-                  type="radio"
-                  value="onSite"
-                  v-model="scheduleData.mode"
-                />
-                On-Site</label
-              >
-              <label
-                ><input
-                  type="radio"
-                  value="online"
-                  v-model="scheduleData.mode"
-                />
-                Online</label
-              >
+              <label><input type="radio" value="onSite" v-model="scheduleData.mode" />
+                On-Site</label>
+              <label><input type="radio" value="online" v-model="scheduleData.mode" />
+                Online</label>
             </div>
 
             <!-- Conditional Fields -->
             <div v-if="scheduleData.mode === 'onSite'">
               <label>Location:</label>
-              <input
-                type="text"
-                v-model="scheduleData.detail"
-                placeholder="Enter interview location"
-              />
+              <input type="text" v-model="scheduleData.detail" placeholder="Enter interview location" />
             </div>
 
             <div v-else-if="scheduleData.mode === 'online'">
               <label>Interview Link:</label>
-              <input
-                type="text"
-                v-model="scheduleData.detail"
-                placeholder="https://meet.google.com/..."
-              />
+              <input type="text" v-model="scheduleData.detail" placeholder="https://meet.google.com/..." />
             </div>
 
             <div class="modal-actions">
@@ -1687,11 +1514,7 @@ async function viewRequirement(id) {
       </div>
 
       <!-- View Schedule Modal -->
-      <div
-        v-if="showViewScheduleModal"
-        class="modal-overlay"
-        @click.self="closeViewScheduleModal"
-      >
+      <div v-if="showViewScheduleModal" class="modal-overlay" @click.self="closeViewScheduleModal">
         <div class="modal-box">
           <button class="modal-close-btn" @click="closeViewScheduleModal">
             ✕
@@ -1707,26 +1530,18 @@ async function viewRequirement(id) {
               <strong>Mode:</strong> {{ selectedPerson.interviewMode }}
             </p>
 
-            <p
-              v-if="
-                selectedPerson.interviewMode === 'On-Site' &&
-                selectedPerson.interviewLocation
-              "
-            >
+            <p v-if="
+              selectedPerson.interviewMode === 'On-Site' &&
+              selectedPerson.interviewLocation
+            ">
               <strong>Location:</strong> {{ selectedPerson.interviewLocation }}
             </p>
-            <p
-              v-else-if="
-                selectedPerson.interviewMode === 'Online' &&
-                selectedPerson.interviewLink
-              "
-            >
+            <p v-else-if="
+              selectedPerson.interviewMode === 'Online' &&
+              selectedPerson.interviewLink
+            ">
               <strong>Interview Link:</strong>
-              <a
-                :href="selectedPerson.interviewLink"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <a :href="selectedPerson.interviewLink" target="_blank" rel="noopener noreferrer">
                 {{ selectedPerson.interviewLink }}
               </a>
             </p>
@@ -1755,44 +1570,17 @@ async function viewRequirement(id) {
 
           <form @submit.prevent="saveCareer" class="Career-popup-form">
             <!-- Inputs -->
-            <input
-              v-model="newCareer.position"
-              type="text"
-              placeholder="Position"
-              class="career-input"
-            />
-            <input
-              v-model="newCareer.details"
-              type="text"
-              placeholder="Details and Instruction"
-              class="career-input"
-            />
-            <textarea
-              v-model="newCareer.qualifications"
-              placeholder="Qualifications"
-              class="career-input"
-            ></textarea>
-            <textarea
-              v-model="newCareer.requirements"
-              placeholder="Requirements"
-              class="career-input"
-            ></textarea>
-            <input
-              v-model="newCareer.letterAddress"
-              type="text"
-              placeholder="Application Letter Address"
-              class="career-input"
-            />
+            <input v-model="newCareer.position" type="text" placeholder="Position" class="career-input" />
+            <input v-model="newCareer.details" type="text" placeholder="Details and Instruction" class="career-input" />
+            <textarea v-model="newCareer.qualifications" placeholder="Qualifications" class="career-input"></textarea>
+            <textarea v-model="newCareer.requirements" placeholder="Requirements" class="career-input"></textarea>
+            <input v-model="newCareer.letterAddress" type="text" placeholder="Application Letter Address"
+              class="career-input" />
 
             <!-- Deadline -->
             <div class="deadline-input-wrapper">
-              <input
-                type="date"
-                v-model="newCareer.deadline"
-                :min="todayDate"
-                placeholder="Deadline of Submission"
-                class="career-input"
-              />
+              <input type="date" v-model="newCareer.deadline" :min="todayDate" placeholder="Deadline of Submission"
+                class="career-input" />
               <span class="calendar-icon">
                 <!-- SVG omitted for brevity -->
               </span>
@@ -1803,43 +1591,24 @@ async function viewRequirement(id) {
               <label class="block font-semibold text-gray-600 mb-2">Tags</label>
               <div class="tag-list-wrapper">
                 <div class="tag-list">
-                  <span
-                    v-for="tag in tagOptions"
-                    :key="tag.TagID"
-                    class="tag-chip"
-                    @click="toggleTag(tag.TagID)"
-                    :class="{ 'tag-chip-selected': isTagSelected(tag.TagID) }"
-                  >
+                  <span v-for="tag in tagOptions" :key="tag.TagID" class="tag-chip" @click="toggleTag(tag.TagID)"
+                    :class="{ 'tag-chip-selected': isTagSelected(tag.TagID) }">
                     {{ tag.TagName }}
                   </span>
                 </div>
               </div>
 
-              <div
-                v-if="newCareer.Tags.length"
-                class="flex flex-wrap gap-2 mt-2"
-              >
-                <span
-                  v-for="tagID in newCareer.Tags"
-                  :key="tagID"
-                  class="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-full"
-                >
+              <div v-if="newCareer.Tags.length" class="flex flex-wrap gap-2 mt-2">
+                <span v-for="tagID in newCareer.Tags" :key="tagID"
+                  class="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-full">
                   {{ getTagName(tagID) }}
-                  <button
-                    @click.stop="removeTag(tagID)"
-                    class="ml-1 text-red-500"
-                  >
+                  <button @click.stop="removeTag(tagID)" class="ml-1 text-red-500">
                     ×
                   </button>
                 </span>
               </div>
 
-              <input
-                v-model="newTagName"
-                type="text"
-                placeholder="Add new tag"
-                class="career-input mt-2"
-              />
+              <input v-model="newTagName" type="text" placeholder="Add new tag" class="career-input mt-2" />
               <button @click.prevent="addTag" class="career-save-btn mt-2">
                 Add Tag
               </button>
@@ -1854,11 +1623,7 @@ async function viewRequirement(id) {
       </div>
 
       <!-- Career Details Modal -->
-      <div
-        v-if="showCareerDetailsModal"
-        class="modal-overlay"
-        @click.self="closeCareerDetails"
-      >
+      <div v-if="showCareerDetailsModal" class="modal-overlay" @click.self="closeCareerDetails">
         <div class="career-details-modal">
           <button class="modal-close-btn" @click="closeCareerDetails">✕</button>
           <h3 class="modal-title">{{ selectedCareer.title }}</h3>
@@ -1884,10 +1649,7 @@ async function viewRequirement(id) {
             {{ formatdeadline(selectedCareer.deadlineOfSubmission) }}
           </p>
           <div class="career-actions">
-            <button
-              class="btn-view-applicants"
-              @click="handleViewApplicants(selectedCareer)"
-            >
+            <button class="btn-view-applicants" @click="handleViewApplicants(selectedCareer)">
               View Applicants
             </button>
           </div>
@@ -2416,7 +2178,7 @@ async function viewRequirement(id) {
   line-height: 1.4;
 }
 
-.dropdown-menu li + li {
+.dropdown-menu li+li {
   border-top: 1px solid #eee;
 }
 
@@ -2895,7 +2657,7 @@ tbody td {
 }
 
 /* Rejected Applicants - Blur Effect */
-.status-rejected + .interview-col .schedule-btn {
+.status-rejected+.interview-col .schedule-btn {
   filter: blur(1.2px) brightness(0.85);
   opacity: 0.6;
   pointer-events: none;

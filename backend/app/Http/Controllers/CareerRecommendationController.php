@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\Log;
 class CareerRecommendationController extends Controller
 {
     // Display list of careers
-    public function index()
+    public function index(Request $request)
     {
-        $careers = DB::table('career as c')
+        $query = DB::table('career as c')
             ->join('organization as o', 'c.organizationID', '=', 'o.organizationID')
             ->select(
                 'c.careerID',
@@ -23,8 +23,13 @@ class CareerRecommendationController extends Controller
                 'c.requirements',
                 'c.applicationLetterAddress',
                 'c.deadlineOfSubmission'
-            )
-            ->get();
+            );
+
+        if ($request->has('organizationID')) {
+            $query->where('c.organizationID', $request->organizationID);
+        }
+
+        $careers = $query->get();
 
         return response()->json($careers);
     }
