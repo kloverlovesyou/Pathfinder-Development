@@ -146,7 +146,7 @@ async function submitApplication() {
       }
     );
 
-    addToast("FAILED TO SUBMIT APPLICATION", "accent");
+    addToast("APPLICATION SUBMITTED SUCCESSFULLY", "success");
     const id = props.career.careerID ?? props.career.id;
     props.myApplications.add(id);
     emits("update-applications", new Set(props.myApplications));
@@ -161,7 +161,7 @@ async function submitApplication() {
     } else if (error.response?.status === 422) {
       addToast("INVALID INPUT. ONLY PDF UP TO 5MB", "accent");
     } else {
-      addToast("APPLICATION SUBMITTED SUCCESSFULLY", "success");
+      addToast("FAILED TO SUBMIT APPLICATION", "accent");
     }
   }
 }
