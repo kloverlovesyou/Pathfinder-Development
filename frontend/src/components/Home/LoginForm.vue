@@ -182,7 +182,7 @@ const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
     }, 3000); // Toast disappears after 3s
   };
 
-  const handleLogin = async () => {
+const handleLogin = async () => {
   emailError.value = !validateEmail(email.value);
   passwordError.value = !validatePassword(password.value);
   loginError.value = "";
@@ -202,16 +202,16 @@ const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
     const token = response.data.token;
     const role = userData.role || (userData.adminID ? "organization" : "applicant");
 
-    // STOP login if pending
+    // Handle pending status
     if (role === "organization" && userData.status === "pending") {
       showToast("Your organization account is not yet approved by the admin.");
       return;
     }
 
-    // STOP login if rejected
+    // Handle rejected status with reason
     if (role === "organization" && userData.status === "rejected") {
-      // show the actual reason returned by backend
-      showToast(response.data.reason || "Your registration was rejected.");
+      const reason = response.data.reason; // backend returns rejection reason
+      showToast(`Your registration was rejected. Reason: ${reason}`);
       return;
     }
 
@@ -246,7 +246,8 @@ const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
     console.error(err.response?.data || err.message);
 
     if (err.response?.status === 403) {
-      showToast(err.response.data.reason || err.response.data.message);
+      const reason = err.response.data.reason;
+      showToast(reason ? `Your registration was rejected. Reason: ${reason}` : err.response.data.message);
       return;
     }
 
