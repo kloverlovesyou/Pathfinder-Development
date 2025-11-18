@@ -121,6 +121,7 @@ Route::middleware('auth.custom')->group(function () {
     
   
     Route::get('/trainings/{trainingID}', [TrainingController::class, 'show']);
+    Route::get('/organization/trainings', [TrainingController::class, 'organizationIndex']);
 
     // Organization-specific listings
     Route::get('/organization/careers', [CareerController::class, 'index']);
