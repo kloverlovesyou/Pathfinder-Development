@@ -936,7 +936,13 @@ export default {
 
     async fetchTrainings() {
       try {
-        const response = await api.get("/trainings");
+        const storedUser = localStorage.getItem("user");
+        const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+        const organizationID = parsedUser?.organizationID ?? parsedUser?.organization?.organizationID ?? null;
+
+        const response = await api.get("/trainings", {
+          params: organizationID ? { organizationID } : {},
+        });
         const newTrainings = response.data;
 
         newTrainings.forEach(training => {

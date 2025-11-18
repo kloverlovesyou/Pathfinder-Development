@@ -387,8 +387,13 @@ export default {
       const token = localStorage.getItem("token");
       if (!token) return;
 
+      const storedUser = localStorage.getItem("user");
+      const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+      const organizationID = parsedUser?.organizationID ?? parsedUser?.organization?.organizationID ?? null;
+
       const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/trainings", {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        params: organizationID ? { organizationID } : {},
       });
 
       this.trainings = res.data.map(t => {
@@ -415,7 +420,11 @@ export default {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/careers", {
+      const storedUser = localStorage.getItem("user");
+      const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+      const organizationID = parsedUser?.organizationID ?? parsedUser?.organization?.organizationID ?? null;
+
+      const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/organization/careers", {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       });
 
