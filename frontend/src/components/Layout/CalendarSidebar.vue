@@ -59,21 +59,35 @@ async function fetchCareerEvents() {
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
+    console.log("📋 Applications API response:", apps);
+    console.log("📋 First application sample:", apps[0]);
+
     // Filter only applications that have an interview schedule
     const careerEvents = apps
       .filter((app) => app.interviewSchedule) // skip applications without interviews
-      .map((app) => ({
-        id: app.applicationID,
-        careerID: app.careerID,
-        title: app.career?.position || "Career Interview",
-        date: new Date(app.interviewSchedule).toISOString().split("T")[0],
-        type: "career",
-        interviewSchedule: app.interviewSchedule,
-        interviewMode: app.interviewMode,
-        interviewLink: app.interviewLink,
-        interviewLocation: app.interviewLocation,
-        organization: app.career?.organization,
-      }));
+      .map((app) => {
+        // Debug: Log what fields are available
+        console.log("📋 Processing application:", {
+          applicationID: app.applicationID,
+          title: app.title,
+          careerPosition: app.career?.position,
+          hasCareer: !!app.career,
+          allKeys: Object.keys(app)
+        });
+
+        return {
+          id: app.applicationID,
+          careerID: app.careerID,
+          title: app.title || app.career?.position || "Career Interview", // Use title from API response first
+          date: new Date(app.interviewSchedule).toISOString().split("T")[0],
+          type: "career",
+          interviewSchedule: app.interviewSchedule,
+          interviewMode: app.interviewMode,
+          interviewLink: app.interviewLink,
+          interviewLocation: app.interviewLocation,
+          organization: app.organizationName || app.career?.organization?.name || app.career?.organization || "Unknown Organization",
+        };
+      });
 
     // Merge career events into your existing events map
     careerEvents.forEach((event) => {

@@ -32,7 +32,7 @@ class ApplicationController extends Controller
             'interviewLocation' => $app->interviewLocation,
             'detailsAndInstructions' => $app->career->detailsAndInstructions ?? null,
             'qualifications' => $app->career->qualifications ?? null,
-            'requirements' => $app->career->requirements ?? null,
+            'requirement_directory' => $app->career->requirement_directory ?? null,
             'applicationLetterAddress' => $app->career->applicationLetterAddress ?? null,
             'deadlineOfSubmission' => $app->career->deadlineOfSubmission ?? null,
             'status' => $app->applicationStatus,
@@ -47,64 +47,176 @@ class ApplicationController extends Controller
                     ->with('organization');
     }
     //create application
-    public function store(Request $request)
-    {
-        $user = $request->user();
+   public function store(Request $request)
+{
+    $user = $request->user();
 
-        $validated = $request->validate([
-            'careerID' => 'required|exists:career,careerID',
-            'requirements' => 'nullable|file|mimes:pdf|max:5120', //5mb
+    $validated = $request->validate([
+        'careerID' => 'required|exists:career,careerID',
+        'requirement_directory' => 'required|file|mimes:pdf|max:5120', // PDF required, max 5MB
+    ], [
+        'requirement_directory.required' => 'PDF file is required',
+        'requirement_directory.mimes' => 'Only PDF files are allowed',
+        'requirement_directory.max' => 'File size must be less than 5MB',
+    ]);
+    
+    // Log file info for debugging
+    if ($request->hasFile('requirement_directory')) {
+        $file = $request->file('requirement_directory');
+        Log::info('File received in request', [
+            'original_name' => $file->getClientOriginalName(),
+            'mime_type' => $file->getMimeType(),
+            'size' => $file->getSize(),
+            'is_valid' => $file->isValid(),
         ]);
+    } else {
+        Log::warning('No file received in request', [
+            'has_file' => $request->hasFile('requirement_directory'),
+            'all_files' => $request->allFiles(),
+        ]);
+    }
 
-        //prevent duplicates
-        $existing = Application::where('applicantID', $user->applicantID)
-            ->where('careerID', (int) $validated['careerID'])
-            ->first();
+    // prevent duplicates
+    $existing = Application::where('applicantID', $user->applicantID)
+        ->where('careerID', (int) $validated['careerID'])
+        ->first();
+
+    if ($existing) {
+        return response()->json([
+            'message' => 'ALREADY APPLIED',
+            'applicationID' => $existing->applicationID,
+        ], 409);
+    }
+
+    // store uploaded file
+    $requirementsPath = null;
+    if ($request->hasFile('requirement_directory')) {
+        $file = $request->file('requirement_directory');
         
-        if($existing){
-            return response()->json([
-                'message' => 'ALREADY APPLIED',
-                'applicationID' => $existing->applicationID,
-            ], 409);
+        // Ensure the requirements directory exists with proper permissions
+        $requirementsDir = storage_path('app/public/requirements');
+        if (!file_exists($requirementsDir)) {
+            if (!mkdir($requirementsDir, 0755, true)) {
+                Log::error('Failed to create requirements directory', ['path' => $requirementsDir]);
+                return response()->json(['message' => 'Failed to create storage directory'], 500);
+            }
         }
-
-        //store requirements pdf
-        $requirementsPath = null;
-        if($request->hasFile('requirements')){
-            //uses public disk, ensure filesystems.php has public disk configured
-            $file = $request->file('requirements');
-            // Use Storage facade to ensure correct path format
+        
+        // Check if directory is writable
+        if (!is_writable($requirementsDir)) {
+            Log::error('Requirements directory is not writable', ['path' => $requirementsDir]);
+            return response()->json(['message' => 'Storage directory is not writable'], 500);
+        }
+        
+        try {
+            // Store the file - putFile returns the path relative to the disk root
             $requirementsPath = Storage::disk('public')->putFile('requirements', $file);
             
-            // Log the stored path for debugging
-            Log::info('Requirements file stored', [
+            if (!$requirementsPath) {
+                throw new \Exception('Failed to store file - putFile returned null');
+            }
+            
+            // Verify file was actually saved - check both possible locations
+            $fullPath = Storage::disk('public')->path($requirementsPath);
+            $alternatePath = storage_path('app/public/' . $requirementsPath);
+            
+            $fileExists = file_exists($fullPath) || file_exists($alternatePath);
+            
+            if (!$fileExists) {
+                throw new \Exception('File was not saved to disk. Expected at: ' . $fullPath . ' or ' . $alternatePath);
+            }
+            
+            // Use the path that actually exists
+            $actualPath = file_exists($fullPath) ? $fullPath : $alternatePath;
+
+            Log::info('Requirements file stored successfully', [
                 'stored_path' => $requirementsPath,
-                'full_path' => Storage::disk('public')->path($requirementsPath),
-                'file_exists' => Storage::disk('public')->exists($requirementsPath)
+                'full_path' => $actualPath,
+                'file_exists' => $fileExists,
+                'file_size' => filesize($actualPath),
+                'original_name' => $file->getClientOriginalName(),
             ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to store requirements file', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'file_name' => $file->getClientOriginalName() ?? 'unknown',
+                'file_size' => $file->getSize() ?? 0,
+            ]);
+            // Return error - file is required
+            return response()->json([
+                'message' => 'Failed to save file: ' . $e->getMessage()
+            ], 500);
         }
+    }
 
+    try {
         $app = Application::create([
-        'requirements' => $requirementsPath,
-        'dateSubmitted' => Carbon::now(),
-        'applicationStatus' => 'Submitted',
-        'interviewSchedule' => null,
-        'interviewMode' => null,
-        'interviewLocation' => null,
-        'interviewLink' => null,
+            'requirement_directory' => $requirementsPath,
+            'dateSubmitted' => Carbon::now(),
+            'applicationStatus' => 'Submitted',
 
-        'careerID' => (int) $validated['careerID'],
-        'applicantID' => $user->applicantID,
+            'interviewSchedule' => null,
+            'interviewMode' => null,
+            'interviewLocation' => null,
+            'interviewLink' => null,
+
+            'careerID' => (int) $validated['careerID'],
+            'applicantID' => $user->applicantID,
         ]);
 
-        $app->organization = $app->career->organization->name ?? 'Unknown Organization';
-        $app->save();
-
+        // Get ID immediately from attributes to avoid property access issues
+        $appId = $app->getAttributes()['applicationID'] ?? null;
+        // Unset model immediately to prevent any further access
+        unset($app);
+        
+        // Build response from values we already have
         return response()->json([
             'message' => 'APPLICATION SUBMITTED SUCCESSFULLY!!!',
-            'data' => $app,
+            'data' => [
+                'applicationID' => $appId,
+                'careerID' => (int) $validated['careerID'],
+                'applicantID' => $user->applicantID,
+                'requirement_directory' => $requirementsPath,
+                'dateSubmitted' => Carbon::now()->toDateTimeString(),
+                'applicationStatus' => 'Submitted',
+                'interviewSchedule' => null,
+                'interviewMode' => null,
+                'interviewLocation' => null,
+                'interviewLink' => null,
+            ],
         ], 201);
+    } catch (\Exception $e) {
+        // Log the error for debugging
+        Log::error('Application submission error', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+            'careerID' => $validated['careerID'] ?? null,
+            'applicantID' => $user->applicantID ?? null,
+        ]);
+        
+        // Check if application was actually created (might have been saved before error)
+        $existing = Application::where('applicantID', $user->applicantID)
+            ->where('careerID', (int) ($validated['careerID'] ?? 0))
+            ->first();
+        
+        if ($existing) {
+            // Application was saved, return success even though there was an error
+            return response()->json([
+                'message' => 'APPLICATION SUBMITTED SUCCESSFULLY!!!',
+                'data' => [
+                    'applicationID' => $existing->applicationID,
+                    'careerID' => (int) $validated['careerID'],
+                    'applicantID' => $user->applicantID,
+                ],
+            ], 201);
+        }
+        
+        // If application wasn't saved, re-throw the error
+        throw $e;
     }
+}
+
 
     //withdraw application
     public function destroy(Request $request, int $id)
@@ -127,19 +239,19 @@ public function viewRequirement($id)
 {
     $application = Application::findOrFail($id);
 
-    if (!$application->requirements) {
+    if (!$application->requirement_directory) {
         return response()->json(['message' => 'No requirement found.'], 404);
     }
 
-    $pdfData = $application->requirements; // raw binary from DB
+    $filePath = storage_path('app/public/' . $application->requirement_directory);
 
-    return response()->make($pdfData, 200, [
-        'Content-Type' => 'application/pdf',
-        'Content-Disposition' => 'inline; filename="requirement.pdf"',
-        'Content-Length' => strlen($pdfData),
-        'Cache-Control' => 'no-cache, must-revalidate',
-    ]);
+    if (!file_exists($filePath)) {
+        return response()->json(['message' => 'File not found'], 404);
+    }
+
+    return response()->file($filePath);
 }
+
 
     public function getApplicantsByCareer(Request $request, $careerID)
     {
@@ -177,7 +289,7 @@ public function viewRequirement($id)
                     'name' => $applicantName,
                     'dateSubmitted' => $app->dateSubmitted ? $app->dateSubmitted->format('M d, Y') : null,
                     'status' => $app->applicationStatus ? strtolower($app->applicationStatus) : 'submitted',
-                    'requirements' => $app->requirements,
+                    'requirement_directory' => $app->requirement_directory,
                     'interviewSchedule' => $app->interviewSchedule ? $app->interviewSchedule->format('Y-m-d H:i:s') : null,
                     'interviewMode' => $app->interviewMode,
                     'interviewLocation' => $app->interviewLocation,
@@ -287,9 +399,9 @@ public function viewRequirement($id)
         }
     }
 
-    public function getRequirements(Request $request, $applicationID)
+  public function getRequirements(Request $request, $applicationID)
 {
-    $user = $request->user(); 
+    $user = $request->user();
 
     $application = Application::find($applicationID);
     if (!$application) {
@@ -300,32 +412,16 @@ public function viewRequirement($id)
         return response()->json(['message' => 'Access denied'], 403);
     }
 
-    $path = $application->requirements;
+    $path = $application->requirement_directory;
 
-    // Check if path exists in storage
     if (!$path || !Storage::disk('public')->exists($path)) {
         return response()->json(['message' => 'File not found'], 404);
     }
 
-    $fullPath = Storage::disk('public')->path($path);
-
-    // Double-check file exists and is readable
-    if (!file_exists($fullPath) || !is_readable($fullPath)) {
-        return response()->json(['message' => 'File missing or not readable'], 404);
-    }
-
     try {
-
-        // 🔥 FIX: Return real binary content directly from storage
         return Storage::disk('public')->download($path, basename($path), [
             'Content-Type' => 'application/pdf'
         ]);
-
-        // (Your previous return is untouched below, but now unreachable)
-        return response()->download($fullPath, basename($path), [
-            'Content-Type' => 'application/pdf',
-        ]);
-
     } catch (\Exception $e) {
         \Log::error('Download failed: ' . $e->getMessage());
         return response()->json([
@@ -334,6 +430,7 @@ public function viewRequirement($id)
         ], 500);
     }
 }
+
 
 
 
