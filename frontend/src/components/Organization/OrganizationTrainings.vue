@@ -940,10 +940,21 @@ export default {
         const parsedUser = storedUser ? JSON.parse(storedUser) : null;
         const organizationID = parsedUser?.organizationID ?? parsedUser?.organization?.organizationID ?? null;
 
-        const response = await api.get("/trainings", {
-          params: organizationID ? { organizationID } : {},
-        });
-        const newTrainings = response.data;
+        let newTrainings = [];
+        try {
+          const { data } = await api.get("/organization/trainings");
+          newTrainings = data;
+        } catch (err) {
+          console.warn("Org trainings endpoint unavailable, falling back:", err?.response?.status);
+          const storedUser = localStorage.getItem("user");
+          const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+          const organizationID = parsedUser?.organizationID ?? parsedUser?.organization?.organizationID ?? null;
+
+          const { data } = await api.get("/trainings", {
+            params: organizationID ? { organizationID } : {},
+          });
+          newTrainings = data;
+        }
 
         newTrainings.forEach(training => {
           const existingIndex = this.upcomingtrainings.findIndex(t => t.trainingID === training.trainingID);

@@ -189,7 +189,7 @@ export default {
 import { ref, nextTick, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Chart from 'chart.js/auto';
-import axios from 'axios';
+import api from '@/composables/api';
 
 // ----------------------
 // Router & Sidebar
@@ -221,34 +221,47 @@ const totalCareers = ref(0);
 const ongoingCareers = ref(0);
 const filledOutCareers = ref(0);
 
-const fetchTotals = async () => {
+const fetchTrainingStats = async () => {
   try {
-    const trainingsRes = await axios.get(import.meta.env.VITE_API_BASE_URL + "/trainings/total");
-    totalTrainings.value = trainingsRes.data.totalTrainings;
+    let data;
+    try {
+      ({ data } = await api.get("/organization/trainings"));
+    } catch (err) {
+      console.warn("Org trainings endpoint unavailable for homepage, falling back:", err?.response?.status);
+      const storedUser = localStorage.getItem("user");
+      const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+      const organizationID = parsedUser?.organizationID ?? parsedUser?.organization?.organizationID ?? null;
+      ({ data } = await api.get("/trainings", {
+        params: organizationID ? { organizationID } : {},
+      }));
+    }
 
-    const careersRes = await axios.get(import.meta.env.VITE_API_BASE_URL + "/careers/total");
-    totalCareers.value = careersRes.data.totalCareers;
+    const now = new Date();
+
+    totalTrainings.value = data.length;
+    upcomingTrainings.value = data.filter(t => {
+      const schedule = t.schedule ? new Date(t.schedule) : null;
+      return schedule && schedule > now;
+    }).length;
+    completedTrainings.value = totalTrainings.value - upcomingTrainings.value;
   } catch (err) {
-    console.error("Failed to fetch totals:", err);
+    console.error("Failed to fetch training stats:", err);
   }
 };
 
-// Fetch training and career counts
-const fetchCounts = async () => {
+const fetchCareerStats = async () => {
   try {
-    // Trainings
-    const { data: trainingCounts } = await axios.get(import.meta.env.VITE_API_BASE_URL + "/trainings/counts-partial");
-    // Only update upcoming/completed, not total
-    upcomingTrainings.value = trainingCounts.upcoming;
-    completedTrainings.value = trainingCounts.completed;
+    const { data } = await api.get("/organization/careers");
+    const now = new Date();
 
-    // Careers
-    const { data: careerCounts } = await axios.get(import.meta.env.VITE_API_BASE_URL + "/careers/counts-partial");
-    ongoingCareers.value = careerCounts.ongoing;
-    filledOutCareers.value = careerCounts.filled;
-
+    totalCareers.value = data.length;
+    ongoingCareers.value = data.filter(c => {
+      const deadline = c.deadlineOfSubmission ? new Date(c.deadlineOfSubmission) : null;
+      return deadline && deadline >= now;
+    }).length;
+    filledOutCareers.value = totalCareers.value - ongoingCareers.value;
   } catch (err) {
-    console.error("Failed to fetch counts:", err);
+    console.error("Failed to fetch career stats:", err);
   }
 };
 
@@ -351,9 +364,8 @@ function swapChart(clickedChart) {
 // Lifecycle
 // ----------------------
 onMounted(async () => {
-  await fetchTotals();   // ← sets totalTrainings & totalCareers
-  await fetchCounts();   // ← sets only upcoming/completed/ongoing/filled
-  await fetchCounts();
+  await fetchTrainingStats();
+  await fetchCareerStats();
   await fetchChartData();
   await nextTick();
 
