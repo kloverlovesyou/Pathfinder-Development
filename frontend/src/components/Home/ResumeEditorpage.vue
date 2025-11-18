@@ -971,6 +971,8 @@ onMounted(fetchSelectedCertificates);
                   <input
                     v-model="newEducation.graduationYear"
                     type="number"
+                    min="1900"
+                    max="2099"
                     placeholder="e.g. 2025"
                     class="input-field border rounded w-full p-2"
                   />
