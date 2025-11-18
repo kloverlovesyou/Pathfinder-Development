@@ -221,6 +221,11 @@ const totalCareers = ref(0);
 const ongoingCareers = ref(0);
 const filledOutCareers = ref(0);
 
+const trainingsData = ref([]);
+const careersData = ref([]);
+const registrationsData = ref([]);
+const applicationsData = ref([]);
+
 const fetchTrainingStats = async () => {
   try {
     let data;
@@ -236,32 +241,36 @@ const fetchTrainingStats = async () => {
       }));
     }
 
+    trainingsData.value = Array.isArray(data) ? data : [];
     const now = new Date();
 
-    totalTrainings.value = data.length;
-    upcomingTrainings.value = data.filter(t => {
+    totalTrainings.value = trainingsData.value.length;
+    upcomingTrainings.value = trainingsData.value.filter(t => {
       const schedule = t.schedule ? new Date(t.schedule) : null;
       return schedule && schedule > now;
     }).length;
     completedTrainings.value = totalTrainings.value - upcomingTrainings.value;
   } catch (err) {
     console.error("Failed to fetch training stats:", err);
+    trainingsData.value = [];
   }
 };
 
 const fetchCareerStats = async () => {
   try {
     const { data } = await api.get("/organization/careers");
+    careersData.value = Array.isArray(data) ? data : [];
     const now = new Date();
 
-    totalCareers.value = data.length;
-    ongoingCareers.value = data.filter(c => {
+    totalCareers.value = careersData.value.length;
+    ongoingCareers.value = careersData.value.filter(c => {
       const deadline = c.deadlineOfSubmission ? new Date(c.deadlineOfSubmission) : null;
       return deadline && deadline >= now;
     }).length;
     filledOutCareers.value = totalCareers.value - ongoingCareers.value;
   } catch (err) {
     console.error("Failed to fetch career stats:", err);
+    careersData.value = [];
   }
 };
 
@@ -283,67 +292,288 @@ const chartConfigs = ref({
     data: {
       labels: [], datasets: [
         { label: "Training Registrants", data: [], borderColor: "#44576D", backgroundColor: "rgba(68,87,109,0.2)", tension: 0.3, fill: true },
-        { label: "Career Applicants", data: [], borderColor: "#A7B1C2", backgroundColor: "rgba(68,87,109,0.2)", tension: 0.3, fill: true }
+        { label: "Career Applicants", data: [], borderColor: "#A7B1C2", backgroundColor: "rgba(167,177,194,0.2)", tension: 0.3, fill: true }
       ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top'
+        }
+      }
     }
   },
   chart2: {
     type: "pie",
-    data: { labels: ["Onsite", "Online", "Hybrid"], datasets: [{ data: [], backgroundColor: ["#44576D", "#A7B1C2", "#DFE3EA"] }] }
+    data: { labels: ["Onsite", "Online", "Hybrid"], datasets: [{ data: [], backgroundColor: ["#44576D", "#A7B1C2", "#DFE3EA"] }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom'
+        }
+      }
+    }
   },
   chart3: {
     type: "bar",
-    data: { labels: ["Internships", "Jobs", "Trainings"], datasets: [{ label: "Applications", data: [], backgroundColor: "#44576D" }] }
+    data: { labels: ["Internships", "Jobs", "Trainings"], datasets: [{ label: "Applications", data: [], backgroundColor: "#44576D" }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
   },
   chart4: {
     type: "doughnut",
-    data: { labels: ["Accepted", "Pending", "Rejected"], datasets: [{ data: [], backgroundColor: ["#44576D", "#A7B1C2", "#DFE3EA"] }] }
+    data: { labels: ["Accepted", "Pending", "Rejected"], datasets: [{ data: [], backgroundColor: ["#44576D", "#A7B1C2", "#DFE3EA"] }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom'
+        }
+      }
+    }
   }
 });
 
-// Fetch chart data from backend
+// Fetch registrations and applications for chart data
+const fetchRegistrations = async () => {
+  try {
+    // For organizations, we need to get registrations for all their trainings
+    const allRegistrations = [];
+    for (const training of trainingsData.value) {
+      try {
+        const { data } = await api.get(`/trainings/${training.trainingID}/registrants`);
+        if (Array.isArray(data)) {
+          // Add trainingID and registrationDate to each registration for chart calculations
+          data.forEach(reg => {
+            allRegistrations.push({
+              ...reg,
+              trainingID: training.trainingID,
+              registrationDate: reg.dateRegistered || reg.registrationDate
+            });
+          });
+        }
+      } catch (err) {
+        // Skip if we can't get registrants for this training
+        console.warn(`Failed to fetch registrants for training ${training.trainingID}:`, err);
+      }
+    }
+    registrationsData.value = allRegistrations;
+  } catch (err) {
+    console.warn("Failed to fetch registrations:", err);
+    registrationsData.value = [];
+  }
+};
+
+const fetchApplications = async () => {
+  try {
+    // For organizations, we need to get applications for all their careers
+    const allApplications = [];
+    for (const career of careersData.value) {
+      try {
+        const { data } = await api.get(`/careers/${career.careerID}/applicants`);
+        if (Array.isArray(data)) {
+          // Add careerID and dateSubmitted to each application for chart calculations
+          data.forEach(app => {
+            allApplications.push({
+              ...app,
+              careerID: career.careerID,
+              dateSubmitted: app.dateSubmitted,
+              applciationStatus: app.status || app.applicationStatus || app.applciationStatus
+            });
+          });
+        }
+      } catch (err) {
+        // Skip if we can't get applicants for this career
+        console.warn(`Failed to fetch applicants for career ${career.careerID}:`, err);
+      }
+    }
+    applicationsData.value = allApplications;
+  } catch (err) {
+    console.warn("Failed to fetch applications:", err);
+    applicationsData.value = [];
+  }
+};
+
+// Calculate chart data from fetched data
+const calculateChartData = () => {
+  // Chart 1: General Overview - Last 6 months of registrations and applications
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+  const now = new Date();
+  const monthData = months.map((_, index) => {
+    const targetMonth = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+    const monthNum = targetMonth.getMonth() + 1;
+    const year = targetMonth.getFullYear();
+    
+    const registrants = registrationsData.value.filter(r => {
+      if (!r.registrationDate && !r.dateRegistered) return false;
+      const dateStr = r.registrationDate || r.dateRegistered;
+      if (!dateStr) return false;
+      const regDate = new Date(dateStr);
+      if (isNaN(regDate.getTime())) return false;
+      return regDate.getMonth() + 1 === monthNum && regDate.getFullYear() === year;
+    }).length;
+    
+    const applicants = applicationsData.value.filter(a => {
+      if (!a.dateSubmitted) return false;
+      const appDate = new Date(a.dateSubmitted);
+      if (isNaN(appDate.getTime())) return false;
+      return appDate.getMonth() + 1 === monthNum && appDate.getFullYear() === year;
+    }).length;
+    
+    return { registrants, applicants };
+  });
+  
+  chartConfigs.value.chart1.data.labels = months;
+  chartConfigs.value.chart1.data.datasets[0].data = monthData.map(m => m.registrants);
+  chartConfigs.value.chart1.data.datasets[1].data = monthData.map(m => m.applicants);
+
+  // Chart 2: Training Summary - Count by mode
+  const trainingModes = {
+    onsite: trainingsData.value.filter(t => (t.mode || t.Mode || '').toLowerCase() === 'onsite').length,
+    online: trainingsData.value.filter(t => (t.mode || t.Mode || '').toLowerCase() === 'online').length,
+    hybrid: trainingsData.value.filter(t => (t.mode || t.Mode || '').toLowerCase() === 'hybrid').length
+  };
+  
+  chartConfigs.value.chart2.data.datasets[0].data = [
+    trainingModes.onsite,
+    trainingModes.online,
+    trainingModes.hybrid
+  ];
+
+  // Chart 3: Applicant Engagement - Count registrations and applications
+  const internships = careersData.value.filter(c => 
+    (c.position || '').toLowerCase().includes('intern') || 
+    (c.type || '').toLowerCase() === 'internship'
+  ).length;
+  const jobs = careersData.value.filter(c => 
+    !(c.position || '').toLowerCase().includes('intern') && 
+    (c.type || '').toLowerCase() !== 'internship'
+  ).length;
+  
+  chartConfigs.value.chart3.data.datasets[0].data = [
+    internships,
+    jobs,
+    totalTrainings.value
+  ];
+
+  // Chart 4: Career Insights - Application statuses
+  const outcomes = {
+    accepted: applicationsData.value.filter(a => {
+      const status = (a.applciationStatus || a.applicationStatus || a.status || '').toLowerCase();
+      return status === 'accepted' || status === 'for interview';
+    }).length,
+    pending: applicationsData.value.filter(a => {
+      const status = (a.applciationStatus || a.applicationStatus || a.status || '').toLowerCase();
+      return status === 'pending' || status === 'submitted' || status === 'in review' || status === '' || !status;
+    }).length,
+    rejected: applicationsData.value.filter(a => {
+      const status = (a.applciationStatus || a.applicationStatus || a.status || '').toLowerCase();
+      return status === 'rejected';
+    }).length
+  };
+  
+  chartConfigs.value.chart4.data.datasets[0].data = [
+    outcomes.accepted,
+    outcomes.pending,
+    outcomes.rejected
+  ];
+};
+
+// Fetch chart data from backend (fallback) or calculate from local data
 const fetchChartData = async () => {
   try {
-    const token = localStorage.getItem('token');
+    // Try to fetch from dashboard endpoint first
+    const { data } = await api.get("/dashboard");
 
-    const { data } = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + "/dashboard",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
+    // Chart 1: General Overview (Line Chart)
+    if (data.months && Array.isArray(data.months) && data.months.length > 0) {
+      chartConfigs.value.chart1.data.labels = data.months;
+      chartConfigs.value.chart1.data.datasets[0].data = data.trainingRegistrants || [];
+      chartConfigs.value.chart1.data.datasets[1].data = data.careerApplicants || [];
+    } else {
+      // Calculate from local data
+      calculateChartData();
+    }
 
-    chartConfigs.value.chart1.data.labels = data.months;
-    chartConfigs.value.chart1.data.datasets[0].data = data.trainingRegistrants;
-    chartConfigs.value.chart1.data.datasets[1].data = data.careerApplicants;
+    // Chart 2: Training Summary (Pie Chart)
+    if (data.trainingTypes && (data.trainingTypes.onsite > 0 || data.trainingTypes.online > 0 || data.trainingTypes.hybrid > 0)) {
+      chartConfigs.value.chart2.data.datasets[0].data = [
+        data.trainingTypes.onsite || 0,
+        data.trainingTypes.online || 0,
+        data.trainingTypes.hybrid || 0
+      ];
+    } else {
+      // Calculate from local data
+      calculateChartData();
+    }
 
-    chartConfigs.value.chart2.data.datasets[0].data = [
-      data.trainingTypes.onsite,
-      data.trainingTypes.online,
-      data.trainingTypes.hybrid
-    ];
+    // Chart 4: Career Insights (Doughnut Chart)
+    if (data.careerOutcomes && (data.careerOutcomes.accepted > 0 || data.careerOutcomes.pending > 0 || data.careerOutcomes.rejected > 0)) {
+      chartConfigs.value.chart4.data.datasets[0].data = [
+        data.careerOutcomes.accepted || 0,
+        data.careerOutcomes.pending || 0,
+        data.careerOutcomes.rejected || 0
+      ];
+    } else {
+      // Calculate from local data
+      calculateChartData();
+    }
 
-    chartConfigs.value.chart4.data.datasets[0].data = [
-      data.careerOutcomes.accepted,
-      data.careerOutcomes.pending,
-      data.careerOutcomes.rejected
-    ];
+    // Chart 3 is always calculated from local data
+    calculateChartData();
 
   } catch (err) {
-    console.error("Failed to fetch chart data:", err);
+    console.warn("Dashboard endpoint failed, calculating from local data:", err);
+    // Calculate from local data if API fails
+    calculateChartData();
   }
+  
+  // Re-render all charts after data update
+  await nextTick();
+  renderChart(activeChart.value.id);
+  sideCharts.value.forEach(chart => renderChart(chart.id));
 };
 
 
 // Render a single chart
 function renderChart(id) {
   const ctx = document.getElementById(id);
-  if (!ctx) return;
+  if (!ctx) {
+    console.warn(`Canvas element with id "${id}" not found`);
+    return;
+  }
 
-  if (charts.value[id]) charts.value[id].destroy();
-  charts.value[id] = new Chart(ctx, chartConfigs.value[id]);
+  if (charts.value[id]) {
+    charts.value[id].destroy();
+  }
+  
+  const config = chartConfigs.value[id];
+  if (!config) {
+    console.warn(`Chart config for "${id}" not found`);
+    return;
+  }
+
+  charts.value[id] = new Chart(ctx, config);
 }
 
 // Swap active and side charts
@@ -364,13 +594,20 @@ function swapChart(clickedChart) {
 // Lifecycle
 // ----------------------
 onMounted(async () => {
-  await fetchTrainingStats();
-  await fetchCareerStats();
+  // Fetch training and career stats first (needed for registrations/applications)
+  await Promise.all([
+    fetchTrainingStats(),
+    fetchCareerStats()
+  ]);
+  
+  // Then fetch registrations and applications (they depend on trainings/careers data)
+  await Promise.all([
+    fetchRegistrations(),
+    fetchApplications()
+  ]);
+  
+  // Finally calculate and render charts
   await fetchChartData();
-  await nextTick();
-
-  renderChart(activeChart.value.id);
-  sideCharts.value.forEach(chart => renderChart(chart.id));
 });
 
 // ----------------------
