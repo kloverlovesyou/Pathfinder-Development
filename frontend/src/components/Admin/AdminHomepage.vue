@@ -16,17 +16,22 @@ function openRejectModal(id) {
 
 async function submitRejection() {
   try {
-    await axios.post(
-      import.meta.env.VITE_API_BASE_URL + `/organization/${rejectTargetID.value}/reject`,
+    const res = await axios.post(
+      import.meta.env.VITE_API_BASE_URL + `/organization/${rejectOrgID.value}/reject`,
       { reason: rejectReason.value }
     );
 
+    // Optional: show a toast with reason
+    showToast(`Rejected: ${res.data.rejectionReason}`);
+
     organizations.value = organizations.value.filter(
-      (o) => o.organizationID !== rejectTargetID.value
+      (o) => o.organizationID !== rejectOrgID.value
     );
 
     rejectModal.value = false;
+    rejectReason.value = "";
     selectedOrg.value = null;
+
   } catch (err) {
     console.error("Rejection failed:", err);
   }
