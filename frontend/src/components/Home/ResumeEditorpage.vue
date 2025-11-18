@@ -28,7 +28,7 @@ const newEducation = reactive({
   major: "",
   institutionName: "",
   institutionAddress: "",
-  graduationYear: "",
+  graduationYear: null,
 });
 
 // ✅ Resume Data
