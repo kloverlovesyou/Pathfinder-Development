@@ -144,6 +144,12 @@
             </router-link>
           </p>
         </div>
+                <!-- Toast (bottom-right) -->
+        <div class="toast toast-end" v-if="toastMessage">
+          <div class="alert alert-error text-white">
+            <span>{{ toastMessage }}</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -162,70 +168,85 @@ const email = ref("");
 const password = ref("");
 const emailError = ref(false);
 const passwordError = ref(false);
+const toastMessage = ref("");
 
 const loginError = ref(""); // just show as text now
 
 const validateEmail = (emailVal) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
 const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
 
-const handleLogin = async () => {
-  emailError.value = !validateEmail(email.value);
-  passwordError.value = !validatePassword(password.value);
-  loginError.value = "";
-  if (emailError.value || passwordError.value) return;
+  const showToast = (msg) => {
+    toastMessage.value = msg;
+    setTimeout(() => {
+      toastMessage.value = "";
+    }, 3000); // Toast disappears after 3s
+  };
 
-  try {
-    // 1️⃣ Send login request
-    const response = await axios.post(
-      import.meta.env.VITE_API_BASE_URL + "/login",
-      {
-        emailAddress: email.value,
-        password: password.value,
+  const handleLogin = async () => {
+    emailError.value = !validateEmail(email.value);
+    passwordError.value = !validatePassword(password.value);
+    loginError.value = "";
+
+    if (emailError.value || passwordError.value) return;
+
+    try {
+      const response = await axios.post(
+        import.meta.env.VITE_API_BASE_URL + "/login",
+        {
+          emailAddress: email.value,
+          password: password.value,
+        }
+      );
+
+      const userData = response.data.user || response.data.organization;
+      const token = response.data.token;
+      const role = userData.role || (userData.adminID ? "organization" : "applicant");
+
+      // ⛔ BLOCK UNAPPROVED ORGANIZATIONS
+      if (role === "organization" && userData.status !== "approved") {
+        showToast("Your organization account is not yet approved by the admin.");
+        return;
       }
-    );
 
-    const userData = response.data.user || response.data.organization;  
-    const token = response.data.token;
-    const role = userData.role || (userData.adminID ? "organization" : "applicant");
+      // Continue only if approved
+      let displayName = "";
+      if (role === "organization") {
+        displayName = userData.organizationName || userData.name || "Organization";
+      } else if (role === "admin") {
+        displayName = userData.name || "Admin";
+      } else {
+        displayName = `${userData.firstName} ${userData.lastName}`;
+      }
 
-    let displayName = "";
-    if (role === "organization") {
-      displayName = userData.organizationName || userData.name || "Organization";
-    } else if (role === "admin") {
-      displayName = userData.name || "Admin";
-    } else {
-      displayName = `${userData.firstName} ${userData.lastName}`;
+      // Save token + user
+      localStorage.setItem("token", token);
+      localStorage.setItem(
+        "user",
+        JSON.stringify({ ...userData, role, displayName })
+      );
+
+      await regStore.fetchMyRegistrations();
+
+      // Redirect
+      if (role === "organization") {
+        router.push("/organization");
+      } else if (role === "admin") {
+        router.push("/admin");
+      } else {
+        router.push("/app");
+      }
+
+    } catch (err) {
+      console.error(err.response?.data || err.message);
+
+      if (err.response?.status === 403) {
+        showToast(err.response.data.message);
+        return;
+      }
+
+      showToast("Invalid credentials. Please try again.");
     }
-
-    // Store user + token
-    localStorage.setItem("token", token);
-    localStorage.setItem(
-      "user",
-      JSON.stringify({ ...userData, role, displayName })
-    );
-
-    // 🔥 NEW — Verification check using 'status' column
-    if (role === "organization" && userData.status !== "approved") {
-      alert("⚠️ Your organization account is not yet verified by the admin.");
-    }
-
-    await regStore.fetchMyRegistrations();
-
-    // Redirect
-    if (role === "organization") {
-      router.push("/organization");
-    } else if (role === "admin") {
-      router.push("/admin");
-    } else {
-      router.push("/app");
-    }
-
-    console.log("✅ Logged in successfully with token");
-  } catch (err) {
-    console.error(err.response?.data || err.message);
-    loginError.value = "Invalid credentials. Please try again.";
-  }
-};
+  };
 
 </script>
 
