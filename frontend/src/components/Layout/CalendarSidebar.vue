@@ -65,7 +65,7 @@ async function fetchCareerEvents() {
       .map((app) => ({
         id: app.applicationID,
         careerID: app.careerID,
-        title: app.position,
+        title: app.career?.position,
         date: new Date(app.interviewSchedule).toISOString().split("T")[0],
         type: "career",
         interviewSchedule: app.interviewSchedule,
