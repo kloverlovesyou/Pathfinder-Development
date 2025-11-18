@@ -16,11 +16,11 @@ All charts will render even with zero data, but they need specific data sources 
 
 **Type**: Line chart showing trends over time  
 **Minimum Data Required**: 
-- **At least 1 registration OR 1 application** in the last 6 months
+- **At least 1 registration OR 1 application** in the current year
 
 **Data Sources**:
-- `registrationsData` - Array of registration objects
-- `applicationsData` - Array of application objects
+- `registrationsData` - Array of registration objects (from database)
+- `applicationsData` - Array of application objects (from database)
 
 **Required Fields**:
 - **Registrations**: Each registration needs:
@@ -29,7 +29,7 @@ All charts will render even with zero data, but they need specific data sources 
 - **Applications**: Each application needs:
   - `dateSubmitted` (date string)
 
-**Time Period**: Last 6 months (Jan, Feb, Mar, Apr, May, Jun from current date)
+**Time Period**: Full year - 12 months (January to December of current year)
 
 **What Shows**:
 - **Blue line**: Number of training registrants per month
@@ -59,16 +59,17 @@ All charts will render even with zero data, but they need specific data sources 
 - **At least 1 training** in the organization's training list
 
 **Data Sources**:
-- `trainingsData` - Array of training objects
+- `trainingsData` - Array of training objects (from database)
 
 **Required Fields**:
 - Each training needs:
-  - `mode` OR `Mode` (string: "onsite", "online", or "hybrid")
+  - `mode` OR `Mode` (string: "onsite"/"on-site"/"on site" or "online")
 
 **What Shows**:
-- **Onsite**: Count of trainings with mode = "onsite"
-- **Online**: Count of trainings with mode = "online"  
-- **Hybrid**: Count of trainings with mode = "hybrid"
+- **On-site**: Count of trainings with mode = "onsite", "on-site", or "on site"
+- **Online**: Count of trainings with mode = "online"
+
+**Note**: Hybrid trainings are no longer included in this chart.
 
 **Example Minimum Data**:
 ```json
@@ -90,18 +91,15 @@ All charts will render even with zero data, but they need specific data sources 
 - **At least 1 career OR 1 training** in the organization
 
 **Data Sources**:
-- `careersData` - Array of career objects
+- `careersData` - Array of career objects (from database)
 - `totalTrainings` - Count of trainings (calculated from trainingsData)
 
 **Required Fields**:
-- **Careers**: Each career needs:
-  - `position` (string) OR `type` (string)
-  
+- **Careers**: All careers are counted (no specific fields needed)
 - **Trainings**: Counted from `trainingsData.length`
 
 **What Shows**:
-- **Internships**: Careers where position contains "intern" OR type = "internship"
-- **Jobs**: Careers that are NOT internships
+- **Jobs**: Total count of all careers
 - **Trainings**: Total count of trainings
 
 **Example Minimum Data**:
@@ -109,7 +107,7 @@ All charts will render even with zero data, but they need specific data sources 
 // At least one career:
 {
   "careerID": 1,
-  "position": "Software Engineer Intern"  // or "type": "internship"
+  "position": "Software Engineer"
 }
 
 // OR at least one training (counted automatically):
@@ -119,7 +117,7 @@ All charts will render even with zero data, but they need specific data sources 
 }
 ```
 
-**Note**: This chart will show data even if you only have careers OR only trainings.
+**Note**: Internships have been removed. This chart will show data even if you only have careers OR only trainings.
 
 ---
 
@@ -130,20 +128,24 @@ All charts will render even with zero data, but they need specific data sources 
 - **At least 1 application** to any of the organization's careers
 
 **Data Sources**:
-- `applicationsData` - Array of application objects
+- `applicationsData` - Array of application objects (from database)
 
 **Required Fields**:
 - Each application needs:
   - `applciationStatus` OR `applicationStatus` OR `status` (string)
 
 **Status Values Recognized**:
-- **Accepted**: "accepted" or "for interview"
-- **Pending**: "pending", "submitted", "in review", or empty/null
+- **Submitted**: "submitted" or empty/null
+- **In Review**: "in review" or "pending"
+- **For Interview**: "for interview"
+- **Accepted**: "accepted"
 - **Rejected**: "rejected"
 
 **What Shows**:
-- **Accepted**: Applications with status = "accepted" or "for interview"
-- **Pending**: Applications with status = "pending", "submitted", "in review", or no status
+- **Submitted**: Applications with status = "submitted" or no status
+- **In Review**: Applications with status = "in review" or "pending"
+- **For Interview**: Applications with status = "for interview"
+- **Accepted**: Applications with status = "accepted"
 - **Rejected**: Applications with status = "rejected"
 
 **Example Minimum Data**:
@@ -162,33 +164,35 @@ All charts will render even with zero data, but they need specific data sources 
 
 | Chart | Minimum Requirement | Data Source | Key Fields Needed |
 |-------|-------------------|-------------|-------------------|
-| **Chart 1: General Overview** | 1 registration OR 1 application in last 6 months | `registrationsData`, `applicationsData` | `registrationDate`/`dateRegistered`, `dateSubmitted` |
-| **Chart 2: Training Summary** | 1 training | `trainingsData` | `mode` or `Mode` |
-| **Chart 3: Applicant Engagement** | 1 career OR 1 training | `careersData`, `trainingsData` | `position`/`type`, training count |
-| **Chart 4: Career Insights** | 1 application | `applicationsData` | `status`/`applciationStatus`/`applicationStatus` |
+| **Chart 1: General Overview** | 1 registration OR 1 application in current year | `registrationsData`, `applicationsData` (from database) | `registrationDate`/`dateRegistered`, `dateSubmitted` |
+| **Chart 2: Training Summary** | 1 training | `trainingsData` (from database) | `mode` or `Mode` ("onsite"/"on-site" or "online") |
+| **Chart 3: Applicant Engagement** | 1 career OR 1 training | `careersData`, `trainingsData` (from database) | Any career or training (internships removed) |
+| **Chart 4: Career Insights** | 1 application | `applicationsData` (from database) | `status`/`applciationStatus`/`applicationStatus` (5 statuses) |
 
 ---
 
 ## Data Flow
 
-1. **Fetch Training Stats** → Gets `trainingsData` (needed for Charts 2 & 3)
-2. **Fetch Career Stats** → Gets `careersData` (needed for Chart 3)
-3. **Fetch Registrations** → Gets `registrationsData` (needed for Chart 1)
+**All charts now depend entirely on database data - no fallback to dashboard endpoint.**
+
+1. **Fetch Training Stats** → Gets `trainingsData` from database (needed for Charts 2 & 3)
+2. **Fetch Career Stats** → Gets `careersData` from database (needed for Chart 3)
+3. **Fetch Registrations** → Gets `registrationsData` from database (needed for Chart 1)
    - Loops through each training and calls `/trainings/{trainingID}/registrants`
-4. **Fetch Applications** → Gets `applicationsData` (needed for Charts 1 & 4)
+4. **Fetch Applications** → Gets `applicationsData` from database (needed for Charts 1 & 4)
    - Loops through each career and calls `/careers/{careerID}/applicants`
-5. **Calculate Chart Data** → Processes all data and populates charts
-6. **Render Charts** → Displays charts with calculated data
+5. **Calculate Chart Data** → Processes all database data and populates charts
+6. **Render Charts** → Displays charts with calculated data from database
 
 ---
 
 ## Troubleshooting
 
 ### Charts showing all zeros:
-- **Chart 1**: Check if you have registrations/applications with valid dates in the last 6 months
-- **Chart 2**: Check if trainings have `mode` or `Mode` field set
-- **Chart 3**: Check if you have at least one career or training
-- **Chart 4**: Check if you have applications with status fields
+- **Chart 1**: Check if you have registrations/applications with valid dates in the current year (January to December)
+- **Chart 2**: Check if trainings have `mode` or `Mode` field set to "onsite"/"on-site" or "online" (hybrid is excluded)
+- **Chart 3**: Check if you have at least one career or training (internships are no longer shown separately)
+- **Chart 4**: Check if you have applications with status fields matching: Submitted, In Review, For Interview, Accepted, or Rejected
 
 ### Charts not rendering:
 - Check browser console for errors

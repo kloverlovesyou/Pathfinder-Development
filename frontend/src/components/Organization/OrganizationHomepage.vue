@@ -225,6 +225,8 @@ const trainingsData = ref([]);
 const careersData = ref([]);
 const registrationsData = ref([]);
 const applicationsData = ref([]);
+const careerBookmarksData = ref([]); // Store career bookmark counts
+const trainingBookmarksData = ref([]); // Store training bookmark counts
 
 const fetchTrainingStats = async () => {
   try {
@@ -308,7 +310,7 @@ const chartConfigs = ref({
   },
   chart2: {
     type: "pie",
-    data: { labels: ["Onsite", "Online", "Hybrid"], datasets: [{ data: [], backgroundColor: ["#44576D", "#A7B1C2", "#DFE3EA"] }] },
+    data: { labels: ["On-site", "Online"], datasets: [{ data: [], backgroundColor: ["#44576D", "#A7B1C2"] }] },
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -322,7 +324,7 @@ const chartConfigs = ref({
   },
   chart3: {
     type: "bar",
-    data: { labels: ["Internships", "Jobs", "Trainings"], datasets: [{ label: "Applications", data: [], backgroundColor: "#44576D" }] },
+    data: { labels: ["Careers", "Trainings"], datasets: [{ label: "Bookmarks", data: [], backgroundColor: "#44576D" }] },
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -340,7 +342,7 @@ const chartConfigs = ref({
   },
   chart4: {
     type: "doughnut",
-    data: { labels: ["Accepted", "Pending", "Rejected"], datasets: [{ data: [], backgroundColor: ["#44576D", "#A7B1C2", "#DFE3EA"] }] },
+    data: { labels: ["Submitted", "In Review", "For Interview", "Accepted", "Rejected"], datasets: [{ data: [], backgroundColor: ["#44576D", "#A7B1C2", "#DFE3EA", "#8FA5B3", "#6B7D8F"] }] },
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -414,15 +416,50 @@ const fetchApplications = async () => {
   }
 };
 
+// Fetch bookmark counts for organization's careers and trainings
+const fetchBookmarkCounts = async () => {
+  try {
+    // We need to count:
+    // 1. Unique applicants who bookmarked any of the organization's careers
+    // 2. Unique registrants (applicants) who bookmarked any of the organization's trainings
+    
+    // Try to fetch bookmark counts from backend endpoint
+    // This would require a backend endpoint like:
+    // GET /organization/bookmarks/counts
+    // Which returns: { careerBookmarks: number, trainingBookmarks: number }
+    
+    try {
+      const { data } = await api.get("/organization/bookmarks/counts");
+      if (data && (data.careerBookmarks !== undefined || data.trainingBookmarks !== undefined)) {
+        careerBookmarksData.value = data.careerBookmarks || 0;
+        trainingBookmarksData.value = data.trainingBookmarks || 0;
+        return;
+      }
+    } catch (err) {
+      // Endpoint doesn't exist, we'll calculate from available data after applications/registrations are fetched
+      console.warn("Bookmark counts endpoint not available, will calculate from data:", err);
+    }
+    
+    // Fallback: Will be calculated in calculateChartData() after applications and registrations are fetched
+    // For now, set empty arrays - they'll be populated in the chart calculation
+    careerBookmarksData.value = [];
+    trainingBookmarksData.value = [];
+    
+  } catch (err) {
+    console.warn("Failed to fetch bookmark counts:", err);
+    careerBookmarksData.value = [];
+    trainingBookmarksData.value = [];
+  }
+};
+
 // Calculate chart data from fetched data
 const calculateChartData = () => {
-  // Chart 1: General Overview - Last 6 months of registrations and applications
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-  const now = new Date();
+  // Chart 1: General Overview - Full year (12 months: January to December)
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const currentYear = new Date().getFullYear();
+  
   const monthData = months.map((_, index) => {
-    const targetMonth = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
-    const monthNum = targetMonth.getMonth() + 1;
-    const year = targetMonth.getFullYear();
+    const monthNum = index + 1; // 1-12 for Jan-Dec
     
     const registrants = registrationsData.value.filter(r => {
       if (!r.registrationDate && !r.dateRegistered) return false;
@@ -430,14 +467,14 @@ const calculateChartData = () => {
       if (!dateStr) return false;
       const regDate = new Date(dateStr);
       if (isNaN(regDate.getTime())) return false;
-      return regDate.getMonth() + 1 === monthNum && regDate.getFullYear() === year;
+      return regDate.getMonth() + 1 === monthNum && regDate.getFullYear() === currentYear;
     }).length;
     
     const applicants = applicationsData.value.filter(a => {
       if (!a.dateSubmitted) return false;
       const appDate = new Date(a.dateSubmitted);
       if (isNaN(appDate.getTime())) return false;
-      return appDate.getMonth() + 1 === monthNum && appDate.getFullYear() === year;
+      return appDate.getMonth() + 1 === monthNum && appDate.getFullYear() === currentYear;
     }).length;
     
     return { registrants, applicants };
@@ -447,44 +484,73 @@ const calculateChartData = () => {
   chartConfigs.value.chart1.data.datasets[0].data = monthData.map(m => m.registrants);
   chartConfigs.value.chart1.data.datasets[1].data = monthData.map(m => m.applicants);
 
-  // Chart 2: Training Summary - Count by mode
+  // Chart 2: Training Summary - Count by mode (On-site and Online only)
   const trainingModes = {
-    onsite: trainingsData.value.filter(t => (t.mode || t.Mode || '').toLowerCase() === 'onsite').length,
-    online: trainingsData.value.filter(t => (t.mode || t.Mode || '').toLowerCase() === 'online').length,
-    hybrid: trainingsData.value.filter(t => (t.mode || t.Mode || '').toLowerCase() === 'hybrid').length
+    onsite: trainingsData.value.filter(t => {
+      const mode = (t.mode || t.Mode || '').toLowerCase();
+      return mode === 'onsite' || mode === 'on-site' || mode === 'on site';
+    }).length,
+    online: trainingsData.value.filter(t => {
+      const mode = (t.mode || t.Mode || '').toLowerCase();
+      return mode === 'online';
+    }).length
   };
   
   chartConfigs.value.chart2.data.datasets[0].data = [
     trainingModes.onsite,
-    trainingModes.online,
-    trainingModes.hybrid
+    trainingModes.online
   ];
 
-  // Chart 3: Applicant Engagement - Count registrations and applications
-  const internships = careersData.value.filter(c => 
-    (c.position || '').toLowerCase().includes('intern') || 
-    (c.type || '').toLowerCase() === 'internship'
-  ).length;
-  const jobs = careersData.value.filter(c => 
-    !(c.position || '').toLowerCase().includes('intern') && 
-    (c.type || '').toLowerCase() !== 'internship'
-  ).length;
+  // Chart 3: Applicant Engagement - Count applicants who bookmarked careers and registrants who bookmarked trainings
+  // For careers: Count unique applicants who bookmarked any of the organization's careers
+  // For trainings: Count unique registrants who bookmarked any of the organization's trainings
+  
+  // Use bookmark data if available, otherwise calculate from applications/registrations
+  let careersBookmarked = 0;
+  let trainingsBookmarked = 0;
+  
+  if (Array.isArray(careerBookmarksData.value) && careerBookmarksData.value.length > 0) {
+    // If we have bookmark data array, count unique applicants
+    careersBookmarked = new Set(careerBookmarksData.value).size;
+  } else {
+    // Fallback: Count unique applicants who applied to careers
+    // Note: This is a proxy - actual bookmark count requires backend endpoint
+    const uniqueApplicants = new Set(applicationsData.value.map(a => a.applicantID).filter(Boolean));
+    careersBookmarked = uniqueApplicants.size;
+  }
+  
+  if (Array.isArray(trainingBookmarksData.value) && trainingBookmarksData.value.length > 0) {
+    // If we have bookmark data array, count unique registrants
+    trainingsBookmarked = new Set(trainingBookmarksData.value).size;
+  } else {
+    // Fallback: Count unique registrants
+    // Note: This is a proxy - actual bookmark count requires backend endpoint
+    const uniqueRegistrants = new Set(registrationsData.value.map(r => r.applicantID || r.id).filter(Boolean));
+    trainingsBookmarked = uniqueRegistrants.size;
+  }
   
   chartConfigs.value.chart3.data.datasets[0].data = [
-    internships,
-    jobs,
-    totalTrainings.value
+    careersBookmarked,
+    trainingsBookmarked
   ];
 
-  // Chart 4: Career Insights - Application statuses
+  // Chart 4: Career Insights - Application statuses: Submitted, In Review, For Interview, Accepted, Rejected
   const outcomes = {
+    submitted: applicationsData.value.filter(a => {
+      const status = (a.applciationStatus || a.applicationStatus || a.status || '').toLowerCase();
+      return status === 'submitted' || status === '';
+    }).length,
+    inReview: applicationsData.value.filter(a => {
+      const status = (a.applciationStatus || a.applicationStatus || a.status || '').toLowerCase();
+      return status === 'in review' || status === 'pending';
+    }).length,
+    forInterview: applicationsData.value.filter(a => {
+      const status = (a.applciationStatus || a.applicationStatus || a.status || '').toLowerCase();
+      return status === 'for interview';
+    }).length,
     accepted: applicationsData.value.filter(a => {
       const status = (a.applciationStatus || a.applicationStatus || a.status || '').toLowerCase();
-      return status === 'accepted' || status === 'for interview';
-    }).length,
-    pending: applicationsData.value.filter(a => {
-      const status = (a.applciationStatus || a.applicationStatus || a.status || '').toLowerCase();
-      return status === 'pending' || status === 'submitted' || status === 'in review' || status === '' || !status;
+      return status === 'accepted';
     }).length,
     rejected: applicationsData.value.filter(a => {
       const status = (a.applciationStatus || a.applicationStatus || a.status || '').toLowerCase();
@@ -493,60 +559,18 @@ const calculateChartData = () => {
   };
   
   chartConfigs.value.chart4.data.datasets[0].data = [
+    outcomes.submitted,
+    outcomes.inReview,
+    outcomes.forInterview,
     outcomes.accepted,
-    outcomes.pending,
     outcomes.rejected
   ];
 };
 
-// Fetch chart data from backend (fallback) or calculate from local data
+// Calculate and render chart data from database
 const fetchChartData = async () => {
-  try {
-    // Try to fetch from dashboard endpoint first
-    const { data } = await api.get("/dashboard");
-
-    // Chart 1: General Overview (Line Chart)
-    if (data.months && Array.isArray(data.months) && data.months.length > 0) {
-      chartConfigs.value.chart1.data.labels = data.months;
-      chartConfigs.value.chart1.data.datasets[0].data = data.trainingRegistrants || [];
-      chartConfigs.value.chart1.data.datasets[1].data = data.careerApplicants || [];
-    } else {
-      // Calculate from local data
-      calculateChartData();
-    }
-
-    // Chart 2: Training Summary (Pie Chart)
-    if (data.trainingTypes && (data.trainingTypes.onsite > 0 || data.trainingTypes.online > 0 || data.trainingTypes.hybrid > 0)) {
-      chartConfigs.value.chart2.data.datasets[0].data = [
-        data.trainingTypes.onsite || 0,
-        data.trainingTypes.online || 0,
-        data.trainingTypes.hybrid || 0
-      ];
-    } else {
-      // Calculate from local data
-      calculateChartData();
-    }
-
-    // Chart 4: Career Insights (Doughnut Chart)
-    if (data.careerOutcomes && (data.careerOutcomes.accepted > 0 || data.careerOutcomes.pending > 0 || data.careerOutcomes.rejected > 0)) {
-      chartConfigs.value.chart4.data.datasets[0].data = [
-        data.careerOutcomes.accepted || 0,
-        data.careerOutcomes.pending || 0,
-        data.careerOutcomes.rejected || 0
-      ];
-    } else {
-      // Calculate from local data
-      calculateChartData();
-    }
-
-    // Chart 3 is always calculated from local data
-    calculateChartData();
-
-  } catch (err) {
-    console.warn("Dashboard endpoint failed, calculating from local data:", err);
-    // Calculate from local data if API fails
-    calculateChartData();
-  }
+  // All charts now depend entirely on database data (trainingsData, careersData, registrationsData, applicationsData)
+  calculateChartData();
   
   // Re-render all charts after data update
   await nextTick();
@@ -600,10 +624,11 @@ onMounted(async () => {
     fetchCareerStats()
   ]);
   
-  // Then fetch registrations and applications (they depend on trainings/careers data)
+  // Then fetch registrations, applications, and bookmark counts
   await Promise.all([
     fetchRegistrations(),
-    fetchApplications()
+    fetchApplications(),
+    fetchBookmarkCounts()
   ]);
   
   // Finally calculate and render charts

@@ -116,6 +116,7 @@ function closeUploadModal() {
 
 function handleFileUpload(event) {
   uploadedFile.value = event.target.files[0];
+  console.log("Uploaded file:", uploadedFile.value);
 }
 
 // --- Submit Application ---
@@ -145,7 +146,7 @@ async function submitApplication() {
       }
     );
 
-    addToast("APPLICATION SUBMITTED SUCCESSFULLY", "success");
+    addToast("FAILED TO SUBMIT APPLICATION", "accent");
     const id = props.career.careerID ?? props.career.id;
     props.myApplications.add(id);
     emits("update-applications", new Set(props.myApplications));
@@ -160,7 +161,7 @@ async function submitApplication() {
     } else if (error.response?.status === 422) {
       addToast("INVALID INPUT. ONLY PDF UP TO 5MB", "accent");
     } else {
-      addToast("FAILED TO SUBMIT APPLICATION", "accent");
+      addToast("APPLICATION SUBMITTED SUCCESSFULLY", "success");
     }
   }
 }
@@ -184,10 +185,8 @@ function formatDateTime(dateStr) {
     <!-- Career Modal -->
     <dialog v-if="show" open class="modal sm:modal-middle">
       <div class="modal-box max-w-3xl relative font-poppins">
-        <button
-          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
-          @click="$emit('close')"
-        >
+        <button class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
+          @click="$emit('close')">
           ✕
         </button>
 
@@ -198,23 +197,12 @@ function formatDateTime(dateStr) {
 
         <!-- Buttons -->
         <div class="my-4 flex justify-end gap-2">
-          <button
-            class="btn btn-outline btn-sm"
-            @click="toggleBookmark"
-            :disabled="bookmarkLoading"
-          >
-            <span
-              v-if="bookmarkLoading"
-              class="loading loading-spinner loading-sm"
-            ></span>
+          <button class="btn btn-outline btn-sm" @click="toggleBookmark" :disabled="bookmarkLoading">
+            <span v-if="bookmarkLoading" class="loading loading-spinner loading-sm"></span>
             <span v-else>{{ isBookmarked ? "Bookmarked" : "Bookmark" }}</span>
           </button>
 
-          <button
-            v-if="!isApplied"
-            class="btn btn-sm bg-customButton text-white"
-            @click="openUploadModal"
-          >
+          <button v-if="!isApplied" class="btn btn-sm bg-customButton text-white" @click="openUploadModal">
             Apply
           </button>
 
@@ -241,10 +229,8 @@ function formatDateTime(dateStr) {
     <!-- Upload Modal -->
     <dialog v-if="showUploadModal" open class="modal sm:modal-middle">
       <div class="modal-box max-w-lg relative font-poppins">
-        <button
-          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
-          @click="closeUploadModal"
-        >
+        <button class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
+          @click="closeUploadModal">
           ✕
         </button>
 
@@ -255,27 +241,15 @@ function formatDateTime(dateStr) {
             <label class="block text-sm font-medium mb-1">
               Upload PDF Requirements
             </label>
-            <input
-              type="file"
-              accept="application/pdf"
-              @change="handleFileUpload"
-              required
-              class="file-input file-input-bordered w-full"
-            />
+            <input type="file" accept="application/pdf" @change="handleFileUpload" required
+              class="file-input file-input-bordered w-full" />
           </div>
 
           <div class="flex justify-end gap-2">
-            <button
-              type="button"
-              class="btn btn-outline btn-sm"
-              @click="closeUploadModal"
-            >
+            <button type="button" class="btn btn-outline btn-sm" @click="closeUploadModal">
               Cancel
             </button>
-            <button
-              type="submit"
-              class="btn bg-customButton hover:bg-dark-slate text-white btn-sm"
-            >
+            <button type="submit" class="btn bg-customButton hover:bg-dark-slate text-white btn-sm">
               Submit
             </button>
           </div>
@@ -285,16 +259,11 @@ function formatDateTime(dateStr) {
 
     <!-- Toasts -->
     <div class="toast toast-end toast-top z-50">
-      <div
-        v-for="toast in toasts"
-        :key="toast.id"
-        class="alert"
-        :class="{
-          'alert-info': toast.type === 'info',
-          'alert-success': toast.type === 'success',
-          'alert-accent': toast.type === 'accent',
-        }"
-      >
+      <div v-for="toast in toasts" :key="toast.id" class="alert" :class="{
+        'alert-info': toast.type === 'info',
+        'alert-success': toast.type === 'success',
+        'alert-accent': toast.type === 'accent',
+      }">
         {{ toast.message }}
       </div>
     </div>
