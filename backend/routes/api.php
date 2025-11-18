@@ -36,15 +36,20 @@ Route::get('/dashboard', [DashboardController::class, 'getChartData']);
 // Trainings
 Route::get('/trainings', [TrainingController::class, 'index']);
 
+// Careers with recommendations
+Route::get('/careers', [CareerRecommendationController::class, 'index']);
+Route::get('/careers/recommend/{careerID}', [CareerRecommendationController::class, 'getCareerWithRecommendations'])
+     ->name('careers.recommendation');
+Route::get('/careers/{careerID}/trainings', [CareerRecommendationController::class, 'recommendedTrainings']);
+
+
+// CareerController
+Route::get('/careers/recommend/manual/{id}', [CareerController::class, 'recommend'])
+     ->name('careers.recommend.manual');
 // Tags
 Route::get('/tags', [TagController::class, 'index']);
 Route::post('/tags', [TagController::class, 'store']);
 
-// Careers with recommendations
-Route::get('/careers', [CareerRecommendationController::class, 'index']);
-Route::get('/careers/{careerID}/recommended', [CareerRecommendationController::class, 'recommendedCareers']);
-Route::get('/careers/{careerID}/trainings', [CareerRecommendationController::class, 'recommendedTrainings']);
-Route::get('/careers/{careerID}/details', [CareerRecommendationController::class, 'careerDetails']);
 
 
 // Attendance check-in
@@ -144,6 +149,7 @@ Route::middleware('auth.custom')->group(function () {
     Route::post('/applications', [ApplicationController::class, 'store']);
     Route::delete('/applications/{id}', [ApplicationController::class, 'destroy']);
     Route::get('/applications/{id}/requirement', [ApplicationController::class, 'viewRequirement']);
+    Route::get('/interviews', [InterviewController::class, 'index']);
 
     // Certificates
     Route::get('/certificates/{applicantID}', [CertificateController::class, 'index']);

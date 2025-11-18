@@ -29,35 +29,39 @@ class CareerRecommendationController extends Controller
         return response()->json($careers);
     }
 
-     // Fetch recommended careers based on career ID (includes target career)
      public function recommendedCareers($careerID)
-     {
-         // Ensure that careerID is an integer
-         $careerID = (int)$careerID;
- 
-         // Use Laravel's DB facade to call the stored procedure with parameter binding
-         $careers = DB::select("CALL sp_GetRecommendedCareers_ByTags(?)", [$careerID]);
- 
-         // ✅ Map the organization field to ensure consistency
-         $careers = collect($careers)->map(function ($career) {
-             // The stored procedure returns 'organization' as 'name', ensure it's accessible
-             if (isset($career->organization)) {
-                 // Already has organization name from stored procedure
-             } elseif (isset($career->organizationID)) {
-                 // Fallback: fetch organization name if not included
-                 $org = DB::table('organization')
-                     ->where('organizationID', $career->organizationID)
-                     ->first();
-                 $career->organization = $org->name ?? 'Unknown';
-             } else {
-                 $career->organization = 'Unknown';
-             }
-             return $career;
-         });
- 
-         // Return the results as JSON
-         return response()->json($careers);
-     }
+    {
+        try {
+            // Ensure careerID is an integer
+            $careerID = (int)$careerID;
+
+            // Call the stored procedure
+            $careers = DB::select("CALL sp_GetRecommendedCareers_ByTags(?)", [$careerID]);
+
+            // Map organization names if missing
+            $careers = collect($careers)->map(function ($career) {
+                if (!isset($career->organization) && isset($career->organizationID)) {
+                    $org = DB::table('organization')
+                        ->where('organizationID', $career->organizationID)
+                        ->first();
+                    $career->organization = $org->name ?? 'Unknown';
+                } elseif (!isset($career->organization)) {
+                    $career->organization = 'Unknown';
+                }
+                return $career;
+            });
+
+            // Return as JSON
+            return response()->json($careers);
+
+        } catch (\Exception $e) {
+            // Return error message if procedure fails
+            return response()->json([
+                'message' => 'Error fetching recommended careers',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 
      // Fetch recommended trainings based on career ID
      public function recommendedTrainings($careerID)
@@ -153,4 +157,41 @@ class CareerRecommendationController extends Controller
              'recommended_trainings' => $trainingsWithOrg,
          ]);
      }
+
+      public function getCareerWithRecommendations($careerID)
+    {
+    try {
+    // Log the careerID to verify its value
+    Log::info('Career ID: ' . $careerID);
+            // Call the stored procedure with the careerID
+            $results = DB::select('CALL sp_get_career_with_recommendations(?)', [$careerID]);
+            
+            // Check if results are returned
+            if (empty($results)) {
+                return response()->json([
+                    'career' => null,
+                    'recommended_trainings' => []
+                ]);
+            }
+
+            // First result set for career info
+            $careerInfo = $results[0]; 
+            $trainings = [];
+
+            // Capture second result set (recommended trainings)
+            if (count($results) > 1) {
+                $trainings = array_slice($results, 1); // Get all subsequent results
+            }
+
+            return response()->json([
+                'career' => $careerInfo, // Return the career info directly
+                'recommended_trainings' => $trainings // Return trainings
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to load career recommendations',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

@@ -198,13 +198,15 @@
                   <h4 class="group-title">🟥 Scheduled Interviews</h4>
                   <div v-for="(event, i) in selectedEvents.interviews" :key="'i-' + i" class="event-details-card">
                     <h5>{{ event.title }}</h5>
-                    <p class="event-info"><strong>Applicant:</strong> {{ event.applicant || 'N/A' }}</p>
-                    <p class="event-info"><strong>Time:</strong> {{formatTime12Hour (event.time) || 'TBD' }}</p>
-                    <p class="event-info" v-if="event.mode"><strong>Mode:</strong> {{ event.mode }}</p>
-                    <p class="event-info" v-if="event.location"><strong>Location:</strong> {{ event.location }}</p>
+                    <p class="event-info"><strong>Applicant:</strong> {{ event.applicantID || 'N/A' }}</p>
+                    <p class="event-info"><strong>Time:</strong> {{ formatTime12Hour(event.interviewSchedule) || 'TBD'
+                    }}</p>
+                    <p class="event-info" v-if="event.mode"><strong>Mode:</strong> {{ event.interviewMode }}</p>
+                    <p class="event-info" v-if="event.location"><strong>Location:</strong> {{ event.interviewLocation }}
+                    </p>
                     <p class="event-info" v-if="event.interviewLink"><strong>Link:</strong>
-                      <a :href="event.interviewLink" target="_blank" rel="noopener noreferrer">{{ event.interviewLink
-                      }}</a>
+                      <a :href="event.interviewLink" target="_blank" rel="noopener noreferrer">{{
+                        event.interviewLink }}</a>
                     </p>
                   </div>
                 </div>
@@ -234,7 +236,7 @@ export default {
     return {
       dictLogo,
       currentDate: new Date(),
-      selectedEvents: { trainings: [], careers: [], interviews: [] },
+      selectedEvents: { trainings: [], careers: [], scheduledInterviews: [] },
       isSidebarOpen: true,
       dayNames: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
 
@@ -245,39 +247,13 @@ export default {
 
       trainings: [],
       careers: [],
-      scheduledInterviews: [
-        {
-          id: 1,
-          title: "Interview: Frontend Developer",
-          applicant: "John Doe",
-          date: "2025-12-01",
-          time: "09:30",
-          mode: "On-Site",
-          location: "Tuguegarao City",
-          careerID: 35
-        },
-        {
-          id: 2,
-          title: "Interview: IT Support",
-          applicant: "Jane Smith",
-          date: "2025-11-28",
-          time: "01:00",
-          mode: "On-Site",
-          location: "Tuguegarao City",
-          careerID: 39
-        },
-        {
-          id: 3,
-          title: "Interview: Graphic Designer",
-          applicant: "Mark Reyes",
-          date: "2025-11-25",
-          time: "13:00",
-          mode: "Online",
-          interviewLink: "https://meet.example.com/xyz",
-          careerID: 40
-        }
-      ],
+      scheduledInterviews: [],
     }
+  },
+  setup() {
+    const events = ref({}); // calendar events by date
+
+    return { events };
   },
   computed: {
     monthYear() {
@@ -333,6 +309,80 @@ export default {
       return `${displayHour}:${minutes.toString().padStart(2, "0")} ${ampm}`;
     },
 
+    async fetchApplications() {
+      try {
+        const user = JSON.parse(localStorage.getItem("user"));
+        const token = localStorage.getItem("token");
+        if (!user || !token) return;
+
+        // Call the API that returns applications with interview schedule
+        const { data: apps } = await axios.get(
+          import.meta.env.VITE_API_BASE_URL + "/applications",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        // Filter only applications that have an interview schedule
+        const careerEvents = apps
+          .filter((app) => app.interviewSchedule) // skip applications without interviews
+          .map((app) => ({
+            id: app.applicationID,
+            careerID: app.careerID,
+            title: app.career?.position || "Career Interview",
+            date: new Date(app.interviewSchedule).toISOString().split("T")[0],
+            type: "career",
+            interviewSchedule: app.interviewSchedule,
+            interviewMode: app.interviewMode,
+            interviewLink: app.interviewLink,
+            interviewLocation: app.interviewLocation,
+            organization: app.career?.organization,
+          }));
+
+        // Merge career events into your existing events map
+        careerEvents.forEach((event) => {
+          if (!events.value[event.date]) events.value[event.date] = [];
+          events.value[event.date].push(event);
+        });
+
+        console.log("📅 Career events merged:", careerEvents);
+      } catch (err) {
+        console.error("Failed to fetch applications:", err);
+      }
+    },
+
+    async fetchInterviews() {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/applications/interviews", {
+          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        });
+        console.log("API /applications/interviews response:", res.data);
+
+        const interviews = res.data.map((interview) => {
+          const schedule = interview.interviewSchedule || interview.schedule || null;
+          const scheduleDate = schedule ? new Date(schedule) : null;
+
+          return {
+            id: interview.id || interview.applicationID || interview.interviewID,
+            applicantID: interview.applicantID || interview.applicant_id || null,
+            title: interview.title || interview.interwiewStatus || "For Interview",
+            date: scheduleDate ? scheduleDate.toISOString().split("T")[0] : "",
+            interviewSchedule: schedule,
+            interviewMode: interview.interviewMode || interview.mode || null,
+            interviewLink: interview.interviewLink || interview.link || null,
+            interviewLocation: interview.interviewLocation || interview.location || null,
+            organization: interview.organizationName || interview.organization || null,
+          };
+        });
+
+        this.scheduledInterviews = interviews;
+        console.log("📅 Scheduled interviews loaded:", interviews.length);
+      } catch (err) {
+        console.error("Error fetching interviews:", err);
+      }
+    },
+
     async fetchTrainings() {
       const token = localStorage.getItem("token");
       if (!token) return;
@@ -340,8 +390,6 @@ export default {
       const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/trainings", {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       });
-
-      console.log(res.data);  // <-- check what schedule and end_time actually look like
 
       this.trainings = res.data.map(t => {
         const start = t.schedule ? new Date(t.schedule) : null;
@@ -525,6 +573,8 @@ export default {
   mounted() {
     this.fetchTrainings();
     this.fetchCareers();
+    this.fetchApplications();
+    this.fetchInterviews();
   },
 };
 </script>

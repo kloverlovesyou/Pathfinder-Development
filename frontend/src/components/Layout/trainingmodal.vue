@@ -18,6 +18,14 @@ const props = defineProps({
 
 const emit = defineEmits(["close", "toggle-register", "bookmark"]);
 
+// ✅ Helper: Check if training has started
+function hasTrainingStarted(schedule) {
+  if (!schedule) return false;
+  const now = new Date();
+  const trainingTime = new Date(schedule);
+  return now >= trainingTime;
+}
+
 // ⏳ QR countdown state
 const countdown = ref("");
 const qrExpired = ref(false);
@@ -34,11 +42,10 @@ watch(
       return;
     }
 
-    // Start countdown logic (your existing code)
     const endTime = new Date(t.end_time);
     clearInterval(countdownInterval);
 
-    const update = () => {
+    const update = async () => {
       const now = new Date();
       const diff = endTime - now;
 
@@ -52,18 +59,18 @@ watch(
         const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, "0");
         countdown.value = `${m}:${s}`;
         qrExpired.value = false;
+
+        // 🔹 Only generate QR when training has started
+        if (props.isRegistered && !qrCode.value && hasTrainingStarted(t.schedule)) {
+          await trainingStore.generateQR(t);
+          const storedQR = trainingStore.qrCodes[t.trainingID];
+          qrCode.value = storedQR?.value || "";
+        }
       }
     };
 
     update();
     countdownInterval = setInterval(update, 1000);
-
-    // ✅ Generate QR code via the store
-    if (props.isRegistered) {
-      await trainingStore.generateQR(t);
-      const storedQR = trainingStore.qrCodes[t.trainingID];
-      qrCode.value = storedQR?.value || "";
-    }
   },
   { immediate: true }
 );
