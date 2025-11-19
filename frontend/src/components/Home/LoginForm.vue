@@ -242,17 +242,27 @@ const handleLogin = async () => {
       router.push("/app");
     }
 
-  } catch (err) {
-    console.error(err.response?.data || err.message);
+      } catch (err) {
+  console.error("FULL ERROR RESPONSE:", err);
 
-    if (err.response?.status === 403) {
-      const reason = err.response.data.reason;
-      showToast(reason ? `Your registration was rejected. Reason: ${reason}` : err.response.data.message);
-      return;
-    }
+  if (err.response?.status === 403) {
+    let data = err.response.data;
+    console.log("FULL RESPONSE DATA:", data);
 
-    showToast("Invalid credentials. Please try again.");
+    // Ensure reason exists
+    const reason = data && typeof data === "object" ? data.reason : undefined;
+    console.log("REJECTION REASON:", reason);
+
+    const msg = reason
+      ? `Your registration was rejected. Reason: ${reason}`
+      : data.message || "Your registration is not approved.";
+
+    showToast(msg);
+    return;
   }
+
+  showToast("Invalid credentials. Please try again.");
+}
 };
 
 </script>

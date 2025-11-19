@@ -144,19 +144,35 @@ async function submitApplication() {
     return;
   }
 
-  const form = new FormData();
-  form.append("careerID", props.career.careerID ?? props.career.id);
-  if (uploadedFile.value)
-    form.append("requirement_directory", uploadedFile.value);
+  let filePath = null;
 
+  // Upload file to Supabase first (if file is selected)
+  if (uploadedFile.value) {
+    addToast("Uploading file to Supabase...", "info");
+    const { uploadPDF } = await import("@/lib/supabase");
+    filePath = await uploadPDF(uploadedFile.value, "Requirements");
+    
+    if (!filePath) {
+      addToast("FAILED TO UPLOAD FILE TO SUPABASE", "accent");
+      return;
+    }
+    addToast("File uploaded successfully!", "success");
+  }
+
+  // Send application data to backend (with file path, not the file itself)
   try {
+    const payload = {
+      careerID: props.career.careerID ?? props.career.id,
+      requirement_directory: filePath, // Send the path, not the file
+    };
+
     await axios.post(
       import.meta.env.VITE_API_BASE_URL + "/applications",
-      form,
+      payload,
       {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
+          "Content-Type": "application/json",
         },
       }
     );
