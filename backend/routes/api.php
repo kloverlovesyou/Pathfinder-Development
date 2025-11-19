@@ -41,7 +41,7 @@ Route::get('/careers', [CareerRecommendationController::class, 'index']);
 Route::get('/careers/recommend/{careerID}', [CareerRecommendationController::class, 'recommendedCareers'])
      ->name('careers.recommendation');
 Route::get('/careers/{careerID}/trainings', [CareerRecommendationController::class, 'recommendedTrainings']);
-Route::get('/careers/{id}/details', [CareerRecommendationController::class, 'getCareerWithRecommendations']);
+Route::get('/careers/{careerID}/details', [CareerRecommendationController::class, 'careerDetails']);
 
 
 
