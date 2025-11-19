@@ -460,7 +460,7 @@ onMounted(async () => {
             {{ selectedCareerDetails.position }}
           </h2>
           <p class="text-sm text-gray-400 mb-2">
-            Organization: {{ selectedCareerDetails.organizationName }}
+            Organization: {{ selectedCareerDetails.organization }}
           </p>
 
           <!-- Buttons -->
