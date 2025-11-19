@@ -10,7 +10,7 @@
       </header>
 
       <!-- Page Content -->
-      <main class="flex-1 overflow-x-auto px-12">
+      <main class="flex-1 overflow-x-auto px-12 bg-gray-100">
         <div class="w-full max-w-full">
           <router-view v-slot="{ Component }">
             <keep-alive>
