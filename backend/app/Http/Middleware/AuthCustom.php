@@ -12,6 +12,15 @@ class AuthCustom
 {
 public function handle(Request $request, Closure $next)
 {
+    // Log POST requests to /applications
+    if ($request->is('api/applications') && $request->isMethod('POST')) {
+        Log::info('AuthCustom: POST /applications request received', [
+            'url' => $request->fullUrl(),
+            'has_file' => $request->hasFile('requirement_directory'),
+            'all_files' => array_keys($request->allFiles()),
+        ]);
+    }
+    
     // ✅ Public endpoints that do NOT require authentication
     $publicPaths = [
         'api/trainings/total',
