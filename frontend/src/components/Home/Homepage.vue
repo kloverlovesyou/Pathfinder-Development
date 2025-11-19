@@ -90,17 +90,24 @@ async function fetchMyRegistrations() {
 }
 
 // ------------------ MODALS ------------------
-function openCareerModal(career) {
-  console.log("Career Data:", career);
-  selectedCareerDetails.value = career;
+async function openCareerModal(career) {
+  try {
+    console.log('Career Object:', career);
 
-  recommendedTrainings.value =
-    career.recommended_trainings ||
-    career.recommendedTrainings ||     // maybe this?
-    career.trainings ||                // maybe this?
-    [];
+    const careerID = parseInt(career.careerID, 10);
+    console.log('Parsed Career ID:', careerID);
 
-  showCareerPopup.value = true;
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + `/careers/${careerID}/details`);
+
+    //store main career + recommended trainings
+    selectedCareerDetails.value = res.data.career;
+    recommendedTrainings.value = res.data.recommended_trainings || [];
+    
+    showCareerPopup.value = true;
+  } catch (error) {
+    console.error("Error loading career details:", error);
+    alert("Failed to load career details.");
+  }
 }
 function closeCareerModal() {
   showCareerPopup.value = false;
