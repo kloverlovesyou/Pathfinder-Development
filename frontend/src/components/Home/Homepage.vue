@@ -18,7 +18,7 @@ const myApplications = ref(new Set());
 const myRegistrations = ref(new Set());
 const toasts = ref([]);
 
-// ✅ Toast notifications
+// Toast notifications
 function addToast(message, type = 'info') {
   const id = Date.now();
   toasts.value.push({ id, message, type });
@@ -27,7 +27,7 @@ function addToast(message, type = 'info') {
   }, 3000);
 }
 
-// ✅ Fetch user's applications and registrations
+// Fetch user's applications and registrations
 async function fetchMyApplications() {
   try {
     const token = localStorage.getItem('token');
@@ -127,26 +127,26 @@ function closeCareerModal() {
   recommendedTrainings.value = [];
 }
 
-// ✅ Open training modal
+// Open training modal
 function openTrainingModal(training) {
   selectedTraining.value = training;
   showTrainingModal.value = true;
 }
 
-// ✅ Close training modal
+// Close training modal
 function closeTrainingModal() {
   showTrainingModal.value = false;
   selectedTraining.value = null;
 }
 
-// ✅ Cancel application
+// Cancel application
 function cancelApplication(career) {
   const id = career.careerID;
   appliedPosts.value[id] = false;
   myApplications.value.delete(id);
 }
 
-// ✅ Toggle bookmark for career
+// Toggle bookmark for career
 async function toggleCareerBookmark(career) {
   const token = localStorage.getItem('token');
   if (!token) {
@@ -182,7 +182,7 @@ async function toggleCareerBookmark(career) {
   }
 }
 
-// ✅ Toggle bookmark for training
+// Toggle bookmark for training
 async function toggleTrainingBookmark(training) {
   const token = localStorage.getItem('token');
   if (!token) {
@@ -218,7 +218,7 @@ async function toggleTrainingBookmark(training) {
   }
 }
 
-// ✅ Register for training
+// Register for training
 async function registerForTraining(training) {
   if (!training) return;
 
@@ -249,7 +249,7 @@ async function registerForTraining(training) {
   }
 }
 
-// ✅ Unregister from training
+// Unregister from training
 async function unregisterFromTraining(training) {
   try {
     const token = localStorage.getItem('token');
