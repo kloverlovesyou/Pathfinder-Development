@@ -149,62 +149,92 @@ async function toggleCareerBookmark(career) {
   }
 }
 
-// Register for training
-async function registerForTraining(training) {
+      async function registerForTraining(training) {
+      if (!training) return;
+
+      try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+      addToast('PLEASE LOG IN FIRST', 'accent');
+      return;
+      }
+
+      const response = await axios.post(
+        import.meta.env.VITE_API_BASE_URL + '/registrations',
+        { trainingID: training.trainingID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Check if the server explicitly says success = false
+      if (response.data?.success === false) {
+        addToast('FAILED TO REGISTER', 'accent');
+        return;
+      }
+
+      addToast('REGISTRATION SUCCESSFUL!!!', 'success');
+      myRegistrations.value.add(training.trainingID);
+      registeredPosts.value[training.trainingID] = true;
+
+      } catch (error) {
+      // Axios response error handling
+      if (error.response?.status === 409) {
+      addToast('YOU ALREADY REGISTERED FOR THIS TRAINING', 'accent');
+      myRegistrations.value.add(training.trainingID);
+      registeredPosts.value[training.trainingID] = true;
+      } else if (error.response?.status === 401) {
+      addToast('UNAUTHORIZED. PLEASE LOG IN AGAIN', 'accent');
+      } else {
+      console.error('Registration error:', error.response || error);
+      addToast('FAILED TO REGISTER', 'accent');
+      }
+      }
+      }
+
+// Unregister from training
+  async function unregisterFromTraining(training) {
   if (!training) return;
 
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      addToast('PLEASE LOG IN FIRST', 'accent');
-      return;
-    }
-
-    await axios.post(
-      import.meta.env.VITE_API_BASE_URL + '/registrations',
-      { trainingID: training.trainingID },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    addToast('REGISTRATION SUCCESSFUL!!!', 'success');
-    myRegistrations.value.add(training.trainingID);
-    registeredPosts.value[training.trainingID] = true;
-  } catch (error) {
-    if (error.response?.status === 409) {
-      addToast('YOU ALREADY REGISTERED FOR THIS TRAINING', 'accent');
-    } else if (error.response?.status === 401) {
-      addToast('UNAUTHORIZED. PLEASE LOG IN AGAIN', 'accent');
-    } else {
-      addToast('FAILED TO REGISTER', 'accent');
-    }
+  const token = localStorage.getItem('token');
+  if (!token) {
+  addToast('PLEASE LOG IN FIRST', 'accent');
+  return;
   }
-}
 
-// Unregister from training
-async function unregisterFromTraining(training) {
-  try {
-    const token = localStorage.getItem('token');
-    if (!token) return;
+  // Fetch user's registrations
+  const registrationsRes = await axios.get(
+    import.meta.env.VITE_API_BASE_URL + '/registrations',
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
 
-    // Find registration ID
-    const registrationsRes = await axios.get(import.meta.env.VITE_API_BASE_URL + '/registrations', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    
-    const registration = registrationsRes.data.find(r => r.trainingID === training.trainingID);
-    if (registration) {
-      await axios.delete(import.meta.env.VITE_API_BASE_URL + `/registrations/${registration.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      myRegistrations.value.delete(training.trainingID);
-      registeredPosts.value[training.trainingID] = false;
-      addToast('Unregistered successfully', 'info');
-    }
-  } catch (error) {
-    console.error("Error unregistering:", error);
-    addToast('Failed to unregister', 'error');
+  const registration = registrationsRes.data.find(r => r.trainingID === training.trainingID);
+
+  if (!registration) {
+    addToast('You are not registered for this training', 'accent');
+    return;
   }
-}
+
+  // Delete registration
+  await axios.delete(
+    import.meta.env.VITE_API_BASE_URL + `/registrations/${registration.id}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  myRegistrations.value.delete(training.trainingID);
+  registeredPosts.value[training.trainingID] = false;
+  addToast('Unregistered successfully', 'info');
+
+  } catch (error) {
+  if (error.response?.status === 404) {
+  addToast('Registration not found', 'accent');
+  } else if (error.response?.status === 401) {
+  addToast('UNAUTHORIZED. PLEASE LOG IN AGAIN', 'accent');
+  } else {
+  console.error("Error unregistering:", error.response || error);
+  addToast('Failed to unregister', 'error');
+  }
+  }
+  }
 
 // ------------------ MODALS ------------------
 async function openCareerModal(career) {
