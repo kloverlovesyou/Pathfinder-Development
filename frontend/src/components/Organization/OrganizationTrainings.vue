@@ -751,6 +751,31 @@ async sendCertificate(file, registrantId) {
         alert("Please enter a tag name.");
       }
     },
+    async sendCertificateDetails() {
+    if (!this.selectedRegistrant || !this.selectedRegistrant.id) {
+      console.error("No registrant ID found!");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("certificateTrackingID", this.selectedRegistrant.certificateTrackingID);
+    formData.append("certificateGivenDate", this.selectedRegistrant.certificateGivenDate);
+    if (this.selectedRegistrant.uploadedFile) {
+      formData.append("file", this.selectedRegistrant.uploadedFile);
+    }
+
+    try {
+      const res = await axios.put(
+        `https://pathfinder-development-production.up.railway.app/api/registrations/${this.selectedRegistrant.id}/certificate`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      console.log("Certificate uploaded successfully", res.data);
+      this.showCertUploadModal = false; // optionally close modal
+    } catch (err) {
+      console.error("Error uploading certificate: ", err);
+    }
+  },
 
     getTagName(tagID) {
       const normalizedId = Number(tagID);
