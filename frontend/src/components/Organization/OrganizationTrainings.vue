@@ -207,6 +207,7 @@
             <table>
               <thead>
                 <tr>
+                  <th>CERTIFICATE TRACKING ID</th>
                   <th>FULL NAME</th>
                   <th>REGISTRATION DATE</th>
                   <th>STATUS</th>
@@ -215,6 +216,9 @@
               </thead>
               <tbody>
                 <tr v-for="person in registrantsList" :key="person.id">
+                  <td>
+                    <p class="registrant-certid">{{ person.id }}</p>
+                  </td>
                   <td>
                     <p class="registrant-name">{{ person.name }}</p>
                   </td>
@@ -889,15 +893,18 @@ async sendCertificate(file, registrantId) {
        ✅ Certificate Upload Modal
     ========================== */
 openCertUploadModal(registrant) {
-    this.selectedRegistrant = {
-      ...registrant,
-      id: registrant.registrationID,
-      certificateTrackingID: registrant.certificateTrackingID || "",
-      certificateGivenDate: registrant.certificateGivenDate || "",
-      uploadedFile: null,
-    };
-    this.showCertUploadModal = true;
-  },
+  console.log("REGISTRANT DATA:", registrant);
+
+  this.selectedRegistrant = {
+    ...registrant,
+    certificateTrackingID: registrant.id || "",
+    certificateGivenDate: registrant.certificateGivenDate || "",
+    uploadedFile: null,
+  };
+
+  console.log("SELECTED REGISTRANT:", this.selectedRegistrant);
+  this.showCertUploadModal = true;
+},
 
     closeCertUploadModal() {
       this.showCertUploadModal = false;
@@ -2303,6 +2310,12 @@ tbody td {
   justify-content: center;
   overflow: hidden;
   margin-bottom: 10px;
+}
+.registrant-certid {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #4a4a4a;
+  text-align: left;
 }
 
 .registrant-name {
