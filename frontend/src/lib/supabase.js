@@ -1,19 +1,23 @@
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://hmevengvfponcwslnyye.supabase.co";
-// Try service_role key first (bypasses RLS), fallback to anon key
-// Note: Service role key should be kept secure, but for file uploads it's often needed
-const supabaseKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_KEY;
+const supabaseKey =
+  import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY ||
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  import.meta.env.VITE_SUPABASE_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
+
+const DEFAULT_BUCKET = "Requirements"; // same bucket for both
 
 /**
  * Upload PDF file to Supabase Storage
  * @param {File} file - The PDF file to upload
  * @param {string} bucketName - The bucket name (default: 'Requirements')
+ * @param {string} folder - The folder inside the bucket ('requirement_directory' or 'certificate_directory')
  * @returns {Promise<string|null>} - Returns the file path if successful, null otherwise
  */
-export async function uploadPDF(file, bucketName = "Requirements") {
+export async function uploadPDF(file, bucketName = DEFAULT_BUCKET, folder = "requirement_directory") {
   if (!file) return null;
 
   if (file.type !== "application/pdf") {
@@ -21,44 +25,39 @@ export async function uploadPDF(file, bucketName = "Requirements") {
     return null;
   }
 
-  // Generate unique filename
-  const fileName = `requirement_directory/${Date.now()}_${file.name}`;
+  const fileName = `${folder}/${Date.now()}_${file.name}`;
+  console.log(`Uploading file to ${bucketName}/${folder}:`, fileName);
 
   try {
-    const { data, error } = await supabase.storage
-      .from(bucketName)
-      .upload(fileName, file, {
-        cacheControl: "3600",
-        upsert: false, // Don't overwrite existing files
-      });
+    const { data, error } = await supabase.storage.from(bucketName).upload(fileName, file, {
+      cacheControl: "3600",
+      upsert: false,
+    });
 
     if (error) {
-      console.error("Supabase upload error:", error);
-      console.error("Attempted bucket name:", bucketName);
-      
-      // Provide helpful error messages
-      if (error.message?.includes("Bucket not found") || error.message?.includes("not found")) {
-        console.error("Bucket Not Found Error:");
-        console.error(`The bucket '${bucketName}' does not exist in Supabase.`);
-        console.error("Please check:");
-        console.error("1. Go to Supabase Dashboard → Storage → Buckets");
-        console.error("2. Verify the exact bucket name (case-sensitive!)");
-        console.error("3. Make sure the bucket exists and is spelled correctly");
-      } else if (error.message?.includes("row-level security") || error.message?.includes("RLS")) {
-        console.error("RLS Policy Error: Make sure your Supabase bucket is either:");
-        console.error("1. Set to Public, OR");
-        console.error("2. Has RLS policies that allow INSERT operations");
-        console.error("Go to: Supabase Dashboard → Storage → [Your Bucket] → Policies");
-      }
-      
+      console.error(`Supabase upload error (${bucketName}/${folder}):`, error);
       return null;
     }
 
-    return fileName; // Return the path stored in Supabase
+    return fileName;
   } catch (error) {
-    console.error("Upload error:", error);
+    console.error(`Upload error (${bucketName}/${folder}):`, error);
     return null;
   }
+}
+
+/**
+ * Upload PDF to Requirements folder
+ */
+export async function uploadRequirement(file, bucketName = DEFAULT_BUCKET) {
+  return uploadPDF(file, bucketName, "requirement_directory");
+}
+
+/**
+ * Upload PDF to Certificates folder
+ */
+export async function uploadCertificate(file, bucketName = DEFAULT_BUCKET) {
+  return uploadPDF(file, bucketName, "certificate_directory");
 }
 
 /**
@@ -67,8 +66,7 @@ export async function uploadPDF(file, bucketName = "Requirements") {
  * @param {string} bucketName - The bucket name (default: 'Requirements')
  * @returns {string} - Public URL to the file
  */
-export function getPDFUrl(fileName, bucketName = "Requirements") {
+export function getPDFUrl(fileName, bucketName = DEFAULT_BUCKET) {
   const { data } = supabase.storage.from(bucketName).getPublicUrl(fileName);
   return data.publicUrl;
 }
-

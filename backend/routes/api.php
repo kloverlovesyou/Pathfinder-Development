@@ -43,7 +43,9 @@ Route::get('/careers/recommend/{careerID}', [CareerRecommendationController::cla
 Route::get('/careers/{careerID}/trainings', [CareerRecommendationController::class, 'recommendedTrainings']);
 Route::get('/careers/{careerID}/details', [CareerRecommendationController::class, 'careerDetails']);
 
+//Certificate Issuance
 
+Route::post('/certifications/{id}/issue', [CertificateController::class, 'issueCertificate']);
 
 
 // CareerController
