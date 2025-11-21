@@ -217,7 +217,7 @@
               <tbody>
                 <tr v-for="person in registrantsList" :key="person.id">
                   <td>
-                    <p class="registrant-certid">{{ person.applicantID }}</p>
+                    <p class="registrant-certid">{{ person.registrationID }}</p>
                   </td>
                   <td>
                     <p class="registrant-name">{{ person.name }}</p>
