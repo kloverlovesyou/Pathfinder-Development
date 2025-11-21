@@ -889,15 +889,18 @@ async sendCertificate(file, registrantId) {
        ✅ Certificate Upload Modal
     ========================== */
 openCertUploadModal(registrant) {
-    this.selectedRegistrant = {
-      ...registrant,
-      id: registrant.registrationID,
-      certificateTrackingID: registrant.registrationID || "",
-      certificateGivenDate: registrant.certificateGivenDate || "",
-      uploadedFile: null,
-    };
-    this.showCertUploadModal = true;
-  },
+  console.log("REGISTRANT DATA:", registrant);
+
+  this.selectedRegistrant = {
+    ...registrant,
+    certificateTrackingID: registrant.registrationID || "",
+    certificateGivenDate: registrant.certificateGivenDate || "",
+    uploadedFile: null,
+  };
+
+  console.log("SELECTED REGISTRANT:", this.selectedRegistrant);
+  this.showCertUploadModal = true;
+},
 
     closeCertUploadModal() {
       this.showCertUploadModal = false;
