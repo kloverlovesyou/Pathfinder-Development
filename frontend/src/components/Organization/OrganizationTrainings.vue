@@ -893,7 +893,7 @@ openCertUploadModal(registrant) {
 
   this.selectedRegistrant = {
     ...registrant,
-    certificateTrackingID: registrant.registrationID || "",
+    certificateTrackingID: registrant.applicantID || "",
     certificateGivenDate: registrant.certificateGivenDate || "",
     uploadedFile: null,
   };
