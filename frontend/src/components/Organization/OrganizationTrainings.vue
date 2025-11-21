@@ -324,7 +324,7 @@
           </p>
 
           <form @submit.prevent="sendCertificateDetails" class="cert-form">
-            <input type="text" v-model="selectedRegistrant.registrationID" placeholder="Certificate Tracking ID"
+            <input type="text" v-model="selectedRegistrant.certificateTrackingID" placeholder="Certificate Tracking ID"
               class="cert-input" required />
 
             <div class="cert-input-wrapper">
