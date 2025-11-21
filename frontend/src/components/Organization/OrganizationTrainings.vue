@@ -498,6 +498,7 @@ import axios from "axios";
 import QrcodeVue from "qrcode.vue";
 import api from "@/composables/api.js";
 import { activeTrainingQR, activeTrainingId, scheduleQR } from "@/composables/useTrainingQR.js";
+import { uploadCertificate } from "@/lib/supabase.js";
 
 export default {
   components: { QrcodeVue }, // ✅ register component
@@ -577,75 +578,50 @@ export default {
   },
 
   methods: {
-    /* async issueCertificate() {
-       try {
-         if (!this.selectedRegistrant) {
-           alert("No registrant selected.");
-           return;
-         }
- 
-         const formData = new FormData();
-         formData.append('certTrackingID', this.certificateData.certTrackingID);
-         formData.append('certGivenDate', this.certificateData.certGivenDate);
-         if (this.certificateData.file) {
-           formData.append('certificate', this.certificateData.file);
-         }
- 
-         await axios.put(
-           'http://127.0.0.1:8000/api/registrations/' + this.selectedRegistrant.registrationID + '/certificate',
-           formData,
-           { headers: { 'Content-Type': 'multipart/form-data' } }
-         );
- 
-         alert('Certificate issued successfully!');
-         this.showCertUploadModal = false;
-         this.loadRegistrants(); // reload updated data
-       } catch (error) {
-         console.error('Certificate issue failed:', error);
-         alert(
-           error.response?.data?.message ||
-           'Failed to issue certificate. Check required fields and try again.'
-         );
-       }
-     }, */
 
+async sendCertificate(file, registrantId) {
+    if (!file) {
+      alert("Please select a PDF certificate to upload.");
+      return;
+    }
 
-    async sendCertificateDetails() {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Please log in to continue.");
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Please log in to continue.");
+      return;
+    }
+
+    try {
+      // Upload certificate to Supabase certificate_directory
+      const filePath = await uploadCertificate(file);
+      if (!filePath) {
+        alert("Failed to upload certificate to Supabase.");
         return;
       }
 
-      try {
-        const formData = new FormData();
-        formData.append('certTrackingID', this.selectedRegistrant.certificateTrackingID);
-        formData.append('certGivenDate', this.selectedRegistrant.certificateGivenDate);
-        formData.append('certificate', this.selectedRegistrant.uploadedFile);
+      console.log("Certificate uploaded to:", filePath);
 
-        const response = await axios.put(
-          import.meta.env.VITE_API_BASE_URL + '/registrations/${this.selectedRegistrant.id}/certificate',
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'multipart/form-data',
-            },
-          }
-        );
+      // Send certificate info to backend
+      const form = new FormData();
+      form.append("certificateFilePath", filePath);
 
-        alert("Certificate issued successfully!");
-        this.closeCertUploadModal();
-        await this.openRegistrantsModal(this.selectedTraining); // Refresh list
-      } catch (error) {
-        console.error("Error issuing certificate:", error);
-        if (error.response) {
-          alert(error.response.data.message || "Failed to issue certificate.");
-        } else {
-          alert("An error occurred while issuing the certificate.");
+      await axios.put(
+        `${import.meta.env.VITE_API_BASE_URL}/registrations/${registrantId}/certificate`,
+        form,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
         }
-      }
-    },
+      );
+
+      alert("Certificate issued successfully!");
+    } catch (error) {
+      console.error("Error uploading certificate:", error);
+      alert(error.response?.data?.message || "An error occurred while issuing the certificate.");
+    }
+  },
 
     openBulkCertModal() {
       const registrantsWithoutCert = this.registrantsList.filter(r => !r.hasCertificate);
@@ -775,6 +751,31 @@ export default {
         alert("Please enter a tag name.");
       }
     },
+    async sendCertificateDetails() {
+    if (!this.selectedRegistrant || !this.selectedRegistrant.id) {
+      console.error("No registrant ID found!");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("certificateTrackingID", this.selectedRegistrant.certificateTrackingID);
+    formData.append("certificateGivenDate", this.selectedRegistrant.certificateGivenDate);
+    if (this.selectedRegistrant.uploadedFile) {
+      formData.append("file", this.selectedRegistrant.uploadedFile);
+    }
+
+    try {
+      const res = await axios.put(
+        `https://pathfinder-development-production.up.railway.app/api/registrations/${this.selectedRegistrant.id}/certificate`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      console.log("Certificate uploaded successfully", res.data);
+      this.showCertUploadModal = false; // optionally close modal
+    } catch (err) {
+      console.error("Error uploading certificate: ", err);
+    }
+  },
 
     getTagName(tagID) {
       const normalizedId = Number(tagID);
@@ -887,16 +888,16 @@ export default {
     /* ==========================
        ✅ Certificate Upload Modal
     ========================== */
-    openCertUploadModal(registrant) {
-      this.selectedRegistrant = {
-        ...registrant,
-        certificateTrackingID: registrant.certificateTrackingID || "",
-        certificateGivenDate: registrant.certificateGivenDate || "",
-        uploadedFile: null,
-      };
-      this.showCertUploadModal = true;
-      this.closeAllMenus();
-    },
+openCertUploadModal(registrant) {
+    this.selectedRegistrant = {
+      ...registrant,
+      id: registrant.registrationID,
+      certificateTrackingID: registrant.certificateTrackingID || "",
+      certificateGivenDate: registrant.certificateGivenDate || "",
+      uploadedFile: null,
+    };
+    this.showCertUploadModal = true;
+  },
 
     closeCertUploadModal() {
       this.showCertUploadModal = false;
@@ -907,10 +908,22 @@ export default {
       this.selectedRegistrant.uploadedFile = event.target.files[0];
     },
 
-    sendCertificateDetails() {
-      console.log("Sending Certificate Details:", this.selectedRegistrant);
+  sendCertificateDetails() {
+    if (!this.selectedRegistrant.uploadedFile) {
+      alert("Please select a certificate file before sending.");
+      return;
+    }
+    
+    this.sendCertificate(
+      this.selectedRegistrant.uploadedFile,
+      this.selectedRegistrant.id
+    ).then(() => {
       this.closeCertUploadModal();
-    },
+    }).catch(err => {
+      console.error(err);
+      alert("Failed to send certificate.");
+    });
+  },
 
     dismissModal() {
       this.showCertUploadModal = false;

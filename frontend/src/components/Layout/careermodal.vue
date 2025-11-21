@@ -1,29 +1,17 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import axios from "axios";
 import { uploadPDF } from "@/lib/supabase";
 
 // Props from parent
 const props = defineProps({
-  show: Boolean, // Controls visibility
-  career: Object, // Selected career data
-  myApplications: [Set, Object], // allow Set or ref(Set)
+  show: Boolean,
+  career: Object,
+  myApplications: [Set, Object],
   bookmarkedCareers: [Set, Object],
 });
-const actualApplications = computed(() =>
-  props.myApplications instanceof Set
-    ? props.myApplications
-    : props.myApplications?.value
-);
 
-const actualBookmarks = computed(() =>
-  props.bookmarkedCareers instanceof Set
-    ? props.bookmarkedCareers
-    : props.bookmarkedCareers?.value
-);
 const emits = defineEmits(["close", "update-applications", "update-bookmarks"]);
-const myApplications = ref(new Set());
-const bookmarkedCareers = ref(new Set());
 
 const showUploadModal = ref(false);
 const uploadedFile = ref(null);
@@ -40,6 +28,7 @@ watch(
     else modalRef.value?.close();
   }
 );
+
 // --- Toast Helper ---
 function addToast(message, type = "info") {
   const id = Date.now();
@@ -48,11 +37,6 @@ function addToast(message, type = "info") {
     toasts.value = toasts.value.filter((t) => t.id !== id);
   }, 3000);
 }
-
-watch(
-  () => props.show,
-  (val) => console.log("Modal received prop:", val)
-);
 
 // --- Check if bookmarked / applied ---
 const isBookmarked = computed(() =>
@@ -78,9 +62,7 @@ async function toggleBookmark() {
     if (isBookmarked.value) {
       await axios.delete(
         import.meta.env.VITE_API_BASE_URL + `/career-bookmarks/${id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       props.bookmarkedCareers.delete(id);
       emits("update-bookmarks", new Set(props.bookmarkedCareers));
@@ -89,9 +71,7 @@ async function toggleBookmark() {
       await axios.post(
         import.meta.env.VITE_API_BASE_URL + "/career-bookmarks",
         { careerID: id },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       props.bookmarkedCareers.add(id);
       emits("update-bookmarks", new Set(props.bookmarkedCareers));
@@ -105,7 +85,7 @@ async function toggleBookmark() {
   }
 }
 
-// --- Apply Modal Handlers ---
+// --- Upload Modal Handlers ---
 function openUploadModal() {
   showUploadModal.value = true;
 }
@@ -132,11 +112,12 @@ async function submitApplication() {
 
   let filePath = null;
 
-  // Upload file to Supabase first (if file is selected)
   if (uploadedFile.value) {
     addToast("Uploading file to Supabase...", "info");
-    filePath = await uploadPDF(uploadedFile.value, "Requirements");
-    
+
+    // Always upload to requirement_directory
+    filePath = await uploadPDF(uploadedFile.value, "Requirements", "requirement_directory");
+
     if (!filePath) {
       addToast("FAILED TO UPLOAD FILE TO SUPABASE", "accent");
       return;
@@ -144,11 +125,10 @@ async function submitApplication() {
     addToast("File uploaded successfully!", "success");
   }
 
-  // Send application data to backend (with file path, not the file itself)
   try {
     const payload = {
       careerID: props.career.careerID ?? props.career.id,
-      requirement_directory: filePath, // Send the path, not the file
+      requirement_directory: filePath, // Always requirement
     };
 
     await axios.post(
@@ -163,6 +143,7 @@ async function submitApplication() {
     );
 
     addToast("APPLICATION SUBMITTED SUCCESSFULLY", "success");
+
     const id = props.career.careerID ?? props.career.id;
     props.myApplications.add(id);
     emits("update-applications", new Set(props.myApplications));
