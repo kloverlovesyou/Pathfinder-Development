@@ -370,7 +370,243 @@ function updateCounters(type, increase = true) {
   }
 }
 
-const showPdfModal = ref(false);
+const downloadRequirement = async (activity, event) => {
+  if (event) {
+    event.stopPropagation(); // prevent parent modal opening
+    event.preventDefault(); // prevent any default behavior
+  }
+
+  const applicationID = activity.applicationID;
+  const token = localStorage.getItem("token");
+  
+  if (!token) {
+    alert("Please log in to download requirements.");
+    return;
+  }
+
+  if (!applicationID) {
+    console.error("Application ID not found in activity:", activity);
+    alert("Application ID not found. Please try refreshing the page.");
+    return;
+  }
+
+  // If requirement_directory is not in activity, try to fetch it from the API
+  let filePath = activity.requirement_directory;
+  console.log("Activity data:", activity);
+  console.log("Initial filePath from activity:", filePath);
+  
+  // Check if filePath is null, undefined, or empty string
+  if (!filePath || filePath === null || filePath === '') {
+    console.log("requirement_directory not in activity, fetching from API...");
+    try {
+      const appResponse = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/applications`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      console.log("Applications API response:", appResponse.data);
+      
+      const application = appResponse.data.find(
+        (app) => app.applicationID === applicationID
+      );
+      
+      console.log("Found application:", application);
+      
+      if (application) {
+        filePath = application.requirement_directory;
+        console.log("filePath from API:", filePath);
+        
+        // If still no filePath, try using the backend endpoint directly
+        if (!filePath || filePath === null || filePath === '') {
+          console.log("No filePath found, trying backend endpoint directly...");
+          // We'll handle this in the try block below by using the backend endpoint
+        }
+      } else {
+        console.error("Application not found for applicationID:", applicationID);
+        // Try backend endpoint anyway - it might have the file
+        filePath = null;
+      }
+    } catch (error) {
+      console.error("Error fetching application details:", error);
+      // Don't return here - try the backend endpoint as fallback
+      filePath = null;
+    }
+  }
+  
+  try {
+    // If filePath is provided (from Supabase), use it directly
+    if (filePath && filePath !== null && filePath !== '') {
+      try {
+        // Import getPDFUrl dynamically
+        const { getPDFUrl } = await import("@/lib/supabase");
+        const pdfUrl = getPDFUrl(filePath, "Requirements");
+        
+        // Fetch the PDF from Supabase
+        const response = await fetch(pdfUrl);
+        if (!response.ok) {
+          throw new Error("Failed to fetch PDF from Supabase");
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        
+        // Extract filename from path or use default
+        const fileName = filePath.split("/").pop() || "requirement.pdf";
+        
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        return; // Success, exit early
+      } catch (supabaseError) {
+        console.warn("Supabase download failed, trying backend endpoint:", supabaseError);
+        // Fall through to backend endpoint
+      }
+    }
+    
+    // Fallback to backend endpoint (works even if filePath is missing - backend will find it)
+    try {
+      const response = await axios({
+        url: `${import.meta.env.VITE_API_BASE_URL}/applications/${applicationID}/requirement`,
+        method: "GET",
+        responseType: "blob",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      const url = window.URL.createObjectURL(
+        new Blob([response.data], { type: "application/pdf" })
+      );
+      
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "requirement.pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (backendError) {
+      console.error("Backend endpoint also failed:", backendError);
+      if (backendError.response?.status === 404) {
+        alert("No requirement file has been uploaded for this application.");
+      } else {
+        alert("Failed to download requirements. Please try again.");
+      }
+    }
+  } catch (error) {
+    console.error("Error downloading requirements:", error);
+    alert("Failed to download requirements. Please try again.");
+  }
+};
+
+const downloadCertificate = async (activity, event) => {
+  if (event) {
+    event.stopPropagation(); // prevent parent modal opening
+    event.preventDefault(); // prevent any default behavior
+  }
+
+  const registrationID = activity.registrationID;
+  const token = localStorage.getItem("token");
+  
+  if (!token) {
+    alert("Please log in to download certificates.");
+    return;
+  }
+
+  if (!registrationID) {
+    console.error("Registration ID not found in activity:", activity);
+    alert("Registration ID not found. Please try refreshing the page.");
+    return;
+  }
+
+  // Get certificate path from activity
+  let filePath = activity.certificate;
+  console.log("Activity data:", activity);
+  console.log("Initial certificate path from activity:", filePath);
+  
+  // If certificate path is not in activity, try to fetch it from the API
+  if (!filePath || filePath === null || filePath === '') {
+    console.log("certificate not in activity, fetching from API...");
+    try {
+      // Try to fetch registrations to get certificate
+      const regResponse = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/registrations`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      console.log("Registrations API response:", regResponse.data);
+      
+      const registration = regResponse.data.find(
+        (reg) => reg.registrationID === registrationID || reg.id === registrationID
+      );
+      
+      console.log("Found registration:", registration);
+      
+      if (registration) {
+        filePath = registration.certificate || registration.certificatePath;
+        console.log("certificate path from API:", filePath);
+      }
+    } catch (error) {
+      console.error("Error fetching registration details:", error);
+      // Continue to try downloading anyway
+    }
+  }
+  
+  // Final check
+  if (!filePath || filePath === null || filePath === '') {
+    alert("No certificate has been issued for this training yet.");
+    return;
+  }
+
+  try {
+    // If filePath is provided (from Supabase), use it directly
+    if (filePath) {
+      try {
+        // Import getPDFUrl dynamically
+        const { getPDFUrl } = await import("@/lib/supabase");
+        // Certificates are stored in "Requirements" bucket
+        const pdfUrl = getPDFUrl(filePath, "Requirements");
+        
+        // Fetch the PDF from Supabase
+        const response = await fetch(pdfUrl);
+        if (!response.ok) {
+          throw new Error("Failed to fetch certificate from Supabase");
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        
+        // Extract filename from path or use default
+        const fileName = filePath.split("/").pop() || `certificate_${activity.title || 'training'}.pdf`;
+        
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        return; // Success
+      } catch (supabaseError) {
+        console.warn("Supabase download failed:", supabaseError);
+        alert("Failed to download certificate from Supabase. Please try again.");
+      }
+    }
+  } catch (error) {
+    console.error("Error downloading certificate:", error);
+    alert("Failed to download certificate. Please try again.");
+  }
+};
 
 onMounted(fetchMyActivities);
 </script>
@@ -491,26 +727,43 @@ onMounted(fetchMyActivities);
                   </span>
                   <button
                     v-if="activity.type === 'career'"
+<<<<<<< HEAD
                     :class="[
                       'px-3 py-1 rounded text-white',
                       'bg-blue-500 hover:bg-blue-600',
                     ]"
                     @click="viewRequirement(activity)"
+=======
+                    type="button"
+                    :class="[
+                      'px-3 py-1 rounded text-white',
+                      activity.requirement_directory || activity.applicationID
+                        ? 'bg-blue-500 hover:bg-blue-600 cursor-pointer'
+                        : 'bg-gray-300 cursor-not-allowed',
+                    ]"
+                    @click.stop="downloadRequirement(activity, $event)"
+>>>>>>> c1d47076dc8da69a8633f36005a0a175b15ebe34
                   >
-                    View Requirement
+                    Download Requirement
                   </button>
 
                   <button
                     v-else
+                    type="button"
                     class="ml-2 px-3 py-1 rounded text-white text-sm"
-                    :class="
-                      activity.certificate
-                        ? 'bg-green-500 hover:bg-green-600'
-                        : 'bg-gray-300 cursor-not-allowed'
-                    "
-                    :disabled="!activity.certificate"
+                    :class="[
+                      activity.status?.toLowerCase() === 'attended'
+                        ? 'bg-green-500 hover:bg-green-600 cursor-pointer'
+                        : 'bg-gray-300 cursor-not-allowed',
+                    ]"
+                    :disabled="activity.status?.toLowerCase() !== 'attended'"
+                    @click.stop="activity.status?.toLowerCase() === 'attended' ? downloadCertificate(activity, $event) : null"
                   >
-                    {{ activity.certificate ? "View Certificate" : "Pending" }}
+                    {{
+                      activity.status?.toLowerCase() === 'attended'
+                        ? "Download Certificate"
+                        : "Certificate Unavailable"
+                    }}
                   </button>
                 </div>
               </div>
@@ -754,30 +1007,43 @@ onMounted(fetchMyActivities);
                   <td class="px-6 py-4 whitespace-nowrap text-sm">
                     <button
                       v-if="activity.type === 'career'"
+<<<<<<< HEAD
                       :class="[
                         'px-3 py-1 rounded text-white',
 
                         'bg-blue-500 hover:bg-blue-600',
                       ]"
                       @click="viewRequirement(activity)"
+=======
+                      type="button"
+                      :class="[
+                        'px-3 py-1 rounded text-white',
+                        activity.requirement_directory || activity.applicationID
+                          ? 'bg-blue-500 hover:bg-blue-600 cursor-pointer'
+                          : 'bg-gray-300 cursor-not-allowed',
+                      ]"
+                      @click.stop="downloadRequirement(activity, $event)"
+>>>>>>> c1d47076dc8da69a8633f36005a0a175b15ebe34
                     >
-                      View Requirement
+                      Download Requirement
                     </button>
 
                     <button
                       v-else
-                      :disabled="!activity.certificate"
+                      type="button"
                       :class="[
                         'px-3 py-1 rounded text-white',
-                        activity.certificate
-                          ? 'bg-green-500 hover:bg-green-600'
+                        activity.status?.toLowerCase() === 'attended'
+                          ? 'bg-green-500 hover:bg-green-600 cursor-pointer'
                           : 'bg-gray-300 cursor-not-allowed',
                       ]"
+                      :disabled="activity.status?.toLowerCase() !== 'attended'"
+                      @click.stop="activity.status?.toLowerCase() === 'attended' ? downloadCertificate(activity, $event) : null"
                     >
                       {{
-                        activity.certificate
-                          ? "View Certificate"
-                          : "Certificate Pending"
+                        activity.status?.toLowerCase() === 'attended'
+                          ? "Download Certificate"
+                          : "Certificate Unavailable"
                       }}
                     </button>
                   </td>
@@ -958,27 +1224,6 @@ onMounted(fetchMyActivities);
             </p>
           </div>
         </div>
-      </div>
-    </dialog>
-    <dialog v-if="showPdfModal" class="modal" open>
-      <div class="modal-box w-11/12 max-w-5xl relative">
-        <button
-          class="btn btn-sm btn-circle absolute right-2 top-2"
-          @click="showPdfModal = false"
-        >
-          ✕
-        </button>
-
-        <h3 class="font-bold text-lg mb-4">Uploaded Requirement</h3>
-
-        <iframe
-          v-if="pdfUrl"
-          :src="pdfUrl"
-          class="w-full h-[80vh] rounded-lg"
-          frameborder="0"
-        ></iframe>
-
-        <p v-else class="text-center text-gray-500">No requirement found.</p>
       </div>
     </dialog>
   </div>
