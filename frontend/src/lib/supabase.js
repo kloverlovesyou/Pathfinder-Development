@@ -56,10 +56,18 @@ export async function uploadRequirement(file, bucketName = DEFAULT_BUCKET) {
 /**
  * Upload PDF to Certificates folder
  */
-export async function uploadCertificate(file, bucketName = DEFAULT_BUCKET) {
+export async function uploadCertificate(file, bucketName = "Requirements") {
   const filePath = await uploadPDF(file, bucketName, "certificate_directory");
   if (!filePath) return null;
 
+  // Return both the object path (for DB) and public URL (for UI)
+  const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
+  const publicUrl = data?.publicUrl || null;
+
+  return { filePath, publicUrl };
+}
+
+export function getPDFUrl(filePath, bucketName = "Requirements") {
   const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
   return data?.publicUrl || null;
 }
@@ -70,7 +78,3 @@ export async function uploadCertificate(file, bucketName = DEFAULT_BUCKET) {
  * @param {string} bucketName - The bucket name (default: 'Requirements')
  * @returns {string} - Public URL to the file
  */
-export function getPDFUrl(fileName, bucketName = DEFAULT_BUCKET) {
-  const { data } = supabase.storage.from(bucketName).getPublicUrl(fileName);
-  return data.publicUrl;
-}
