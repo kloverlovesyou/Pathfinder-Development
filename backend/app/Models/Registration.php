@@ -17,7 +17,6 @@ use Illuminate\Database\Eloquent\Model;
  * @property Carbon $registrationStatus
  * @property string|null $certTrackingID
  * @property Carbon|null $certGivenDate
- * @property string|null $certificate
  * @property int|null $trainingID
  * @property int|null $applicantID
  * 
@@ -45,7 +44,6 @@ class Registration extends Model
 		'registrationStatus',
 		'certTrackingID',
 		'certGivenDate',
-		'certificate',
 		'trainingID',
 		'applicantID',
 		'certificatePath'

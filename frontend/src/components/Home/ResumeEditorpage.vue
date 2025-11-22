@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref, onMounted } from "vue";
+import { reactive, ref, onMounted, onActivated } from "vue";
 import jsPDF from "jspdf";
 import axios from "axios";
 import { useRouter } from "vue-router";
@@ -546,6 +546,7 @@ onMounted(async () => {
   }
   await loadResume();
   await fetchTrainingCounters();
+  await fetchSelectedCertificates(); // Ensure certificates are loaded
 });
 
 const logout = () => {
@@ -559,20 +560,27 @@ const selectedCertificates = ref([]);
 async function fetchSelectedCertificates() {
   const token = localStorage.getItem("token");
   const user = JSON.parse(localStorage.getItem("user"));
-  if (!token || !user?.applicantID) return [];
+  if (!token || !user?.applicantID) {
+    selectedCertificates.value = [];
+    return [];
+  }
 
   try {
+    // Fetch all certificates (including organization-issued ones)
     const response = await axios.get(
       import.meta.env.VITE_API_BASE_URL +
-        `/certificates/${user.applicantID}/selected`,
+        `/certificates/${user.applicantID}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    // ✅ Update reactive state for the resume page
-    selectedCertificates.value = response.data.filter(
-      (cert) => cert.IsSelected === 1
+    // Filter for selected certificates (both manual and organization-issued)
+    // Only include certificates where IsSelected is 1 or true
+    selectedCertificates.value = (response.data || []).filter(
+      (cert) => cert.IsSelected === 1 || cert.IsSelected === true
     );
 
+    console.log("✅ Selected certificates loaded:", selectedCertificates.value.length);
+    
     // ✅ Also return it for PDF preview
     return selectedCertificates.value;
   } catch (error) {
@@ -582,7 +590,10 @@ async function fetchSelectedCertificates() {
   }
 }
 
-onMounted(fetchSelectedCertificates);
+// Refresh certificates when component is activated (navigated back to)
+onActivated(async () => {
+  await fetchSelectedCertificates();
+});
 </script>
 
 <template>
