@@ -83,6 +83,16 @@ Route::post('/test-email', [AuthController::class, 'testEmail']); // For debuggi
 // Get verification link for testing (development only)
 Route::get('/get-verification-link/{email}', [AuthController::class, 'getVerificationLink']);
 
+// Clear config cache (for Railway free tier - no console access)
+Route::post('/clear-cache', function() {
+    \Artisan::call('config:clear');
+    \Artisan::call('cache:clear');
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Config and cache cleared successfully'
+    ]);
+});
+
 // Applicant & Organization
 Route::post('/applicants', [ApplicantController::class, 'a_register']);
 Route::post('/applicants/login', [ApplicantController::class, 'login']);

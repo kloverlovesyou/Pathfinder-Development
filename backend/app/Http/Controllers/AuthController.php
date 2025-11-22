@@ -10,11 +10,87 @@ use App\Models\Organization;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\EmailVerification;
+use App\Services\BrevoEmailService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\View;
 
 
 class AuthController extends Controller
 {
+    /**
+     * Send verification email with automatic fallback to Brevo API
+     */
+    private function sendVerificationEmail($email, $verificationUrl, $userName, $type)
+    {
+        $emailSent = false;
+        $emailError = null;
+        $emailException = null;
+        $usedBrevoApi = false;
+        
+        // Try SMTP first
+        try {
+            Mail::to($email)->send(new EmailVerification($verificationUrl, $userName, $type));
+            $emailSent = true;
+            \Log::info('Verification email sent via SMTP', ['email' => $email]);
+        } catch (\Exception $e) {
+            $errorMessage = $e->getMessage();
+            $emailException = $e;
+            
+            // Check if it's a connection timeout/refused error
+            $isConnectionError = str_contains($errorMessage, 'Connection timed out') ||
+                                 str_contains($errorMessage, 'Connection refused') ||
+                                 str_contains($errorMessage, 'could not be established');
+            
+            if ($isConnectionError) {
+                \Log::warning('SMTP connection failed, trying Brevo API', [
+                    'email' => $email,
+                    'error' => $errorMessage
+                ]);
+                
+                // Fallback to Brevo API
+                try {
+                    $brevoService = new BrevoEmailService();
+                    $htmlContent = View::make('emails.verification', [
+                        'verificationUrl' => $verificationUrl,
+                        'userName' => $userName,
+                        'userType' => $type
+                    ])->render();
+                    
+                    $brevoService->send(
+                        $email,
+                        'Verify Your Email Address - Pathfinder',
+                        $htmlContent
+                    );
+                    
+                    $emailSent = true;
+                    $usedBrevoApi = true;
+                    \Log::info('Verification email sent via Brevo API', ['email' => $email]);
+                } catch (\Exception $brevoError) {
+                    $emailError = 'SMTP failed: ' . $errorMessage . ' | Brevo API failed: ' . $brevoError->getMessage();
+                    \Log::error('Both SMTP and Brevo API failed', [
+                        'email' => $email,
+                        'smtp_error' => $errorMessage,
+                        'brevo_error' => $brevoError->getMessage()
+                    ]);
+                }
+            } else {
+                // Other SMTP error, don't try Brevo API
+                $emailError = $errorMessage;
+                \Log::error('SMTP error (not connection issue)', [
+                    'email' => $email,
+                    'error' => $errorMessage
+                ]);
+            }
+        }
+        
+        return [
+            'email_sent' => $emailSent,
+            'email_error' => $emailError,
+            'email_exception' => $emailException,
+            'used_brevo_api' => $usedBrevoApi,
+        ];
+    }
+
     // ✅ Applicant Registration
     public function a_register(Request $request)
     {
@@ -45,35 +121,49 @@ class AuthController extends Controller
         $verificationUrl = url('/api/verify-email?token=' . $verificationToken . '&type=applicant');
         $userName = $validated['firstName'] . ' ' . $validated['lastName'];
         
-        $emailSent = false;
-        $emailError = null;
+        \Log::info('Attempting to send verification email (Applicant)', [
+            'email' => $validated['emailAddress']
+        ]);
         
-        try {
-            Mail::to($validated['emailAddress'])->send(new EmailVerification($verificationUrl, $userName, 'applicant'));
-            $emailSent = true;
-            \Log::info('Verification email sent successfully', [
-                'email' => $validated['emailAddress'],
-                'url' => $verificationUrl
-            ]);
-        } catch (\Exception $e) {
-            $emailError = $e->getMessage();
-            \Log::error('Failed to send verification email', [
-                'email' => $validated['emailAddress'],
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
+        $emailResult = $this->sendVerificationEmail(
+            $validated['emailAddress'],
+            $verificationUrl,
+            $userName,
+            'applicant'
+        );
+        
+        $emailSent = $emailResult['email_sent'];
+        $emailError = $emailResult['email_error'];
+        $emailException = $emailResult['email_exception'];
+        
+        // Get mail configuration for debugging
+        $mailConfig = [
+            'driver' => config('mail.default'),
+            'host' => config('mail.mailers.smtp.host'),
+            'port' => config('mail.mailers.smtp.port'),
+            'encryption' => config('mail.mailers.smtp.encryption'),
+            'from_address' => config('mail.from.address'),
+            'from_name' => config('mail.from.name'),
+            'username' => config('mail.mailers.smtp.username'),
+            'username_set' => !empty(config('mail.mailers.smtp.username')),
+            'password_set' => !empty(config('mail.mailers.smtp.password')),
+            'password_length' => strlen(config('mail.mailers.smtp.password', '')),
+            'brevo_api_key_set' => !empty(config('services.brevo.api_key')),
+            'used_brevo_api' => $emailResult['used_brevo_api'] ?? false,
+        ];
 
         $response = [
             'status'  => 'success',
             'message' => 'Registration successful! Please check your email to verify your account.',
             'data'    => $applicant,
             'email_sent' => $emailSent,
+            'mail_config' => $mailConfig, // Always include for debugging
         ];
         
         // Always include email status
         if ($emailError) {
             $response['email_error'] = $emailError;
+            $response['error_class'] = $emailException ? get_class($emailException) : 'Unknown';
             $response['warning'] = 'Email sending failed. You can use the resend verification endpoint or check your email configuration.';
             $response['verification_url'] = $verificationUrl; // Include URL for manual testing
             $response['verification_token'] = $verificationToken; // Include token for manual testing
@@ -121,35 +211,49 @@ class AuthController extends Controller
         $verificationUrl = url('/api/verify-email?token=' . $verificationToken . '&type=organization');
         $userName = $validated['name'];
         
-        $emailSent = false;
-        $emailError = null;
+        \Log::info('Attempting to send verification email (Organization)', [
+            'email' => $validated['emailAddress']
+        ]);
         
-        try {
-            Mail::to($validated['emailAddress'])->send(new EmailVerification($verificationUrl, $userName, 'organization'));
-            $emailSent = true;
-            \Log::info('Verification email sent successfully', [
-                'email' => $validated['emailAddress'],
-                'url' => $verificationUrl
-            ]);
-        } catch (\Exception $e) {
-            $emailError = $e->getMessage();
-            \Log::error('Failed to send verification email', [
-                'email' => $validated['emailAddress'],
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
+        $emailResult = $this->sendVerificationEmail(
+            $validated['emailAddress'],
+            $verificationUrl,
+            $userName,
+            'organization'
+        );
+        
+        $emailSent = $emailResult['email_sent'];
+        $emailError = $emailResult['email_error'];
+        $emailException = $emailResult['email_exception'];
+        
+        // Get mail configuration for debugging
+        $mailConfig = [
+            'driver' => config('mail.default'),
+            'host' => config('mail.mailers.smtp.host'),
+            'port' => config('mail.mailers.smtp.port'),
+            'encryption' => config('mail.mailers.smtp.encryption'),
+            'from_address' => config('mail.from.address'),
+            'from_name' => config('mail.from.name'),
+            'username' => config('mail.mailers.smtp.username'),
+            'username_set' => !empty(config('mail.mailers.smtp.username')),
+            'password_set' => !empty(config('mail.mailers.smtp.password')),
+            'password_length' => strlen(config('mail.mailers.smtp.password', '')),
+            'brevo_api_key_set' => !empty(config('services.brevo.api_key')),
+            'used_brevo_api' => $emailResult['used_brevo_api'] ?? false,
+        ];
 
         $response = [
             'status'  => 'success',
             'message' => 'Registration successful! Please check your email to verify your account.',
             'data'    => $organization,
             'email_sent' => $emailSent,
+            'mail_config' => $mailConfig, // Always include for debugging
         ];
         
         // Always include email status
         if ($emailError) {
             $response['email_error'] = $emailError;
+            $response['error_class'] = $emailException ? get_class($emailException) : 'Unknown';
             $response['warning'] = 'Email sending failed. You can use the resend verification endpoint or check your email configuration.';
             $response['verification_url'] = $verificationUrl; // Include URL for manual testing
             $response['verification_token'] = $verificationToken; // Include token for manual testing
@@ -333,13 +437,13 @@ class AuthController extends Controller
         // Send verification email
         $verificationUrl = url('/api/verify-email?token=' . $verificationToken . '&type=' . $type);
         
-        try {
-            Mail::to($email)->send(new EmailVerification($verificationUrl, $userName, $type));
-        } catch (\Exception $e) {
-            \Log::error('Failed to resend verification email: ' . $e->getMessage());
+        $emailResult = $this->sendVerificationEmail($email, $verificationUrl, $userName, $type);
+        
+        if (!$emailResult['email_sent']) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to send verification email. Please try again later.',
+                'error' => $emailResult['email_error'],
             ], 500);
         }
 
@@ -360,6 +464,7 @@ class AuthController extends Controller
         $verificationUrl = url('/api/verify-email?token=test_token&type=applicant');
         
         // Get full mail configuration for debugging
+        $brevoApiKey = config('services.brevo.api_key', env('BREVO_API_KEY'));
         $mailConfig = [
             'driver' => config('mail.default'),
             'host' => config('mail.mailers.smtp.host'),
@@ -371,44 +476,51 @@ class AuthController extends Controller
             'username_set' => !empty(config('mail.mailers.smtp.username')),
             'password_set' => !empty(config('mail.mailers.smtp.password')),
             'password_length' => strlen(config('mail.mailers.smtp.password', '')),
+            'brevo_api_key_set' => !empty($brevoApiKey),
+            'brevo_api_key_length' => $brevoApiKey ? strlen($brevoApiKey) : 0,
         ];
         
         \Log::info('Testing email configuration', [
             'email' => $testEmail,
-            'mail_config' => $mailConfig
+            'mail_config' => $mailConfig,
+            'brevo_api_key_set' => !empty($brevoApiKey)
         ]);
         
-        try {
-            Mail::to($testEmail)->send(new EmailVerification($verificationUrl, 'Test User', 'applicant'));
-            
+        $emailResult = $this->sendVerificationEmail($testEmail, $verificationUrl, 'Test User', 'applicant');
+        $mailConfig['used_brevo_api'] = $emailResult['used_brevo_api'] ?? false;
+        
+        if ($emailResult['email_sent']) {
             \Log::info('Test email sent successfully', ['email' => $testEmail]);
             
             return response()->json([
                 'status' => 'success',
                 'message' => 'Test email sent successfully! Check your inbox (and spam folder).',
                 'mail_config' => $mailConfig,
+                'method' => $emailResult['used_brevo_api'] ? 'Brevo API' : 'SMTP',
             ]);
-        } catch (\Exception $e) {
+        } else {
             \Log::error('Test email failed', [
                 'email' => $testEmail,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error' => $emailResult['email_error'],
                 'mail_config' => $mailConfig
             ]);
+            
+            $troubleshooting = [
+                'check_brevo_api_key' => 'Set BREVO_API_KEY in Railway environment variables (not just .env file)',
+                'check_smtp_config' => 'Verify SMTP settings if using SMTP',
+                'check_connection' => 'Railway blocks SMTP - Brevo API fallback should work if BREVO_API_KEY is set',
+            ];
+            
+            if (!$mailConfig['brevo_api_key_set']) {
+                $troubleshooting['action'] = 'BREVO_API_KEY is NOT set in Railway. Add it in Railway Dashboard → Variables';
+            }
             
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to send test email',
-                'error' => $e->getMessage(),
-                'error_class' => get_class($e),
+                'error' => $emailResult['email_error'],
                 'mail_config' => $mailConfig,
-                'troubleshooting' => [
-                    'check_password' => 'Verify MAIL_PASSWORD is correct (no spaces, full App Password)',
-                    'check_port' => 'Verify MAIL_PORT is 587 for TLS or 465 for SSL',
-                    'check_gmail' => 'Ensure 2FA is enabled and you\'re using an App Password',
-                    'test_log_driver' => 'Try setting MAIL_MAILER=log to test if emails are being generated',
-                    'check_firewall' => 'Ensure Railway allows outbound connections on port 587',
-                ],
+                'troubleshooting' => $troubleshooting,
             ], 500);
         }
     }
