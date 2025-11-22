@@ -535,6 +535,7 @@ import jsPDF from "jspdf";
 import * as pdfjsLib from "pdfjs-dist";
 import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
+
 // Configure pdfjs worker - use Vite's asset handling for the worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
