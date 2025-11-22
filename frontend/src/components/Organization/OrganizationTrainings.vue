@@ -246,7 +246,7 @@
 
                     <!-- View Certificate Button (only show when certificate exists) -->
                     <button class="action-btn"
-                            v-if="person.hasCertificate || person.certificatePath"
+                            v-if="person.hasCertificate && person.certificatePath"
                             @click="viewCertificate(person.certificatePath)">
                       View Certificate
                     </button>
@@ -682,6 +682,7 @@ export default {
       person.hasCertificate = true;
       person.certificateTrackingID = person.id;
       person.certificateUrl = publicUrl; // <-- save public URL for viewing
+      person.certificatePath = filePath; // <-- save path in DB
 
       alert(`Certificate issued for ${person.name}!`);
     } catch (error) {
