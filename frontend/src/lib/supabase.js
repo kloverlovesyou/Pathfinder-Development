@@ -60,8 +60,15 @@ export async function uploadCertificate(file, bucketName = DEFAULT_BUCKET) {
   const filePath = await uploadPDF(file, bucketName, "certificate_directory");
   if (!filePath) return null;
 
+  // Optionally get public URL
   const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
-  return data?.publicUrl || null;
+  const publicUrl = data?.publicUrl || null;
+
+  // Return both so backend gets path, frontend can use URL
+  return {
+    filePath,   // e.g., certificate_directory/123456_file.pdf -> store in DB
+    publicUrl,  // optional -> display or share
+  };
 }
 
 /**
