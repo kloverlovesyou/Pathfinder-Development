@@ -238,8 +238,9 @@
                   </td>
                   <td>
                     <button class="action-btn"
-                      :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
-                      :disabled="person.hasCertificate" @click="openCertUploadModal(person)">
+                            :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
+                            :disabled="person.hasCertificate"
+                            @click="issueCertificate(person)">
                       {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
                     </button>
                   </td>
@@ -513,6 +514,8 @@ import QrcodeVue from "qrcode.vue";
 import api from "@/composables/api.js";
 import { activeTrainingQR, activeTrainingId, scheduleQR } from "@/composables/useTrainingQR.js";
 import { uploadCertificate } from "@/lib/supabase.js";
+import jsPDF from "jspdf";
+
 
 export default {
   components: { QrcodeVue }, // ✅ register component
@@ -596,47 +599,135 @@ export default {
 
   methods: {
 
-async sendCertificate(file, registrantId) {
-    if (!file) {
-      alert("Please select a PDF certificate to upload.");
-      return;
-    }
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("Please log in to continue.");
-      return;
-    }
-
+    async issueCertificate(person) {
     try {
-      // Upload certificate to Supabase certificate_directory
-      const filePath = await uploadCertificate(file);
-      if (!filePath) {
-        alert("Failed to upload certificate to Supabase.");
-        return;
-      }
+      if (person.hasCertificate) return; // already issued
 
-      console.log("Certificate uploaded to:", filePath);
+      const givenDate = new Date().toISOString().split("T")[0];
 
-      // Send certificate info to backend
-      const form = new FormData();
-      form.append("certificateFilePath", filePath);
+      // Generate PDF
+      const doc = new jsPDF();
+      doc.setFontSize(20);
+      doc.text("Certificate of Completion", 105, 40, null, null, "center");
+      doc.setFontSize(14);
+      doc.text(`This is to certify that ${person.name}`, 105, 60, null, null, "center");
+      doc.text(`has completed the training: ${this.selectedTraining.title}`, 105, 70, null, null, "center");
+      doc.text(`Certificate Tracking ID: ${person.id}`, 105, 90, null, null, "center");
+      doc.text(`Date Issued: ${givenDate}`, 105, 100, null, null, "center");
+
+      const pdfBlob = doc.output("blob");
+      const pdfFile = new File([pdfBlob], `${person.id}.pdf`, { type: "application/pdf" });
+
+      // Upload PDF to Supabase
+      const filePath = await uploadCertificate(pdfFile);
+      if (!filePath) throw new Error("Failed to upload certificate");
+
+      // Send metadata to backend
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("certificateTrackingID", person.id); // Use registrationID
+      formData.append("certificateGivenDate", givenDate);
+      formData.append("certificateFilePath", filePath);
 
       await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/registrations/${registrantId}/certificate`,
-        form,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
+        `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
+        formData,
+        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
       );
 
-      alert("Certificate issued successfully!");
+      // Update UI
+      person.hasCertificate = true;
+      person.certificateTrackingID = person.id;
+
+      alert(`Certificate issued for ${person.name}!`);
     } catch (error) {
-      console.error("Error uploading certificate:", error);
-      alert(error.response?.data?.message || "An error occurred while issuing the certificate.");
+      console.error("Error issuing certificate:", error);
+      alert(`Failed to issue certificate for ${person.name}.`);
+    }
+  },
+
+    async issueBulkCertificates(selectedRegistrants) {
+    try {
+      const baseID = `CERT-${Date.now()}`;
+      const givenDate = new Date().toISOString().split("T")[0];
+
+      const certificates = await Promise.all(
+        selectedRegistrants.map(async (person) => {
+          const doc = new jsPDF();
+          doc.setFontSize(20);
+          doc.text("Certificate of Completion", 105, 40, null, null, "center");
+          doc.setFontSize(14);
+          doc.text(`This is to certify that ${person.name}`, 105, 60, null, null, "center");
+          doc.text(`has completed the training: ${this.selectedTraining.title}`, 105, 70, null, null, "center");
+
+          const pdfBlob = doc.output("blob");
+          const pdfFile = new File([pdfBlob], `${person.name}.pdf`, { type: "application/pdf" });
+          const filePath = await uploadCertificate(pdfFile);
+
+          return { filePath };
+        })
+      );
+
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `${import.meta.env.VITE_API_BASE_URL}/registrations/${this.selectedTraining.id}/bulk-certificates`,
+        { baseTrackingID: baseID, certGivenDate: givenDate, certificates },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      alert("Bulk certificates issued successfully!");
+    } catch (error) {
+      console.error("Error issuing bulk certificates:", error);
+      alert("Failed to issue bulk certificates.");
+    }
+  },
+
+  async issueCertificatesToSelected() {
+    const selectedPeople = this.registrantsList.filter(p => p.selected && !p.hasCertificate);
+    if (!selectedPeople.length) return alert("No selected registrants or all already issued.");
+
+    try {
+      const certGivenDate = new Date().toISOString().split("T")[0];
+      const baseTrackingID = `CERT-${Date.now()}`; // ✅ Base tracking ID for bulk issuance
+      const certificates = [];
+
+      for (const person of selectedPeople) {
+        const doc = new jsPDF();
+        doc.setFontSize(20);
+        doc.text("Certificate of Completion", 105, 40, null, null, "center");
+        doc.setFontSize(14);
+        doc.text(`This is to certify that ${person.name}`, 105, 60, null, null, "center");
+        doc.text(`has completed the training: ${this.selectedTraining.title}`, 105, 70, null, null, "center");
+        doc.text(`Certificate Tracking ID: ${person.id}`, 105, 90, null, null, "center");
+        doc.text(`Date Issued: ${certGivenDate}`, 105, 100, null, null, "center");
+
+        const pdfBlob = doc.output("blob");
+        const pdfFile = new File([pdfBlob], `${person.id}.pdf`, { type: "application/pdf" });
+
+        const filePath = await uploadCertificate(pdfFile);
+        if (!filePath) throw new Error(`Failed to upload certificate for ${person.name}`);
+
+        certificates.push({ filePath });
+      }
+
+      const token = localStorage.getItem("token");
+      await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/trainings/${this.selectedTraining.trainingID}/certificates/bulk`,
+        { baseTrackingID, certGivenDate, certificates },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Update UI
+      selectedPeople.forEach(p => {
+        p.hasCertificate = true;
+        p.certificateTrackingID = p.id; // Registration ID as tracking ID
+      });
+
+      alert("Certificates issued successfully!");
+    } catch (error) {
+      console.error("Bulk issuance error:", error);
+      alert("Failed to issue certificates.");
     }
   },
 
