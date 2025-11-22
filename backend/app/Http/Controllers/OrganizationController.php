@@ -90,8 +90,22 @@ class OrganizationController extends Controller
         
         $emailSent = false;
         $emailError = null;
+        $mailConfig = [
+            'driver' => config('mail.default'),
+            'host' => config('mail.mailers.smtp.host'),
+            'port' => config('mail.mailers.smtp.port'),
+            'from_address' => config('mail.from.address'),
+            'from_name' => config('mail.from.name'),
+            'username_set' => !empty(config('mail.mailers.smtp.username')),
+            'password_set' => !empty(config('mail.mailers.smtp.password')),
+        ];
         
         try {
+            \Log::info('Attempting to send verification email', [
+                'email' => $request->input('emailAddress'),
+                'mail_config' => $mailConfig
+            ]);
+            
             Mail::to($request->input('emailAddress'))->send(new EmailVerification($verificationUrl, $userName, 'organization'));
             $emailSent = true;
             \Log::info('Verification email sent successfully', [
@@ -103,31 +117,36 @@ class OrganizationController extends Controller
             \Log::error('Failed to send verification email', [
                 'email' => $request->input('emailAddress'),
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
+                'mail_config' => $mailConfig
             ]);
         }
 
         $response = [
-            'message' => 'Registration successful! Please check your email to verify your account.',
+            'message' => $emailSent 
+                ? 'Registration successful! Please check your email to verify your account.'
+                : 'Registration successful! However, the verification email could not be sent.',
             'organization' => $organization,
             'email_sent' => $emailSent,
+            'mail_config' => $mailConfig, // Always include for debugging
         ];
         
         // Always include email status and verification info
         if ($emailError) {
             $response['email_error'] = $emailError;
-            $response['warning'] = 'Email sending failed. You can use the resend verification endpoint or check your email configuration.';
+            $response['warning'] = 'Email sending failed. Check your email configuration in .env file.';
             $response['verification_url'] = $verificationUrl; // Include URL for manual testing
             $response['verification_token'] = $verificationToken; // Include token for manual testing
-        }
-        
-        // In development, include more debug info
-        if (config('app.debug')) {
-            $response['debug'] = [
-                'mail_driver' => config('mail.default'),
-                'mail_from' => config('mail.from.address'),
-                'verification_url' => $verificationUrl,
+            $response['help'] = [
+                'check_env' => 'Verify MAIL_MAILER, MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD in .env',
+                'test_endpoint' => 'Use POST /api/test-email to test your email configuration',
+                'manual_verify' => 'You can manually verify using the verification_url above',
             ];
+        } else if (!$emailSent) {
+            // Email didn't send but no error was caught (silent failure)
+            $response['warning'] = 'Email may not have been sent. Check your email configuration.';
+            $response['verification_url'] = $verificationUrl;
+            $response['verification_token'] = $verificationToken;
         }
 
         return response()->json($response, 201);

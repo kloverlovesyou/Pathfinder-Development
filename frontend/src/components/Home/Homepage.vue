@@ -45,12 +45,6 @@ function buildEvents() {
   });
 }
 
-// Show events on calendar click
-function showEvents(dateStr) {
-  selectedDate.value = dateStr;
-  dayEvents.value = events.value[dateStr] || [];
-}
-
 // ------------------ TOAST ------------------
 function addToast(message, type = "info") {
   const id = Date.now();
@@ -107,134 +101,6 @@ async function fetchMyRegistrations() {
   }
 }
 
-function cancelApplication(career) {
-  const id = career.careerID;
-  appliedPosts.value[id] = false;
-  myApplications.value.delete(id);
-}
-
-// Toggle bookmark for career
-async function toggleCareerBookmark(career) {
-  const token = localStorage.getItem('token');
-  if (!token) {
-    addToast('PLEASE LOG IN FIRST', 'accent');
-    return;
-  }
-
-  const careerID = career.careerID;
-  const isBookmarked = bookmarkedPosts.value[careerID];
-
-  try {
-    if (isBookmarked) {
-      await axios.delete(import.meta.env.VITE_API_BASE_URL + `/career-bookmarks/${careerID}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      bookmarkedPosts.value[careerID] = false;
-      addToast('Bookmark removed', 'info');
-    } else {
-      await axios.post(
-        import.meta.env.VITE_API_BASE_URL + '/career-bookmarks',
-        { careerID },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      bookmarkedPosts.value[careerID] = true;
-      addToast('Bookmarked!', 'success');
-    }
-  } catch (error) {
-    if (error.response?.status === 409) {
-      addToast('Already bookmarked', 'accent');
-    } else {
-      addToast('Failed to bookmark', 'error');
-    }
-  }
-}
-
-      async function registerForTraining(training) {
-      if (!training) return;
-
-      try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-      addToast('PLEASE LOG IN FIRST', 'accent');
-      return;
-      }
-
-      const response = await axios.post(
-        import.meta.env.VITE_API_BASE_URL + '/registrations',
-        { trainingID: training.trainingID },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      // Check if the server explicitly says success = false
-      if (response.data?.success === false) {
-        addToast('FAILED TO REGISTER', 'accent');
-        return;
-      }
-
-      addToast('REGISTRATION SUCCESSFUL!!!', 'success');
-      myRegistrations.value.add(training.trainingID);
-      registeredPosts.value[training.trainingID] = true;
-
-      } catch (error) {
-      // Axios response error handling
-      if (error.response?.status === 409) {
-      addToast('YOU ALREADY REGISTERED FOR THIS TRAINING', 'accent');
-      myRegistrations.value.add(training.trainingID);
-      registeredPosts.value[training.trainingID] = true;
-      } else if (error.response?.status === 401) {
-      addToast('UNAUTHORIZED. PLEASE LOG IN AGAIN', 'accent');
-      } else {
-      console.error('Registration error:', error.response || error);
-      addToast('FAILED TO REGISTER', 'accent');
-      }
-      }
-      }
-
-// Unregister from training
-  async function unregisterFromTraining(training) {
-  if (!training) return;
-
-  try {
-  const token = localStorage.getItem('token');
-  if (!token) {
-  addToast('PLEASE LOG IN FIRST', 'accent');
-  return;
-  }
-
-  // Fetch user's registrations
-  const registrationsRes = await axios.get(
-    import.meta.env.VITE_API_BASE_URL + '/registrations',
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-
-  const registration = registrationsRes.data.find(r => r.trainingID === training.trainingID);
-
-  if (!registration) {
-    addToast('You are not registered for this training', 'accent');
-    return;
-  }
-
-  // Delete registration
-  await axios.delete(
-    import.meta.env.VITE_API_BASE_URL + `/registrations/${registration.id}`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-
-  myRegistrations.value.delete(training.trainingID);
-  registeredPosts.value[training.trainingID] = false;
-  addToast('Unregistered successfully', 'info');
-
-  } catch (error) {
-  if (error.response?.status === 404) {
-  addToast('Registration not found', 'accent');
-  } else if (error.response?.status === 401) {
-  addToast('UNAUTHORIZED. PLEASE LOG IN AGAIN', 'accent');
-  } else {
-  console.error("Error unregistering:", error.response || error);
-  addToast('Failed to unregister', 'error');
-  }
-  }
-  }
 
 // ------------------ MODALS ------------------
 async function openCareerModal(career) {
@@ -249,7 +115,7 @@ async function openCareerModal(career) {
     //store main career + recommended trainings
     selectedCareerDetails.value = res.data.career;
     recommendedTrainings.value = res.data.recommended_trainings || [];
-    
+
     showCareerPopup.value = true;
   } catch (error) {
     console.error("Error loading career details:", error);
@@ -317,42 +183,6 @@ async function toggleCareerBookmark(career) {
   }
 }
 
-// Toggle bookmark for training
-async function toggleTrainingBookmark(training) {
-  const token = localStorage.getItem('token');
-  if (!token) {
-    addToast('PLEASE LOG IN FIRST', 'accent');
-    return;
-  }
-
-  const trainingID = training.trainingID;
-  const isBookmarked = bookmarkedPosts.value[trainingID];
-
-  try {
-    if (isBookmarked) {
-      await axios.delete(import.meta.env.VITE_API_BASE_URL + `/bookmarks/${trainingID}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      bookmarkedPosts.value[trainingID] = false;
-      addToast('Bookmark removed', 'info');
-    } else {
-      await axios.post(
-        import.meta.env.VITE_API_BASE_URL + '/bookmarks',
-        { trainingID },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      bookmarkedPosts.value[trainingID] = true;
-      addToast('Bookmarked!', 'success');
-    }
-  } catch (error) {
-    if (error.response?.status === 409) {
-      addToast('Already bookmarked', 'accent');
-    } else {
-      addToast('Failed to bookmark', 'error');
-    }
-  }
-}
-
 // Register for training
 async function registerForTraining(training) {
   if (!training) return;
@@ -394,7 +224,7 @@ async function unregisterFromTraining(training) {
     const registrationsRes = await axios.get(import.meta.env.VITE_API_BASE_URL + '/registrations', {
       headers: { Authorization: `Bearer ${token}` },
     });
-    
+
     const registration = registrationsRes.data.find(r => r.trainingID === training.trainingID);
     if (registration) {
       await axios.delete(import.meta.env.VITE_API_BASE_URL + `/registrations/${registration.id}`, {
@@ -417,18 +247,6 @@ function openModal(post) {
 
 function closeModal() {
   selectedPost.value = null;
-}
-
-// Build events only when posts are loaded
-function buildEvents() {
-  events.value = {};
-  posts.value.forEach((post) => {
-    const date = post.deadlineOfSubmission || (post.schedule ? post.schedule.split("T")[0] : null);
-    if (date) {
-      if (!events.value[date]) events.value[date] = [];
-      events.value[date].push(post);
-    }
-  });
 }
 
 // Show events on calendar click
@@ -465,7 +283,7 @@ async function fetchRecommendedCareers() {
   try {
     const res = await axios.get(
       import.meta.env.VITE_API_BASE_URL +
-        `/careers/recommend/${selectedCareerId.value}`
+      `/careers/recommend/${selectedCareerId.value}`
     );
 
     // API SHOULD RETURN LIST OF CAREERS
@@ -546,35 +364,20 @@ onMounted(async () => {
     <!-- Layout wrapper -->
     <div class="relative font-poppins min-h-screen flex">
       <!-- MAIN CONTENT -->
-      <main
-        class="flex-1 bg-white m-3 px-4 rounded-lg flex flex-col min-h-0 overflow-hidden"
-      >
+      <main class="flex-1 bg-white m-3 px-4 rounded-lg flex flex-col min-h-0 overflow-hidden">
         <!-- Sticky Header -->
-        <div
-          class="sticky top-0 z-10 bg-white pt-4 px-4 pb-2 border-b shadow-sm"
-        >
+        <div class="sticky top-0 z-10 bg-white pt-4 px-4 pb-2 border-b shadow-sm">
           <h2 class="text-lg font-bold">Career-Training</h2>
           <h2 class="text-2xl font-bold mb-2">Matching Engine</h2>
 
           <div class="mt-4 mb-4">
-            <label
-              for="career-select"
-              class="block text-sm font-medium text-gray-700 mb-2"
-            >
+            <label for="career-select" class="block text-sm font-medium text-gray-700 mb-2">
               Select Your Target Career
             </label>
-            <select
-              id="career-select"
-              v-model="selectedCareerId"
-              @change="fetchRecommendedCareers"
-              class="block w-full px-4 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-gray-100"
-            >
+            <select id="career-select" v-model="selectedCareerId" @change="fetchRecommendedCareers"
+              class="block w-full px-4 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-gray-100">
               <option :value="null" disabled>Select a target career</option>
-              <option
-                v-for="career in allCareers"
-                :key="career.careerID"
-                :value="career.careerID"
-              >
+              <option v-for="career in allCareers" :key="career.careerID" :value="career.careerID">
                 {{ career.position }}
               </option>
             </select>
@@ -583,27 +386,16 @@ onMounted(async () => {
 
         <!-- Scrollable Posts -->
         <div class="flex-1 overflow-y-auto space-y-4 pb-4 pt-4">
-          <div
-            v-if="posts.length === 0 && selectedCareerId"
-            class="text-center text-gray-500 py-8"
-          >
+          <div v-if="posts.length === 0 && selectedCareerId" class="text-center text-gray-500 py-8">
             No recommended careers found.
           </div>
-          <div
-            v-else-if="posts.length === 0"
-            class="text-center text-gray-500 py-8"
-          >
+          <div v-else-if="posts.length === 0" class="text-center text-gray-500 py-8">
             Please select a target career to see recommendations.
           </div>
-          <div
-            v-for="post in posts"
-            :key="post.careerID"
-            class="p-4 bg-blue-gray rounded-lg relative cursor-pointer hover:bg-gray-300 transition"
-            :class="{
+          <div v-for="post in posts" :key="post.careerID"
+            class="p-4 bg-blue-gray rounded-lg relative cursor-pointer hover:bg-gray-300 transition" :class="{
               'ring-2 ring-blue-500': post.careerID === selectedCareerId,
-            }"
-            @click="openCareerModal(post)"
-          >
+            }" @click="openCareerModal(post)">
             <div class="flex items-center justify-between">
               <div class="flex-1">
                 <h3 class="font-semibold text-lg">{{ post.position }}</h3>
@@ -612,10 +404,8 @@ onMounted(async () => {
                 </p>
               </div>
               <!-- ✅ Show indicator for target career -->
-              <span
-                v-if="post.careerID === selectedCareerId"
-                class="ml-2 px-2 py-1 text-xs bg-blue-500 text-white rounded-full"
-              >
+              <span v-if="post.careerID === selectedCareerId"
+                class="ml-2 px-2 py-1 text-xs bg-blue-500 text-white rounded-full">
                 Target
               </span>
             </div>
@@ -624,21 +414,15 @@ onMounted(async () => {
       </main>
     </div>
 
-    <CalendarSidebar
-      :isOpen="calendarOpen"
-      @open="calendarOpen = true"
-      @close="calendarOpen = false"
-      @eventClick="openModalCalendar"
-    />
+    <CalendarSidebar :isOpen="calendarOpen" @open="calendarOpen = true" @close="calendarOpen = false"
+      @eventClick="openModalCalendar" />
 
     <!-- 🟦 Training Modal -->
     <dialog v-if="selectedTraining" open class="modal sm:modal-middle">
       <div class="modal-box max-w-3xl relative font-poppins">
         <!-- Close button -->
-        <button
-          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
-          @click="closeTrainingModal"
-        >
+        <button class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
+          @click="closeTrainingModal">
           ✕
         </button>
 
@@ -651,10 +435,7 @@ onMounted(async () => {
         <!-- Buttons -->
         <div class="my-4 flex justify-end gap-2">
           <!-- Bookmark -->
-          <button
-            class="btn btn-outline btn-sm"
-            @click="toggleBookmark(selectedTraining)"
-          >
+          <button class="btn btn-outline btn-sm" @click="toggleBookmark(selectedTraining)">
             {{
               bookmarkedPosts[selectedTraining.trainingID]
                 ? "Bookmarked"
@@ -674,12 +455,8 @@ onMounted(async () => {
             </div>
 
             <div v-else class="flex flex-col gap-2">
-              <div
-                v-for="(event, i) in dayEvents"
-                :key="i"
-                @click="openModal(event)"
-                class="bg-gray-100 p-2 rounded-lg shadow-sm cursor-pointer hover:bg-gray-200 break-words flex justify-between items-center"
-              >
+              <div v-for="(event, i) in dayEvents" :key="i" @click="openModal(event)"
+                class="bg-gray-100 p-2 rounded-lg shadow-sm cursor-pointer hover:bg-gray-200 break-words flex justify-between items-center">
                 <div>
                   <h3 class="font-semibold text-sm">
                     {{ isTraining(event) ? event.title : event.position }}
@@ -690,11 +467,8 @@ onMounted(async () => {
                 </div>
 
                 <!-- Badge -->
-                <span
-                  v-if="isRegisteredOrApplied(event)"
-                  class="text-[10px] text-white px-2 py-1 rounded-full"
-                  :class="isTraining(event) ? 'bg-blue-500' : 'bg-green-500'"
-                >
+                <span v-if="isRegisteredOrApplied(event)" class="text-[10px] text-white px-2 py-1 rounded-full"
+                  :class="isTraining(event) ? 'bg-blue-500' : 'bg-green-500'">
                   {{ isTraining(event) ? "Registered" : "Applied" }}
                 </span>
               </div>
@@ -705,46 +479,28 @@ onMounted(async () => {
         <!-- Description -->
         <p><strong>Description: </strong>{{ selectedTraining.description }}</p>
 
-        <button
-          v-if="!isSidebarOpen"
+        <button v-if="!isSidebarOpen"
           class="fixed bottom-6 right-6 bg-dark-slate text-white p-3 rounded-full shadow-lg z-50"
-          @click="isSidebarOpen = true"
-        >
+          @click="isSidebarOpen = true">
           <!-- Calendar SVG -->
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M16.75 3.56V2C16.75 1.59 16.41 1.25 16 1.25C15.59 1.25 15.25 1.59 15.25 2V3.5H8.74999V2C8.74999 1.59 8.40999 1.25 7.99999 1.25C7.58999 1.25 7.24999 1.59 7.24999 2V3.56C4.54999 3.81 3.23999 5.42 3.03999 7.81C3.01999 8.1 3.25999 8.34 3.53999 8.34H20.46C20.75 8.34 20.99 8.09 20.96 7.81C20.76 5.42 19.45 3.81 16.75 3.56Z"
-              fill="white"
-            />
+              fill="white" />
             <path
               d="M20 9.84003H4C3.45 9.84003 3 10.29 3 10.84V17C3 20 4.5 22 8 22H16C19.5 22 21 20 21 17V10.84C21 10.29 20.55 9.84003 20 9.84003ZM9.21 18.21C9.16 18.25 9.11 18.3 9.06 18.33C9 18.37 8.94 18.4 8.88 18.42C8.82 18.45 8.76 18.47 8.7 18.48C8.63 18.49 8.57 18.5 8.5 18.5C8.37 18.5 8.24 18.47 8.12 18.42C7.99 18.37 7.89 18.3 7.79 18.21C7.61 18.02 7.5 17.76 7.5 17.5C7.5 17.24 7.61 16.98 7.79 16.79C7.89 16.7 7.99 16.63 8.12 16.58C8.3 16.5 8.5 16.48 8.7 16.52C8.76 16.53 8.82 16.55 8.88 16.58C8.94 16.6 9 16.63 9.06 16.67C9.11 16.71 9.16 16.75 9.21 16.79C9.39 16.98 9.5 17.24 9.5 17.5C9.5 17.76 9.39 18.02 9.21 18.21ZM9.21 14.71C9.02 14.89 8.76 15 8.5 15C8.24 15 7.98 14.89 7.79 14.71C7.61 14.52 7.5 14.26 7.5 14C7.5 13.74 7.61 13.48 7.79 13.29C8.07 13.01 8.51 12.92 8.88 13.08C9.01 13.13 9.12 13.2 9.21 13.29C9.39 13.48 9.5 13.74 9.5 14C9.5 14.26 9.39 14.52 9.21 14.71ZM12.71 18.21C12.52 18.39 12.26 18.5 12 18.5C11.74 18.5 11.48 18.39 11.29 18.21C11.11 18.02 11 17.76 11 17.5C11 17.24 11.11 16.98 11.29 16.79C11.66 16.42 12.34 16.42 12.71 16.79C12.89 16.98 13 17.24 13 17.5C13 17.76 12.89 18.02 12.71 18.21ZM12.71 14.71C12.66 14.75 12.61 14.79 12.56 14.83C12.5 14.87 12.44 14.9 12.38 14.92C12.32 14.95 12.26 14.97 12.2 14.98C12.13 14.99 12.07 15 12 15C11.74 15 11.48 14.89 11.29 14.71C11.11 14.52 11 14.26 11 14C11 13.74 11.11 13.48 11.29 13.29C11.38 13.2 11.49 13.13 11.62 13.08C11.99 12.92 12.43 13.01 12.71 13.29C12.89 13.48 13 13.74 13 14C13 14.26 12.89 14.52 12.71 14.71ZM16.21 18.21C16.02 18.39 15.76 18.5 15.5 18.5C15.24 18.5 14.98 18.39 14.79 18.21C14.61 18.02 14.5 17.76 14.5 17.5C14.5 17.24 14.61 16.98 14.79 16.79C15.16 16.42 15.84 16.42 16.21 16.79C16.39 16.98 16.5 17.24 16.5 17.5C16.5 17.76 16.39 18.02 16.21 18.21ZM16.21 14.71C16.16 14.75 16.11 14.79 16.06 14.83C16 14.87 15.94 14.9 15.88 14.92C15.82 14.95 15.76 14.97 15.7 14.98C15.63 14.99 15.56 15 15.5 15C15.24 15 14.98 14.89 14.79 14.71C14.61 14.52 14.5 14.26 14.5 14C14.5 13.74 14.61 13.48 14.79 13.29C14.89 13.2 14.99 13.13 15.12 13.08C15.3 13 15.5 12.98 15.7 13.02C15.76 13.03 15.82 13.05 15.88 13.08C15.94 13.1 16 13.13 16.06 13.17C16.11 13.21 16.16 13.25 16.21 13.29C16.39 13.48 16.5 13.74 16.5 14C16.5 14.26 16.39 14.52 16.21 14.71Z"
-              fill="white"
-            />
+              fill="white" />
           </svg>
         </button>
       </div>
     </dialog>
 
     <!-- Career Details Modal -->
-    <dialog
-      v-if="showCareerPopup && selectedCareerDetails"
-      open
-      class="modal sm:modal-middle"
-    >
-      <div
-        class="modal-box max-w-3xl relative font-poppins bg-gray-800 text-white"
-      >
+    <dialog v-if="showCareerPopup && selectedCareerDetails" open class="modal sm:modal-middle">
+      <div class="modal-box max-w-3xl relative font-poppins bg-gray-800 text-white">
         <!-- Close button -->
-        <button
-          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2 text-white"
-          @click="closeCareerModal"
-        >
+        <button class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2 text-white"
+          @click="closeCareerModal">
           ✕
         </button>
 
@@ -760,10 +516,8 @@ onMounted(async () => {
           <!-- Buttons -->
           <div class="my-4 flex justify-end gap-2">
             <!-- Bookmark -->
-            <button
-              class="btn btn-outline btn-sm border-white text-white hover:bg-white hover:text-gray-800"
-              @click="toggleCareerBookmark(selectedCareerDetails)"
-            >
+            <button class="btn btn-outline btn-sm border-white text-white hover:bg-white hover:text-gray-800"
+              @click="toggleCareerBookmark(selectedCareerDetails)">
               {{
                 bookmarkedPosts[selectedCareerDetails.careerID]
                   ? "BOOKMARKED"
@@ -772,18 +526,12 @@ onMounted(async () => {
             </button>
 
             <!-- Apply / Cancel -->
-            <button
-              v-if="!myApplications.has(selectedCareerDetails.careerID)"
+            <button v-if="!myApplications.has(selectedCareerDetails.careerID)"
               class="btn btn-sm bg-blue-600 text-white hover:bg-blue-700"
-              @click="openApplyModal(selectedCareerDetails)"
-            >
+              @click="openApplyModal(selectedCareerDetails)">
               APPLY
             </button>
-            <button
-              v-else
-              class="btn btn-sm bg-gray-500 text-white"
-              @click="cancelApplication(selectedCareerDetails)"
-            >
+            <button v-else class="btn btn-sm bg-gray-500 text-white" @click="cancelApplication(selectedCareerDetails)">
               Cancel Application
             </button>
           </div>
@@ -815,23 +563,13 @@ onMounted(async () => {
           <!-- Recommended Trainings -->
           <div class="mt-6">
             <h3 class="text-base font-semibold mb-3">Recommended Trainings</h3>
-            <div
-              v-if="recommendedTrainings.length === 0"
-              class="text-gray-400 text-sm"
-            >
+            <div v-if="recommendedTrainings.length === 0" class="text-gray-400 text-sm">
               No recommended trainings available.
             </div>
-            <div
-              v-else
-              class="flex overflow-x-auto space-x-3 pb-2 snap-x snap-mandatory"
-              style="scrollbar-width: thin"
-            >
-              <div
-                v-for="training in recommendedTrainings"
-                :key="training.trainingID"
+            <div v-else class="flex overflow-x-auto space-x-3 pb-2 snap-x snap-mandatory" style="scrollbar-width: thin">
+              <div v-for="training in recommendedTrainings" :key="training.trainingID"
                 class="snap-start w-[180px] flex-shrink-0 p-3 bg-white text-gray-800 rounded-lg cursor-pointer hover:bg-gray-200 transition shadow-sm"
-                @click.stop="openTrainingModal(training)"
-              >
+                @click.stop="openTrainingModal(training)">
                 <h4 class="font-semibold text-sm leading-snug mb-1">
                   {{ training.title }}
                 </h4>
@@ -851,19 +589,11 @@ onMounted(async () => {
     </dialog>
 
     <!-- Training Details Modal -->
-    <dialog
-      v-if="showTrainingModal && selectedTraining"
-      open
-      class="modal sm:modal-middle"
-    >
-      <div
-        class="modal-box max-w-3xl relative font-poppins bg-gray-800 text-white"
-      >
+    <dialog v-if="showTrainingModal && selectedTraining" open class="modal sm:modal-middle">
+      <div class="modal-box max-w-3xl relative font-poppins bg-gray-800 text-white">
         <!-- Close button -->
-        <button
-          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2 text-white"
-          @click="closeTrainingModal"
-        >
+        <button class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2 text-white"
+          @click="closeTrainingModal">
           ✕
         </button>
 
@@ -885,51 +615,26 @@ onMounted(async () => {
             <!-- Bookmark -->
             <button
               class="btn btn-outline btn-sm border-white text-white hover:bg-white hover:text-gray-800 flex items-center gap-2"
-              @click="toggleTrainingBookmark(selectedTraining)"
-            >
-              <svg
-                v-if="!bookmarkedPosts[selectedTraining.trainingID]"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
+              @click="toggleTrainingBookmark(selectedTraining)">
+              <svg v-if="!bookmarkedPosts[selectedTraining.trainingID]" width="20" height="20" viewBox="0 0 24 24"
+                fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path
                   d="M12.89 5.87988H5.10999C3.39999 5.87988 2 7.27987 2 8.98987V20.3499C2 21.7999 3.04 22.4199 4.31 21.7099L8.23999 19.5199C8.65999 19.2899 9.34 19.2899 9.75 19.5199L13.68 21.7099C14.95 22.4199 15.99 21.7999 15.99 20.3499V8.98987C16 7.27987 14.6 5.87988 12.89 5.87988Z"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
+                  stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
-              <svg
-                v-else
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
+              <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path
                   d="M12.89 5.87988H5.11C3.4 5.87988 2 7.27988 2 8.98988V20.3499C2 21.7999 3.04 22.4199 4.31 21.7099L8.24 19.5199C8.66 19.2899 9.34 19.2899 9.75 19.5199L13.68 21.7099C14.96 22.4099 16 21.7999 16 20.3499V8.98988C16 7.27988 14.6 5.87988 12.89 5.87988Z"
-                  fill="currentColor"
-                />
+                  fill="currentColor" />
               </svg>
             </button>
             <!-- Register -->
-            <button
-              v-if="!myRegistrations.has(selectedTraining.trainingID)"
+            <button v-if="!myRegistrations.has(selectedTraining.trainingID)"
               class="btn btn-sm bg-blue-600 text-white hover:bg-blue-700"
-              @click="registerForTraining(selectedTraining)"
-            >
+              @click="registerForTraining(selectedTraining)">
               REGISTER
             </button>
-            <button
-              v-else
-              class="btn btn-sm bg-gray-500 text-white"
-              @click="unregisterFromTraining(selectedTraining)"
-            >
+            <button v-else class="btn btn-sm bg-gray-500 text-white" @click="unregisterFromTraining(selectedTraining)">
               Unregister
             </button>
           </div>
@@ -965,10 +670,8 @@ onMounted(async () => {
     <!-- Apply Modal -->
     <dialog v-if="applyModalOpen" open class="modal sm:modal-middle">
       <div class="modal-box max-w-lg relative font-poppins">
-        <button
-          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
-          @click="closeApplyModal"
-        >
+        <button class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
+          @click="closeApplyModal">
           ✕
         </button>
 
@@ -978,30 +681,16 @@ onMounted(async () => {
 
         <form @submit.prevent="submitApplication">
           <div class="mb-4">
-            <label class="block text-sm font-medium mb-1"
-              >Upload PDF Requirements</label
-            >
-            <input
-              type="file"
-              accept="application/pdf"
-              @change="handleFileUpload"
-              required
-              class="file-input file-input-bordered w-full"
-            />
+            <label class="block text-sm font-medium mb-1">Upload PDF Requirements</label>
+            <input type="file" accept="application/pdf" @change="handleFileUpload" required
+              class="file-input file-input-bordered w-full" />
           </div>
 
           <div class="flex justify-end gap-2">
-            <button
-              type="button"
-              class="btn btn-outline btn-sm"
-              @click="closeApplyModal"
-            >
+            <button type="button" class="btn btn-outline btn-sm" @click="closeApplyModal">
               Cancel
             </button>
-            <button
-              type="submit"
-              class="btn bg-customButton hover:bg-dark-slate text-white btn-sm"
-            >
+            <button type="submit" class="btn bg-customButton hover:bg-dark-slate text-white btn-sm">
               Submit
             </button>
           </div>
@@ -1011,17 +700,12 @@ onMounted(async () => {
 
     <!-- Toast Notifications -->
     <div class="toast toast-end toast-top z-50">
-      <div
-        v-for="toast in toasts"
-        :key="toast.id"
-        class="alert"
-        :class="{
-          'alert-info': toast.type === 'info',
-          'alert-success': toast.type === 'success',
-          'alert-error': toast.type === 'error',
-          'alert-warning': toast.type === 'accent',
-        }"
-      >
+      <div v-for="toast in toasts" :key="toast.id" class="alert" :class="{
+        'alert-info': toast.type === 'info',
+        'alert-success': toast.type === 'success',
+        'alert-error': toast.type === 'error',
+        'alert-warning': toast.type === 'accent',
+      }">
         {{ toast.message }}
       </div>
     </div>
@@ -1034,6 +718,7 @@ onMounted(async () => {
   border-radius: 9999px;
   font-weight: bold;
 }
+
 .selected-day {
   background-color: #3b82f6;
   color: white;

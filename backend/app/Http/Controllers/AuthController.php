@@ -359,33 +359,56 @@ class AuthController extends Controller
         $testEmail = $request->input('email');
         $verificationUrl = url('/api/verify-email?token=test_token&type=applicant');
         
+        // Get full mail configuration for debugging
+        $mailConfig = [
+            'driver' => config('mail.default'),
+            'host' => config('mail.mailers.smtp.host'),
+            'port' => config('mail.mailers.smtp.port'),
+            'encryption' => config('mail.mailers.smtp.encryption'),
+            'from_address' => config('mail.from.address'),
+            'from_name' => config('mail.from.name'),
+            'username' => config('mail.mailers.smtp.username'),
+            'username_set' => !empty(config('mail.mailers.smtp.username')),
+            'password_set' => !empty(config('mail.mailers.smtp.password')),
+            'password_length' => strlen(config('mail.mailers.smtp.password', '')),
+        ];
+        
+        \Log::info('Testing email configuration', [
+            'email' => $testEmail,
+            'mail_config' => $mailConfig
+        ]);
+        
         try {
             Mail::to($testEmail)->send(new EmailVerification($verificationUrl, 'Test User', 'applicant'));
             
+            \Log::info('Test email sent successfully', ['email' => $testEmail]);
+            
             return response()->json([
                 'status' => 'success',
-                'message' => 'Test email sent successfully!',
-                'mail_config' => [
-                    'driver' => config('mail.default'),
-                    'host' => config('mail.mailers.smtp.host'),
-                    'port' => config('mail.mailers.smtp.port'),
-                    'from_address' => config('mail.from.address'),
-                    'from_name' => config('mail.from.name'),
-                ],
+                'message' => 'Test email sent successfully! Check your inbox (and spam folder).',
+                'mail_config' => $mailConfig,
             ]);
         } catch (\Exception $e) {
+            \Log::error('Test email failed', [
+                'email' => $testEmail,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'mail_config' => $mailConfig
+            ]);
+            
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to send test email',
                 'error' => $e->getMessage(),
-                'mail_config' => [
-                    'driver' => config('mail.default'),
-                    'host' => config('mail.mailers.smtp.host'),
-                    'port' => config('mail.mailers.smtp.port'),
-                    'from_address' => config('mail.from.address'),
-                    'from_name' => config('mail.from.name'),
+                'error_class' => get_class($e),
+                'mail_config' => $mailConfig,
+                'troubleshooting' => [
+                    'check_password' => 'Verify MAIL_PASSWORD is correct (no spaces, full App Password)',
+                    'check_port' => 'Verify MAIL_PORT is 587 for TLS or 465 for SSL',
+                    'check_gmail' => 'Ensure 2FA is enabled and you\'re using an App Password',
+                    'test_log_driver' => 'Try setting MAIL_MAILER=log to test if emails are being generated',
+                    'check_firewall' => 'Ensure Railway allows outbound connections on port 587',
                 ],
-                'suggestion' => 'For testing, set MAIL_MAILER=log in your .env file. This will log emails to storage/logs/laravel.log instead of sending them.',
             ], 500);
         }
     }
