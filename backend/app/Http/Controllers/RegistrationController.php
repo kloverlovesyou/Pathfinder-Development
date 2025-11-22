@@ -188,4 +188,45 @@ class RegistrationController extends Controller
     ]);
 }
 
+
+public function updateCertificate(Request $request, $registrationID)
+{
+    $user = $request->user();
+    
+    if (!$user || !isset($user->organizationID)) {
+        return response()->json(['message' => 'Unauthorized'], 401);
+    }
+    
+    $registration = Registration::find($registrationID);
+    if (!$registration) {
+        return response()->json(['message' => 'Registration not found'], 404);
+    }
+    
+    // Verify training belongs to organization
+    $training = \App\Models\Training::where('trainingID', $registration->trainingID)
+        ->where('organizationID', $user->organizationID)
+        ->first();
+    
+    if (!$training) {
+        return response()->json(['message' => 'Access denied'], 403);
+    }
+    
+    $validated = $request->validate([
+        'certificateTrackingID' => 'required|string',
+        'certificateGivenDate' => 'required|date',
+        'certificateFilePath' => 'required|string', // <-- path from Supabase
+    ]);
+    
+    // Store the Supabase path in the database
+    $registration->update([
+        'certTrackingID' => $validated['certificateTrackingID'],
+        'certGivenDate' => $validated['certificateGivenDate'],
+        'certificate' => $validated['certificateFilePath'], // store the Supabase path
+    ]);
+    
+    return response()->json([
+        'message' => 'Certificate issued successfully',
+        'data' => $registration,
+    ]);
+}
 }
