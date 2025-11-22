@@ -38,6 +38,7 @@ class Certification extends Model
 		'applicantID',
 		'IsSelected',
 		'certificate_path',
+		'certificate', // Allow setting certificate field (binary data) - only for manual uploads
 	];
 
 	public function resume()

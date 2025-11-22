@@ -16,7 +16,6 @@ const upcomingCount = ref(0);
 const completedCount = ref(0);
 let trainingCounterInterval = null;
 let certificateRefreshInterval = null;
-const togglingCertificates = ref(new Set()); // Track certificates being toggled
 
 // ➤ Add a new upload entry
 function addCertificate() {
@@ -136,31 +135,51 @@ async function fetchCertificates(applicantID) {
       return;
     }
     
-    // Step 1: Fetch manually uploaded certificates from /certificates endpoint
+    // Step 1: Fetch all certificates from /certificates endpoint (includes both manual and organization)
     let manualCertificates = [];
+    let apiOrganizationCertificates = {}; // Map by certificate_path to get IsSelected values
     try {
       const certResponse = await axios.get(
         import.meta.env.VITE_API_BASE_URL + `/certificates/${applicantID}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      // Filter for manually uploaded certificates (binary data or those without certificate_path)
-      manualCertificates = (certResponse.data || []).filter(cert => {
-        // Manual certificates have binary data or no certificate_path
-        return cert.certificate && !cert.certificate.startsWith('http') || 
-               (!cert.certificate_path && cert.certificate);
-      }).map(cert => ({
-        certificationID: cert.certificationID,
-        certificationName: cert.certificationName,
-        image: cert.certificate, // Data URL for manual uploads
-        IsSelected: cert.IsSelected === 1 || cert.IsSelected === true,
-        source: 'manual',
-        certificate_path: cert.certificate_path || null,
-      }));
+      const allCerts = certResponse.data || [];
+      
+      // Separate manual and organization certificates
+      allCerts.forEach(cert => {
+        // Organization certificates have certificate_path and HTTP URL or are marked as organization
+        const isOrganization = cert.certificate_path || 
+                               (cert.certificate && cert.certificate.startsWith('http')) ||
+                               cert.source === 'organization';
+        
+        if (isOrganization && cert.certificate_path) {
+          // Store organization certificate data by certificate_path for matching later
+          apiOrganizationCertificates[cert.certificate_path] = {
+            certificationID: cert.certificationID,
+            IsSelected: cert.IsSelected === 1 || cert.IsSelected === true,
+            certificationName: cert.certificationName,
+            certificate: cert.certificate,
+          };
+        } else {
+          // Manual certificate (binary data or no certificate_path)
+          if (cert.certificate && (!cert.certificate.startsWith('http') || !cert.certificate_path)) {
+            manualCertificates.push({
+              certificationID: cert.certificationID,
+              certificationName: cert.certificationName,
+              image: cert.certificate, // Data URL for manual uploads
+              IsSelected: cert.IsSelected === 1 || cert.IsSelected === true,
+              source: 'manual',
+              certificate_path: cert.certificate_path || null,
+            });
+          }
+        }
+      });
       
       console.log('✅ Manual certificates loaded:', manualCertificates.length);
+      console.log('✅ Organization certificates from API:', Object.keys(apiOrganizationCertificates).length);
     } catch (error) {
-      console.warn('⚠️ Could not fetch manual certificates:', error.message);
+      console.warn('⚠️ Could not fetch certificates:', error.message);
     }
     
     // Step 2: Fetch organization-issued certificates from registrations (same method as Profilepage)
@@ -202,12 +221,22 @@ async function fetchCertificates(applicantID) {
                                `Training #${registration.trainingID || 'Unknown'}`;
           const certificationName = `${trainingTitle} - Certificate of Completion`;
           
+          // Check if this certificate exists in API response (has Certification entry)
+          const existingCertFromAPI = apiOrganizationCertificates[certificatePath];
+          
+          console.log('📄 Processing registration certificate:', {
+            registrationID: registration.registrationID,
+            certificatePath: certificatePath,
+            supabaseUrl: supabaseUrl,
+            certificationName: certificationName,
+            existingCertFromAPI: existingCertFromAPI ? 'found' : 'not found'
+          });
           
           return {
-            certificationID: 'REG_' + registration.registrationID,
-            certificationName: certificationName,
-            image: supabaseUrl, // Supabase public URL for display
-            IsSelected: false, // Default to not selected
+            certificationID: existingCertFromAPI?.certificationID || ('REG_' + registration.registrationID),
+            certificationName: existingCertFromAPI?.certificationName || certificationName,
+            image: existingCertFromAPI?.certificate || supabaseUrl, // Use API URL if available, else Supabase URL
+            IsSelected: existingCertFromAPI ? existingCertFromAPI.IsSelected : false, // Use existing IsSelected if available
             source: 'organization',
             registrationID: registration.registrationID,
             certGivenDate: registration.certGivenDate || null,
@@ -365,19 +394,23 @@ async function toggleCertificateSelection(cert) {
   const source = cert.source || 'manual';
   const id = cert.certificationID || cert.id;
   const user = JSON.parse(localStorage.getItem("user"));
-  
-  // Prevent double-toggling
-  const certKey = id?.toString() || cert.certificate_path || 'unknown';
-  if (togglingCertificates.value.has(certKey)) {
-    console.log("⏳ Certificate toggle already in progress:", certKey);
-    return;
-  }
-  
-  togglingCertificates.value.add(certKey);
+
+  // Store original state for error recovery
+  const originalIsSelected = cert.IsSelected;
 
   // For organization-issued certificates, create/update Certification entry and toggle
   if (source === 'organization' || id?.toString().startsWith('REG_')) {
+    // Validate required fields
+    if (!cert.certificate_path) {
+      console.error("❌ Certificate path is missing:", cert);
+      showToast("Certificate path is missing. Cannot update selection.", "error");
+      return;
+    }
+
     try {
+      // Update local state immediately for better UX
+      cert.IsSelected = !cert.IsSelected;
+      
       // Check if Certification entry exists by fetching all certificates
       const certResponse = await axios.get(
         import.meta.env.VITE_API_BASE_URL + `/certificates/${user.applicantID}`,
@@ -386,7 +419,9 @@ async function toggleCertificateSelection(cert) {
       
       // Find existing certification by certificate_path (must have real certificationID, not REG_)
       const existingCert = (certResponse.data || []).find(
-        c => c.certificate_path === cert.certificate_path && 
+        c => c.certificate_path && 
+             cert.certificate_path &&
+             c.certificate_path === cert.certificate_path && 
              c.certificationID && 
              !c.certificationID.toString().startsWith('REG_')
       );
@@ -404,45 +439,50 @@ async function toggleCertificateSelection(cert) {
           }
         );
         
-        cert.IsSelected = toggleResponse.data.IsSelected === 1 || toggleResponse.data.IsSelected === true;
+        const newIsSelected = toggleResponse.data.IsSelected === 1 || toggleResponse.data.IsSelected === true;
+        cert.IsSelected = newIsSelected;
         cert.certificationID = existingCert.certificationID; // Update ID to real certificationID
+        
+        console.log('✅ Toggled existing Certification entry:', {
+          certificationID: existingCert.certificationID,
+          IsSelected: newIsSelected
+        });
       } else {
-        // Create new Certification entry for organization certificate using FormData
-        // Ensure certificate_path is available
-        if (!cert.certificate_path) {
-          console.error('❌ certificate_path is missing for organization certificate:', cert);
-          showToast("Certificate path is missing. Please refresh the page and try again.", "error");
-          cert.IsSelected = !cert.IsSelected; // Revert local state
-          return;
-        }
-        
-        const formData = new FormData();
-        formData.append('certificationName', cert.certificationName || 'Certificate');
-        formData.append('certificate_path', cert.certificate_path);
-        formData.append('applicantID', user.applicantID.toString());
-        formData.append('IsSelected', '1'); // Auto-select when creating
-        
-        console.log('📤 Creating Certification entry with:', {
+        // Need to create or update Certification entry
+        // The backend store method will check if one exists and update it if needed
+        // Use JSON instead of FormData since we're not uploading a file
+        const requestData = {
           certificationName: cert.certificationName,
           certificate_path: cert.certificate_path,
-          applicantID: user.applicantID
-        });
+          applicantID: user.applicantID,
+          IsSelected: cert.IsSelected ? 1 : 0,
+        };
         
         const createResponse = await axios.post(
           import.meta.env.VITE_API_BASE_URL + '/certificates',
-          formData,
+          requestData,
           { 
             headers: { 
               Authorization: `Bearer ${token}`,
-              'Content-Type': 'multipart/form-data'
+              'Content-Type': 'application/json'
             } 
           }
         );
         
-        cert.IsSelected = true;
-        cert.certificationID = createResponse.data.data?.certificationID || createResponse.data.certificationID;
+        // Handle response - backend might return updated existing certificate
+        const newCertificationID = createResponse.data.data?.certificationID || 
+                                   createResponse.data.certificationID;
+        const newIsSelected = createResponse.data.data?.IsSelected ?? 
+                             (cert.IsSelected ? 1 : 0);
         
-        console.log('✅ Created Certification entry for organization certificate:', cert.certificationID);
+        cert.IsSelected = newIsSelected === 1 || newIsSelected === true;
+        cert.certificationID = newCertificationID;
+        
+        console.log('✅ Created/Updated Certification entry:', {
+          certificationID: newCertificationID,
+          IsSelected: cert.IsSelected,
+          message: createResponse.data.message
+        });
       }
       
       showToast(
@@ -456,39 +496,56 @@ async function toggleCertificateSelection(cert) {
       await fetchCertificates(user.applicantID);
       
     } catch (error) {
-      console.error("❌ Toggle organization certificate error:", error.response?.data || error);
-      showToast("Failed to update selection. Please try again.", "error");
+      console.error("❌ Toggle organization certificate error:", {
+        error: error.response?.data || error.message,
+        status: error.response?.status,
+        fullError: error,
+        certificate: {
+          certificationName: cert.certificationName,
+          certificate_path: cert.certificate_path,
+          certificationID: cert.certificationID
+        }
+      });
       
       // Revert local state on error
-      cert.IsSelected = !cert.IsSelected;
-    } finally {
-      togglingCertificates.value.delete(certKey);
+      cert.IsSelected = originalIsSelected;
+      
+      // Show more specific error message - prioritize backend error messages
+      let errorMessage = "Failed to update selection. Please try again.";
+      
+      if (error.response?.data) {
+        // Check for validation errors
+        if (error.response.data.errors) {
+          const firstError = Object.values(error.response.data.errors)[0];
+          errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+        } 
+        // Check for general error message
+        else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+        // Check for error field
+        else if (error.response.data.error) {
+          errorMessage = error.response.data.error;
+        }
+      } else if (error.response?.status === 404) {
+        errorMessage = "Certificate not found";
+      } else if (error.response?.status === 401) {
+        errorMessage = "Please log in again";
+      }
+      
+      showToast(errorMessage, "error");
     }
     return;
   }
 
   // For manually uploaded certificates, use existing toggle endpoint
-  // Store the original state to revert if error occurs
-  const originalState = cert.IsSelected;
-  
-  // Validate ID exists
-  if (!id) {
-    console.error("❌ Certificate ID is missing:", cert);
-    showToast("Certificate ID is missing. Please refresh the page and try again.", "error");
-    return;
-  }
-
   try {
-    // Optimistically update UI
-    cert.IsSelected = !cert.IsSelected;
-    
     const response = await axios.patch(
-      import.meta.env.VITE_API_BASE_URL + `/certificates/${id}/toggle`,
+      import.meta.env.VITE_API_BASE_URL +`/certificates/${id}/toggle`,
       {},
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    // Update with server response
     cert.IsSelected =
       response.data.IsSelected === 1 || response.data.IsSelected === true;
 
@@ -499,29 +556,8 @@ async function toggleCertificateSelection(cert) {
       "success"
     );
   } catch (error) {
-    // Revert to original state on error
-    cert.IsSelected = originalState;
-    
-    console.error("❌ Toggle selection error:", {
-      error: error.response?.data || error.message,
-      status: error.response?.status,
-      certificateID: id,
-      certificate: cert
-    });
-    
-    // Provide more specific error message
-    let errorMessage = "Failed to update selection. Please try again.";
-    if (error.response?.status === 404) {
-      errorMessage = "Certificate not found. Please refresh the page.";
-    } else if (error.response?.status === 401) {
-      errorMessage = "Session expired. Please log in again.";
-    } else if (error.response?.data?.message) {
-      errorMessage = error.response.data.message;
-    }
-    
-    showToast(errorMessage, "error");
-  } finally {
-    togglingCertificates.value.delete(certKey);
+    console.error("❌ Toggle selection error:", error.response?.data || error);
+    showToast("Failed to update selection", "error");
   }
 }
 
@@ -1023,9 +1059,8 @@ const deselectAllCertificates = async () => {
                     <input
                       type="checkbox"
                       :checked="cert.IsSelected"
-                      :disabled="togglingCertificates.has(cert.certificationID?.toString() || cert.certificate_path || 'unknown')"
                       @change="() => toggleCertificateSelection(cert)"
-                      class="w-4 h-4 accent-customButton cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      class="w-4 h-4 accent-customButton cursor-pointer"
                     />
                   </div>
 
