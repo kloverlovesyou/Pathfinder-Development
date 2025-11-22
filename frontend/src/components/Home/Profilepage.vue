@@ -14,10 +14,24 @@ const careerModal = ref(null);
 const trainingModal = ref(null);
 const selectedCareer = ref(null);
 const selectedTraining = ref(null);
+const loading = ref(false);
+
+const viewRequirement = async (activity, event) => {
+  event.stopPropagation();
+
+  try {
+    const response = await axios.get(
+      `/api/applications/${activity.applicationID}/file`
+    );
+
+    window.open(response.data.url, "_blank");
+  } catch (error) {
+    console.error(error);
+    alert("Unable to open requirement file");
+  }
+};
 
 async function openModal(activity) {
-  console.log("🟢 Activity clicked:", activity);
-
   if (activity.type === "career") {
     try {
       const token = localStorage.getItem("token");
@@ -30,6 +44,8 @@ async function openModal(activity) {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
+      console.log("🟢 Activity clicked:", activity);
+      console.log("Applications from API:", res.data);
 
       // Find the full application for this career
 
@@ -38,10 +54,15 @@ async function openModal(activity) {
       );
 
       if (app) {
-        console.log("✅ Application + interview found:", app);
-        selectedCareer.value = app; // now has interview details
+        console.log("🎯 Matching application found:", app);
+        selectedCareer.value = {
+          ...app,
+          ...Object.fromEntries(
+            Object.entries(activity).filter(([_, v]) => v !== "" && v !== null)
+          ),
+        };
       } else {
-        console.log("ℹ️ No application found, using activity data only.");
+        console.log("ℹ️ No matching application found — showing career info.");
         selectedCareer.value = activity;
       }
 
@@ -706,6 +727,13 @@ onMounted(fetchMyActivities);
                   </span>
                   <button
                     v-if="activity.type === 'career'"
+<<<<<<< HEAD
+                    :class="[
+                      'px-3 py-1 rounded text-white',
+                      'bg-blue-500 hover:bg-blue-600',
+                    ]"
+                    @click="viewRequirement(activity)"
+=======
                     type="button"
                     :class="[
                       'px-3 py-1 rounded text-white',
@@ -714,6 +742,7 @@ onMounted(fetchMyActivities);
                         : 'bg-gray-300 cursor-not-allowed',
                     ]"
                     @click.stop="downloadRequirement(activity, $event)"
+>>>>>>> c1d47076dc8da69a8633f36005a0a175b15ebe34
                   >
                     Download Requirement
                   </button>
@@ -978,6 +1007,14 @@ onMounted(fetchMyActivities);
                   <td class="px-6 py-4 whitespace-nowrap text-sm">
                     <button
                       v-if="activity.type === 'career'"
+<<<<<<< HEAD
+                      :class="[
+                        'px-3 py-1 rounded text-white',
+
+                        'bg-blue-500 hover:bg-blue-600',
+                      ]"
+                      @click="viewRequirement(activity)"
+=======
                       type="button"
                       :class="[
                         'px-3 py-1 rounded text-white',
@@ -986,6 +1023,7 @@ onMounted(fetchMyActivities);
                           : 'bg-gray-300 cursor-not-allowed',
                       ]"
                       @click.stop="downloadRequirement(activity, $event)"
+>>>>>>> c1d47076dc8da69a8633f36005a0a175b15ebe34
                     >
                       Download Requirement
                     </button>
@@ -1056,8 +1094,11 @@ onMounted(fetchMyActivities);
               }}
             </p>
             <p>
-              <strong>Requirements: </strong>
-              {{ selectedCareer.requirements }}
+              <strong>Requirement: </strong>
+              {{
+                selectedCareer.requirements ||
+                selectedCareer.career?.requirements
+              }}
             </p>
             <p>
               <strong>Application Address:</strong>

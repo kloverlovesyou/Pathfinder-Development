@@ -12,20 +12,24 @@ use Illuminate\Support\Facades\Log;
 class ApplicationController extends Controller
 {
     //list applicant's applications
-   public function index(Request $request)
+  public function index(Request $request)
 {
     $user = $request->user();
 
-    $apps = Application::with('career.organization') // eager load organization
+    // Fetch applications with career + organization
+    $apps = Application::with(['career.organization'])
         ->where('applicantID', $user->applicantID)
         ->get();
 
-    return response()->json($apps->map(function($app) {
+
+    return $apps->map(function ($app) {
+
+        $career = $app->career;
+
         return [
+            // Application table
             'applicationID' => $app->applicationID,
             'careerID' => $app->careerID,
-            'title' => $app->career->position ?? 'Career',
-            'organizationName' => $app->career->organization->name ?? 'Unknown Organization',
             'interviewSchedule' => $app->interviewSchedule,
             'interviewMode' => $app->interviewMode,
             'interviewLink' => $app->interviewLink,
@@ -36,9 +40,25 @@ class ApplicationController extends Controller
             'applicationLetterAddress' => $app->career->applicationLetterAddress ?? null,
             'deadlineOfSubmission' => $app->career->deadlineOfSubmission ?? null,
             'status' => $app->applicationStatus,
+
+            // Career table
+            'title' => $career->position ?? null,
+            'detailsAndInstructions' => $career->detailsAndInstructions ?? null,
+            'qualifications' => $career->qualifications ?? null,
+            'requirements' => $career->requirements ?? null,
+            'applicationLetterAddress' => $career->applicationLetterAddress ?? null,
+            'deadlineOfSubmission' => $career->deadlineOfSubmission ?? null,
+
+            // Organization table
+            'organizationName' => $career->organization->name ?? null,
+
+            // Type
+            'type' => 'career',
         ];
-    }));
+    });
 }
+
+
 
  public function career()
     {
@@ -94,10 +114,10 @@ class ApplicationController extends Controller
             ]);
         }
 
-        $validated = $request->validate([
-            'careerID' => 'required|exists:career,careerID',
-            'requirement_directory' => 'nullable', // Can be file path (string) or file upload
-        ]);
+        //$validated = $request->validate([
+          //  'careerID' => 'required|exists:career,careerID',
+            //'requirement_directory' => 'nullable', // Can be file path (string) or file upload
+        //]);
 
         // prevent duplicates
         $existing = Application::where('applicantID', $user->applicantID)
@@ -230,7 +250,7 @@ class ApplicationController extends Controller
 
 
         $app = Application::create([
-            'requirement_directory' => $requirementsPath,
+            'requirement_directory' => $filePath,
             'dateSubmitted' => Carbon::now(),
             'applicationStatus' => 'Submitted',
 
