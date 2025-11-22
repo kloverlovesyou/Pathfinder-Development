@@ -180,6 +180,8 @@ Route::post('/applications/{id}/upload-requirement', [ApplicationController::cla
     Route::get('/interviews', [InterviewController::class, 'index']);
 
     // Certificates
+    // ✅ Specific routes first (before parameterized routes)
+    Route::post('/certificates/organization/toggle', [CertificateController::class, 'toggleOrganizationCertificate']);
     Route::get('/certificates/{applicantID}', [CertificateController::class, 'index']);
     Route::post('/certificates', [CertificateController::class, 'store']);
     Route::delete('/certificates/{id}', [CertificateController::class, 'destroy']);
