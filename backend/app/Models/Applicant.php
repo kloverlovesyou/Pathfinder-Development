@@ -51,7 +51,7 @@ class Applicant extends Model
 		'phoneNumber',
 		'password',
 		'api_token',
-		'careerID',
+	
 	];
 
 	public function applications()
@@ -84,8 +84,4 @@ class Applicant extends Model
 		return $this->hasMany(Trainingbookmark::class, 'applicantID');
 	}
 
-	public function targetCareer()
-	{
-		return $this->belongsTo(Career::class, 'careerID', 'careerID');
-	}
 }

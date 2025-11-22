@@ -14,10 +14,24 @@ const careerModal = ref(null);
 const trainingModal = ref(null);
 const selectedCareer = ref(null);
 const selectedTraining = ref(null);
+const loading = ref(false);
+
+const viewRequirement = async (activity, event) => {
+  event.stopPropagation();
+
+  try {
+    const response = await axios.get(
+      `/api/applications/${activity.applicationID}/file`
+    );
+
+    window.open(response.data.url, "_blank");
+  } catch (error) {
+    console.error(error);
+    alert("Unable to open requirement file");
+  }
+};
 
 async function openModal(activity) {
-  console.log("🟢 Activity clicked:", activity);
-
   if (activity.type === "career") {
     try {
       const token = localStorage.getItem("token");
@@ -30,6 +44,8 @@ async function openModal(activity) {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
+      console.log("🟢 Activity clicked:", activity);
+      console.log("Applications from API:", res.data);
 
       // Find the full application for this career
 
@@ -38,10 +54,15 @@ async function openModal(activity) {
       );
 
       if (app) {
-        console.log("✅ Application + interview found:", app);
-        selectedCareer.value = app; // now has interview details
+        console.log("🎯 Matching application found:", app);
+        selectedCareer.value = {
+          ...app,
+          ...Object.fromEntries(
+            Object.entries(activity).filter(([_, v]) => v !== "" && v !== null)
+          ),
+        };
       } else {
-        console.log("ℹ️ No application found, using activity data only.");
+        console.log("ℹ️ No matching application found — showing career info.");
         selectedCareer.value = activity;
       }
 
@@ -350,19 +371,6 @@ function updateCounters(type, increase = true) {
 }
 
 const showPdfModal = ref(false);
-const pdfUrl = ref("");
-
-const viewRequirement = (activity, event) => {
-  event?.stopPropagation(); // prevent parent modal opening
-
-  if (!activity.requirement_directory) return;
-
-  const applicationID = activity.applicationID;
-  pdfUrl.value = `${
-    import.meta.env.VITE_API_URL
-  }/api/applications/${applicationID}/requirement`;
-  showPdfModal.value = true;
-};
 
 onMounted(fetchMyActivities);
 </script>
@@ -483,14 +491,11 @@ onMounted(fetchMyActivities);
                   </span>
                   <button
                     v-if="activity.type === 'career'"
-                    :disabled="!activity.requirement_directory"
                     :class="[
                       'px-3 py-1 rounded text-white',
-                      activity.requirement_directory
-                        ? 'bg-blue-500 hover:bg-blue-600'
-                        : 'bg-gray-300 cursor-not-allowed',
+                      'bg-blue-500 hover:bg-blue-600',
                     ]"
-                    @click.stop="viewRequirement(activity, $event)"
+                    @click="viewRequirement(activity)"
                   >
                     View Requirement
                   </button>
@@ -749,14 +754,12 @@ onMounted(fetchMyActivities);
                   <td class="px-6 py-4 whitespace-nowrap text-sm">
                     <button
                       v-if="activity.type === 'career'"
-                      :disabled="!activity.requirement_directory"
                       :class="[
                         'px-3 py-1 rounded text-white',
-                        activity.requirement_directory
-                          ? 'bg-blue-500 hover:bg-blue-600'
-                          : 'bg-gray-300 cursor-not-allowed',
+
+                        'bg-blue-500 hover:bg-blue-600',
                       ]"
-                      @click.stop="viewRequirement(activity, $event)"
+                      @click="viewRequirement(activity)"
                     >
                       View Requirement
                     </button>
@@ -825,8 +828,11 @@ onMounted(fetchMyActivities);
               }}
             </p>
             <p>
-              <strong>Requirements: </strong>
-              {{ selectedCareer.requirements }}
+              <strong>Requirement: </strong>
+              {{
+                selectedCareer.requirements ||
+                selectedCareer.career?.requirements
+              }}
             </p>
             <p>
               <strong>Application Address:</strong>
