@@ -155,7 +155,8 @@ export default {
               app.name ?? `${app.firstName || ""} ${app.lastName || ""}`.trim(),
             dateSubmitted: app.dateSubmitted ?? app.created_at ?? app.createdAt,
             status: app.status ? String(app.status).toLowerCase() : "submitted",
-            requirements: app.requirements ?? [],
+            requirement_directory: app.requirement_directory ?? null, // File path in Supabase
+            requirements: app.requirements ?? [], // Keep for backwards compatibility
             interviewSchedule: app.interviewSchedule ?? null,
             interviewMode: app.interviewMode ?? null,
             interviewLocation: app.interviewLocation ?? null,
@@ -275,24 +276,58 @@ export default {
       }
     },
 
-    downloadRequirements(applicationID) {
-      axios({
-        url: `${import.meta.env.VITE_API_BASE_URL
-          }/applications/${applicationID}/requirement`,
-        method: "GET",
-        responseType: "mediumblob",
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      }).then((res) => {
-        const url = window.URL.createObjectURL(
-          new Blob([res.data], { type: "application/pdf" })
-        );
-
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "requirement.pdf";
-        a.click();
-        window.URL.revokeObjectURL(url);
-      });
+    async downloadRequirements(applicationID, filePath) {
+      try {
+        // If filePath is provided (from Supabase), use it directly
+        if (filePath) {
+          // Import getPDFUrl dynamically
+          const { getPDFUrl } = await import("@/lib/supabase");
+          const pdfUrl = getPDFUrl(filePath, "Requirements");
+          
+          // Fetch the PDF from Supabase
+          const response = await fetch(pdfUrl);
+          if (!response.ok) {
+            throw new Error("Failed to fetch PDF from Supabase");
+          }
+          
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          
+          // Extract filename from path or use default
+          const fileName = filePath.split("/").pop() || "requirement.pdf";
+          
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        } else {
+          // Fallback to backend endpoint for old files
+          const response = await axios({
+            url: `${import.meta.env.VITE_API_BASE_URL}/applications/${applicationID}/requirement`,
+            method: "GET",
+            responseType: "blob",
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          });
+          
+          const url = window.URL.createObjectURL(
+            new Blob([response.data], { type: "application/pdf" })
+          );
+          
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "requirement.pdf";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        }
+      } catch (error) {
+        console.error("Error downloading requirements:", error);
+        alert("Failed to download requirements. Please try again.");
+      }
     },
 
     async confirmSchedule() {
@@ -452,7 +487,8 @@ export default {
     },
 
     async addTag() {
-      if (!this.newTagName) {
+      const trimmedTagName = this.newTagName.trim();
+      if (!trimmedTagName) {
         alert("Please enter a tag name.");
         return;
       }
@@ -460,12 +496,29 @@ export default {
       const token = this.checkToken(); // Check token before proceeding
       if (!token) return; // If token is invalid, exit
 
+      // Check if tag already exists (case-insensitive)
+      const existingTag = this.tagOptions.find(
+        tag => tag.TagName.toLowerCase() === trimmedTagName.toLowerCase()
+      );
+
+      if (existingTag) {
+        // Tag exists, just select it if not already selected
+        const normalizedId = Number(existingTag.TagID);
+        if (!this.newCareer.Tags.includes(normalizedId)) {
+          this.newCareer.Tags.push(normalizedId);
+        }
+        // Clear the input field
+        this.newTagName = "";
+        return;
+      }
+
+      // Tag doesn't exist, create it
       try {
         // Send the new tag to the backend
         const response = await axios.post(
           import.meta.env.VITE_API_BASE_URL + "/tags",
           {
-            TagName: this.newTagName,
+            TagName: trimmedTagName,
           },
           {
             headers: {
@@ -481,7 +534,6 @@ export default {
 
         // Clear the input field
         this.newTagName = "";
-        alert("Tag added successfully!");
       } catch (error) {
         console.error("Error adding tag:", error);
         alert("Failed to add tag.");
@@ -1137,6 +1189,16 @@ export default {
         ? this.filteredCompletedCareers
         : this.filteredCompletedCareers.slice(0, 4);
     },
+    // Filter tags based on search input
+    filteredTags() {
+      if (!this.newTagName || this.newTagName.trim() === "") {
+        return this.tagOptions;
+      }
+      const searchQuery = this.newTagName.toLowerCase().trim();
+      return this.tagOptions.filter(tag =>
+        tag.TagName.toLowerCase().includes(searchQuery)
+      );
+    },
   },
 
   mounted() {
@@ -1451,10 +1513,11 @@ async function viewRequirement(id) {
                     </select>
                   </td>
                   <td class="requirements-col">
-                    <button v-if="person.requirements" class="download-btn" @click="
-                      console.log('PERSON OBJECT:', person);
-                    downloadRequirements(person.id, person.requirements);
-                    ">
+                    <button 
+                      v-if="person.requirement_directory || person.requirements" 
+                      class="download-btn" 
+                      @click="downloadRequirements(person.id, person.requirement_directory || person.requirements)"
+                    >
                       Download Requirements
                     </button>
 
@@ -1625,10 +1688,21 @@ async function viewRequirement(id) {
             <!-- Tags -->
             <div class="relative mb-4">
               <label class="block font-semibold text-gray-600 mb-2">Tags</label>
+              <input 
+                v-model="newTagName" 
+                type="text" 
+                placeholder="Search or type a new tag..." 
+                class="career-input mb-2" 
+              />
               <div class="tag-list-wrapper">
                 <div class="tag-list">
-                  <span v-for="tag in tagOptions" :key="tag.TagID" class="tag-chip" @click="toggleTag(tag.TagID)"
-                    :class="{ 'tag-chip-selected': isTagSelected(tag.TagID) }">
+                  <span 
+                    v-for="tag in filteredTags" 
+                    :key="tag.TagID" 
+                    class="tag-chip" 
+                    @click="toggleTag(tag.TagID)"
+                    :class="{ 'tag-chip-selected': isTagSelected(tag.TagID) }"
+                  >
                     {{ tag.TagName }}
                   </span>
                 </div>
@@ -1644,7 +1718,6 @@ async function viewRequirement(id) {
                 </span>
               </div>
 
-              <input v-model="newTagName" type="text" placeholder="Add new tag" class="career-input mt-2" />
               <button @click.prevent="addTag" class="career-save-btn mt-2">
                 Add Tag
               </button>
@@ -2653,6 +2726,24 @@ tbody td {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+/* Download Requirements Button */
+.download-btn {
+  background-color: #334155;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.download-btn:hover {
+  background-color: #1e293b;
+  transform: scale(1.03);
 }
 
 .schedule-btn:hover {
