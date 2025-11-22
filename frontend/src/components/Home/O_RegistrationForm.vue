@@ -370,35 +370,51 @@
       </form>
     </div>
 
-    <!-- 🔵 Success Modal -->
+    <!-- 🔵 Email Verification Modal -->
     <div
       v-if="showSuccessModal"
-      class="fixed inset-0 flex items-center justify-center z-50"
-      style="background-color: rgba(0, 0, 0, 0.3)"
+      class="fixed inset-0 flex items-center justify-center"
+      style="background-color: rgba(0, 0, 0, 0.5); z-index: 9999;"
     >
       <div
         class="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full text-center relative"
       >
-        <h2 class="text-lg font-bold text-green-600 mb-4">
-          Registration Successful 🎉
+        <div class="mb-4">
+          <svg class="mx-auto h-16 w-16 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+          </svg>
+        </div>
+        <h2 class="text-lg font-bold text-blue-600 mb-4">
+          Verify Your Email Address
         </h2>
-        <p class="text-sm mb-6">
-          Your organization account has been created successfully.<br />
-          Click OK to go to the login page.
+        <p class="text-sm mb-4 text-gray-700">
+          Your organization account has been created successfully!
         </p>
-        <button
-          class="btn btn-primary w-3/4 bg-dark-slate text-white"
-          @click="goToLogin"
-        >
-          OK
-        </button>
+        <p class="text-sm mb-6 text-gray-600">
+          Please check your email (<strong>{{ registeredEmail || form.emailAddress }}</strong>) and click the verification link to activate your account.
+        </p>
+        <div class="space-y-2">
+          <button
+            class="btn btn-primary w-full bg-dark-slate text-white"
+            @click="goToLogin"
+          >
+            Go to Login
+          </button>
+          <button
+            v-if="registrationResponse?.verification_url"
+            class="btn btn-secondary w-full bg-gray-200 text-gray-700 text-xs"
+            @click="copyVerificationLink"
+          >
+            Copy Verification Link
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, nextTick } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
 import api from "../../composables/api.js";
@@ -418,6 +434,8 @@ const form = ref({
 const termsAccepted = ref(false);
 const showModal = ref(false);
 const showSuccessModal = ref(false);
+const registrationResponse = ref(null);
+const registeredEmail = ref('');
 
 const handleSubmit = async () => {
   if (!termsAccepted.value) {
@@ -429,10 +447,28 @@ const handleSubmit = async () => {
 
   try {
     const { confirmPassword, ...payload } = form.value;
-   await axios.post(import.meta.env.VITE_API_BASE_URL + "/organization", payload);
+    const response = await axios.post(import.meta.env.VITE_API_BASE_URL + "/organization", payload);
 
-    // ✅ Show success modal instead of alert
+    console.log('Registration response:', response);
+    console.log('Response status:', response.status);
+    console.log('Response data:', response.data);
+
+    // Store registration response (handle both direct data and nested organization property)
+    registrationResponse.value = response.data;
+    // Extract verification_url if it exists in the response
+    if (response.data.verification_url) {
+      registrationResponse.value.verification_url = response.data.verification_url;
+    }
+    registeredEmail.value = form.value.emailAddress;
+
+    // ✅ Show email verification modal
+    console.log('Setting showSuccessModal to true');
     showSuccessModal.value = true;
+    console.log('showSuccessModal value:', showSuccessModal.value);
+    
+    // Force Vue to update
+    await nextTick();
+    console.log('After nextTick, showSuccessModal:', showSuccessModal.value);
 
     // ✅ Clear form
     form.value = {
@@ -446,7 +482,30 @@ const handleSubmit = async () => {
     };
     termsAccepted.value = false;
   } catch (error) {
-    console.error(error.response?.data || error.message);
+    console.error('Registration error:', error);
+    console.error('Error response:', error.response);
+    console.error('Error data:', error.response?.data);
+    
+    // Check if it's actually a success (201 status) but axios is treating it as error
+    if (error.response?.status === 201 || (error.response?.status >= 200 && error.response?.status < 300)) {
+      // Registration actually succeeded
+      registrationResponse.value = error.response.data.organization || error.response.data;
+      registeredEmail.value = form.value.emailAddress;
+      showSuccessModal.value = true;
+      
+      // Clear form
+      form.value = {
+        name: "",
+        location: "",
+        websiteURL: "",
+        emailAddress: "",
+        phoneNumber: "",
+        password: "",
+        confirmPassword: "",
+      };
+      termsAccepted.value = false;
+      return;
+    }
     
     // Show validation errors to user
     if (error.response?.status === 422 && error.response?.data?.errors) {
@@ -467,6 +526,16 @@ const handleSubmit = async () => {
 const goToLogin = () => {
   showSuccessModal.value = false;
   router.push("Login");
+};
+
+const copyVerificationLink = () => {
+  if (registrationResponse.value?.verification_url) {
+    navigator.clipboard.writeText(registrationResponse.value.verification_url).then(() => {
+      alert('Verification link copied to clipboard!');
+    }).catch(() => {
+      alert('Failed to copy link. Please copy manually:\n' + registrationResponse.value.verification_url);
+    });
+  }
 };
 
 const showPassword = ref(false);
