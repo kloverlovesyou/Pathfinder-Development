@@ -250,7 +250,7 @@
 
           <!-- Issue Certificates To All Button -->
           <div class="modal-footer">
-            <button class="issue-cert-btn" @click="issueCertificatesToSelected">
+            <button class="bulk-issue-btn" @click="issueCertificatesToSelected">
               Issue Certificates to Selected
             </button>
           </div>
@@ -529,6 +529,7 @@ export default {
       qrCodeValue: null,
       qrExpiresAt: null,
       activeTrainingId: null, // which training shows the QR
+      selectAll: false,
 
       showBulkCertModal: false,
       certificateData: {
@@ -536,6 +537,8 @@ export default {
         certGivenDate: '',
         file: null,
       },
+
+      
       selectedRegistrant: null,
       bulkCertData: {
         baseTrackingID: '',
@@ -637,6 +640,15 @@ async sendCertificate(file, registrantId) {
     }
   },
 
+  toggleSelectAll() {
+    this.registrantsList.forEach(person => {
+      person.selected = this.selectAll;
+    });
+  },
+
+   updateSelectAll() {
+    this.selectAll = this.registrantsList.every(person => person.selected);
+  },
     openBulkCertModal() {
       const registrantsWithoutCert = this.registrantsList.filter(r => !r.hasCertificate);
       if (registrantsWithoutCert.length === 0) {
