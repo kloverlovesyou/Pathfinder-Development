@@ -32,7 +32,7 @@ class ApplicationController extends Controller
             'interviewLocation' => $app->interviewLocation,
             'detailsAndInstructions' => $app->career->detailsAndInstructions ?? null,
             'qualifications' => $app->career->qualifications ?? null,
-            'requirement_directory' => $app->career->requirement_directory ?? null,
+            'requirement_directory' => $app->requirement_directory ?? null, // Fixed: get from application, not career
             'applicationLetterAddress' => $app->career->applicationLetterAddress ?? null,
             'deadlineOfSubmission' => $app->career->deadlineOfSubmission ?? null,
             'status' => $app->applicationStatus,
@@ -288,9 +288,25 @@ class ApplicationController extends Controller
 
         return response()->json(['message' => 'APPLICATION WITHDRAWN'], 200);
     }
-public function viewRequirement($id)
+public function viewRequirement(Request $request, $id)
 {
+    $user = $request->user();
     $application = Application::findOrFail($id);
+
+    // Authorization: Check if user is the applicant or the organization that owns the career
+    if ($user instanceof \App\Models\Applicant) {
+        // Applicants can only view their own requirements
+        if ($application->applicantID !== $user->applicantID) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+    } elseif ($user instanceof \App\Models\Organization) {
+        // Organizations can only view requirements for applications to their careers
+        if ($application->career->organizationID !== $user->organizationID) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+    } else {
+        return response()->json(['message' => 'Unauthorized'], 401);
+    }
 
     if (!$application->requirement_directory) {
         return response()->json(['message' => 'No requirement found.'], 404);
@@ -307,12 +323,12 @@ public function viewRequirement($id)
         $publicUrl = "{$supabaseUrl}/storage/v1/object/public/{$bucket}/{$application->requirement_directory}";
         return redirect($publicUrl);
     }
-    
+
     // Fallback to public storage (for old uploads)
     if (Storage::disk('public')->exists($application->requirement_directory)) {
         return Storage::disk('public')->response($application->requirement_directory);
     }
-    
+
     // Fallback to public path for backwards compatibility
     $filePath = public_path($application->requirement_directory);
     if (file_exists($filePath)) {

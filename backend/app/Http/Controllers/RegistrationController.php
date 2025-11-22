@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Registration;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class RegistrationController extends Controller
 {
@@ -215,14 +216,125 @@ class RegistrationController extends Controller
         $validated = $request->validate([
             'certificateTrackingID' => 'required|string',
             'certificateGivenDate' => 'required|date',
-            'certificatePath' => 'required|string', // <-- path from Supabase
+            'certificatePath' => 'nullable|string', // Optional if file is uploaded
+            'file' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:4096', // Accept file uploads
         ]);
+        
+        $certificatePath = $validated['certificatePath'] ?? null;
+        
+        // If file is uploaded, process it (convert PDF to image if needed) and upload to Supabase
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $mimeType = $file->getMimeType();
+            $fileContents = null;
+            $fileExtension = 'png'; // Default to PNG after conversion
+            $contentType = 'image/png'; // Default content type
+            
+            // If file is PDF, convert to image
+            if ($mimeType === 'application/pdf' || $file->getClientOriginalExtension() === 'pdf') {
+                try {
+                    if (!extension_loaded('imagick') || !class_exists('Imagick')) {
+                        return response()->json([
+                            'message' => 'PDF conversion requires Imagick PHP extension. Please install it or upload an image instead.',
+                            'error' => 'IMAGICK_NOT_AVAILABLE'
+                        ], 400);
+                    }
+                    
+                    // Convert PDF first page to image using Imagick
+                    $imagick = new \Imagick();
+                    $imagick->setResolution(300, 300);
+                    $imagick->readImage($file->getRealPath() . '[0]');
+                    $imagick->setImageFormat('png');
+                    $imagick->setImageCompressionQuality(95);
+                    
+                    $fileContents = $imagick->getImageBlob();
+                    $imagick->clear();
+                    $imagick->destroy();
+                    
+                    Log::info('PDF converted to image for registration certificate', [
+                        'registrationID' => $registrationID,
+                        'original_size' => $file->getSize(),
+                        'converted_size' => strlen($fileContents)
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('PDF to image conversion failed for registration certificate', [
+                        'registrationID' => $registrationID,
+                        'error' => $e->getMessage()
+                    ]);
+                    return response()->json([
+                        'message' => 'Failed to convert PDF to image: ' . $e->getMessage(),
+                        'error' => 'PDF_CONVERSION_FAILED'
+                    ], 500);
+                }
+            } else {
+                // For images, read binary data directly
+                $fileContents = file_get_contents($file->getRealPath());
+                $fileExtension = $file->getClientOriginalExtension();
+                $contentType = $mimeType;
+            }
+            
+            // Upload to Supabase Storage
+            $supabaseUrl = env('SUPABASE_URL', 'https://hmevengvfponcwslnyye.supabase.co');
+            $supabaseUrl = preg_replace('#/storage/v1/object/public/?$#', '', $supabaseUrl);
+            $supabaseUrl = rtrim($supabaseUrl, '/');
+            $supabaseKey = env('SUPABASE_SECRET') ?: env('SUPABASE_KEY');
+            $bucket = env('SUPABASE_BUCKET', 'Requirements');
+            
+            if (!$supabaseKey || !$bucket) {
+                return response()->json([
+                    'message' => 'Supabase Storage not configured'
+                ], 500);
+            }
+            
+            // Generate storage path
+            $safeName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $registrationID);
+            $storagePath = "certificate_directory/{$safeName}_" . time() . ".{$fileExtension}";
+            
+            $uploadUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}/{$storagePath}";
+            
+            try {
+                $client = new \GuzzleHttp\Client();
+                $response = $client->request('POST', $uploadUrl, [
+                    'headers' => [
+                        'Authorization' => "Bearer {$supabaseKey}",
+                        'Content-Type' => $contentType,
+                        'x-upsert' => 'true',
+                    ],
+                    'body' => $fileContents,
+                ]);
+                
+                if ($response->getStatusCode() !== 200 && $response->getStatusCode() !== 201) {
+                    throw new \Exception('Failed to upload certificate to Supabase');
+                }
+                
+                $certificatePath = $storagePath;
+                
+                Log::info('Certificate uploaded to Supabase successfully', [
+                    'registrationID' => $registrationID,
+                    'path' => $certificatePath
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Failed to upload certificate to Supabase', [
+                    'registrationID' => $registrationID,
+                    'error' => $e->getMessage()
+                ]);
+                return response()->json([
+                    'message' => 'Failed to upload certificate: ' . $e->getMessage()
+                ], 500);
+            }
+        }
+        
+        if (!$certificatePath) {
+            return response()->json([
+                'message' => 'Either certificatePath or file must be provided'
+            ], 400);
+        }
         
         // Store the Supabase path in the database
         $registration->update([
             'certTrackingID' => $validated['certificateTrackingID'],
             'certGivenDate' => $validated['certificateGivenDate'],
-            'certificatePath' => $validated['certificatePath'], // store the Supabase path
+            'certificatePath' => $certificatePath,
         ]);
         
         return response()->json([

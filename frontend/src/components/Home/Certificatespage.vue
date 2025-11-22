@@ -22,6 +22,7 @@ function addCertificate() {
     title: "",
     image: null,
     file: null,
+    fileType: null, // 'image' or 'pdf'
   });
 }
 
@@ -47,12 +48,33 @@ function handleFileUpload(event, index) {
   const file = event.target.files[0];
   if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    certificates.value[index].image = e.target.result;
-    certificates.value[index].file = file;
-  };
-  reader.readAsDataURL(file);
+  // Check if file is PDF or image
+  const isPDF = file.type === 'application/pdf';
+  const isImage = file.type.startsWith('image/');
+
+  if (!isPDF && !isImage) {
+    showToast('Please upload an image or PDF file', 'error');
+    return;
+  }
+
+  certificates.value[index].file = file;
+  certificates.value[index].fileType = isPDF ? 'pdf' : 'image';
+
+  if (isPDF) {
+    // For PDFs, create a data URL for preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      certificates.value[index].image = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  } else {
+    // For images, use the same logic
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      certificates.value[index].image = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
 }
 
 // Fetch TrainingCounter
@@ -104,12 +126,33 @@ async function fetchCertificates(applicantID) {
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    uploadedCertificates.value = response.data.map((cert) => ({
-      certificationID: cert.certificationID,
-      certificationName: cert.certificationName,
-      image: cert.certificate,
-      IsSelected: cert.IsSelected === 1, // ✅ ensure boolean
-    }));
+    uploadedCertificates.value = response.data.map((cert) => {
+      // All certificates should be images now (PDFs converted during upload)
+      // But handle legacy PDFs that might still exist
+      let fileType = cert.fileType || 'image';
+      if (cert.mimeType === 'application/pdf' || (cert.certificate && cert.certificate.includes('application/pdf'))) {
+        fileType = 'pdf'; // Legacy PDF
+      }
+      
+      console.log('Certificate loaded:', {
+        name: cert.certificationName,
+        fileType: fileType,
+        mimeType: cert.mimeType,
+        hasData: !!cert.certificate,
+        dataUrlStart: cert.certificate ? cert.certificate.substring(0, 50) : 'null'
+      });
+      
+      return {
+        certificationID: cert.certificationID,
+        certificationName: cert.certificationName,
+        image: cert.certificate,
+        fileType: fileType,
+        mimeType: cert.mimeType,
+        IsSelected: cert.IsSelected === 1, // ✅ ensure boolean
+      };
+    });
+    
+    console.log('Total certificates loaded:', uploadedCertificates.value.length);
   } catch (error) {
     console.error(
       "❌ Error fetching certificates:",
@@ -231,10 +274,45 @@ async function toggleCertificateSelection(cert) {
 }
 
 // Modal handlers
-function openModal(image, title) {
+const selectedFileType = ref(null);
+
+function handleImageError(event) {
+  console.error('Image failed to load:', {
+    src: event.target.src?.substring(0, 100),
+    error: event
+  });
+  
+  // Try to find the certificate name for better error message
+  const certName = event.target.alt || 'certificate';
+  
+  event.target.style.display = 'none';
+  const parent = event.target.parentElement;
+  if (parent) {
+    parent.innerHTML = `
+      <div class="p-4 text-center">
+        <svg class="w-12 h-12 text-red-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <p class="text-sm text-red-600 font-semibold mb-1">Failed to load image</p>
+        <p class="text-xs text-gray-500">Please try re-uploading this certificate</p>
+      </div>
+    `;
+  }
+}
+
+function openModal(image, title, fileType = 'image') {
   selectedImage.value = image;
   selectedTitle.value = title;
+  selectedFileType.value = fileType;
   isModalOpen.value = true;
+  
+  // Debug logging
+  console.log('Opening modal:', { 
+    image: image ? (image.substring(0, 100) + '...') : null, 
+    title, 
+    fileType,
+    imageLength: image ? image.length : 0
+  });
 }
 function closeModal() {
   isModalOpen.value = false;
@@ -535,9 +613,8 @@ const deselectAllCertificates = async () => {
               />
               <input
                 type="file"
-                accept="image/*"
+                accept="image/*,application/pdf"
                 class="file-input"
-                
                 @change="handleFileUpload($event, index)"
               />
             </div>
@@ -545,13 +622,23 @@ const deselectAllCertificates = async () => {
             
 
             <div
-              v-if="cert.image"
-              class="h-32 w-full flex items-center justify-center border rounded"
+              v-if="cert.image || cert.file"
+              class="h-32 w-full flex items-center justify-center border rounded bg-gray-50"
             >
+              <!-- PDF Preview -->
+              <div v-if="cert.fileType === 'pdf' || (cert.file && cert.file.type === 'application/pdf')" class="flex flex-col items-center justify-center p-4 w-full">
+                <svg class="w-16 h-16 text-red-500 mb-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M4 18h12V6h-4V2H4v16zm-2 1V0h12l4 4v16H2v-1z"/>
+                </svg>
+                <p class="text-sm text-gray-600 text-center">{{ cert.file?.name || 'PDF Certificate' }}</p>
+                <p class="text-xs text-gray-400 mt-1">Click to view</p>
+              </div>
+              <!-- Image Preview -->
               <img
+                v-else
                 :src="cert.image"
                 alt="Preview"
-                class="h-32 object-cover rounded-lg"
+                class="h-full w-full object-cover rounded-lg"
               />
             </div>
 
@@ -559,7 +646,7 @@ const deselectAllCertificates = async () => {
               v-else
               class="h-32 w-full flex items-center justify-center border rounded text-gray-400 text-sm"
             >
-              Certificate Preview
+              Certificate Preview (Image or PDF)
             </div>
 
             <div class="flex justify-end mt-2">
@@ -614,16 +701,30 @@ const deselectAllCertificates = async () => {
             >
               <!-- 🖼️ Certificate Image -->
               <div
-                class="w-full h-48 bg-gray-200 flex items-center justify-center cursor-pointer hover:opacity-90 transition"
-                @click="openModal(cert.image, cert.title)"
+                class="w-full h-48 bg-gray-200 flex items-center justify-center cursor-pointer hover:opacity-90 transition overflow-hidden"
+                @click="openModal(cert.image, cert.certificationName, cert.fileType || 'image')"
               >
+                <!-- Image Display -->
                 <img
-                  v-if="cert.image"
+                  v-if="cert.image && cert.image.startsWith('data:')"
                   :src="cert.image"
                   alt="Certificate Image"
-                  class="h-full w-full object-cover"
+                  class="h-full w-full object-contain bg-white"
+                  @error="handleImageError($event)"
+                  @load="console.log('Certificate image loaded:', cert.certificationName)"
                 />
-                <span v-else class="text-gray-500">No Image</span>
+                <div v-else-if="cert.mimeType === 'application/pdf'" class="p-4 text-center">
+                  <svg class="w-16 h-16 text-red-500 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M4 18h12V6h-4V2H4v16zm-2 1V0h12l4 4v16H2v-1z"/>
+                  </svg>
+                  <p class="text-sm text-red-600 font-semibold mb-1">Legacy PDF Certificate</p>
+                  <p class="text-xs text-gray-500">Please re-upload this certificate</p>
+                </div>
+                <div v-else-if="cert.image" class="p-4 text-center">
+                  <p class="text-sm text-red-500 mb-2">Invalid image data</p>
+                  <p class="text-xs text-gray-400">{{ cert.image.substring(0, 30) }}...</p>
+                </div>
+                <span v-else class="text-gray-500">No Certificate</span>
               </div>
 
               <!-- 🏷️ Bottom section -->
@@ -675,22 +776,51 @@ const deselectAllCertificates = async () => {
           <!-- Modal -->
           <div
             v-if="isModalOpen"
-            class="fixed inset-0 flex items-center justify-center z-50"
+            class="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50"
+            @click.self="closeModal"
           >
             <div
-              class="bg-white rounded-lg shadow-lg max-w-3xl w-full p-4 relative"
+              class="bg-white rounded-lg shadow-lg max-w-5xl w-full mx-4 relative flex flex-col"
+              style="max-height: 90vh;"
             >
-              <button
-                class="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
-                @click="closeModal"
-              >
-                ✕
-              </button>
-              <img
-                :src="selectedImage"
-                :alt="selectedTitle"
-                class="max-h-[80vh] w-auto mx-auto rounded"
-              />
+              <div class="flex justify-between items-center p-4 border-b">
+                <h3 class="text-lg font-semibold">{{ selectedTitle }}</h3>
+                <button
+                  class="text-gray-500 hover:text-gray-800 text-2xl font-bold"
+                  @click="closeModal"
+                >
+                  ✕
+                </button>
+              </div>
+              <div class="flex-1 overflow-auto p-4">
+                <!-- PDF Display (for legacy PDFs that weren't converted) -->
+                <div v-if="selectedFileType === 'pdf' && selectedImage && selectedImage.includes('application/pdf')" class="w-full" style="min-height: 70vh;">
+                  <iframe
+                    :src="selectedImage"
+                    class="w-full rounded border"
+                    style="min-height: 70vh; height: 80vh;"
+                    frameborder="0"
+                    type="application/pdf"
+                  ></iframe>
+                </div>
+                <!-- Image Display in Modal -->
+                <div v-else-if="selectedImage" class="flex justify-center items-center min-h-[70vh]">
+                  <img
+                    :src="selectedImage"
+                    :alt="selectedTitle"
+                    class="max-h-[80vh] max-w-full w-auto rounded shadow-lg"
+                    @error="handleImageError($event)"
+                    @load="console.log('Image loaded successfully')"
+                  />
+                </div>
+                <div v-else class="flex items-center justify-center h-64 text-gray-500">
+                  <div class="text-center">
+                    <p class="mb-2">No certificate to display</p>
+                    <p class="text-sm text-gray-400">Image data is missing</p>
+                    <p class="text-xs text-gray-300 mt-2">Debug: selectedImage = {{ selectedImage ? 'exists' : 'null' }}, fileType = {{ selectedFileType }}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
