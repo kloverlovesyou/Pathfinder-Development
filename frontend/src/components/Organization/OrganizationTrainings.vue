@@ -600,7 +600,7 @@ export default {
   methods: {
 
 
-  async issueCertificate(person) {
+    async issueCertificate(person) {
     try {
       if (person.hasCertificate) return; // already issued
 
@@ -609,14 +609,34 @@ export default {
       // Generate PDF in landscape
       const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
 
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+
+      // Vertical positioning variables
+      const titleY = pageHeight * 0.25; // 25% from top
+      const nameY = pageHeight * 0.45;  // 45% from top
+      const trainingY = pageHeight * 0.55; // 55% from top
+      const trackingY = pageHeight * 0.70; // 70% from top
+      const dateY = pageHeight * 0.80; // 80% from top
+
+      // Title
+      doc.setFontSize(28);
+      doc.text("Certificate of Completion", pageWidth / 2, titleY, null, null, "center");
+
+      // Name
       doc.setFontSize(20);
-      doc.text("Certificate of Completion", doc.internal.pageSize.getWidth() / 2, 100, null, null, "center");
-      
+      doc.text(person.name, pageWidth / 2, nameY, null, null, "center");
+
+      // Training
+      doc.setFontSize(16);
+      doc.text(`has completed the training: ${this.selectedTraining.title}`, pageWidth / 2, trainingY, null, null, "center");
+
+      // Tracking ID
       doc.setFontSize(14);
-      doc.text(`This is to certify that ${person.name}`, doc.internal.pageSize.getWidth() / 2, 150, null, null, "center");
-      doc.text(`has completed the training: ${this.selectedTraining.title}`, doc.internal.pageSize.getWidth() / 2, 180, null, null, "center");
-      doc.text(`Certificate Tracking ID: ${person.id}`, doc.internal.pageSize.getWidth() / 2, 230, null, null, "center");
-      doc.text(`Date Issued: ${givenDate}`, doc.internal.pageSize.getWidth() / 2, 260, null, null, "center");
+      doc.text(`Certificate Tracking ID: ${person.id}`, pageWidth / 2, trackingY, null, null, "center");
+
+      // Date
+      doc.text(`Date Issued: ${givenDate}`, pageWidth / 2, dateY, null, null, "center");
 
       const pdfBlob = doc.output("blob");
 
@@ -627,7 +647,7 @@ export default {
       // Upload PDF to Supabase
       const filePath = await uploadCertificate(pdfFile);
       if (!filePath) throw new Error("Failed to upload certificate");
-      
+
       console.log("Certificate public URL:", filePath);
 
       // Send metadata to backend
