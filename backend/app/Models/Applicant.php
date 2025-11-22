@@ -52,6 +52,8 @@ class Applicant extends Model
 		'password',
 		'api_token',
 		'careerID',
+		'email_verification_token',
+		'email_verified_at',
 	];
 
 	public function applications()

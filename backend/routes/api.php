@@ -73,6 +73,14 @@ Route::post('/a_register', [AuthController::class, 'a_register']);
 Route::post('/o_register', [AuthController::class, 'o_register']);
 Route::post('/login', [AuthController::class, 'login']);
 
+// Email Verification routes
+Route::get('/verify-email', [AuthController::class, 'verifyEmail']);
+Route::post('/resend-verification', [AuthController::class, 'resendVerification']);
+Route::post('/test-email', [AuthController::class, 'testEmail']); // For debugging email configuration
+
+// Get verification link for testing (development only)
+Route::get('/get-verification-link/{email}', [AuthController::class, 'getVerificationLink']);
+
 // Applicant & Organization
 Route::post('/applicants', [ApplicantController::class, 'a_register']);
 Route::post('/applicants/login', [ApplicantController::class, 'login']);

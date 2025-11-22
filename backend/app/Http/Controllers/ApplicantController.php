@@ -7,6 +7,8 @@ use App\Models\Applicant;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\EmailVerification;
 class ApplicantController extends Controller
 {
     public function a_register(Request $request)
@@ -28,6 +30,9 @@ class ApplicantController extends Controller
             ], 422);
         }
 
+        // Generate verification token
+        $verificationToken = Str::random(64);
+
         $applicant = Applicant::create([
             'firstName'    => $request->firstName,
             'middleName'   => $request->middleName,
@@ -38,11 +43,23 @@ class ApplicantController extends Controller
             'password'     => bcrypt($request->password),
             'api_token'    => Str::random(60),
             'careerID'  => $request->careerID,
+            'email_verification_token' => $verificationToken,
+            'email_verified_at' => null,
         ]);
+
+        // Send verification email
+        $verificationUrl = url('/api/verify-email?token=' . $verificationToken . '&type=applicant');
+        $userName = $request->firstName . ' ' . $request->lastName;
+        
+        try {
+            Mail::to($request->emailAddress)->send(new EmailVerification($verificationUrl, $userName, 'applicant'));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send verification email: ' . $e->getMessage());
+        }
 
         return response()->json([
             'status'  => 'success',
-            'message' => 'Registration successful',
+            'message' => 'Registration successful! Please check your email to verify your account.',
             'user'    => $applicant,
         ], 201);
     }
@@ -58,6 +75,14 @@ public function login(Request $request)
 
     if (!$applicant || !Hash::check($request->password, $applicant->password)) {
         return response()->json(['message' => 'Invalid credentials'], 401);
+    }
+
+    // Check if email is verified
+    if (!$applicant->email_verified_at) {
+        return response()->json([
+            'message' => 'Please verify your email address before logging in. Check your inbox for the verification link.',
+            'email_verified' => false,
+        ], 403);
     }
 
     // ✅ Only generate if missing

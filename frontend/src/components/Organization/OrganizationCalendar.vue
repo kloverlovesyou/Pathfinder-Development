@@ -198,7 +198,7 @@
                   <h4 class="group-title">🟥 Scheduled Interviews</h4>
                   <div v-for="(event, i) in selectedEvents.interviews" :key="'i-' + i" class="event-details-card">
                     <h5>{{ event.title }}</h5>
-                    <p class="event-info"><strong>Applicant:</strong> {{ event.applicantID || 'N/A' }}</p>
+                    <p class="event-info"><strong>Applicant:</strong> {{ event.applicantName || event.applicantID || 'N/A' }}</p>
                     <p class="event-info"><strong>Time:</strong> {{ formatTime12Hour(event.interviewSchedule) || 'TBD'
                     }}</p>
                     <p class="event-info" v-if="event.mode"><strong>Mode:</strong> {{ event.interviewMode }}</p>
@@ -367,6 +367,7 @@ export default {
           return {
             id: interview.id || interview.applicationID || interview.interviewID,
             applicantID: interview.applicantID || interview.applicant_id || null,
+            applicantName: interview.applicantName || null,
             title: interview.title || interview.interwiewStatus || "For Interview",
             date: scheduleDate ? scheduleDate.toISOString().split("T")[0] : "",
             interviewSchedule: schedule,
