@@ -28,10 +28,28 @@ const events = ref({});
 const selectedDate = ref("");
 const dayEvents = ref([]);
 const calendarRef = ref(null);
-
+const uploadedFilde = ref(null);
 const uploadedFile = ref(null);
 const applyModalOpen = ref(false);
 const organizations = ref({});
+
+// Build events only when posts are loaded
+function buildEvents() {
+  events.value = {};
+  posts.value.forEach((post) => {
+    const date = post.deadlineOfSubmission || (post.schedule ? post.schedule.split("T")[0] : null);
+    if (date) {
+      if (!events.value[date]) events.value[date] = [];
+      events.value[date].push(post);
+    }
+  });
+}
+
+// Show events on calendar click
+function showEvents(dateStr) {
+  selectedDate.value = dateStr;
+  dayEvents.value = events.value[dateStr] || [];
+}
 
 // ------------------ TOAST ------------------
 function addToast(message, type = "info") {
@@ -89,18 +107,154 @@ async function fetchMyRegistrations() {
   }
 }
 
+function cancelApplication(career) {
+  const id = career.careerID;
+  appliedPosts.value[id] = false;
+  myApplications.value.delete(id);
+}
+
+// Toggle bookmark for career
+async function toggleCareerBookmark(career) {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    addToast('PLEASE LOG IN FIRST', 'accent');
+    return;
+  }
+
+  const careerID = career.careerID;
+  const isBookmarked = bookmarkedPosts.value[careerID];
+
+  try {
+    if (isBookmarked) {
+      await axios.delete(import.meta.env.VITE_API_BASE_URL + `/career-bookmarks/${careerID}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      bookmarkedPosts.value[careerID] = false;
+      addToast('Bookmark removed', 'info');
+    } else {
+      await axios.post(
+        import.meta.env.VITE_API_BASE_URL + '/career-bookmarks',
+        { careerID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      bookmarkedPosts.value[careerID] = true;
+      addToast('Bookmarked!', 'success');
+    }
+  } catch (error) {
+    if (error.response?.status === 409) {
+      addToast('Already bookmarked', 'accent');
+    } else {
+      addToast('Failed to bookmark', 'error');
+    }
+  }
+}
+
+      async function registerForTraining(training) {
+      if (!training) return;
+
+      try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+      addToast('PLEASE LOG IN FIRST', 'accent');
+      return;
+      }
+
+      const response = await axios.post(
+        import.meta.env.VITE_API_BASE_URL + '/registrations',
+        { trainingID: training.trainingID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Check if the server explicitly says success = false
+      if (response.data?.success === false) {
+        addToast('FAILED TO REGISTER', 'accent');
+        return;
+      }
+
+      addToast('REGISTRATION SUCCESSFUL!!!', 'success');
+      myRegistrations.value.add(training.trainingID);
+      registeredPosts.value[training.trainingID] = true;
+
+      } catch (error) {
+      // Axios response error handling
+      if (error.response?.status === 409) {
+      addToast('YOU ALREADY REGISTERED FOR THIS TRAINING', 'accent');
+      myRegistrations.value.add(training.trainingID);
+      registeredPosts.value[training.trainingID] = true;
+      } else if (error.response?.status === 401) {
+      addToast('UNAUTHORIZED. PLEASE LOG IN AGAIN', 'accent');
+      } else {
+      console.error('Registration error:', error.response || error);
+      addToast('FAILED TO REGISTER', 'accent');
+      }
+      }
+      }
+
+// Unregister from training
+  async function unregisterFromTraining(training) {
+  if (!training) return;
+
+  try {
+  const token = localStorage.getItem('token');
+  if (!token) {
+  addToast('PLEASE LOG IN FIRST', 'accent');
+  return;
+  }
+
+  // Fetch user's registrations
+  const registrationsRes = await axios.get(
+    import.meta.env.VITE_API_BASE_URL + '/registrations',
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  const registration = registrationsRes.data.find(r => r.trainingID === training.trainingID);
+
+  if (!registration) {
+    addToast('You are not registered for this training', 'accent');
+    return;
+  }
+
+  // Delete registration
+  await axios.delete(
+    import.meta.env.VITE_API_BASE_URL + `/registrations/${registration.id}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  myRegistrations.value.delete(training.trainingID);
+  registeredPosts.value[training.trainingID] = false;
+  addToast('Unregistered successfully', 'info');
+
+  } catch (error) {
+  if (error.response?.status === 404) {
+  addToast('Registration not found', 'accent');
+  } else if (error.response?.status === 401) {
+  addToast('UNAUTHORIZED. PLEASE LOG IN AGAIN', 'accent');
+  } else {
+  console.error("Error unregistering:", error.response || error);
+  addToast('Failed to unregister', 'error');
+  }
+  }
+  }
+
 // ------------------ MODALS ------------------
-function openCareerModal(career) {
-  console.log("Career Data:", career);
-  selectedCareerDetails.value = career;
+async function openCareerModal(career) {
+  try {
+    console.log('Career Object:', career);
 
-  recommendedTrainings.value =
-    career.recommended_trainings ||
-    career.recommendedTrainings ||     // maybe this?
-    career.trainings ||                // maybe this?
-    [];
+    const careerID = parseInt(career.careerID, 10);
+    console.log('Parsed Career ID:', careerID);
 
-  showCareerPopup.value = true;
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + `/careers/${careerID}/details`);
+
+    //store main career + recommended trainings
+    selectedCareerDetails.value = res.data.career;
+    recommendedTrainings.value = res.data.recommended_trainings || [];
+    
+    showCareerPopup.value = true;
+  } catch (error) {
+    console.error("Error loading career details:", error);
+    alert("Failed to load career details.");
+  }
 }
 function closeCareerModal() {
   showCareerPopup.value = false;
@@ -108,15 +262,184 @@ function closeCareerModal() {
   recommendedTrainings.value = [];
 }
 
+// Open training modal
 function openTrainingModal(training) {
   selectedTraining.value = training;
   showTrainingModal.value = true;
 }
 
+// Close training modal
 function closeTrainingModal() {
   showTrainingModal.value = false;
   selectedTraining.value = null;
 }
+
+// Cancel application
+function cancelApplication(career) {
+  const id = career.careerID;
+  appliedPosts.value[id] = false;
+  myApplications.value.delete(id);
+}
+
+// Toggle bookmark for career
+async function toggleCareerBookmark(career) {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    addToast('PLEASE LOG IN FIRST', 'accent');
+    return;
+  }
+
+  const careerID = career.careerID;
+  const isBookmarked = bookmarkedPosts.value[careerID];
+
+  try {
+    if (isBookmarked) {
+      await axios.delete(import.meta.env.VITE_API_BASE_URL + `/career-bookmarks/${careerID}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      bookmarkedPosts.value[careerID] = false;
+      addToast('Bookmark removed', 'info');
+    } else {
+      await axios.post(
+        import.meta.env.VITE_API_BASE_URL + '/career-bookmarks',
+        { careerID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      bookmarkedPosts.value[careerID] = true;
+      addToast('Bookmarked!', 'success');
+    }
+  } catch (error) {
+    if (error.response?.status === 409) {
+      addToast('Already bookmarked', 'accent');
+    } else {
+      addToast('Failed to bookmark', 'error');
+    }
+  }
+}
+
+// Toggle bookmark for training
+async function toggleTrainingBookmark(training) {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    addToast('PLEASE LOG IN FIRST', 'accent');
+    return;
+  }
+
+  const trainingID = training.trainingID;
+  const isBookmarked = bookmarkedPosts.value[trainingID];
+
+  try {
+    if (isBookmarked) {
+      await axios.delete(import.meta.env.VITE_API_BASE_URL + `/bookmarks/${trainingID}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      bookmarkedPosts.value[trainingID] = false;
+      addToast('Bookmark removed', 'info');
+    } else {
+      await axios.post(
+        import.meta.env.VITE_API_BASE_URL + '/bookmarks',
+        { trainingID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      bookmarkedPosts.value[trainingID] = true;
+      addToast('Bookmarked!', 'success');
+    }
+  } catch (error) {
+    if (error.response?.status === 409) {
+      addToast('Already bookmarked', 'accent');
+    } else {
+      addToast('Failed to bookmark', 'error');
+    }
+  }
+}
+
+// Register for training
+async function registerForTraining(training) {
+  if (!training) return;
+
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      addToast('PLEASE LOG IN FIRST', 'accent');
+      return;
+    }
+
+    await axios.post(
+      import.meta.env.VITE_API_BASE_URL + '/registrations',
+      { trainingID: training.trainingID },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    addToast('REGISTRATION SUCCESSFUL!!!', 'success');
+    myRegistrations.value.add(training.trainingID);
+    registeredPosts.value[training.trainingID] = true;
+  } catch (error) {
+    if (error.response?.status === 409) {
+      addToast('YOU ALREADY REGISTERED FOR THIS TRAINING', 'accent');
+    } else if (error.response?.status === 401) {
+      addToast('UNAUTHORIZED. PLEASE LOG IN AGAIN', 'accent');
+    } else {
+      addToast('FAILED TO REGISTER', 'accent');
+    }
+  }
+}
+
+// Unregister from training
+async function unregisterFromTraining(training) {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    // Find registration ID
+    const registrationsRes = await axios.get(import.meta.env.VITE_API_BASE_URL + '/registrations', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    
+    const registration = registrationsRes.data.find(r => r.trainingID === training.trainingID);
+    if (registration) {
+      await axios.delete(import.meta.env.VITE_API_BASE_URL + `/registrations/${registration.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      myRegistrations.value.delete(training.trainingID);
+      registeredPosts.value[training.trainingID] = false;
+      addToast('Unregistered successfully', 'info');
+    }
+  } catch (error) {
+    console.error("Error unregistering:", error);
+    addToast('Failed to unregister', 'error');
+  }
+}
+
+
+function openModal(post) {
+  selectedPost.value = post;
+}
+
+function closeModal() {
+  selectedPost.value = null;
+}
+
+// Build events only when posts are loaded
+function buildEvents() {
+  events.value = {};
+  posts.value.forEach((post) => {
+    const date = post.deadlineOfSubmission || (post.schedule ? post.schedule.split("T")[0] : null);
+    if (date) {
+      if (!events.value[date]) events.value[date] = [];
+      events.value[date].push(post);
+    }
+  });
+}
+
+// Show events on calendar click
+function showEvents(dateStr) {
+  selectedDate.value = dateStr;
+  dayEvents.value = events.value[dateStr] || [];
+}
+
+
+
+
 
 function openApplyModal(career) {
   selectedPost.value = career;
@@ -155,36 +478,7 @@ async function fetchRecommendedCareers() {
   }
 }
 // ------------------ ACTIONS ------------------
-async function toggleCareerBookmark(career) {
-  const token = localStorage.getItem("token");
-  if (!token) return addToast("Please log in first", "accent");
 
-  const id = career.careerID;
-  const isBookmarked = bookmarkedPosts.value[id];
-
-  try {
-    if (isBookmarked) {
-      await axios.delete(
-        import.meta.env.VITE_API_BASE_URL + `/career-bookmarks/${id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      bookmarkedPosts.value[id] = false;
-      addToast("Bookmark removed", "info");
-    } else {
-      await axios.post(
-        import.meta.env.VITE_API_BASE_URL + "/career-bookmarks",
-        { careerID: id },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      bookmarkedPosts.value[id] = true;
-      addToast("Bookmarked!", "success");
-    }
-  } catch (err) {
-    addToast("Failed to toggle bookmark", "error");
-  }
-}
 
 async function toggleTrainingBookmark(training) {
   const token = localStorage.getItem("token");
@@ -460,7 +754,7 @@ onMounted(async () => {
             {{ selectedCareerDetails.position }}
           </h2>
           <p class="text-sm text-gray-400 mb-2">
-            Organization: {{ selectedCareerDetails.organizationName }}
+            Organization: {{ selectedCareerDetails.organization }}
           </p>
 
           <!-- Buttons -->
