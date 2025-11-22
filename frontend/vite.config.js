@@ -12,4 +12,12 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  optimizeDeps: {
+    include: ["pdfjs-dist"],
+  },
+  build: {
+    commonjsOptions: {
+      include: [/pdfjs-dist/, /node_modules/],
+    },
+  },
 });

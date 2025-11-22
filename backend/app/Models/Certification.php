@@ -13,7 +13,6 @@ use Illuminate\Database\Eloquent\Model;
  * 
  * @property int $certificationID
  * @property string $certificationName
- * @property string $certificate
  * @property int|null $resumeID
  * @property int|null $applicantID
  * 
@@ -35,7 +34,6 @@ class Certification extends Model
 
 	protected $fillable = [
 		'certificationName',
-		'certificate',
 		'resumeID',
 		'applicantID',
 		'IsSelected',

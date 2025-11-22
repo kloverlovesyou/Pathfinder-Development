@@ -39,6 +39,7 @@ public function getMyActivities($applicantID)
         ->join('organization', 'career.organizationID', '=', 'organization.organizationID')
         ->select(
             'application.applicationID',
+            'application.requirement_directory',
             'career.position as title',
             'career.detailsAndInstructions',
             'career.qualifications',

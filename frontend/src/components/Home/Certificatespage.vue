@@ -1,7 +1,7 @@
 <script setup>
 import { useRouter } from "vue-router";
 import axios from "axios";
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 
 const toasts = ref([]);
 const router = useRouter();
@@ -15,6 +15,8 @@ const selectedTitle = ref(null);
 const upcomingCount = ref(0);
 const completedCount = ref(0);
 let trainingCounterInterval = null;
+let certificateRefreshInterval = null;
+const togglingCertificates = ref(new Set()); // Track certificates being toggled
 
 // ➤ Add a new upload entry
 function addCertificate() {
@@ -42,15 +44,40 @@ function stopTrainingCounterUpdater() {
   if (trainingCounterInterval) clearInterval(trainingCounterInterval);
 }
 
+// Start certificate refresh interval
+function startCertificateRefresh() {
+  const savedUser = localStorage.getItem("user");
+  if (savedUser) {
+    const user = JSON.parse(savedUser);
+    if (user.applicantID) {
+      // Refresh certificates every 30 seconds to check for new organization-issued certificates
+      certificateRefreshInterval = setInterval(() => {
+        fetchCertificates(user.applicantID);
+      }, 30 * 1000);
+    }
+  }
+}
+
+// Stop certificate refresh interval
+function stopCertificateRefresh() {
+  if (certificateRefreshInterval) clearInterval(certificateRefreshInterval);
+}
+
 // ➤ File preview handler
 function handleFileUpload(event, index) {
   const file = event.target.files[0];
   if (!file) return;
 
+  if (!file.type.startsWith('image/')) {
+    showToast('Please upload an image file', 'error');
+    return;
+  }
+
+  certificates.value[index].file = file;
+
   const reader = new FileReader();
   reader.onload = (e) => {
     certificates.value[index].image = e.target.result;
-    certificates.value[index].file = file;
   };
   reader.readAsDataURL(file);
 }
@@ -95,26 +122,148 @@ async function fetchTrainingCounters() {
   }
 }
 
-// ➤ Fetch uploaded certificates only
+// ➤ Fetch certificates using the same method as Profilepage - from registrations via Supabase
 async function fetchCertificates(applicantID) {
   try {
     const token = localStorage.getItem("token");
-    const response = await axios.get(
-      import.meta.env.VITE_API_BASE_URL +`/certificates/${applicantID}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    uploadedCertificates.value = response.data.map((cert) => ({
-      certificationID: cert.certificationID,
-      certificationName: cert.certificationName,
-      image: cert.certificate,
-      IsSelected: cert.IsSelected === 1, // ✅ ensure boolean
-    }));
+    
+    if (!token) {
+      console.error("❌ No token found in localStorage");
+      showToast("Please log in to view certificates", "error");
+      setTimeout(() => {
+        router.push({ name: "Login" });
+      }, 2000);
+      return;
+    }
+    
+    // Step 1: Fetch manually uploaded certificates from /certificates endpoint
+    let manualCertificates = [];
+    try {
+      const certResponse = await axios.get(
+        import.meta.env.VITE_API_BASE_URL + `/certificates/${applicantID}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Filter for manually uploaded certificates (binary data or those without certificate_path)
+      manualCertificates = (certResponse.data || []).filter(cert => {
+        // Manual certificates have binary data or no certificate_path
+        return cert.certificate && !cert.certificate.startsWith('http') || 
+               (!cert.certificate_path && cert.certificate);
+      }).map(cert => ({
+        certificationID: cert.certificationID,
+        certificationName: cert.certificationName,
+        image: cert.certificate, // Data URL for manual uploads
+        IsSelected: cert.IsSelected === 1 || cert.IsSelected === true,
+        source: 'manual',
+        certificate_path: cert.certificate_path || null,
+      }));
+      
+      console.log('✅ Manual certificates loaded:', manualCertificates.length);
+    } catch (error) {
+      console.warn('⚠️ Could not fetch manual certificates:', error.message);
+    }
+    
+    // Step 2: Fetch organization-issued certificates from registrations (same method as Profilepage)
+    const { getPDFUrl } = await import("@/lib/supabase");
+    
+    try {
+      const regResponse = await axios.get(
+        import.meta.env.VITE_API_BASE_URL + "/registrations",
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      console.log('📋 Registrations API response:', regResponse.data?.length || 0, 'registrations');
+      
+      // Filter registrations for this applicant with certificates
+      const registrations = (regResponse.data || []).filter(reg => {
+        return reg.applicantID === applicantID && 
+               (reg.certificatePath || reg.certificate) &&
+               reg.certificatePath !== null && 
+               reg.certificatePath !== '';
+      });
+      
+      console.log('📝 Registrations with certificates for applicantID', applicantID, ':', registrations.length);
+      
+      // Process each registration to get certificate URL from Supabase
+      const organizationCertificates = await Promise.all(
+        registrations.map(async (registration) => {
+          const certificatePath = registration.certificatePath || registration.certificate;
+          
+          if (!certificatePath) {
+            return null;
+          }
+          
+          // Get Supabase public URL using the same method as Profilepage
+          const supabaseUrl = getPDFUrl(certificatePath, "Requirements");
+          
+          // Get training title for certificate name
+          const trainingTitle = registration.title || 
+                               registration.training?.title || 
+                               `Training #${registration.trainingID || 'Unknown'}`;
+          const certificationName = `${trainingTitle} - Certificate of Completion`;
+          
+          
+          return {
+            certificationID: 'REG_' + registration.registrationID,
+            certificationName: certificationName,
+            image: supabaseUrl, // Supabase public URL for display
+            IsSelected: false, // Default to not selected
+            source: 'organization',
+            registrationID: registration.registrationID,
+            certGivenDate: registration.certGivenDate || null,
+            certificate_path: certificatePath,
+          };
+        })
+      );
+      
+      // Filter out null entries
+      const validOrgCertificates = organizationCertificates.filter(cert => cert !== null);
+      console.log('✅ Organization certificates loaded:', validOrgCertificates.length);
+      
+      // Combine manual and organization certificates
+      uploadedCertificates.value = [...manualCertificates, ...validOrgCertificates];
+      
+      console.log('✅ Total certificates loaded:', uploadedCertificates.value.length);
+      console.log('  - Manual:', manualCertificates.length);
+      console.log('  - Organization:', validOrgCertificates.length);
+      
+      if (uploadedCertificates.value.length === 0) {
+        console.log('ℹ️ No certificates found for applicantID:', applicantID);
+      }
+      
+    } catch (error) {
+      console.error("❌ Error fetching registrations:", error.response?.data || error);
+      
+      // Still show manual certificates if available
+      uploadedCertificates.value = manualCertificates;
+      
+      if (error.response?.status === 401) {
+        showToast("Your session has expired. Please log in again.", "error");
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setTimeout(() => {
+          router.push({ name: "Login" });
+        }, 2000);
+        return;
+      }
+      
+      showToast("Failed to load some certificates. Please try again.", "error");
+    }
+    
   } catch (error) {
-    console.error(
-      "❌ Error fetching certificates:",
-      error.response?.data || error
-    );
+    console.error("❌ Error fetching certificates:", error.response?.data || error);
+    
+    if (error.response?.status === 401) {
+      showToast("Your session has expired. Please log in again.", "error");
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      setTimeout(() => {
+        router.push({ name: "Login" });
+      }, 2000);
+      return;
+    }
+    
+    showToast("Failed to load certificates. Please try again.", "error");
   }
 }
 
@@ -180,6 +329,15 @@ function confirmDeleteCertificate(cert) {
 async function deleteCertificateConfirmed() {
   const token = localStorage.getItem("token");
   const id = certToDelete.value.certificationID || certToDelete.value.id;
+  const source = certToDelete.value.source || 'manual';
+
+  // Prevent deletion of organization-issued certificates
+  if (source === 'organization' || id?.toString().startsWith('REG_')) {
+    showToast("Cannot delete organization-issued certificates", "error");
+    showDeleteModal.value = false;
+    certToDelete.value = null;
+    return;
+  }
 
   try {
     await axios.delete(import.meta.env.VITE_API_BASE_URL +`/certificates/${id}`, {
@@ -204,20 +362,136 @@ async function deleteCertificateConfirmed() {
 // ✅ Toggle certificate selection for resume
 async function toggleCertificateSelection(cert) {
   const token = localStorage.getItem("token");
+  const source = cert.source || 'manual';
+  const id = cert.certificationID || cert.id;
+  const user = JSON.parse(localStorage.getItem("user"));
+  
+  // Prevent double-toggling
+  const certKey = id?.toString() || cert.certificate_path || 'unknown';
+  if (togglingCertificates.value.has(certKey)) {
+    console.log("⏳ Certificate toggle already in progress:", certKey);
+    return;
+  }
+  
+  togglingCertificates.value.add(certKey);
+
+  // For organization-issued certificates, create/update Certification entry and toggle
+  if (source === 'organization' || id?.toString().startsWith('REG_')) {
+    try {
+      // Check if Certification entry exists by fetching all certificates
+      const certResponse = await axios.get(
+        import.meta.env.VITE_API_BASE_URL + `/certificates/${user.applicantID}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Find existing certification by certificate_path (must have real certificationID, not REG_)
+      const existingCert = (certResponse.data || []).find(
+        c => c.certificate_path === cert.certificate_path && 
+             c.certificationID && 
+             !c.certificationID.toString().startsWith('REG_')
+      );
+      
+      if (existingCert) {
+        // Toggle existing Certification entry
+        const toggleResponse = await axios.patch(
+          import.meta.env.VITE_API_BASE_URL + `/certificates/${existingCert.certificationID}/toggle`,
+          {},
+          { 
+            headers: { 
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            } 
+          }
+        );
+        
+        cert.IsSelected = toggleResponse.data.IsSelected === 1 || toggleResponse.data.IsSelected === true;
+        cert.certificationID = existingCert.certificationID; // Update ID to real certificationID
+      } else {
+        // Create new Certification entry for organization certificate using FormData
+        // Ensure certificate_path is available
+        if (!cert.certificate_path) {
+          console.error('❌ certificate_path is missing for organization certificate:', cert);
+          showToast("Certificate path is missing. Please refresh the page and try again.", "error");
+          cert.IsSelected = !cert.IsSelected; // Revert local state
+          return;
+        }
+        
+        const formData = new FormData();
+        formData.append('certificationName', cert.certificationName || 'Certificate');
+        formData.append('certificate_path', cert.certificate_path);
+        formData.append('applicantID', user.applicantID.toString());
+        formData.append('IsSelected', '1'); // Auto-select when creating
+        
+        console.log('📤 Creating Certification entry with:', {
+          certificationName: cert.certificationName,
+          certificate_path: cert.certificate_path,
+          applicantID: user.applicantID
+        });
+        
+        const createResponse = await axios.post(
+          import.meta.env.VITE_API_BASE_URL + '/certificates',
+          formData,
+          { 
+            headers: { 
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'multipart/form-data'
+            } 
+          }
+        );
+        
+        cert.IsSelected = true;
+        cert.certificationID = createResponse.data.data?.certificationID || createResponse.data.certificationID;
+        
+        console.log('✅ Created Certification entry for organization certificate:', cert.certificationID);
+      }
+      
+      showToast(
+        cert.IsSelected
+          ? `"${cert.certificationName}" added to resume!`
+          : `"${cert.certificationName}" removed from resume!`,
+        "success"
+      );
+      
+      // Refresh certificates to get updated data
+      await fetchCertificates(user.applicantID);
+      
+    } catch (error) {
+      console.error("❌ Toggle organization certificate error:", error.response?.data || error);
+      showToast("Failed to update selection. Please try again.", "error");
+      
+      // Revert local state on error
+      cert.IsSelected = !cert.IsSelected;
+    } finally {
+      togglingCertificates.value.delete(certKey);
+    }
+    return;
+  }
+
+  // For manually uploaded certificates, use existing toggle endpoint
+  // Store the original state to revert if error occurs
+  const originalState = cert.IsSelected;
+  
+  // Validate ID exists
+  if (!id) {
+    console.error("❌ Certificate ID is missing:", cert);
+    showToast("Certificate ID is missing. Please refresh the page and try again.", "error");
+    return;
+  }
 
   try {
-    const id = cert.certificationID || cert.id;
+    // Optimistically update UI
+    cert.IsSelected = !cert.IsSelected;
+    
     const response = await axios.patch(
-      import.meta.env.VITE_API_BASE_URL +`/certificates/${id}/toggle`,
+      import.meta.env.VITE_API_BASE_URL + `/certificates/${id}/toggle`,
       {},
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    // ✅ Update local state using correct field name
+    // Update with server response
     cert.IsSelected =
       response.data.IsSelected === 1 || response.data.IsSelected === true;
 
-    // ✅ Use correct property for name
     showToast(
       cert.IsSelected
         ? `"${cert.certificationName}" added to resume!`
@@ -225,12 +499,58 @@ async function toggleCertificateSelection(cert) {
       "success"
     );
   } catch (error) {
-    console.error("❌ Toggle selection error:", error.response?.data || error);
-    showToast("Failed to update selection", "error");
+    // Revert to original state on error
+    cert.IsSelected = originalState;
+    
+    console.error("❌ Toggle selection error:", {
+      error: error.response?.data || error.message,
+      status: error.response?.status,
+      certificateID: id,
+      certificate: cert
+    });
+    
+    // Provide more specific error message
+    let errorMessage = "Failed to update selection. Please try again.";
+    if (error.response?.status === 404) {
+      errorMessage = "Certificate not found. Please refresh the page.";
+    } else if (error.response?.status === 401) {
+      errorMessage = "Session expired. Please log in again.";
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    }
+    
+    showToast(errorMessage, "error");
+  } finally {
+    togglingCertificates.value.delete(certKey);
   }
 }
 
 // Modal handlers
+
+function handleImageError(event) {
+  console.error('Image failed to load:', {
+    src: event.target.src?.substring(0, 100),
+    error: event
+  });
+  
+  // Try to find the certificate name for better error message
+  const certName = event.target.alt || 'certificate';
+  
+  event.target.style.display = 'none';
+  const parent = event.target.parentElement;
+  if (parent) {
+    parent.innerHTML = `
+      <div class="p-4 text-center">
+        <svg class="w-12 h-12 text-red-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <p class="text-sm text-red-600 font-semibold mb-1">Failed to load image</p>
+        <p class="text-xs text-gray-500">Please try re-uploading this certificate</p>
+      </div>
+    `;
+  }
+}
+
 function openModal(image, title) {
   selectedImage.value = image;
   selectedTitle.value = title;
@@ -249,21 +569,63 @@ function logout() {
 // Load user info and fetch certificates
 onMounted(async () => {
   const savedUser = localStorage.getItem("user");
+  const token = localStorage.getItem("token");
+  
+  // Check if we have both user and token
+  if (!token) {
+    console.error("❌ No token found - redirecting to login");
+    showToast("Please log in to view certificates", "error");
+    setTimeout(() => {
+      router.push({ name: "Login" });
+    }, 2000);
+    return;
+  }
+  
   if (savedUser) {
-    const user = JSON.parse(savedUser);
-    userName.value =
-      user.firstName && user.lastName
-        ? `${user.firstName} ${user.lastName}`
-        : "Guest";
+    try {
+      const user = JSON.parse(savedUser);
+      userName.value =
+        user.firstName && user.lastName
+          ? `${user.firstName} ${user.lastName}`
+          : "Guest";
 
-    if (user.applicantID) {
-      await fetchCertificates(user.applicantID);
+      if (user.applicantID) {
+        await fetchCertificates(user.applicantID);
+        startCertificateRefresh(); // Start automatic refresh for organization certificates
+      } else {
+        console.warn("⚠️ No applicantID found in user data");
+        showToast("User data incomplete. Please log in again.", "error");
+        setTimeout(() => {
+          router.push({ name: "Login" });
+        }, 2000);
+      }
+    } catch (error) {
+      console.error("❌ Error parsing user data:", error);
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      showToast("Session data corrupted. Please log in again.", "error");
+      setTimeout(() => {
+        router.push({ name: "Login" });
+      }, 2000);
+      return;
     }
   } else {
-    userName.value = "Guest";
+    console.error("❌ No user data found - redirecting to login");
+    showToast("Please log in to view certificates", "error");
+    setTimeout(() => {
+      router.push({ name: "Login" });
+    }, 2000);
+    return;
   }
+  
   startTrainingCounterUpdater();
   await fetchTrainingCounters();
+});
+
+// Clean up intervals on unmount
+onUnmounted(() => {
+  stopTrainingCounterUpdater();
+  stopCertificateRefresh();
 });
 
 // ➤ Toast helper
@@ -290,13 +652,21 @@ const selectAllCertificates = async () => {
     await Promise.all(
       uploadedCertificates.value.map(async (cert) => {
         if (!cert.IsSelected) {
+          const source = cert.source || 'manual';
           const id = cert.certificationID || cert.id;
-          await axios.patch(
-            import.meta.env.VITE_API_BASE_URL + `/certificates/${id}/toggle`,
-            {},
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          cert.IsSelected = true;
+          
+          // For organization-issued certificates, just toggle locally
+          if (source === 'organization' || id?.toString().startsWith('REG_')) {
+            cert.IsSelected = true;
+          } else {
+            // For manually uploaded certificates, update via API
+            await axios.patch(
+              import.meta.env.VITE_API_BASE_URL + `/certificates/${id}/toggle`,
+              {},
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            cert.IsSelected = true;
+          }
         }
       })
     );
@@ -318,13 +688,21 @@ const deselectAllCertificates = async () => {
     await Promise.all(
       uploadedCertificates.value.map(async (cert) => {
         if (cert.IsSelected) {
+          const source = cert.source || 'manual';
           const id = cert.certificationID || cert.id;
-          await axios.patch(
-            import.meta.env.VITE_API_BASE_URL + `/certificates/${id}/toggle`,
-            {},
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          cert.IsSelected = false;
+          
+          // For organization-issued certificates, just toggle locally
+          if (source === 'organization' || id?.toString().startsWith('REG_')) {
+            cert.IsSelected = false;
+          } else {
+            // For manually uploaded certificates, update via API
+            await axios.patch(
+              import.meta.env.VITE_API_BASE_URL + `/certificates/${id}/toggle`,
+              {},
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            cert.IsSelected = false;
+          }
         }
       })
     );
@@ -537,7 +915,6 @@ const deselectAllCertificates = async () => {
                 type="file"
                 accept="image/*"
                 class="file-input"
-                
                 @change="handleFileUpload($event, index)"
               />
             </div>
@@ -546,12 +923,12 @@ const deselectAllCertificates = async () => {
 
             <div
               v-if="cert.image"
-              class="h-32 w-full flex items-center justify-center border rounded"
+              class="h-32 w-full flex items-center justify-center border rounded bg-gray-50"
             >
               <img
                 :src="cert.image"
                 alt="Preview"
-                class="h-32 object-cover rounded-lg"
+                class="h-full w-full object-cover rounded-lg"
               />
             </div>
 
@@ -614,16 +991,18 @@ const deselectAllCertificates = async () => {
             >
               <!-- 🖼️ Certificate Image -->
               <div
-                class="w-full h-48 bg-gray-200 flex items-center justify-center cursor-pointer hover:opacity-90 transition"
-                @click="openModal(cert.image, cert.title)"
+                class="w-full h-48 bg-gray-200 flex items-center justify-center cursor-pointer hover:opacity-90 transition overflow-hidden"
+                @click="openModal(cert.image, cert.certificationName)"
               >
+                <!-- Image Display -->
                 <img
                   v-if="cert.image"
                   :src="cert.image"
                   alt="Certificate Image"
-                  class="h-full w-full object-cover"
+                  class="h-full w-full object-contain bg-white"
+                  @error="handleImageError($event)"
                 />
-                <span v-else class="text-gray-500">No Image</span>
+                <span v-else class="text-gray-500">No Certificate</span>
               </div>
 
               <!-- 🏷️ Bottom section -->
@@ -644,13 +1023,15 @@ const deselectAllCertificates = async () => {
                     <input
                       type="checkbox"
                       :checked="cert.IsSelected"
+                      :disabled="togglingCertificates.has(cert.certificationID?.toString() || cert.certificate_path || 'unknown')"
                       @change="() => toggleCertificateSelection(cert)"
-                      class="w-4 h-4 accent-customButton cursor-pointer"
+                      class="w-4 h-4 accent-customButton cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                   </div>
 
-                  <!-- Delete Button -->
+                  <!-- Delete Button (only for manually uploaded certificates) -->
                   <button
+                    v-if="cert.source !== 'organization' && !cert.certificationID?.toString().startsWith('REG_')"
                     @click.stop="confirmDeleteCertificate(cert)"
                     title="Delete certificate"
                   >
@@ -667,6 +1048,14 @@ const deselectAllCertificates = async () => {
                       />
                     </svg>
                   </button>
+                  <!-- Organization-issued badge -->
+                  <span
+                    v-if="cert.source === 'organization' || cert.certificationID?.toString().startsWith('REG_')"
+                    class="text-xs text-green-600 font-semibold px-2 py-1 bg-green-100 rounded"
+                    title="Organization-issued certificate"
+                  >
+                    ✓ Issued
+                  </span>
                 </div>
               </div>
             </div>
@@ -675,22 +1064,39 @@ const deselectAllCertificates = async () => {
           <!-- Modal -->
           <div
             v-if="isModalOpen"
-            class="fixed inset-0 flex items-center justify-center z-50"
+            class="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50"
+            @click.self="closeModal"
           >
             <div
-              class="bg-white rounded-lg shadow-lg max-w-3xl w-full p-4 relative"
+              class="bg-white rounded-lg shadow-lg max-w-5xl w-full mx-4 relative flex flex-col"
+              style="max-height: 90vh;"
             >
-              <button
-                class="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
-                @click="closeModal"
-              >
-                ✕
-              </button>
-              <img
-                :src="selectedImage"
-                :alt="selectedTitle"
-                class="max-h-[80vh] w-auto mx-auto rounded"
-              />
+              <div class="flex justify-between items-center p-4 border-b">
+                <h3 class="text-lg font-semibold">{{ selectedTitle }}</h3>
+                <button
+                  class="text-gray-500 hover:text-gray-800 text-2xl font-bold"
+                  @click="closeModal"
+                >
+                  ✕
+                </button>
+              </div>
+              <div class="flex-1 overflow-auto p-4">
+                <!-- Image Display in Modal -->
+                <div v-if="selectedImage" class="flex justify-center items-center min-h-[70vh]">
+                  <img
+                    :src="selectedImage"
+                    :alt="selectedTitle"
+                    class="max-h-[80vh] max-w-full w-auto rounded shadow-lg"
+                    @error="handleImageError($event)"
+                  />
+                </div>
+                <div v-else class="flex items-center justify-center h-64 text-gray-500">
+                  <div class="text-center">
+                    <p class="mb-2">No certificate to display</p>
+                    <p class="text-sm text-gray-400">Image data is missing</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
