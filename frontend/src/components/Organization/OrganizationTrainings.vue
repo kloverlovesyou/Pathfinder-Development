@@ -1006,7 +1006,11 @@ export default {
         );
 
         // Populate registrants list dynamically
-        this.registrantsList = response.data;
+        this.registrantsList = response.data.map(person => ({
+        ...person,
+        hasCertificate: !!person.certificatePath,
+        certificateUrl: person.certificatePath ? getPDFUrl(person.certificatePath) : null,
+      }));
 
         // Open the modal
         this.showRegistrantsModal = true;
