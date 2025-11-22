@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Brevo Email</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+        }
+        .result-loading {
+            background: #e3f2fd;
+            color: #1976d2;
+            display: block;
+        }
+        .result-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            display: block;
+        }
+        .result-error {
+            background: #ffebee;
+            color: #c62828;
+            display: block;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📧 Test Brevo Email</h1>
+        <p class="subtitle">Test your email configuration without registering</p>
+        
+        <div class="form-group">
+            <label for="email">Email Address:</label>
+            <input 
+                type="email" 
+                id="email" 
+                placeholder="Enter your email address"
+                value="judeandrei.f.pasicolan@gmail.com"
+            >
+        </div>
+        
+        <button onclick="testEmail()" id="testBtn">Send Test Email</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // Get Railway URL from current location or use default
+        function getApiUrl() {
+            // Try to detect if we're on Railway
+            const hostname = window.location.hostname;
+            if (hostname.includes('railway') || hostname.includes('up.railway.app')) {
+                return window.location.origin + '/api';
+            }
+            // Default Railway URL
+            return 'https://pathfinder-development-production.up.railway.app/api';
+        }
+
+        async function testEmail() {
+            const email = document.getElementById('email').value;
+            const resultDiv = document.getElementById('result');
+            const testBtn = document.getElementById('testBtn');
+            
+            if (!email) {
+                alert('Please enter an email address');
+                return;
+            }
+
+            // Show loading state
+            testBtn.disabled = true;
+            testBtn.textContent = 'Sending...';
+            resultDiv.className = 'result-loading';
+            resultDiv.textContent = 'Sending test email... Please wait.';
+            resultDiv.style.display = 'block';
+
+            try {
+                const apiUrl = getApiUrl();
+                console.log('Testing email with API:', apiUrl);
+                
+                const response = await fetch(`${apiUrl}/test-email`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email: email })
+                });
+
+                const data = await response.json();
+                
+                // Format the response nicely
+                const formatted = JSON.stringify(data, null, 2);
+                resultDiv.textContent = formatted;
+                
+                // Style based on result
+                if (data.status === 'success') {
+                    resultDiv.className = 'result-success';
+                } else {
+                    resultDiv.className = 'result-error';
+                }
+                
+                // Log to console for debugging
+                console.log('Email Test Result:', data);
+                
+            } catch (error) {
+                resultDiv.className = 'result-error';
+                resultDiv.textContent = `Error: ${error.message}\n\nMake sure:\n1. You're on the Railway site\n2. The API endpoint is accessible\n3. CORS is configured correctly`;
+                console.error('Test email error:', error);
+            } finally {
+                testBtn.disabled = false;
+                testBtn.textContent = 'Send Test Email';
+            }
+        }
+
+        // Allow Enter key to submit
+        document.getElementById('email').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                testEmail();
+            }
+        });
+    </script>
+</body>
+</html>
+

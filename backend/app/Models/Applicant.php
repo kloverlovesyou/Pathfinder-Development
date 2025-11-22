@@ -51,7 +51,8 @@ class Applicant extends Model
 		'phoneNumber',
 		'password',
 		'api_token',
-	
+		'email_verification_token',
+		'email_verified_at',
 	];
 
 	public function applications()

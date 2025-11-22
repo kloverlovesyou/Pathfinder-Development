@@ -43,7 +43,9 @@ Route::get('/careers/recommend/{careerID}', [CareerRecommendationController::cla
 Route::get('/careers/{careerID}/trainings', [CareerRecommendationController::class, 'recommendedTrainings']);
 Route::get('/careers/{careerID}/details', [CareerRecommendationController::class, 'careerDetails']);
 
+//Certificate Issuance
 
+Route::post('/certifications/{id}/issue', [CertificateController::class, 'issueCertificate']);
 
 
 // CareerController
@@ -72,6 +74,24 @@ Route::get('/signed/applications/{application}/{organization}/requirements',
 Route::post('/a_register', [AuthController::class, 'a_register']);
 Route::post('/o_register', [AuthController::class, 'o_register']);
 Route::post('/login', [AuthController::class, 'login']);
+
+// Email Verification routes
+Route::get('/verify-email', [AuthController::class, 'verifyEmail']);
+Route::post('/resend-verification', [AuthController::class, 'resendVerification']);
+Route::post('/test-email', [AuthController::class, 'testEmail']); // For debugging email configuration
+
+// Get verification link for testing (development only)
+Route::get('/get-verification-link/{email}', [AuthController::class, 'getVerificationLink']);
+
+// Clear config cache (for Railway free tier - no console access)
+Route::post('/clear-cache', function() {
+    \Artisan::call('config:clear');
+    \Artisan::call('cache:clear');
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Config and cache cleared successfully'
+    ]);
+});
 
 // Applicant & Organization
 Route::post('/applicants', [ApplicantController::class, 'a_register']);

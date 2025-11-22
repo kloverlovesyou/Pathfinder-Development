@@ -8,9 +8,76 @@ use App\Models\Training;
 use App\Models\Organization;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\EmailVerification;
+use App\Services\BrevoEmailService;
+use Illuminate\Support\Facades\View;
 
 class OrganizationController extends Controller
 {
+    /**
+     * Send verification email with automatic fallback to Brevo API
+     * Optimized to skip SMTP on Railway (known to be blocked) and go straight to Brevo API
+     */
+    private function sendVerificationEmail($email, $verificationUrl, $userName, $type)
+    {
+        $emailSent = false;
+        $emailError = null;
+        $emailException = null;
+        $usedBrevoApi = false;
+        
+        // Skip SMTP on Railway (it's blocked) and go straight to Brevo API for speed
+        $brevoApiKey = config('services.brevo.api_key', env('BREVO_API_KEY'));
+        
+        if (!empty($brevoApiKey)) {
+            // Use Brevo API directly (faster, no SMTP timeout)
+            try {
+                $brevoService = new BrevoEmailService();
+                $htmlContent = View::make('emails.verification', [
+                    'verificationUrl' => $verificationUrl,
+                    'userName' => $userName,
+                    'userType' => $type
+                ])->render();
+                
+                $brevoService->send(
+                    $email,
+                    'Verify Your Email Address - Pathfinder',
+                    $htmlContent
+                );
+                
+                $emailSent = true;
+                $usedBrevoApi = true;
+                \Log::info('Verification email sent via Brevo API', ['email' => $email]);
+            } catch (\Exception $brevoError) {
+                $emailError = 'Brevo API failed: ' . $brevoError->getMessage();
+                \Log::error('Brevo API failed', [
+                    'email' => $email,
+                    'error' => $brevoError->getMessage()
+                ]);
+            }
+        } else {
+            // Fallback to SMTP only if Brevo API key is not set
+            try {
+                Mail::to($email)->send(new EmailVerification($verificationUrl, $userName, $type));
+                $emailSent = true;
+                \Log::info('Verification email sent via SMTP', ['email' => $email]);
+            } catch (\Exception $e) {
+                $emailError = $e->getMessage();
+                \Log::error('SMTP failed', [
+                    'email' => $email,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+        
+        return [
+            'email_sent' => $emailSent,
+            'email_error' => $emailError,
+            'email_exception' => $emailException,
+            'used_brevo_api' => $usedBrevoApi,
+        ];
+    }
+
     // ----------------------
     // List approved organizations with careers & trainings
     // ----------------------
@@ -45,28 +112,83 @@ class OrganizationController extends Controller
             'name'        => 'required|string|max:255',
             'location'    => 'nullable|string|max:255',
             'websiteURL'  => 'nullable|string|max:255',
-            'emailAddress'=> 'required|email|unique:organization,emailAddress',
+            'emailAddress'=> [
+                'required',
+                'email',
+                'max:255',
+                \Illuminate\Validation\Rule::unique('organization', 'emailAddress')
+            ],
+            'phoneNumber' => 'nullable|string|max:20',
             'password'    => 'required|string|min:8',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            \Log::error('Organization registration validation failed', [
+                'errors' => $validator->errors()->toArray(),
+                'input' => $request->all()
+            ]);
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
         }
+
+        // Generate verification token
+        $verificationToken = Str::random(64);
 
         $organization = Organization::create([
             'name'        => $request->input('name'),
             'location'    => $request->input('location'),
             'websiteURL'  => $request->input('websiteURL'),
             'emailAddress'=> $request->input('emailAddress'),
+            'phoneNumber' => $request->input('phoneNumber'),
             'password'    => Hash::make($request->input('password')),
             'adminID'     => $request->input('adminID'),
             'status'      => 'pending',
+            'email_verification_token' => $verificationToken,
+            'email_verified_at' => null,
         ]);
 
-        return response()->json([
-            'message' => 'Registration successful',
-            'organization' => $organization
+        // Prepare verification URL and user info
+        $verificationUrl = url('/api/verify-email?token=' . $verificationToken . '&type=organization');
+        $userName = $request->input('name');
+        $userEmail = $request->input('emailAddress');
+        
+        // Return response immediately (don't wait for email)
+        $response = response()->json([
+            'message' => 'Registration successful! Please check your email to verify your account.',
+            'organization' => $organization,
+            'email_sent' => true, // Assume it will be sent
+            'verification_url' => $verificationUrl, // Always include for manual verification
+            'verification_token' => $verificationToken,
         ], 201);
+        
+        // Send email asynchronously (after response is sent)
+        // Use fastcgi_finish_request() if available to send response immediately
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+        
+        // Send email in background (won't block response)
+        try {
+            \Log::info('Sending verification email asynchronously (Organization)', [
+                'email' => $userEmail
+            ]);
+            
+            $this->sendVerificationEmail(
+                $userEmail,
+                $verificationUrl,
+                $userName,
+                'organization'
+            );
+        } catch (\Exception $e) {
+            \Log::error('Failed to send verification email asynchronously', [
+                'email' => $userEmail,
+                'error' => $e->getMessage()
+            ]);
+        }
+        
+        return $response;
     }
 
     // ----------------------
@@ -83,6 +205,14 @@ class OrganizationController extends Controller
 
         if (!$organization || !Hash::check($request->password, $organization->password)) {
             return response()->json(['message' => 'Invalid credentials'], 401);
+        }
+
+        // Check if email is verified
+        if (!$organization->email_verified_at) {
+            return response()->json([
+                'message' => 'Please verify your email address before logging in. Check your inbox for the verification link.',
+                'email_verified' => false,
+            ], 403);
         }
 
         if ($organization->status === 'pending') {
