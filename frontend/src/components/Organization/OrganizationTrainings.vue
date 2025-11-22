@@ -655,7 +655,7 @@ export default {
       const formData = new FormData();
       formData.append("certificateTrackingID", person.id); // Use registrationID
       formData.append("certificateGivenDate", givenDate);
-      formData.append("certificateFilePath", filePath);
+      formData.append("certificatePath", filePath);
 
       await axios.put(
         `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
