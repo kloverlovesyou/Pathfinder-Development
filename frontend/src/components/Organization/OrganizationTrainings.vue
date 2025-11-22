@@ -532,6 +532,54 @@ import api from "@/composables/api.js";
 import { activeTrainingQR, activeTrainingId, scheduleQR } from "@/composables/useTrainingQR.js";
 import { uploadCertificate, getPDFUrl } from "@/lib/supabase.js";
 import jsPDF from "jspdf";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+
+// Configure pdfjs worker - use Vite's asset handling for the worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+
+// Helper function to convert PDF blob/ArrayBuffer to PNG image
+async function convertPDFToImage(pdfBlobOrArrayBuffer) {
+  try {
+    // Convert to ArrayBuffer if it's a Blob
+    const data = pdfBlobOrArrayBuffer instanceof Blob 
+      ? await pdfBlobOrArrayBuffer.arrayBuffer() 
+      : pdfBlobOrArrayBuffer;
+    
+    const pdf = await pdfjsLib.getDocument({ data }).promise;
+    const page = await pdf.getPage(1); // Get first page
+    
+    // Set scale for high quality (2x for better resolution)
+    const scale = 2;
+    const viewport = page.getViewport({ scale });
+    
+    // Create canvas
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+    
+    // Render PDF page to canvas
+    await page.render({
+      canvasContext: context,
+      viewport: viewport
+    }).promise;
+    
+    // Convert canvas to blob (PNG)
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error("Failed to convert canvas to blob"));
+        }
+      }, "image/png", 0.95); // 95% quality
+    });
+  } catch (error) {
+    console.error("Error converting PDF to image:", error);
+    throw error;
+  }
+}
 
 
 export default {
@@ -654,26 +702,35 @@ lines.forEach(line => {
 
 const pdfBlob = doc.output("blob");
 const safeName = person.name.replace(/[/\\?%*:|"<>]/g, "_");
-const pdfFile = new File([pdfBlob], `${safeName}.pdf`, { type: "application/pdf" });
 
-// Send PDF file to backend - backend will convert to image and upload to Supabase
+// Convert PDF to image on frontend (since Imagick is not available on server)
+const imageBlob = await convertPDFToImage(pdfBlob);
+const imageFile = new File([imageBlob], `${safeName}.png`, { type: "image/png" });
+
+// Send image file to backend - backend will upload to Supabase
 const token = localStorage.getItem("token");
-const formData = new FormData();
-formData.append("certificateTrackingID", person.id);
-formData.append("certificateGivenDate", givenDate);
-formData.append("file", pdfFile); // Send file directly - backend converts PDF to image
+if (!token) {
+  alert("Please log in to continue.");
+  return;
+}
 
-// Send to backend (backend handles conversion and Supabase upload)
-const response = await axios.put(
-  `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
-  formData,
-  {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "multipart/form-data",
-    },
-  }
-);
+const formData = new FormData();
+formData.append("certificateTrackingID", String(person.id)); // Ensure it's a string
+formData.append("certificateGivenDate", givenDate);
+formData.append("file", imageFile); // Send image (PDF already converted)
+formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
+
+      // Send to backend (backend handles conversion and Supabase upload)
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
 // Update UI
 person.hasCertificate = true;
@@ -724,15 +781,19 @@ alert(`Failed to issue certificate for ${person.name}.`);
         });
 
         const pdfBlob = doc.output("blob");
-        const pdfFile = new File([pdfBlob], `${person.name}.pdf`, { type: "application/pdf" });
+        
+        // Convert PDF to image on frontend (since Imagick is not available on server)
+        const imageBlob = await convertPDFToImage(pdfBlob);
+        const imageFile = new File([imageBlob], `${person.name}.png`, { type: "image/png" });
 
-        // Send PDF file to backend - backend converts to image and uploads to Supabase
+        // Send image file to backend - backend uploads to Supabase
         const formData = new FormData();
-        formData.append("certificateTrackingID", person.id);
+        formData.append("certificateTrackingID", String(person.id)); // Ensure it's a string
         formData.append("certificateGivenDate", givenDate);
-        formData.append("file", pdfFile);
+        formData.append("file", imageFile); // Send image (PDF already converted)
+        formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
 
-        await axios.put(
+        await axios.post(
           `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
           formData,
           { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
@@ -780,15 +841,19 @@ alert(`Failed to issue certificate for ${person.name}.`);
         });
 
         const pdfBlob = doc.output("blob");
-        const pdfFile = new File([pdfBlob], `${person.id}.pdf`, { type: "application/pdf" });
+        
+        // Convert PDF to image on frontend (since Imagick is not available on server)
+        const imageBlob = await convertPDFToImage(pdfBlob);
+        const imageFile = new File([imageBlob], `${person.id}.png`, { type: "image/png" });
 
-        // Send PDF file to backend - backend converts to image and uploads to Supabase
+        // Send image file to backend - backend uploads to Supabase
         const formData = new FormData();
-        formData.append("certificateTrackingID", person.id);
+        formData.append("certificateTrackingID", String(person.id)); // Ensure it's a string
         formData.append("certificateGivenDate", certGivenDate);
-        formData.append("file", pdfFile);
+        formData.append("file", imageFile); // Send image (PDF already converted)
+        formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
 
-        await axios.put(
+        await axios.post(
           `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
           formData,
           { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
@@ -984,13 +1049,28 @@ alert(`Failed to issue certificate for ${person.name}.`);
       return;
     }
 
+    // Convert PDF to image if uploaded file is a PDF
+    let fileToUpload = this.selectedRegistrant.uploadedFile;
+    if (fileToUpload.type === "application/pdf" || fileToUpload.name.toLowerCase().endsWith(".pdf")) {
+      try {
+        const pdfBlob = await fileToUpload.arrayBuffer();
+        const imageBlob = await convertPDFToImage(pdfBlob);
+        fileToUpload = new File([imageBlob], fileToUpload.name.replace(/\.pdf$/i, ".png"), { type: "image/png" });
+      } catch (error) {
+        console.error("Error converting PDF to image:", error);
+        alert("Failed to convert PDF to image. Please try uploading an image file instead.");
+        return;
+      }
+    }
+
     const formData = new FormData();
-    formData.append("certificateTrackingID", this.selectedRegistrant.certificateTrackingID);
+    formData.append("certificateTrackingID", String(this.selectedRegistrant.certificateTrackingID || this.selectedRegistrant.id));
     formData.append("certificateGivenDate", this.selectedRegistrant.certificateGivenDate);
-    formData.append("file", this.selectedRegistrant.uploadedFile); // Backend will convert PDF to image
+    formData.append("file", fileToUpload); // Send image (PDF already converted if it was a PDF)
+    formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
 
     try {
-      const res = await axios.put(
+      const res = await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/registrations/${this.selectedRegistrant.id}/certificate`,
         formData,
         { 
@@ -1094,17 +1174,26 @@ alert(`Failed to issue certificate for ${person.name}.`);
 
       const pdfBlob = doc.output("blob");
       const safeName = person.name.replace(/[/\\?%*:|"<>]/g, "_");
-      const pdfFile = new File([pdfBlob], `${safeName}.pdf`, { type: "application/pdf" });
 
-      // Send PDF file to backend - backend will convert to image and upload to Supabase
+      // Convert PDF to image on frontend (since Imagick is not available on server)
+      const imageBlob = await convertPDFToImage(pdfBlob);
+      const imageFile = new File([imageBlob], `${safeName}.png`, { type: "image/png" });
+
+      // Send image file to backend - backend will upload to Supabase
       const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please log in to continue.");
+        return;
+      }
+
       const formData = new FormData();
-      formData.append("certificateTrackingID", person.id);
+      formData.append("certificateTrackingID", String(person.id)); // Ensure it's a string
       formData.append("certificateGivenDate", givenDate);
-      formData.append("file", pdfFile); // Send file directly - backend converts PDF to image
+      formData.append("file", imageFile); // Send image (PDF already converted)
+      formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
 
       // Send to backend (backend handles conversion and Supabase upload)
-      const response = await axios.put(
+      const response = await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
         formData,
         { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }

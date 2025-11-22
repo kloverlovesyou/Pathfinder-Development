@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Registration;
+use App\Models\Certification;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -59,7 +60,6 @@ class RegistrationController extends Controller
             'registrationStatus' => 'Registered',
             'certTrackingID' => null,
             'certGivenDate' => null,
-            'certificate' => null,
             'trainingID' => $trainingID,
             'applicantID' => $user->applicantID,
         ]);
@@ -178,8 +178,32 @@ class RegistrationController extends Controller
         $registration->update([
             'certTrackingID' => $registration->registrationID, // use registrationID
             'certGivenDate' => $validated['certGivenDate'],
-            'certificate' => $filePath, // Supabase path
+            'certificatePath' => $filePath, // Supabase path
         ]);
+        
+        // Automatically create a Certification entry for each applicant
+        $existingCertification = Certification::where('applicantID', $registration->applicantID)
+            ->where('certificate_path', $filePath)
+            ->first();
+        
+        if (!$existingCertification) {
+            // Create Certification entry using certificate_path (stored in Supabase)
+            $certificationName = $training->title . ' - Certificate of Completion';
+            
+            $newCertification = Certification::create([
+                'certificationName' => $certificationName,
+                'certificate_path' => $filePath, // Store the Supabase path
+                'applicantID' => $registration->applicantID,
+                'IsSelected' => 0, // Default to not selected for resume
+            ]);
+            
+            Log::info('Certificate automatically added to Certification model (bulk)', [
+                'certificationID' => $newCertification->certificationID,
+                'registrationID' => $registration->registrationID,
+                'applicantID' => $registration->applicantID,
+                'certificatePath' => $filePath,
+            ]);
+        }
         
         $results[] = $registration;
     }
@@ -204,6 +228,9 @@ class RegistrationController extends Controller
             return response()->json(['message' => 'Registration not found'], 404);
         }
         
+        // Load training relationship
+        $registration->load('training');
+        
         // Verify training belongs to organization
         $training = \App\Models\Training::where('trainingID', $registration->trainingID)
             ->where('organizationID', $user->organizationID)
@@ -213,65 +240,27 @@ class RegistrationController extends Controller
             return response()->json(['message' => 'Access denied'], 403);
         }
         
+        // Ensure we have the training title
+        if (!$training->title) {
+            $training->refresh();
+        }
+        
         $validated = $request->validate([
             'certificateTrackingID' => 'required|string',
             'certificateGivenDate' => 'required|date',
             'certificatePath' => 'nullable|string', // Optional if file is uploaded
-            'file' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:4096', // Accept file uploads
+            'file' => 'nullable|file|mimes:jpeg,png,jpg|max:4096', // Only accept images
         ]);
         
         $certificatePath = $validated['certificatePath'] ?? null;
         
-        // If file is uploaded, process it (convert PDF to image if needed) and upload to Supabase
+        // If file is uploaded, process it and upload to Supabase
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $mimeType = $file->getMimeType();
-            $fileContents = null;
-            $fileExtension = 'png'; // Default to PNG after conversion
-            $contentType = 'image/png'; // Default content type
-            
-            // If file is PDF, convert to image
-            if ($mimeType === 'application/pdf' || $file->getClientOriginalExtension() === 'pdf') {
-                try {
-                    if (!extension_loaded('imagick') || !class_exists('Imagick')) {
-                        return response()->json([
-                            'message' => 'PDF conversion requires Imagick PHP extension. Please install it or upload an image instead.',
-                            'error' => 'IMAGICK_NOT_AVAILABLE'
-                        ], 400);
-                    }
-                    
-                    // Convert PDF first page to image using Imagick
-                    $imagick = new \Imagick();
-                    $imagick->setResolution(300, 300);
-                    $imagick->readImage($file->getRealPath() . '[0]');
-                    $imagick->setImageFormat('png');
-                    $imagick->setImageCompressionQuality(95);
-                    
-                    $fileContents = $imagick->getImageBlob();
-                    $imagick->clear();
-                    $imagick->destroy();
-                    
-                    Log::info('PDF converted to image for registration certificate', [
-                        'registrationID' => $registrationID,
-                        'original_size' => $file->getSize(),
-                        'converted_size' => strlen($fileContents)
-                    ]);
-                } catch (\Exception $e) {
-                    Log::error('PDF to image conversion failed for registration certificate', [
-                        'registrationID' => $registrationID,
-                        'error' => $e->getMessage()
-                    ]);
-                    return response()->json([
-                        'message' => 'Failed to convert PDF to image: ' . $e->getMessage(),
-                        'error' => 'PDF_CONVERSION_FAILED'
-                    ], 500);
-                }
-            } else {
-                // For images, read binary data directly
-                $fileContents = file_get_contents($file->getRealPath());
-                $fileExtension = $file->getClientOriginalExtension();
-                $contentType = $mimeType;
-            }
+            $fileContents = file_get_contents($file->getRealPath());
+            $fileExtension = $file->getClientOriginalExtension();
+            $contentType = $mimeType;
             
             // Upload to Supabase Storage
             $supabaseUrl = env('SUPABASE_URL', 'https://hmevengvfponcwslnyye.supabase.co');
@@ -336,6 +325,69 @@ class RegistrationController extends Controller
             'certGivenDate' => $validated['certificateGivenDate'],
             'certificatePath' => $certificatePath,
         ]);
+        
+        // Automatically create a Certification entry for the applicant
+        // This ensures organization-issued certificates appear in the Certificates page
+        if (!empty($certificatePath)) {
+            // Check if certification already exists for this certificate path
+            $existingCertification = Certification::where('applicantID', $registration->applicantID)
+                ->where('certificate_path', $certificatePath)
+                ->first();
+            
+            if (!$existingCertification) {
+                Log::info('Creating new Certification entry', [
+                    'registrationID' => $registrationID,
+                    'applicantID' => $registration->applicantID,
+                    'certificatePath' => $certificatePath,
+                    'trainingID' => $training->trainingID ?? null,
+                    'trainingTitle' => $training->title ?? 'Unknown'
+                ]);
+                
+                // Create Certification entry using certificate_path (stored in Supabase)
+                $trainingTitle = $training->title ?? 'Training';
+                $certificationName = $trainingTitle . ' - Certificate of Completion';
+                
+                try {
+                    $newCertification = Certification::create([
+                        'certificationName' => $certificationName,
+                        'certificate_path' => $certificatePath, // Store the Supabase path
+                        'applicantID' => $registration->applicantID,
+                        'IsSelected' => 0, // Default to not selected for resume
+                    ]);
+                    
+                    Log::info('✅ Certificate automatically added to Certification model', [
+                        'certificationID' => $newCertification->certificationID,
+                        'registrationID' => $registrationID,
+                        'applicantID' => $registration->applicantID,
+                        'certificatePath' => $certificatePath,
+                        'certificationName' => $certificationName,
+                        'trainingTitle' => $trainingTitle
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('❌ Failed to create Certification entry', [
+                        'registrationID' => $registrationID,
+                        'applicantID' => $registration->applicantID,
+                        'certificatePath' => $certificatePath,
+                        'trainingTitle' => $trainingTitle,
+                        'error' => $e->getMessage(),
+                        'trace' => substr($e->getTraceAsString(), 0, 500) // Limit trace length
+                    ]);
+                    // Don't fail the request, just log the error
+                }
+            } else {
+                Log::info('ℹ️ Certification entry already exists, skipping creation', [
+                    'certificationID' => $existingCertification->certificationID,
+                    'registrationID' => $registrationID,
+                    'certificatePath' => $certificatePath,
+                    'existingPath' => $existingCertification->certificate_path
+                ]);
+            }
+        } else {
+            Log::warning('⚠️ Skipping Certification entry creation - empty certificatePath', [
+                'registrationID' => $registrationID,
+                'certificatePath' => $certificatePath
+            ]);
+        }
         
         return response()->json([
             'message' => 'Certificate issued successfully',
