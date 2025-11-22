@@ -600,7 +600,7 @@ export default {
   methods: {
 
 
-    async issueCertificate(person) {
+  async issueCertificate(person) {
     try {
       if (person.hasCertificate) return; // already issued
 
@@ -612,31 +612,24 @@ export default {
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
 
-      // Vertical positioning variables
-      const titleY = pageHeight * 0.25; // 25% from top
-      const nameY = pageHeight * 0.45;  // 45% from top
-      const trainingY = pageHeight * 0.55; // 55% from top
-      const trackingY = pageHeight * 0.70; // 70% from top
-      const dateY = pageHeight * 0.80; // 80% from top
+      // Vertical spacing
+      const lines = [
+        { text: "Certificate of Completion", size: 28 },
+        { text: `This is to certify that ${person.name}`, size: 22 },
+        { text: `has completed the training: ${this.selectedTraining.title}`, size: 18 },
+        { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
+        { text: `Date Issued: ${givenDate}`, size: 14 }
+      ];
 
-      // Title
-      doc.setFontSize(28);
-      doc.text("Certificate of Completion", pageWidth / 2, titleY, null, null, "center");
+      // Total height of all lines for centering
+      const totalHeight = lines.reduce((sum, line) => sum + line.size + 10, 0); // 10pt spacing between lines
+      let startY = (pageHeight - totalHeight) / 2; // starting Y to center vertically
 
-      // Name
-      doc.setFontSize(20);
-      doc.text(person.name, pageWidth / 2, nameY, null, null, "center");
-
-      // Training
-      doc.setFontSize(16);
-      doc.text(`has completed the training: ${this.selectedTraining.title}`, pageWidth / 2, trainingY, null, null, "center");
-
-      // Tracking ID
-      doc.setFontSize(14);
-      doc.text(`Certificate Tracking ID: ${person.id}`, pageWidth / 2, trackingY, null, null, "center");
-
-      // Date
-      doc.text(`Date Issued: ${givenDate}`, pageWidth / 2, dateY, null, null, "center");
+      lines.forEach(line => {
+        doc.setFontSize(line.size);
+        doc.text(line.text, pageWidth / 2, startY, null, null, "center");
+        startY += line.size + 10; // move to next line
+      });
 
       const pdfBlob = doc.output("blob");
 
@@ -647,7 +640,7 @@ export default {
       // Upload PDF to Supabase
       const filePath = await uploadCertificate(pdfFile);
       if (!filePath) throw new Error("Failed to upload certificate");
-
+      
       console.log("Certificate public URL:", filePath);
 
       // Send metadata to backend
