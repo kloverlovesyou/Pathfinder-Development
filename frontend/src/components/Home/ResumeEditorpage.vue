@@ -475,14 +475,15 @@ async function generatePdf() {
         // FIX: Assuming the backend (EducationController) now returns
         // graduationYear as a 4-digit number (e.g., 2024), we use it directly.
         // Removed the unnecessary getYearOnly() call.
-        const gradYear = edu.graduationYear; 
+        const gradYear = edu.graduationYear?.toString() || ""; // ✅ convert to string
+        
         
         doc.setFont("times", "bold");
         doc.text(`${edu.institutionName || ""}`, margin, y);
         doc.text(gradYear, pageWidth - margin, y, { align: "right" });
         y += 6;
         doc.setFont("times", "regular");
-        doc.text(`${edu.educationLevel} in ${edu.major}`, margin, y);
+        doc.text(`${edu.educationLevel} Major in ${edu.major}`, margin, y);
         y += 6;
       });
     }

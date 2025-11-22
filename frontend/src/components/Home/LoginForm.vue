@@ -299,84 +299,27 @@ const handleLogin = async () => {
       router.push("/app");
     }
 
-  } catch (err) {
-    console.error(err.response?.data || err.message);
+      } catch (err) {
+  console.error("FULL ERROR RESPONSE:", err);
 
-    // Check if email is not verified
-    if (err.response?.status === 403 && err.response.data.email_verified === false) {
-      // Try to determine user type - check both applicant and organization endpoints
-      // We'll default to applicant, but the resend endpoint can handle both
-      userType.value = "applicant"; // Default, will be determined when resending
-      showVerificationModal.value = true;
-      return;
-    }
+  if (err.response?.status === 403) {
+    let data = err.response.data;
+    console.log("FULL RESPONSE DATA:", data);
 
-    if (err.response?.status === 403) {
-      const reason = err.response.data.reason;
-      showToast(reason ? `Your registration was rejected. Reason: ${reason}` : err.response.data.message);
-      return;
-    }
+    // Ensure reason exists
+    const reason = data && typeof data === "object" ? data.reason : undefined;
+    console.log("REJECTION REASON:", reason);
 
-    showToast("Invalid credentials. Please try again.");
-  }
-};
+    const msg = reason
+      ? `Your registration was rejected. Reason: ${reason}`
+      : data.message || "Your registration is not approved.";
 
-const closeVerificationModal = () => {
-  showVerificationModal.value = false;
-  resendMessage.value = "";
-  resendMessageType.value = "";
-};
-
-const resendVerificationEmail = async () => {
-  if (!email.value) {
-    resendMessage.value = "Please enter your email address.";
-    resendMessageType.value = "error";
+    showToast(msg);
     return;
   }
 
-  resendingEmail.value = true;
-  resendMessage.value = "";
-  
-  // Try applicant first, then organization if that fails
-  const tryResend = async (type) => {
-    try {
-      const response = await axios.post(
-        import.meta.env.VITE_API_BASE_URL + "/resend-verification",
-        {
-          emailAddress: email.value,
-          type: type,
-        }
-      );
-      return { success: true, message: response.data.message || "Verification email sent successfully! Please check your inbox.", userType: type };
-    } catch (err) {
-      if (err.response?.status === 404 && type === "applicant") {
-        // User not found as applicant, try organization
-        return null; // Signal to try next type
-      }
-      throw err;
-    }
-  };
-
-  try {
-    let result = await tryResend("applicant");
-    
-    // If applicant failed with 404, try organization
-    if (!result) {
-      result = await tryResend("organization");
-    }
-
-    if (result && result.success) {
-      resendMessage.value = result.message;
-      resendMessageType.value = "success";
-      userType.value = result.userType || "applicant";
-    }
-  } catch (err) {
-    console.error("Failed to resend verification email:", err);
-    resendMessage.value = err.response?.data?.message || "Failed to resend verification email. Please try again later.";
-    resendMessageType.value = "error";
-  } finally {
-    resendingEmail.value = false;
-  }
+  showToast("Invalid credentials. Please try again.");
+}
 };
 
 </script>
