@@ -47,7 +47,8 @@ class Registration extends Model
 		'certGivenDate',
 		'certificate',
 		'trainingID',
-		'applicantID'
+		'applicantID',
+		'certificatePath'
 	];
 
 	public function training()
