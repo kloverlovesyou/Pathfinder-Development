@@ -250,7 +250,7 @@
 
           <!-- Issue Certificates To All Button -->
           <div class="modal-footer">
-            <button class="bulk-issue-btn" @click="issueCertificatesToSelected">
+            <button class="action-btn" @click="issueCertificatesToSelected">
               Issue Certificates to Selected
             </button>
           </div>
