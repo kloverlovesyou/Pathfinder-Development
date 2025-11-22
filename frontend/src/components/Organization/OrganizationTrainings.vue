@@ -368,9 +368,9 @@
             </div>
 
             <div class="cert-input-wrapper file-input-wrapper">
-              <input type="file" id="certificate-upload" @change="handleFileUpload" class="hidden-file-input" />
+              <input type="file" id="certificate-upload" accept="image/*,application/pdf" @change="handleFileUpload" class="hidden-file-input" />
               <label for="certificate-upload" class="cert-input upload-label">
-                {{ selectedRegistrant.uploadedFile ? selectedRegistrant.uploadedFile.name : 'Upload File' }}
+                {{ selectedRegistrant.uploadedFile ? selectedRegistrant.uploadedFile.name : 'Upload File (PDF or Image)' }}
               </label>
               <span class="upload-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -656,19 +656,15 @@ const pdfBlob = doc.output("blob");
 const safeName = person.name.replace(/[/\\?%*:|"<>]/g, "_");
 const pdfFile = new File([pdfBlob], `${safeName}.pdf`, { type: "application/pdf" });
 
-// Upload to Supabase
-const { filePath, publicUrl } = await uploadCertificate(pdfFile);
-if (!filePath) throw new Error("Failed to upload certificate");
-
+// Send PDF file to backend - backend will convert to image and upload to Supabase
 const token = localStorage.getItem("token");
 const formData = new FormData();
 formData.append("certificateTrackingID", person.id);
 formData.append("certificateGivenDate", givenDate);
-formData.append("certificatePath", filePath);  // store only object path in DB
-formData.append("_method", "PUT");
+formData.append("file", pdfFile); // Send file directly - backend converts PDF to image
 
-// Send metadata to backend
-await axios.post(
+// Send to backend (backend handles conversion and Supabase upload)
+const response = await axios.put(
   `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
   formData,
   {
@@ -682,8 +678,13 @@ await axios.post(
 // Update UI
 person.hasCertificate = true;
 person.certificateTrackingID = person.id;
-person.certificatePath = filePath;  // string only
-person.certificateUrl = publicUrl;   // public URL for viewing
+person.certificatePath = response.data.data?.certificatePath || null;
+
+// Generate public URL for viewing
+if (person.certificatePath) {
+  const { getPDFUrl } = await import("@/lib/supabase");
+  person.certificateUrl = getPDFUrl(person.certificatePath);
+}
 
 alert(`Certificate issued for ${person.name}!`);
 
@@ -694,37 +695,54 @@ alert(`Failed to issue certificate for ${person.name}.`);
 },
     async issueBulkCertificates(selectedRegistrants) {
     try {
-      const baseID = `CERT-${Date.now()}`;
       const givenDate = new Date().toISOString().split("T")[0];
-
-      const certificates = await Promise.all(
-        selectedRegistrants.map(async (person) => {
-          const doc = new jsPDF();
-          doc.setFontSize(20);
-          doc.text("Certificate of Completion", 105, 40, null, null, "center");
-          doc.setFontSize(14);
-          doc.text(`This is to certify that ${person.name}`, 105, 60, null, null, "center");
-          doc.text(`has completed the training: ${this.selectedTraining.title}`, 105, 70, null, null, "center");
-
-          const pdfBlob = doc.output("blob");
-          const pdfFile = new File([pdfBlob], `${person.name}.pdf`, { type: "application/pdf" });
-          const filePath = await uploadCertificate(pdfFile);
-
-          return { filePath };
-        })
-      );
-
       const token = localStorage.getItem("token");
-      await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/registrations/${this.selectedTraining.id}/bulk-certificates`,
-        { baseTrackingID: baseID, certGivenDate: givenDate, certificates },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      if (!token) {
+        alert("Please log in to continue.");
+        return;
+      }
+
+      // Issue certificates one by one (backend converts PDF to image)
+      for (const person of selectedRegistrants) {
+        const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+
+        const lines = [
+          { text: "Certificate of Completion", size: 28 },
+          { text: `This is to certify that ${person.name}`, size: 22 },
+          { text: `has completed the training: ${this.selectedTraining.title}`, size: 18 },
+          { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
+          { text: `Date Issued: ${givenDate}`, size: 14 }
+        ];
+
+        let startY = (pageHeight - lines.reduce((sum, line) => sum + line.size + 10, 0)) / 2;
+        lines.forEach(line => {
+          doc.setFontSize(line.size);
+          doc.text(line.text, pageWidth / 2, startY, null, null, "center");
+          startY += line.size + 10;
+        });
+
+        const pdfBlob = doc.output("blob");
+        const pdfFile = new File([pdfBlob], `${person.name}.pdf`, { type: "application/pdf" });
+
+        // Send PDF file to backend - backend converts to image and uploads to Supabase
+        const formData = new FormData();
+        formData.append("certificateTrackingID", person.id);
+        formData.append("certificateGivenDate", givenDate);
+        formData.append("file", pdfFile);
+
+        await axios.put(
+          `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
+          formData,
+          { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
+        );
+      }
 
       alert("Bulk certificates issued successfully!");
     } catch (error) {
       console.error("Error issuing bulk certificates:", error);
-      alert("Failed to issue bulk certificates.");
+      alert("Failed to issue bulk certificates. " + (error.response?.data?.message || error.message));
     }
   },
 
@@ -734,45 +752,64 @@ alert(`Failed to issue certificate for ${person.name}.`);
 
     try {
       const certGivenDate = new Date().toISOString().split("T")[0];
-      const baseTrackingID = `CERT-${Date.now()}`; // ✅ Base tracking ID for bulk issuance
-      const certificates = [];
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please log in to continue.");
+        return;
+      }
 
+      // Issue certificates one by one (backend converts PDF to image)
       for (const person of selectedPeople) {
-        const doc = new jsPDF();
-        doc.setFontSize(20);
-        doc.text("Certificate of Completion", 105, 40, null, null, "center");
-        doc.setFontSize(14);
-        doc.text(`This is to certify that ${person.name}`, 105, 60, null, null, "center");
-        doc.text(`has completed the training: ${this.selectedTraining.title}`, 105, 70, null, null, "center");
-        doc.text(`Certificate Tracking ID: ${person.id}`, 105, 90, null, null, "center");
-        doc.text(`Date Issued: ${certGivenDate}`, 105, 100, null, null, "center");
+        const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+
+        const lines = [
+          { text: "Certificate of Completion", size: 28 },
+          { text: `This is to certify that ${person.name}`, size: 22 },
+          { text: `has completed the training: ${this.selectedTraining.title}`, size: 18 },
+          { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
+          { text: `Date Issued: ${certGivenDate}`, size: 14 }
+        ];
+
+        let startY = (pageHeight - lines.reduce((sum, line) => sum + line.size + 10, 0)) / 2;
+        lines.forEach(line => {
+          doc.setFontSize(line.size);
+          doc.text(line.text, pageWidth / 2, startY, null, null, "center");
+          startY += line.size + 10;
+        });
 
         const pdfBlob = doc.output("blob");
         const pdfFile = new File([pdfBlob], `${person.id}.pdf`, { type: "application/pdf" });
 
-        const filePath = await uploadCertificate(pdfFile);
-        if (!filePath) throw new Error(`Failed to upload certificate for ${person.name}`);
+        // Send PDF file to backend - backend converts to image and uploads to Supabase
+        const formData = new FormData();
+        formData.append("certificateTrackingID", person.id);
+        formData.append("certificateGivenDate", certGivenDate);
+        formData.append("file", pdfFile);
 
-        certificates.push({ filePath });
+        await axios.put(
+          `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
+          formData,
+          { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
+        );
       }
-
-      const token = localStorage.getItem("token");
-      await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/trainings/${this.selectedTraining.trainingID}/certificates/bulk`,
-        { baseTrackingID, certGivenDate, certificates },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
 
       // Update UI
       selectedPeople.forEach(p => {
         p.hasCertificate = true;
-        p.certificateTrackingID = p.id; // Registration ID as tracking ID
+        p.certificateTrackingID = p.id;
       });
 
       alert("Certificates issued successfully!");
+      
+      // Refresh registrants list
+      if (this.selectedTraining) {
+        await this.openRegistrantsModal(this.selectedTraining);
+      }
     } catch (error) {
       console.error("Bulk issuance error:", error);
-      alert("Failed to issue certificates.");
+      alert("Failed to issue certificates. " + (error.response?.data?.message || error.message));
     }
   },
 
@@ -936,23 +973,44 @@ alert(`Failed to issue certificate for ${person.name}.`);
       return;
     }
 
+    if (!this.selectedRegistrant.uploadedFile) {
+      alert("Please select a certificate file before sending.");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Please log in to continue.");
+      return;
+    }
+
     const formData = new FormData();
     formData.append("certificateTrackingID", this.selectedRegistrant.certificateTrackingID);
     formData.append("certificateGivenDate", this.selectedRegistrant.certificateGivenDate);
-    if (this.selectedRegistrant.uploadedFile) {
-      formData.append("file", this.selectedRegistrant.uploadedFile);
-    }
+    formData.append("file", this.selectedRegistrant.uploadedFile); // Backend will convert PDF to image
 
     try {
       const res = await axios.put(
-        `https://pathfinder-development-production.up.railway.app/api/registrations/${this.selectedRegistrant.id}/certificate`,
+        `${import.meta.env.VITE_API_BASE_URL}/registrations/${this.selectedRegistrant.id}/certificate`,
         formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data" 
+          } 
+        }
       );
       console.log("Certificate uploaded successfully", res.data);
-      this.showCertUploadModal = false; // optionally close modal
+      alert("Certificate uploaded successfully!");
+      this.showCertUploadModal = false;
+      
+      // Refresh registrants list if modal is open
+      if (this.showRegistrantsModal && this.selectedTraining) {
+        await this.openRegistrantsModal(this.selectedTraining);
+      }
     } catch (err) {
       console.error("Error uploading certificate: ", err);
+      alert(err.response?.data?.message || "Failed to upload certificate. Please try again.");
     }
   },
 
@@ -1038,19 +1096,15 @@ alert(`Failed to issue certificate for ${person.name}.`);
       const safeName = person.name.replace(/[/\\?%*:|"<>]/g, "_");
       const pdfFile = new File([pdfBlob], `${safeName}.pdf`, { type: "application/pdf" });
 
-      // Upload to Supabase
-      const { filePath, publicUrl } = await uploadCertificate(pdfFile);
-      if (!filePath) throw new Error("Failed to upload certificate");
-
-      // Send metadata to backend
+      // Send PDF file to backend - backend will convert to image and upload to Supabase
       const token = localStorage.getItem("token");
       const formData = new FormData();
       formData.append("certificateTrackingID", person.id);
       formData.append("certificateGivenDate", givenDate);
-      formData.append("certificatePath", filePath); // save object path in DB
-      formData.append("_method", "PUT"); // Laravel workaround
+      formData.append("file", pdfFile); // Send file directly - backend converts PDF to image
 
-      await axios.post(
+      // Send to backend (backend handles conversion and Supabase upload)
+      const response = await axios.put(
         `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
         formData,
         { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
@@ -1059,8 +1113,13 @@ alert(`Failed to issue certificate for ${person.name}.`);
       // Update UI
       person.hasCertificate = true;
       person.certificateTrackingID = person.id;
-      person.certificatePath = filePath; // object path from Supabase
-      person.certificateUrl = publicUrl; // public URL for viewing
+      person.certificatePath = response.data.data?.certificatePath || null;
+
+      // Generate public URL for viewing
+      if (person.certificatePath) {
+        const { getPDFUrl } = await import("@/lib/supabase");
+        person.certificateUrl = getPDFUrl(person.certificatePath);
+      }
 
       alert(`Certificate issued for ${person.name}!`);
     } catch (error) {

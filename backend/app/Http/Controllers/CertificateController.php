@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Certification;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Supabase\Storage\StorageClient;
 
 class CertificateController extends Controller
@@ -15,14 +16,136 @@ public function index($applicantID)
     $certificates = Certification::where('applicantID', $applicantID)->get();
 
     $certificates = $certificates->map(function ($cert) {
+        if (!$cert->certificate) {
+            return [
+                'certificationID' => $cert->certificationID,
+                'certificationName' => $cert->certificationName,
+                'certificate' => null,
+                'fileType' => null,
+                'applicantID' => $cert->applicantID,
+                'IsSelected' => (int) $cert->IsSelected,
+            ];
+        }
+
+        // All certificates are now images (PDFs are converted to PNG during upload)
+        $fileContent = $cert->certificate;
+        
+        // Validate that we have actual binary data
+        if (empty($fileContent) || strlen($fileContent) < 10) {
+            Log::warning('Certificate has invalid or empty data', [
+                'certificationID' => $cert->certificationID,
+                'name' => $cert->certificationName,
+                'dataSize' => strlen($fileContent)
+            ]);
+            return [
+                'certificationID' => $cert->certificationID,
+                'certificationName' => $cert->certificationName,
+                'certificate' => null,
+                'fileType' => null,
+                'mimeType' => null,
+                'applicantID' => $cert->applicantID,
+                'IsSelected' => (int) $cert->IsSelected,
+            ];
+        }
+        
+        $mimeType = 'image/png'; // default (PDFs converted to PNG)
+        
+        // Use finfo to detect MIME type if available
+        if (function_exists('finfo_open')) {
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $detectedMime = finfo_buffer($finfo, $fileContent);
+            finfo_close($finfo);
+            
+            if ($detectedMime) {
+                // If it's still a PDF (legacy data), we can't display it as image
+                if ($detectedMime === 'application/pdf') {
+                    Log::warning('Legacy PDF certificate found (needs re-upload)', [
+                        'certificationID' => $cert->certificationID,
+                        'name' => $cert->certificationName
+                    ]);
+                    // Return null so frontend can handle it gracefully
+                    return [
+                        'certificationID' => $cert->certificationID,
+                        'certificationName' => $cert->certificationName,
+                        'certificate' => null,
+                        'fileType' => null,
+                        'mimeType' => 'application/pdf',
+                        'applicantID' => $cert->applicantID,
+                        'IsSelected' => (int) $cert->IsSelected,
+                    ];
+                }
+                $mimeType = $detectedMime;
+            }
+        } else {
+            // Fallback to magic bytes
+            $firstBytes = substr($fileContent, 0, 8);
+            // Check for JPEG
+            if (substr($firstBytes, 0, 2) === "\xFF\xD8") {
+                $mimeType = 'image/jpeg';
+            }
+            // Check for PNG (most common after PDF conversion)
+            elseif (substr($firstBytes, 0, 8) === "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A") {
+                $mimeType = 'image/png';
+            }
+            // Check for PDF (legacy)
+            elseif (substr($firstBytes, 0, 4) === "%PDF") {
+                Log::warning('Legacy PDF certificate found (needs re-upload)', [
+                    'certificationID' => $cert->certificationID,
+                    'name' => $cert->certificationName
+                ]);
+                return [
+                    'certificationID' => $cert->certificationID,
+                    'certificationName' => $cert->certificationName,
+                    'certificate' => null,
+                    'fileType' => null,
+                    'mimeType' => 'application/pdf',
+                    'applicantID' => $cert->applicantID,
+                    'IsSelected' => (int) $cert->IsSelected,
+                ];
+            }
+        }
+
+        // Validate base64 encoding will work
+        try {
+            $base64Data = base64_encode($fileContent);
+            if (empty($base64Data)) {
+                throw new \Exception('Base64 encoding failed');
+            }
+            $dataUrl = 'data:' . $mimeType . ';base64,' . $base64Data;
+        } catch (\Exception $e) {
+            Log::error('Failed to create data URL for certificate', [
+                'certificationID' => $cert->certificationID,
+                'name' => $cert->certificationName,
+                'error' => $e->getMessage()
+            ]);
+            return [
+                'certificationID' => $cert->certificationID,
+                'certificationName' => $cert->certificationName,
+                'certificate' => null,
+                'fileType' => null,
+                'mimeType' => null,
+                'applicantID' => $cert->applicantID,
+                'IsSelected' => (int) $cert->IsSelected,
+            ];
+        }
+
+        Log::info('Certificate retrieved', [
+            'certificationID' => $cert->certificationID,
+            'name' => $cert->certificationName,
+            'mimeType' => $mimeType,
+            'dataSize' => strlen($fileContent),
+            'base64Size' => strlen($base64Data),
+            'dataUrlPrefix' => substr($dataUrl, 0, 50)
+        ]);
+
         return [
             'certificationID' => $cert->certificationID,
             'certificationName' => $cert->certificationName,
-            'certificate' => $cert->certificate
-                ? 'data:image/png;base64,' . base64_encode($cert->certificate)
-                : null,
+            'certificate' => $dataUrl,
+            'fileType' => 'image', // All are images now (PDFs converted)
+            'mimeType' => $mimeType,
             'applicantID' => $cert->applicantID,
-            'IsSelected' => (int) $cert->IsSelected, // ✅ force integer
+            'IsSelected' => (int) $cert->IsSelected,
         ];
     });
 
@@ -39,7 +162,51 @@ public function index($applicantID)
         ]);
 
         $file = $request->file('certificate');
-        $binaryData = file_get_contents($file->getRealPath());
+        $mimeType = $file->getMimeType();
+        $binaryData = null;
+
+        // If file is PDF, convert to image
+        if ($mimeType === 'application/pdf' || $file->getClientOriginalExtension() === 'pdf') {
+            try {
+                // Check if Imagick is available (required for PDF conversion)
+                if (!extension_loaded('imagick') || !class_exists('Imagick')) {
+                    return response()->json([
+                        'message' => 'PDF conversion requires Imagick PHP extension. Please install it or upload an image instead.',
+                        'error' => 'IMAGICK_NOT_AVAILABLE'
+                    ], 400);
+                }
+
+                // Convert PDF first page to image using Imagick
+                $imagick = new \Imagick();
+                $imagick->setResolution(300, 300); // High resolution for better quality
+                $imagick->readImage($file->getRealPath() . '[0]'); // [0] means first page only
+                $imagick->setImageFormat('png');
+                $imagick->setImageCompressionQuality(95);
+                
+                // Get image binary data
+                $binaryData = $imagick->getImageBlob();
+                $imagick->clear();
+                $imagick->destroy();
+                
+                Log::info('PDF converted to image successfully', [
+                    'original_size' => $file->getSize(),
+                    'converted_size' => strlen($binaryData)
+                ]);
+            } catch (\Exception $e) {
+                Log::error('PDF to image conversion failed', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                
+                return response()->json([
+                    'message' => 'Failed to convert PDF to image: ' . $e->getMessage(),
+                    'error' => 'PDF_CONVERSION_FAILED'
+                ], 500);
+            }
+        } else {
+            // For images, just get the binary data
+            $binaryData = file_get_contents($file->getRealPath());
+        }
 
         $cert = Certification::create([
             'certificationName' => $request->certificationName,
