@@ -197,7 +197,7 @@
         </button>
       </section>
 
-      <!-- Registrants Modal -->
+            <!-- Registrants Modal -->
       <div v-if="showRegistrantsModal" class="modal-overlay" @click.self="closeModal">
         <div class="modal-content">
           <button class="modal-close-btn" @click="closeModal">✕</button>
@@ -207,6 +207,8 @@
             <table>
               <thead>
                 <tr>
+                  <th><input type="checkbox" v-model="selectAll" @change="toggleSelectAll"></th>
+                  <th>CERTIFICATE TRACKING ID</th>
                   <th>FULL NAME</th>
                   <th>REGISTRATION DATE</th>
                   <th>STATUS</th>
@@ -215,6 +217,12 @@
               </thead>
               <tbody>
                 <tr v-for="person in registrantsList" :key="person.id">
+                  <td>
+                    <input type="checkbox" v-model="person.selected">
+                  </td>
+                  <td>
+                    <p class="registrant-certid">{{ person.id }}</p>
+                  </td>
                   <td>
                     <p class="registrant-name">{{ person.name }}</p>
                   </td>
@@ -228,17 +236,31 @@
                   }">
                     {{ person.status }}
                   </td>
-
                   <td>
                     <button class="action-btn"
-                      :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
-                      :disabled="person.hasCertificate" @click="openCertUploadModal(person)">
+                            :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
+                            :disabled="person.hasCertificate"
+                            @click="issueCertificate(person)">
                       {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
+                    </button>
+
+                    <!-- View Certificate Button (only show when certificate exists) -->
+                    <button class="action-btn"
+                            v-if="person.hasCertificate && person.certificateUrl"
+                            @click="viewCertificate(person.certificateUrl)">
+                      View Certificate
                     </button>
                   </td>
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Issue Certificates To All Button -->
+          <div class="modal-footer">
+            <button class="bulk-issue-btn" @click="issueCertificatesToSelected">
+              Issue Certificates to Selected
+            </button>
           </div>
         </div>
       </div>
@@ -508,6 +530,9 @@ import axios from "axios";
 import QrcodeVue from "qrcode.vue";
 import api from "@/composables/api.js";
 import { activeTrainingQR, activeTrainingId, scheduleQR } from "@/composables/useTrainingQR.js";
+import { uploadCertificate, getPDFUrl } from "@/lib/supabase.js";
+import jsPDF from "jspdf";
+
 
 export default {
   components: { QrcodeVue }, // ✅ register component
@@ -524,6 +549,7 @@ export default {
       qrCodeValue: null,
       qrExpiresAt: null,
       activeTrainingId: null, // which training shows the QR
+      selectAll: false,
 
       showBulkCertModal: false,
       certificateData: {
@@ -531,6 +557,8 @@ export default {
         certGivenDate: '',
         file: null,
       },
+
+      
       selectedRegistrant: null,
       bulkCertData: {
         baseTrackingID: '',
@@ -587,76 +615,176 @@ export default {
   },
 
   methods: {
-    /* async issueCertificate() {
-       try {
-         if (!this.selectedRegistrant) {
-           alert("No registrant selected.");
-           return;
-         }
- 
-         const formData = new FormData();
-         formData.append('certTrackingID', this.certificateData.certTrackingID);
-         formData.append('certGivenDate', this.certificateData.certGivenDate);
-         if (this.certificateData.file) {
-           formData.append('certificate', this.certificateData.file);
-         }
- 
-         await axios.put(
-           'http://127.0.0.1:8000/api/registrations/' + this.selectedRegistrant.registrationID + '/certificate',
-           formData,
-           { headers: { 'Content-Type': 'multipart/form-data' } }
-         );
- 
-         alert('Certificate issued successfully!');
-         this.showCertUploadModal = false;
-         this.loadRegistrants(); // reload updated data
-       } catch (error) {
-         console.error('Certificate issue failed:', error);
-         alert(
-           error.response?.data?.message ||
-           'Failed to issue certificate. Check required fields and try again.'
-         );
-       }
-     }, */
 
+     viewCertificate(certificatePath) {
+    if (!certificatePath) return alert("Certificate not found.");
 
-    async sendCertificateDetails() {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Please log in to continue.");
-        return;
-      }
+    // Get public URL from Supabase
+    const publicUrl = getPDFUrl(certificatePath);
+    if (!publicUrl) return alert("Unable to generate certificate URL.");
 
-      try {
-        const formData = new FormData();
-        formData.append('certTrackingID', this.selectedRegistrant.certificateTrackingID);
-        formData.append('certGivenDate', this.selectedRegistrant.certificateGivenDate);
-        formData.append('certificate', this.selectedRegistrant.uploadedFile);
+    window.open(publicUrl, "_blank"); // Open in new tab
+  },
 
-        const response = await axios.put(
-          import.meta.env.VITE_API_BASE_URL + '/registrations/${this.selectedRegistrant.id}/certificate',
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'multipart/form-data',
-            },
-          }
-        );
+   async issueCertificate(person) {
+try {
+if (person.hasCertificate) return;
 
-        alert("Certificate issued successfully!");
-        this.closeCertUploadModal();
-        await this.openRegistrantsModal(this.selectedTraining); // Refresh list
-      } catch (error) {
-        console.error("Error issuing certificate:", error);
-        if (error.response) {
-          alert(error.response.data.message || "Failed to issue certificate.");
-        } else {
-          alert("An error occurred while issuing the certificate.");
-        }
-      }
+// Generate PDF Certificate
+const givenDate = new Date().toISOString().split("T")[0];
+
+const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+const pageWidth = doc.internal.pageSize.getWidth();
+const pageHeight = doc.internal.pageSize.getHeight();
+
+const lines = [
+  { text: "Certificate of Completion", size: 28 },
+  { text: `This is to certify that ${person.name}`, size: 22 },
+  { text: `has completed the training: ${this.selectedTraining.title}`, size: 18 },
+  { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
+  { text: `Date Issued: ${givenDate}`, size: 14 }
+];
+
+let startY = (pageHeight - lines.reduce((sum, line) => sum + line.size + 10, 0)) / 2;
+lines.forEach(line => {
+  doc.setFontSize(line.size);
+  doc.text(line.text, pageWidth / 2, startY, null, null, "center");
+  startY += line.size + 10;
+});
+
+const pdfBlob = doc.output("blob");
+const safeName = person.name.replace(/[/\\?%*:|"<>]/g, "_");
+const pdfFile = new File([pdfBlob], `${safeName}.pdf`, { type: "application/pdf" });
+
+// Upload to Supabase
+const { filePath, publicUrl } = await uploadCertificate(pdfFile);
+if (!filePath) throw new Error("Failed to upload certificate");
+
+const token = localStorage.getItem("token");
+const formData = new FormData();
+formData.append("certificateTrackingID", person.id);
+formData.append("certificateGivenDate", givenDate);
+formData.append("certificatePath", filePath);  // store only object path in DB
+formData.append("_method", "PUT");
+
+// Send metadata to backend
+await axios.post(
+  `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
+  formData,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "multipart/form-data",
     },
+  }
+);
 
+// Update UI
+person.hasCertificate = true;
+person.certificateTrackingID = person.id;
+person.certificatePath = filePath;  // string only
+person.certificateUrl = publicUrl;   // public URL for viewing
+
+alert(`Certificate issued for ${person.name}!`);
+
+} catch (error) {
+console.error("Error issuing certificate:", error);
+alert(`Failed to issue certificate for ${person.name}.`);
+}
+},
+    async issueBulkCertificates(selectedRegistrants) {
+    try {
+      const baseID = `CERT-${Date.now()}`;
+      const givenDate = new Date().toISOString().split("T")[0];
+
+      const certificates = await Promise.all(
+        selectedRegistrants.map(async (person) => {
+          const doc = new jsPDF();
+          doc.setFontSize(20);
+          doc.text("Certificate of Completion", 105, 40, null, null, "center");
+          doc.setFontSize(14);
+          doc.text(`This is to certify that ${person.name}`, 105, 60, null, null, "center");
+          doc.text(`has completed the training: ${this.selectedTraining.title}`, 105, 70, null, null, "center");
+
+          const pdfBlob = doc.output("blob");
+          const pdfFile = new File([pdfBlob], `${person.name}.pdf`, { type: "application/pdf" });
+          const filePath = await uploadCertificate(pdfFile);
+
+          return { filePath };
+        })
+      );
+
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `${import.meta.env.VITE_API_BASE_URL}/registrations/${this.selectedTraining.id}/bulk-certificates`,
+        { baseTrackingID: baseID, certGivenDate: givenDate, certificates },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      alert("Bulk certificates issued successfully!");
+    } catch (error) {
+      console.error("Error issuing bulk certificates:", error);
+      alert("Failed to issue bulk certificates.");
+    }
+  },
+
+  async issueCertificatesToSelected() {
+    const selectedPeople = this.registrantsList.filter(p => p.selected && !p.hasCertificate);
+    if (!selectedPeople.length) return alert("No selected registrants or all already issued.");
+
+    try {
+      const certGivenDate = new Date().toISOString().split("T")[0];
+      const baseTrackingID = `CERT-${Date.now()}`; // ✅ Base tracking ID for bulk issuance
+      const certificates = [];
+
+      for (const person of selectedPeople) {
+        const doc = new jsPDF();
+        doc.setFontSize(20);
+        doc.text("Certificate of Completion", 105, 40, null, null, "center");
+        doc.setFontSize(14);
+        doc.text(`This is to certify that ${person.name}`, 105, 60, null, null, "center");
+        doc.text(`has completed the training: ${this.selectedTraining.title}`, 105, 70, null, null, "center");
+        doc.text(`Certificate Tracking ID: ${person.id}`, 105, 90, null, null, "center");
+        doc.text(`Date Issued: ${certGivenDate}`, 105, 100, null, null, "center");
+
+        const pdfBlob = doc.output("blob");
+        const pdfFile = new File([pdfBlob], `${person.id}.pdf`, { type: "application/pdf" });
+
+        const filePath = await uploadCertificate(pdfFile);
+        if (!filePath) throw new Error(`Failed to upload certificate for ${person.name}`);
+
+        certificates.push({ filePath });
+      }
+
+      const token = localStorage.getItem("token");
+      await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/trainings/${this.selectedTraining.trainingID}/certificates/bulk`,
+        { baseTrackingID, certGivenDate, certificates },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Update UI
+      selectedPeople.forEach(p => {
+        p.hasCertificate = true;
+        p.certificateTrackingID = p.id; // Registration ID as tracking ID
+      });
+
+      alert("Certificates issued successfully!");
+    } catch (error) {
+      console.error("Bulk issuance error:", error);
+      alert("Failed to issue certificates.");
+    }
+  },
+
+  toggleSelectAll() {
+    this.registrantsList.forEach(person => {
+      person.selected = this.selectAll;
+    });
+  },
+
+   updateSelectAll() {
+    this.selectAll = this.registrantsList.every(person => person.selected);
+  },
     openBulkCertModal() {
       const registrantsWithoutCert = this.registrantsList.filter(r => !r.hasCertificate);
       if (registrantsWithoutCert.length === 0) {
@@ -728,7 +856,7 @@ export default {
       }
     },
 
-
+    
     async fetchTags() {
       try {
         const response = await axios.get(import.meta.env.VITE_API_BASE_URL + '/tags');
@@ -802,6 +930,31 @@ export default {
         alert("Failed to add tag.");
       }
     },
+    async sendCertificateDetails() {
+    if (!this.selectedRegistrant || !this.selectedRegistrant.id) {
+      console.error("No registrant ID found!");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("certificateTrackingID", this.selectedRegistrant.certificateTrackingID);
+    formData.append("certificateGivenDate", this.selectedRegistrant.certificateGivenDate);
+    if (this.selectedRegistrant.uploadedFile) {
+      formData.append("file", this.selectedRegistrant.uploadedFile);
+    }
+
+    try {
+      const res = await axios.put(
+        `https://pathfinder-development-production.up.railway.app/api/registrations/${this.selectedRegistrant.id}/certificate`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      console.log("Certificate uploaded successfully", res.data);
+      this.showCertUploadModal = false; // optionally close modal
+    } catch (err) {
+      console.error("Error uploading certificate: ", err);
+    }
+  },
 
     getTagName(tagID) {
       const normalizedId = Number(tagID);
@@ -854,57 +1007,67 @@ export default {
     /* ==========================
   ✅ Registrants Modal
 ========================== */
-    async openRegistrantsModal(training) {
-      try {
-        // Set selected training
-        this.selectedTraining = training;
+    async issueCertificate(person) {
+    try {
+      if (person.hasCertificate) return;
 
-        // Get token from localStorage
-        const token = localStorage.getItem("token");
-        if (!token) {
-          console.error("No token found. Please log in first.");
-          alert("You must log in to view registrants.");
-          return;
-        }
+      const givenDate = new Date().toISOString().split("T")[0];
 
-        // Fetch registrants from API
-        const response = await axios.get(
-          import.meta.env.VITE_API_BASE_URL + `/trainings/${training.trainingID}/registrants`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: "application/json",
-            },
-          }
-        );
+      // Generate PDF
+      const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
 
-        // Populate registrants list dynamically
-        this.registrantsList = response.data;
+      const lines = [
+        { text: "Certificate of Completion", size: 28 },
+        { text: `This is to certify that ${person.name}`, size: 22 },
+        { text: `has completed the training: ${this.selectedTraining.title}`, size: 18 },
+        { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
+        { text: `Date Issued: ${givenDate}`, size: 14 }
+      ];
 
-        // Open the modal
-        this.showRegistrantsModal = true;
+      let startY = (pageHeight - lines.reduce((sum, l) => sum + l.size + 10, 0)) / 2;
 
-        // Close any dropdown menus
-        this.closeAllMenus();
+      lines.forEach(line => {
+        doc.setFontSize(line.size);
+        doc.text(line.text, pageWidth / 2, startY, null, null, "center");
+        startY += line.size + 10;
+      });
 
-      } catch (error) {
-        if (error.response) {
-          console.error("Error fetching registrants:", error.response.status, error.response.data);
-          if (error.response.status === 401) {
-            alert("Unauthorized. Please log in again.");
-          } else if (error.response.status === 403) {
-            alert("You don't have permission to view registrants for this training.");
-          } else if (error.response.status === 404) {
-            alert("Training not found or you don't have access to it.");
-          } else {
-            alert("Failed to fetch registrants. Please try again.");
-          }
-        } else {
-          console.error("Network or other error:", error.message);
-          alert("An error occurred while fetching registrants.");
-        }
-      }
-    },
+      const pdfBlob = doc.output("blob");
+      const safeName = person.name.replace(/[/\\?%*:|"<>]/g, "_");
+      const pdfFile = new File([pdfBlob], `${safeName}.pdf`, { type: "application/pdf" });
+
+      // Upload to Supabase
+      const { filePath, publicUrl } = await uploadCertificate(pdfFile);
+      if (!filePath) throw new Error("Failed to upload certificate");
+
+      // Send metadata to backend
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("certificateTrackingID", person.id);
+      formData.append("certificateGivenDate", givenDate);
+      formData.append("certificatePath", filePath); // save object path in DB
+      formData.append("_method", "PUT"); // Laravel workaround
+
+      await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
+        formData,
+        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
+      );
+
+      // Update UI
+      person.hasCertificate = true;
+      person.certificateTrackingID = person.id;
+      person.certificatePath = filePath; // object path from Supabase
+      person.certificateUrl = publicUrl; // public URL for viewing
+
+      alert(`Certificate issued for ${person.name}!`);
+    } catch (error) {
+      console.error("Error issuing certificate:", error);
+      alert(`Failed to issue certificate for ${person.name}.`);
+    }
+  },
 
     closeRegistrantsModal() {
       this.showRegistrantsModal = false;
@@ -914,16 +1077,19 @@ export default {
     /* ==========================
        ✅ Certificate Upload Modal
     ========================== */
-    openCertUploadModal(registrant) {
-      this.selectedRegistrant = {
-        ...registrant,
-        certificateTrackingID: registrant.certificateTrackingID || "",
-        certificateGivenDate: registrant.certificateGivenDate || "",
-        uploadedFile: null,
-      };
-      this.showCertUploadModal = true;
-      this.closeAllMenus();
-    },
+openCertUploadModal(registrant) {
+  console.log("REGISTRANT DATA:", registrant);
+
+  this.selectedRegistrant = {
+    ...registrant,
+    certificateTrackingID: registrant.id || "",
+    certificateGivenDate: registrant.certificateGivenDate || "",
+    uploadedFile: null,
+  };
+
+  console.log("SELECTED REGISTRANT:", this.selectedRegistrant);
+  this.showCertUploadModal = true;
+},
 
     closeCertUploadModal() {
       this.showCertUploadModal = false;
@@ -934,10 +1100,22 @@ export default {
       this.selectedRegistrant.uploadedFile = event.target.files[0];
     },
 
-    sendCertificateDetails() {
-      console.log("Sending Certificate Details:", this.selectedRegistrant);
+  sendCertificateDetails() {
+    if (!this.selectedRegistrant.uploadedFile) {
+      alert("Please select a certificate file before sending.");
+      return;
+    }
+    
+    this.sendCertificate(
+      this.selectedRegistrant.uploadedFile,
+      this.selectedRegistrant.id
+    ).then(() => {
       this.closeCertUploadModal();
-    },
+    }).catch(err => {
+      console.error(err);
+      alert("Failed to send certificate.");
+    });
+  },
 
     dismissModal() {
       this.showCertUploadModal = false;
@@ -962,7 +1140,30 @@ export default {
       this.openRegistrantsModal(training); // pass training to fetch registrants
     },
 
+    async openRegistrantsModal(training) {
+    try {
+      this.selectedTraining = training;
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No token found");
 
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/trainings/${training.trainingID}/registrants`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Map certificatePath -> public URL for UI
+      this.registrantsList = response.data.map(r => ({
+        ...r,
+        certificateUrl: r.certificatePath ? getPDFUrl(r.certificatePath) : null
+      }));
+
+      this.showRegistrantsModal = true;
+      this.closeAllMenus();
+    } catch (error) {
+      console.error("Error fetching registrants:", error);
+      alert("Failed to fetch registrants.");
+    }
+  },
     async fetchTrainings() {
       try {
         const storedUser = localStorage.getItem("user");
@@ -1862,6 +2063,24 @@ const logout = () => {
   line-height: 1.4;
 }
 
+.cert-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.view-cert-btn {
+  background-color: #0059b3;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.view-cert-btn:hover {
+  background-color: #004a99;
+}
+
 .dropdown-menu li+li {
   border-top: 1px solid #eee;
 }
@@ -1942,6 +2161,20 @@ tbody td {
   background-color: #374151;
 }
 
+.bulk-issue-btn
+{
+   /* Set a consistent minimum width for all buttons (fixes the sizing issue) */
+  min-width: 150px;
+  white-space: nowrap;
+  /* Prevents text wrapping */
+
+  padding: 8px 15px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s;
+}
 /* General Action Button Styles (ensures consistent size) */
 .action-btn {
   /* Set a consistent minimum width for all buttons (fixes the sizing issue) */
@@ -2327,6 +2560,12 @@ tbody td {
   justify-content: center;
   overflow: hidden;
   margin-bottom: 10px;
+}
+.registrant-certid {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #4a4a4a;
+  text-align: left;
 }
 
 .registrant-name {

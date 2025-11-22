@@ -51,7 +51,6 @@ class Applicant extends Model
 		'phoneNumber',
 		'password',
 		'api_token',
-		'careerID',
 		'email_verification_token',
 		'email_verified_at',
 	];

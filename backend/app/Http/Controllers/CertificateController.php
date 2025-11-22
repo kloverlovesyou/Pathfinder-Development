@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Certification;
 use Illuminate\Support\Facades\Storage;
+use Supabase\Storage\StorageClient;
 
 class CertificateController extends Controller
 {
@@ -110,6 +111,50 @@ public function selectedCertificates($applicantID)
     }
 
     return response()->json($certificates);
+}
+
+public function issueCertificate(Request $request, $certificationID)
+{
+    $request->validate([
+        'issued_certificate' => 'required|file|mimes:pdf|max:4096'
+    ]);
+
+    $cert = Certification::findOrFail($certificationID);
+
+    // Initialize Supabase client
+    $storage = new StorageClient(
+        env('SUPABASE_URL'),
+        env('SUPABASE_SECRET')
+    );
+
+    $bucket = env('SUPABASE_BUCKET', 'Requirements'); // default bucket
+
+    // Use certificate_directory instead of issued_certificates
+    $fileName = 'certificate_directory/' . time() . '_' . $request->file('issued_certificate')->getClientOriginalName();
+    $fileBytes = file_get_contents($request->file('issued_certificate'));
+
+    // Upload to Supabase
+    $result = $storage->from($bucket)->upload($fileName, $fileBytes);
+
+    if (!empty($result['error'])) {
+        return response()->json([
+            'message' => 'Failed to upload issued certificate',
+            'error' => $result['error']
+        ], 500);
+    }
+
+    // Save the path to DB
+    $cert->certificate_path = $fileName;
+    $cert->save();
+
+    // Get a public URL
+    $publicUrl = $storage->from($bucket)->getPublicUrl($fileName);
+
+    return response()->json([
+        'message' => 'Certificate issued successfully',
+        'path' => $fileName,
+        'public_url' => $publicUrl
+    ]);
 }
 
 

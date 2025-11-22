@@ -20,7 +20,6 @@ class ApplicantController extends Controller
             'emailAddress' => 'required|email|unique:applicant,emailAddress',
             'phoneNumber'  => 'required|string|max:11',
             'password'     => 'required|string|min:8',
-            'careerID'  => 'required|exists:career,careerID',
         ]);
 
         if ($validator->fails()) {
@@ -42,7 +41,6 @@ class ApplicantController extends Controller
             'phoneNumber'  => $request->phoneNumber,
             'password'     => bcrypt($request->password),
             'api_token'    => Str::random(60),
-            'careerID'  => $request->careerID,
             'email_verification_token' => $verificationToken,
             'email_verified_at' => null,
         ]);
