@@ -447,6 +447,20 @@ const handleSubmit = async () => {
     termsAccepted.value = false;
   } catch (error) {
     console.error(error.response?.data || error.message);
+    
+    // Show validation errors to user
+    if (error.response?.status === 422 && error.response?.data?.errors) {
+      const errors = error.response.data.errors;
+      let errorMessage = "Validation errors:\n";
+      
+      Object.keys(errors).forEach(key => {
+        errorMessage += `${key}: ${errors[key].join(', ')}\n`;
+      });
+      
+      alert(errorMessage);
+    } else {
+      alert(error.response?.data?.message || "Registration failed. Please try again.");
+    }
   }
 };
 
