@@ -127,6 +127,7 @@ class RegistrationController extends Controller
                 'dateRegistered' => $r->registrationDate ? $r->registrationDate->format('M d, Y') : null,
                 'certificateTrackingID' => $r->certTrackingID,
                 'certificateGivenDate' => $r->certGivenDate ? $r->certGivenDate->format('M d, Y') : null,
+                'certificatePath' => $r->certificatePath,
                 'hasCertificate' => !is_null($r->certTrackingID) && !is_null($r->certGivenDate),
             ];
         });
