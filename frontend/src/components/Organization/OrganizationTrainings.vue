@@ -246,7 +246,7 @@
 
                     <!-- View Certificate Button (only show when certificate exists) -->
                     <button class="action-btn"
-                            v-if="person.hasCertificate && person.certificatePath"
+                            v-if="person.hasCertificate || person.certificatePath"
                             @click="viewCertificate(person.certificatePath)">
                       View Certificate
                     </button>
@@ -606,8 +606,17 @@ export default {
 
   methods: {
 
+     viewCertificate(certificatePath) {
+    if (!certificatePath) return alert("Certificate not found.");
 
-  async issueCertificate(person) {
+    // Get public URL from Supabase
+    const publicUrl = getPDFUrl(certificatePath);
+    if (!publicUrl) return alert("Unable to generate certificate URL.");
+
+    window.open(publicUrl, "_blank"); // Open in new tab
+  },
+
+    async issueCertificate(person) {
     try {
       if (person.hasCertificate) return; // already issued
 
@@ -619,7 +628,6 @@ export default {
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
 
-      // Vertical spacing
       const lines = [
         { text: "Certificate of Completion", size: 28 },
         { text: `This is to certify that ${person.name}`, size: 22 },
@@ -628,52 +636,52 @@ export default {
         { text: `Date Issued: ${givenDate}`, size: 14 }
       ];
 
-      // Total height of all lines for centering
-      const totalHeight = lines.reduce((sum, line) => sum + line.size + 10, 0); // 10pt spacing between lines
-      let startY = (pageHeight - totalHeight) / 2; // starting Y to center vertically
+      const totalHeight = lines.reduce((sum, line) => sum + line.size + 10, 0);
+      let startY = (pageHeight - totalHeight) / 2;
 
       lines.forEach(line => {
         doc.setFontSize(line.size);
         doc.text(line.text, pageWidth / 2, startY, null, null, "center");
-        startY += line.size + 10; // move to next line
+        startY += line.size + 10;
       });
 
       const pdfBlob = doc.output("blob");
-
-      // Use name as filename (sanitized)
       const safeName = person.name.replace(/[/\\?%*:|"<>]/g, "_");
       const pdfFile = new File([pdfBlob], `${safeName}.pdf`, { type: "application/pdf" });
 
       // Upload PDF to Supabase
-      const filePath = await uploadCertificate(pdfFile);
+      const filePath = await uploadCertificate(pdfFile); // <-- store path in DB
       if (!filePath) throw new Error("Failed to upload certificate");
-      
-      console.log("Certificate public URL:", filePath);
+
+      // Get public URL for viewing
+      const publicUrl = getPDFUrl(filePath);
+
+      console.log("Certificate path (DB):", filePath);
+      console.log("Public URL (viewing):", publicUrl);
 
       // Send metadata to backend
       const token = localStorage.getItem("token");
       const formData = new FormData();
-      formData.append("certificateTrackingID", person.id); // Use registrationID
+      formData.append("certificateTrackingID", person.id);
       formData.append("certificateGivenDate", givenDate);
-      formData.append("certificatePath", filePath);
-
-      // Fix for Laravel + multipart + PUT
-        formData.append("_method", "PUT");
+      formData.append("certificatePath", filePath); // store path in DB
+      formData.append("_method", "PUT"); // Laravel workaround
 
       await axios.post(
-      `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
-      formData,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
+        `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
       // Update UI
       person.hasCertificate = true;
       person.certificateTrackingID = person.id;
+      person.certificateUrl = publicUrl; // <-- save public URL for viewing
 
       alert(`Certificate issued for ${person.name}!`);
     } catch (error) {
@@ -845,7 +853,7 @@ export default {
       }
     },
 
-
+    
     async fetchTags() {
       try {
         const response = await axios.get(import.meta.env.VITE_API_BASE_URL + '/tags');
