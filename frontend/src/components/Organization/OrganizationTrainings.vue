@@ -462,11 +462,23 @@
             <!-- Tag selection -->
             <div class="relative mb-4">
               <label class="block font-semibold text-gray-600 mb-2">Tags</label>
+              <!-- Search/Input for New Tag -->
+              <input 
+                v-model="newTagName" 
+                type="text" 
+                placeholder="Search or type a new tag..." 
+                class="training-input mb-2" 
+              />
               <!-- Tag List Wrapper for horizontal scrolling -->
               <div class="tag-list-wrapper">
                 <div class="tag-list">
-                  <span v-for="tag in tagOptions" :key="tag.TagID" class="tag-chip" @click="toggleTag(tag.TagID)"
-                    :class="{ 'tag-chip-selected': isTagSelected(tag.TagID) }">
+                  <span 
+                    v-for="tag in filteredTags" 
+                    :key="tag.TagID" 
+                    class="tag-chip" 
+                    @click="toggleTag(tag.TagID)"
+                    :class="{ 'tag-chip-selected': isTagSelected(tag.TagID) }"
+                  >
                     {{ tag.TagName }}
                   </span>
                 </div>
@@ -479,8 +491,6 @@
                   <button @click.stop="removeTag(tagID)" class="ml-1 text-red-500">×</button> <!-- Remove Button -->
                 </span>
               </div>
-              <!-- Input for New Tag -->
-              <input v-model="newTagName" type="text" placeholder="Add new tag" class="training-input mt-2" />
               <button @click.prevent="addTag" class="training-save-btn mt-2">Add Tag</button>
             </div>
             <!-- Save -->
@@ -752,27 +762,44 @@ export default {
     },
 
     async addTag() {
-      const newTag = this.newTagName.trim();
-      if (newTag) {
-        try {
-          // Send the new tag to the backend
-          const response = await axios.post(import.meta.env.VITE_API_BASE_URL + '/tags', {
-            TagName: newTag
-          });
-
-          // Add the new tag to the tagOptions and newTraining.Tags
-          this.tagOptions.push(response.data); // Assuming response.data returns the new tag object
-          this.newTraining.Tags.push(Number(response.data.TagID)); // Add the new tag ID to the selected tags
-
-          // Clear the input field
-          this.newTagName = '';
-          alert("Tag added successfully!");
-        } catch (error) {
-          console.error("Error adding tag:", error);
-          alert("Failed to add tag.");
-        }
-      } else {
+      const trimmedTagName = this.newTagName.trim();
+      if (!trimmedTagName) {
         alert("Please enter a tag name.");
+        return;
+      }
+
+      // Check if tag already exists (case-insensitive)
+      const existingTag = this.tagOptions.find(
+        tag => tag.TagName.toLowerCase() === trimmedTagName.toLowerCase()
+      );
+
+      if (existingTag) {
+        // Tag exists, just select it if not already selected
+        const normalizedId = Number(existingTag.TagID);
+        if (!this.newTraining.Tags.includes(normalizedId)) {
+          this.newTraining.Tags.push(normalizedId);
+        }
+        // Clear the input field
+        this.newTagName = "";
+        return;
+      }
+
+      // Tag doesn't exist, create it
+      try {
+        // Send the new tag to the backend
+        const response = await axios.post(import.meta.env.VITE_API_BASE_URL + '/tags', {
+          TagName: trimmedTagName
+        });
+
+        // Add the new tag to the tagOptions and newTraining.Tags
+        this.tagOptions.push(response.data);
+        this.newTraining.Tags.push(Number(response.data.TagID));
+
+        // Clear the input field
+        this.newTagName = '';
+      } catch (error) {
+        console.error("Error adding tag:", error);
+        alert("Failed to add tag.");
       }
     },
 
@@ -1283,6 +1310,16 @@ export default {
       return this.upcomingtrainings
         .filter(t => new Date(t.schedule) < now)
         .sort((a, b) => new Date(b.schedule) - new Date(a.schedule));
+    },
+    // Filter tags based on search input
+    filteredTags() {
+      if (!this.newTagName || this.newTagName.trim() === "") {
+        return this.tagOptions;
+      }
+      const searchQuery = this.newTagName.toLowerCase().trim();
+      return this.tagOptions.filter(tag =>
+        tag.TagName.toLowerCase().includes(searchQuery)
+      );
     },
   },
 };

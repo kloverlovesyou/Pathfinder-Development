@@ -47,10 +47,13 @@ class Organization extends Model
 		'location',
 		'websiteURL',
 		'emailAddress',
+		'phoneNumber',
 		'password',
 		'api_token',
 		'adminID',
 		'status',
+		'email_verification_token',
+		'email_verified_at',
 	];
 
 	public function admin()
