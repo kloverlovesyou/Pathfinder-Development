@@ -9,8 +9,73 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\EmailVerification;
+use App\Services\BrevoEmailService;
+use Illuminate\Support\Facades\View;
 class ApplicantController extends Controller
 {
+    /**
+     * Send verification email with automatic fallback to Brevo API
+     * Optimized to skip SMTP on Railway (known to be blocked) and go straight to Brevo API
+     */
+    private function sendVerificationEmail($email, $verificationUrl, $userName, $type)
+    {
+        $emailSent = false;
+        $emailError = null;
+        $emailException = null;
+        $usedBrevoApi = false;
+        
+        // Skip SMTP on Railway (it's blocked) and go straight to Brevo API for speed
+        $brevoApiKey = config('services.brevo.api_key', env('BREVO_API_KEY'));
+        
+        if (!empty($brevoApiKey)) {
+            // Use Brevo API directly (faster, no SMTP timeout)
+            try {
+                $brevoService = new BrevoEmailService();
+                $htmlContent = View::make('emails.verification', [
+                    'verificationUrl' => $verificationUrl,
+                    'userName' => $userName,
+                    'userType' => $type
+                ])->render();
+                
+                $brevoService->send(
+                    $email,
+                    'Verify Your Email Address - Pathfinder',
+                    $htmlContent
+                );
+                
+                $emailSent = true;
+                $usedBrevoApi = true;
+                \Log::info('Verification email sent via Brevo API', ['email' => $email]);
+            } catch (\Exception $brevoError) {
+                $emailError = 'Brevo API failed: ' . $brevoError->getMessage();
+                \Log::error('Brevo API failed', [
+                    'email' => $email,
+                    'error' => $brevoError->getMessage()
+                ]);
+            }
+        } else {
+            // Fallback to SMTP only if Brevo API key is not set
+            try {
+                Mail::to($email)->send(new EmailVerification($verificationUrl, $userName, $type));
+                $emailSent = true;
+                \Log::info('Verification email sent via SMTP', ['email' => $email]);
+            } catch (\Exception $e) {
+                $emailError = $e->getMessage();
+                \Log::error('SMTP failed', [
+                    'email' => $email,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+        
+        return [
+            'email_sent' => $emailSent,
+            'email_error' => $emailError,
+            'email_exception' => $emailException,
+            'used_brevo_api' => $usedBrevoApi,
+        ];
+    }
+
     public function a_register(Request $request)
     {
         $validator = \Validator::make($request->all(), [
@@ -45,21 +110,47 @@ class ApplicantController extends Controller
             'email_verified_at' => null,
         ]);
 
-        // Send verification email
+        // Prepare verification URL and user info
         $verificationUrl = url('/api/verify-email?token=' . $verificationToken . '&type=applicant');
         $userName = $request->firstName . ' ' . $request->lastName;
+        $userEmail = $request->emailAddress;
         
-        try {
-            Mail::to($request->emailAddress)->send(new EmailVerification($verificationUrl, $userName, 'applicant'));
-        } catch (\Exception $e) {
-            \Log::error('Failed to send verification email: ' . $e->getMessage());
-        }
-
-        return response()->json([
+        // Return response immediately (same as organization registration)
+        $response = response()->json([
             'status'  => 'success',
             'message' => 'Registration successful! Please check your email to verify your account.',
             'user'    => $applicant,
+            'email_sent' => true, // Assume it will be sent
+            'verification_url' => $verificationUrl, // Always include for manual verification
+            'verification_token' => $verificationToken,
         ], 201);
+        
+        // Send email asynchronously (after response is sent) - EXACTLY like organization
+        // Use fastcgi_finish_request() if available to send response immediately
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+        
+        // Send email in background (won't block response)
+        try {
+            \Log::info('Sending verification email asynchronously (Applicant)', [
+                'email' => $userEmail
+            ]);
+            
+            $this->sendVerificationEmail(
+                $userEmail,
+                $verificationUrl,
+                $userName,
+                'applicant'
+            );
+        } catch (\Exception $e) {
+            \Log::error('Failed to send verification email asynchronously', [
+                'email' => $userEmail,
+                'error' => $e->getMessage()
+            ]);
+        }
+        
+        return $response;
     }
 
 public function login(Request $request)
