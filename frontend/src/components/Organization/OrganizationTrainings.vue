@@ -618,13 +618,11 @@ export default {
 
     async issueCertificate(person) {
     try {
-      if (person.hasCertificate) return; // already issued
+      if (person.hasCertificate) return;
 
       const givenDate = new Date().toISOString().split("T")[0];
 
-      // Generate PDF in landscape
       const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
 
@@ -649,23 +647,21 @@ export default {
       const safeName = person.name.replace(/[/\\?%*:|"<>]/g, "_");
       const pdfFile = new File([pdfBlob], `${safeName}.pdf`, { type: "application/pdf" });
 
-      // Upload PDF to Supabase
-      const filePath = await uploadCertificate(pdfFile); // <-- store path in DB
+      // Upload to Supabase
+      const { filePath, publicUrl } = await uploadCertificate(pdfFile);
+
       if (!filePath) throw new Error("Failed to upload certificate");
 
-      // Get public URL for viewing
-      const publicUrl = getPDFUrl(filePath);
-
       console.log("Certificate path (DB):", filePath);
-      console.log("Public URL (viewing):", publicUrl);
+      console.log("Public URL:", publicUrl);
 
       // Send metadata to backend
       const token = localStorage.getItem("token");
       const formData = new FormData();
       formData.append("certificateTrackingID", person.id);
       formData.append("certificateGivenDate", givenDate);
-      formData.append("certificatePath", filePath); // store path in DB
-      formData.append("_method", "PUT"); // Laravel workaround
+      formData.append("certificatePath", filePath); 
+      formData.append("_method", "PUT");
 
       await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
@@ -681,8 +677,8 @@ export default {
       // Update UI
       person.hasCertificate = true;
       person.certificateTrackingID = person.id;
-      person.certificateUrl = publicUrl; // <-- save public URL for viewing
-      person.certificatePath = filePath; // <-- save path in DB
+      person.certificatePath = filePath;
+      person.certificateUrl = publicUrl;
 
       alert(`Certificate issued for ${person.name}!`);
     } catch (error) {
