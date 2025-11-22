@@ -197,7 +197,7 @@
         </button>
       </section>
 
-      <!-- Registrants Modal -->
+            <!-- Registrants Modal -->
       <div v-if="showRegistrantsModal" class="modal-overlay" @click.self="closeModal">
         <div class="modal-content">
           <button class="modal-close-btn" @click="closeModal">✕</button>
@@ -207,6 +207,7 @@
             <table>
               <thead>
                 <tr>
+                  <th><input type="checkbox" v-model="selectAll" @change="toggleSelectAll"></th>
                   <th>CERTIFICATE TRACKING ID</th>
                   <th>FULL NAME</th>
                   <th>REGISTRATION DATE</th>
@@ -216,6 +217,9 @@
               </thead>
               <tbody>
                 <tr v-for="person in registrantsList" :key="person.id">
+                  <td>
+                    <input type="checkbox" v-model="person.selected">
+                  </td>
                   <td>
                     <p class="registrant-certid">{{ person.id }}</p>
                   </td>
@@ -232,7 +236,6 @@
                   }">
                     {{ person.status }}
                   </td>
-
                   <td>
                     <button class="action-btn"
                       :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
