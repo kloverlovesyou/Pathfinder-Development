@@ -657,11 +657,19 @@ export default {
       formData.append("certificateGivenDate", givenDate);
       formData.append("certificatePath", filePath);
 
-      await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
-        formData,
-        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
-      );
+      // Fix for Laravel + multipart + PUT
+        formData.append("_method", "PUT");
+
+      await axios.post(
+      `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
 
       // Update UI
       person.hasCertificate = true;
