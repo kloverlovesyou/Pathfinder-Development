@@ -214,14 +214,14 @@ public function updateCertificate(Request $request, $registrationID)
     $validated = $request->validate([
         'certificateTrackingID' => 'required|string',
         'certificateGivenDate' => 'required|date',
-        'certificateFilePath' => 'required|string', // <-- path from Supabase
+        'certificatePath' => 'required|string', // <-- path from Supabase
     ]);
     
     // Store the Supabase path in the database
     $registration->update([
         'certTrackingID' => $validated['certificateTrackingID'],
         'certGivenDate' => $validated['certificateGivenDate'],
-        'certificate' => $validated['certificateFilePath'], // store the Supabase path
+        'certificate' => $validated['certificatePath'], // store the Supabase path
     ]);
     
     return response()->json([
