@@ -243,6 +243,13 @@
                             @click="issueCertificate(person)">
                       {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
                     </button>
+
+                    <!-- View Certificate Button (only show when certificate exists) -->
+                    <button class="action-btn"
+                            v-if="person.hasCertificate && person.certificatePath"
+                            @click="viewCertificate(person.certificatePath)">
+                      View Certificate
+                    </button>
                   </td>
                 </tr>
               </tbody>
@@ -1975,6 +1982,24 @@ const logout = () => {
   white-space: nowrap;
   color: #000;
   line-height: 1.4;
+}
+
+.cert-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.view-cert-btn {
+  background-color: #0059b3;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.view-cert-btn:hover {
+  background-color: #004a99;
 }
 
 .dropdown-menu li+li {
