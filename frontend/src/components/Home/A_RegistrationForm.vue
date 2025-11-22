@@ -373,32 +373,6 @@
           </div>
         </div> -->
 
-        <div class="relative mb-4">
-          <label class="block font-semibold text-gray-500">
-            To help us personalize recommendations for you,
-          </label>
-          <p class="text-gray-500 mb-2">please select your target career below.</p>
-
-          <!-- Dropdown -->
-          <div class="relative">
-            <select
-              v-model.number="form.careerID"
-              @focus="showDropdown = true"
-              class="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-              required
-            >
-              <option disabled value="">Select your target career</option>
-              <option
-                v-for="career in careers"
-                :key="career.careerID"
-                :value="career.careerID"
-              >
-                {{ career.position }}
-              </option>
-            </select>
-          </div>
-        </div>
-
         <div>
           <label class="flex items-center space-x-2 cursor-pointer mb-2">
             <input
@@ -528,11 +502,6 @@ const handleSubmit = async () => {
     return;
   }
 
-  if (!form.value.careerID) {
-    alert("Please select a target career.");
-    return;
-  }
-
   if (form.value.password !== form.value.confirmPassword) {
     alert("Passwords do not match.");
     return;
@@ -541,7 +510,6 @@ const handleSubmit = async () => {
   try {
     await axios.post(import.meta.env.VITE_API_BASE_URL + "/applicants", {
       ...form.value,
-      careerID: Number(form.value.careerID), // ensure number
     });
     showSuccessModal.value = true;
   } catch (error) {
