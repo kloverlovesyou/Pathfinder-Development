@@ -520,7 +520,7 @@ import axios from "axios";
 import QrcodeVue from "qrcode.vue";
 import api from "@/composables/api.js";
 import { activeTrainingQR, activeTrainingId, scheduleQR } from "@/composables/useTrainingQR.js";
-import { uploadCertificate } from "@/lib/supabase.js";
+import { uploadCertificate, getPDFUrl } from "@/lib/supabase.js";
 import jsPDF from "jspdf";
 
 
