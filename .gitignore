@@ -1,1 +1,41 @@
+# Environment files
+.env
+.env.*
+!.env.example
+*.env
+
+# Backend specific
 backend/.env
+backend/.env.*
+
+# Frontend specific  
+frontend/.env
+frontend/.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+dist/
+build/
+*.min.js
+*.min.css
+
+
+
