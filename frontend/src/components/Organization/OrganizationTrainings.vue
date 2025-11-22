@@ -600,52 +600,54 @@ export default {
   methods: {
 
 
-    async issueCertificate(person) {
-    try {
-      if (person.hasCertificate) return; // already issued
+      async issueCertificate(person) {
+      try {
+        if (person.hasCertificate) return; // already issued
 
-      const givenDate = new Date().toISOString().split("T")[0];
+        const givenDate = new Date().toISOString().split("T")[0];
 
-      // Generate PDF
-      const doc = new jsPDF();
-      doc.setFontSize(20);
-      doc.text("Certificate of Completion", 105, 40, null, null, "center");
-      doc.setFontSize(14);
-      doc.text(`This is to certify that ${person.name}`, 105, 60, null, null, "center");
-      doc.text(`has completed the training: ${this.selectedTraining.title}`, 105, 70, null, null, "center");
-      doc.text(`Certificate Tracking ID: ${person.id}`, 105, 90, null, null, "center");
-      doc.text(`Date Issued: ${givenDate}`, 105, 100, null, null, "center");
+        // Generate PDF
+        const doc = new jsPDF();
+        doc.setFontSize(20);
+        doc.text("Certificate of Completion", 105, 40, null, null, "center");
+        doc.setFontSize(14);
+        doc.text(`This is to certify that ${person.name}`, 105, 60, null, null, "center");
+        doc.text(`has completed the training: ${this.selectedTraining.title}`, 105, 70, null, null, "center");
+        doc.text(`Certificate Tracking ID: ${person.id}`, 105, 90, null, null, "center");
+        doc.text(`Date Issued: ${givenDate}`, 105, 100, null, null, "center");
 
-      const pdfBlob = doc.output("blob");
-      const pdfFile = new File([pdfBlob], `${person.id}.pdf`, { type: "application/pdf" });
+        const pdfBlob = doc.output("blob");
+        const pdfFile = new File([pdfBlob], `${person.id}.pdf`, { type: "application/pdf" });
 
-      // Upload PDF to Supabase
-      const filePath = await uploadCertificate(pdfFile);
-      if (!filePath) throw new Error("Failed to upload certificate");
+        // Upload PDF to Supabase
+        const filePath = await uploadCertificate(pdfFile);
+        if (!filePath) throw new Error("Failed to upload certificate");
+        
+        console.log("Certificate public URL:", filePath);
 
-      // Send metadata to backend
-      const token = localStorage.getItem("token");
-      const formData = new FormData();
-      formData.append("certificateTrackingID", person.id); // Use registrationID
-      formData.append("certificateGivenDate", givenDate);
-      formData.append("certificateFilePath", filePath);
+        // Send metadata to backend
+        const token = localStorage.getItem("token");
+        const formData = new FormData();
+        formData.append("certificateTrackingID", person.id); // Use registrationID
+        formData.append("certificateGivenDate", givenDate);
+        formData.append("certificateFilePath", filePath);
 
-      await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
-        formData,
-        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
-      );
+        await axios.put(
+          `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
+          formData,
+          { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
+        );
 
-      // Update UI
-      person.hasCertificate = true;
-      person.certificateTrackingID = person.id;
+        // Update UI
+        person.hasCertificate = true;
+        person.certificateTrackingID = person.id;
 
-      alert(`Certificate issued for ${person.name}!`);
-    } catch (error) {
-      console.error("Error issuing certificate:", error);
-      alert(`Failed to issue certificate for ${person.name}.`);
-    }
-  },
+        alert(`Certificate issued for ${person.name}!`);
+      } catch (error) {
+        console.error("Error issuing certificate:", error);
+        alert(`Failed to issue certificate for ${person.name}.`);
+      }
+    },
 
     async issueBulkCertificates(selectedRegistrants) {
     try {
