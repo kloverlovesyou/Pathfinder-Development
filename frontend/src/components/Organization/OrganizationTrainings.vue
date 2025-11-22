@@ -246,8 +246,8 @@
 
                     <!-- View Certificate Button (only show when certificate exists) -->
                     <button class="action-btn"
-                            v-if="person.hasCertificate && person.certificatePath"
-                            @click="viewCertificate(person.certificatePath)">
+                            v-if="person.hasCertificate && person.certificateUrl"
+                            @click="viewCertificate(person.certificateUrl)">
                       View Certificate
                     </button>
                   </td>
@@ -982,60 +982,59 @@ export default {
   ✅ Registrants Modal
 ========================== */
     async openRegistrantsModal(training) {
-      try {
-        // Set selected training
-        this.selectedTraining = training;
+    try {
+      // Set selected training
+      this.selectedTraining = training;
 
-        // Get token from localStorage
-        const token = localStorage.getItem("token");
-        if (!token) {
-          console.error("No token found. Please log in first.");
-          alert("You must log in to view registrants.");
-          return;
+      // Get token from localStorage
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No token found. Please log in first.");
+        alert("You must log in to view registrants.");
+        return;
+      }
+
+      // Fetch registrants from API
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/trainings/${training.trainingID}/registrants`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
         }
+      );
 
-        // Fetch registrants from API
-        const response = await axios.get(
-          import.meta.env.VITE_API_BASE_URL + `/trainings/${training.trainingID}/registrants`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: "application/json",
-            },
-          }
-        );
-
-        // Populate registrants list dynamically
-        this.registrantsList = response.data.map(person => ({
-        ...person,
-        hasCertificate: !!person.certificatePath,
-        certificateUrl: person.certificatePath ? getPDFUrl(person.certificatePath) : null,
+      // Populate registrants list dynamically and compute public URL
+      this.registrantsList = response.data.map(r => ({
+        ...r,
+        certificateUrl: r.certificatePath ? getPDFUrl(r.certificatePath) : null
       }));
 
-        // Open the modal
-        this.showRegistrantsModal = true;
+      // Open the modal
+      this.showRegistrantsModal = true;
 
-        // Close any dropdown menus
-        this.closeAllMenus();
+      // Close any dropdown menus
+      this.closeAllMenus();
 
-      } catch (error) {
-        if (error.response) {
-          console.error("Error fetching registrants:", error.response.status, error.response.data);
-          if (error.response.status === 401) {
-            alert("Unauthorized. Please log in again.");
-          } else if (error.response.status === 403) {
-            alert("You don't have permission to view registrants for this training.");
-          } else if (error.response.status === 404) {
-            alert("Training not found or you don't have access to it.");
-          } else {
-            alert("Failed to fetch registrants. Please try again.");
-          }
+    } catch (error) {
+      if (error.response) {
+        console.error("Error fetching registrants:", error.response.status, error.response.data);
+        if (error.response.status === 401) {
+          alert("Unauthorized. Please log in again.");
+        } else if (error.response.status === 403) {
+          alert("You don't have permission to view registrants for this training.");
+        } else if (error.response.status === 404) {
+          alert("Training not found or you don't have access to it.");
         } else {
-          console.error("Network or other error:", error.message);
-          alert("An error occurred while fetching registrants.");
+          alert("Failed to fetch registrants. Please try again.");
         }
+      } else {
+        console.error("Network or other error:", error.message);
+        alert("An error occurred while fetching registrants.");
       }
-    },
+    }
+  },
 
     closeRegistrantsModal() {
       this.showRegistrantsModal = false;
