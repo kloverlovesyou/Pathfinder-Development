@@ -250,7 +250,7 @@
 
           <!-- Issue Certificates To All Button -->
           <div class="modal-footer">
-            <button class="action-btn" @click="issueCertificatesToSelected">
+            <button class="bulk-issue-btn" @click="issueCertificatesToSelected">
               Issue Certificates to Selected
             </button>
           </div>
@@ -1935,6 +1935,20 @@ tbody td {
   background-color: #374151;
 }
 
+.bulk-issue-btn
+{
+   /* Set a consistent minimum width for all buttons (fixes the sizing issue) */
+  min-width: 150px;
+  white-space: nowrap;
+  /* Prevents text wrapping */
+
+  padding: 8px 15px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s;
+}
 /* General Action Button Styles (ensures consistent size) */
 .action-btn {
   /* Set a consistent minimum width for all buttons (fixes the sizing issue) */
