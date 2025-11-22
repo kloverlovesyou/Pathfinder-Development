@@ -981,58 +981,65 @@ export default {
     /* ==========================
   ✅ Registrants Modal
 ========================== */
-    async openRegistrantsModal(training) {
+    async issueCertificate(person) {
     try {
-      // Set selected training
-      this.selectedTraining = training;
+      if (person.hasCertificate) return;
 
-      // Get token from localStorage
+      const givenDate = new Date().toISOString().split("T")[0];
+
+      // Generate PDF
+      const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+
+      const lines = [
+        { text: "Certificate of Completion", size: 28 },
+        { text: `This is to certify that ${person.name}`, size: 22 },
+        { text: `has completed the training: ${this.selectedTraining.title}`, size: 18 },
+        { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
+        { text: `Date Issued: ${givenDate}`, size: 14 }
+      ];
+
+      let startY = (pageHeight - lines.reduce((sum, l) => sum + l.size + 10, 0)) / 2;
+
+      lines.forEach(line => {
+        doc.setFontSize(line.size);
+        doc.text(line.text, pageWidth / 2, startY, null, null, "center");
+        startY += line.size + 10;
+      });
+
+      const pdfBlob = doc.output("blob");
+      const safeName = person.name.replace(/[/\\?%*:|"<>]/g, "_");
+      const pdfFile = new File([pdfBlob], `${safeName}.pdf`, { type: "application/pdf" });
+
+      // Upload to Supabase
+      const { filePath, publicUrl } = await uploadCertificate(pdfFile);
+      if (!filePath) throw new Error("Failed to upload certificate");
+
+      // Send metadata to backend
       const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found. Please log in first.");
-        alert("You must log in to view registrants.");
-        return;
-      }
+      const formData = new FormData();
+      formData.append("certificateTrackingID", person.id);
+      formData.append("certificateGivenDate", givenDate);
+      formData.append("certificatePath", filePath); // save object path in DB
+      formData.append("_method", "PUT"); // Laravel workaround
 
-      // Fetch registrants from API
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/trainings/${training.trainingID}/registrants`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        }
+      await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
+        formData,
+        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
       );
 
-      // Populate registrants list dynamically and compute public URL
-      this.registrantsList = response.data.map(r => ({
-        ...r,
-        certificateUrl: r.certificatePath ? getPDFUrl(r.certificatePath) : null
-      }));
+      // Update UI
+      person.hasCertificate = true;
+      person.certificateTrackingID = person.id;
+      person.certificatePath = filePath; // object path from Supabase
+      person.certificateUrl = publicUrl; // public URL for viewing
 
-      // Open the modal
-      this.showRegistrantsModal = true;
-
-      // Close any dropdown menus
-      this.closeAllMenus();
-
+      alert(`Certificate issued for ${person.name}!`);
     } catch (error) {
-      if (error.response) {
-        console.error("Error fetching registrants:", error.response.status, error.response.data);
-        if (error.response.status === 401) {
-          alert("Unauthorized. Please log in again.");
-        } else if (error.response.status === 403) {
-          alert("You don't have permission to view registrants for this training.");
-        } else if (error.response.status === 404) {
-          alert("Training not found or you don't have access to it.");
-        } else {
-          alert("Failed to fetch registrants. Please try again.");
-        }
-      } else {
-        console.error("Network or other error:", error.message);
-        alert("An error occurred while fetching registrants.");
-      }
+      console.error("Error issuing certificate:", error);
+      alert(`Failed to issue certificate for ${person.name}.`);
     }
   },
 
@@ -1107,7 +1114,30 @@ openCertUploadModal(registrant) {
       this.openRegistrantsModal(training); // pass training to fetch registrants
     },
 
+    async openRegistrantsModal(training) {
+    try {
+      this.selectedTraining = training;
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No token found");
 
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/trainings/${training.trainingID}/registrants`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Map certificatePath -> public URL for UI
+      this.registrantsList = response.data.map(r => ({
+        ...r,
+        certificateUrl: r.certificatePath ? getPDFUrl(r.certificatePath) : null
+      }));
+
+      this.showRegistrantsModal = true;
+      this.closeAllMenus();
+    } catch (error) {
+      console.error("Error fetching registrants:", error);
+      alert("Failed to fetch registrants.");
+    }
+  },
     async fetchTrainings() {
       try {
         const storedUser = localStorage.getItem("user");
