@@ -648,21 +648,18 @@ export default {
       const pdfFile = new File([pdfBlob], `${safeName}.pdf`, { type: "application/pdf" });
 
       // Upload to Supabase
-      const { filePath, publicUrl } = await uploadCertificate(pdfFile);
+      const { filePath: pathOnly, publicUrl } = await uploadCertificate(pdfFile);
 
-      if (!filePath) throw new Error("Failed to upload certificate");
+      if (!pathOnly) throw new Error("Failed to upload certificate");
 
-      console.log("Certificate path (DB):", filePath);
-      console.log("Public URL:", publicUrl);
-
-      // Send metadata to backend
       const token = localStorage.getItem("token");
       const formData = new FormData();
       formData.append("certificateTrackingID", person.id);
       formData.append("certificateGivenDate", givenDate);
-      formData.append("certificatePath", filePath); 
+      formData.append("certificatePath", pathOnly);  // ← MUST BE STRING ONLY
       formData.append("_method", "PUT");
 
+      // Send to backend
       await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
         formData,
@@ -677,7 +674,7 @@ export default {
       // Update UI
       person.hasCertificate = true;
       person.certificateTrackingID = person.id;
-      person.certificatePath = filePath;
+      person.certificatePath = pathOnly;     // string only
       person.certificateUrl = publicUrl;
 
       alert(`Certificate issued for ${person.name}!`);
