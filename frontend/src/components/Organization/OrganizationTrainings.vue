@@ -648,7 +648,7 @@ export default {
       const pdfFile = new File([pdfBlob], `${safeName}.pdf`, { type: "application/pdf" });
 
       // Upload to Supabase
-      const { filePath: pathOnly, publicUrl } = await uploadCertificate(pdfFile);
+      const { filePath, publicUrl } = await uploadCertificate(pdfFile);
 
       if (!pathOnly) throw new Error("Failed to upload certificate");
 
@@ -656,7 +656,7 @@ export default {
       const formData = new FormData();
       formData.append("certificateTrackingID", person.id);
       formData.append("certificateGivenDate", givenDate);
-      formData.append("certificatePath", pathOnly);  // ← MUST BE STRING ONLY
+      formData.append("certificatePath", filePath);  // ← MUST BE STRING ONLY
       formData.append("_method", "PUT");
 
       // Send to backend
@@ -675,7 +675,7 @@ export default {
       person.hasCertificate = true;
       person.certificateTrackingID = person.id;
       person.certificatePath = pathOnly;     // string only
-      person.certificateUrl = publicUrl;
+      person.certificateUrl = publicUrl;      // public URL
 
       alert(`Certificate issued for ${person.name}!`);
     } catch (error) {
