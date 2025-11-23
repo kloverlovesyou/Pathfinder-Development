@@ -360,17 +360,29 @@ export default {
         {
           // Fallback to backend endpoint for old files
           try {
-              console.log("Axios URL:", `${import.meta.env.VITE_API_BASE_URL}/applications/${applicationID}/requirement`);
-              const response = await axios({
-                url: `${import.meta.env.VITE_API_BASE_URL}/applications/${applicationID}/requirement`,
-                method: "GET",
-                responseType: "blob",
-                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-              });
-              console.log("Response status:", response.status);
-            } catch (err) {
-              console.error("Axios error:", err.response?.status, err.response?.data);
-            }
+          const response = await axios({
+            url: `${import.meta.env.VITE_API_BASE_URL}/applications/${applicationID}/requirement`,
+            method: "GET",
+            responseType: "blob",
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          });
+
+          const url = window.URL.createObjectURL(
+            new Blob([response.data], { type: "application/pdf" })
+          );
+
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "requirement.pdf";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+
+        } catch (err) {
+          console.error("Error downloading requirements:", err);
+          alert("Failed to download requirements. Please try again.");
+        }
           
           const url = window.URL.createObjectURL(
             new Blob([response.data], { type: "application/pdf" })
