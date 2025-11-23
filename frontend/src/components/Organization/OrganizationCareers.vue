@@ -359,12 +359,18 @@ export default {
 
         {
           // Fallback to backend endpoint for old files
-          const response = await axios({
-            url: `${import.meta.env.VITE_API_BASE_URL}/applications/${applicationID}/requirement`,
-            method: "GET",
-            responseType: "blob",
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          });
+          try {
+              console.log("Axios URL:", `${import.meta.env.VITE_API_BASE_URL}/applications/${applicationID}/requirement`);
+              const response = await axios({
+                url: `${import.meta.env.VITE_API_BASE_URL}/applications/${applicationID}/requirement`,
+                method: "GET",
+                responseType: "blob",
+                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+              });
+              console.log("Response status:", response.status);
+            } catch (err) {
+              console.error("Axios error:", err.response?.status, err.response?.data);
+            }
           
           const url = window.URL.createObjectURL(
             new Blob([response.data], { type: "application/pdf" })
