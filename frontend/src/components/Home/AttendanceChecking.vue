@@ -106,7 +106,7 @@ const messageIcon = computed(() =>
 );
 onMounted(async () => {
   trainingID.value = route.query.trainingID;
-  key.value = route.query.key;
+  key.value = route.query.key || route.query.attendance_key;;
 
   if (!trainingID.value || !key.value) {
     invalidQR.value = "❌ Invalid or incomplete QR code.";
@@ -153,7 +153,7 @@ async function submitAttendance() {
   try {
     const payload = {
       trainingID: trainingID.value,
-      attendance_key: key.value, // ✔ match backend field name
+      key: key.value, // ✔ FIXED: backend expects key, not attendance_key
       firstName: first_name.value,
       lastName: last_name.value,
       emailAddress: email.value,
