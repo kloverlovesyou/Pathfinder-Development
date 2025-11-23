@@ -142,6 +142,7 @@ function formatToPHT(dateStr) {
 }
 
 async function submitAttendance() {
+  // Basic required fields validation
   if (!first_name.value || !last_name.value || !email.value || !phone.value) {
     message.value = "⚠️ All fields are required.";
     submittedSuccess.value = false;
@@ -150,18 +151,26 @@ async function submitAttendance() {
   }
 
   try {
-    const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/attendance/checkin`, {
+    const payload = {
       trainingID: trainingID.value,
-      key: key.value,
+      attendance_key: key.value, // ✔ match backend field name
       firstName: first_name.value,
       lastName: last_name.value,
       emailAddress: email.value,
       phoneNumber: phone.value,
-    });
+    };
+
+    console.log("Submitting attendance payload:", payload);
+
+    const res = await axios.post(
+      `${import.meta.env.VITE_API_BASE_URL}/attendance/checkin`,
+      payload
+    );
 
     message.value = res.data.message || "✅ Attendance Recorded Successfully";
     submittedSuccess.value = true;
     submitted.value = true;
+
   } catch (error) {
     message.value = error.response?.data?.message || "⚠️ Attendance submission failed.";
     submittedSuccess.value = false;
