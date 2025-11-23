@@ -277,135 +277,102 @@ export default {
     },
 
     async downloadRequirements(applicationID, rawFilePath) {
+    try {
+      const sanitizeFilePath = (value) => {
+        if (typeof value === "string") {
+          const trimmed = value.trim();
+          return trimmed.length ? trimmed : null;
+        }
+
+        if (value && typeof value === "object") {
+          const candidates = ["requirement_directory", "filePath", "path", "url"];
+          for (const key of candidates) {
+            const candidate = value[key];
+            if (typeof candidate === "string") {
+              const trimmed = candidate.trim();
+              if (trimmed.length) return trimmed;
+            }
+          }
+        }
+        return null;
+      };
+
+      let filePath = sanitizeFilePath(rawFilePath);
+
+      // --- Supabase Download ---
+      if (
+        filePath &&
+        (filePath.startsWith("http") ||
+          filePath.includes("requirement_directory") ||
+          filePath.toLowerCase().includes(".pdf"))
+      ) {
+        try {
+          let pdfUrl = filePath.startsWith("http") ? filePath : null;
+
+          if (!pdfUrl) {
+            const { getPDFUrl } = await import("@/lib/supabase");
+            pdfUrl = await getPDFUrl(filePath, "Requirements"); // <- await
+          }
+
+          if (!pdfUrl) throw new Error("Failed to resolve requirements file URL");
+
+          const response = await fetch(pdfUrl);
+          if (!response.ok) throw new Error("Failed to fetch PDF from Supabase");
+
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const fileName = filePath.split("/").pop() || "requirement.pdf";
+
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          return;
+        } catch (supabaseError) {
+          console.warn(
+            "Supabase download failed, falling back to backend endpoint:",
+            supabaseError
+          );
+        }
+      }
+
+      // --- Backend Download Fallback ---
       try {
-        const sanitizeFilePath = (value) => {
-          if (typeof value === "string") {
-            const trimmed = value.trim();
-            return trimmed.length ? trimmed : null;
-          }
+        const response = await axios({
+          url: `${import.meta.env.VITE_API_BASE_URL}/applications/${applicationID}/requirement`,
+          method: "GET",
+          responseType: "blob",
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        });
 
-          if (value && typeof value === "object") {
-            const candidates = [
-              "requirement_directory",
-              "filePath",
-              "path",
-              "url",
-            ];
+        const url = window.URL.createObjectURL(
+          new Blob([response.data], { type: "application/pdf" })
+        );
 
-            for (const key of candidates) {
-              const candidate = value[key];
-              if (typeof candidate === "string") {
-                const trimmed = candidate.trim();
-                if (trimmed.length) {
-                  return trimmed;
-                }
-              }
-            }
-          }
-
-          return null;
-        };
-
-        let filePath = sanitizeFilePath(rawFilePath);
-        const canUseSupabase =
-          !!filePath &&
-          (filePath.startsWith("http") ||
-            filePath.includes("requirement_directory") ||
-            filePath.toLowerCase().includes(".pdf"));
-
-        // If filePath is provided (from Supabase), use it directly
-        if (canUseSupabase) {
-          try {
-            let pdfUrl = filePath.startsWith("http") ? filePath : null;
-
-            if (!pdfUrl) {
-              const { getPDFUrl } = await import("@/lib/supabase");
-              pdfUrl = getPDFUrl(filePath, "Requirements");
-            }
-
-            if (!pdfUrl) {
-              throw new Error("Failed to resolve requirements file URL");
-            }
-
-            // Fetch the PDF from Supabase
-            const response = await fetch(pdfUrl);
-            if (!response.ok) {
-              throw new Error("Failed to fetch PDF from Supabase");
-            }
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-
-            // Extract filename from path or use default
-            const cleanPath = filePath.split("?")[0];
-            const segments = cleanPath.split("/");
-            const fileName = segments.pop() || "requirement.pdf";
-
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-            return;
-          } catch (supabaseError) {
-            console.warn(
-              "Supabase download failed, falling back to backend endpoint:",
-              supabaseError
-            );
-          }
-        }
-
-        {
-          // Fallback to backend endpoint for old files
-          try {
-          const response = await axios({
-            url: `${import.meta.env.VITE_API_BASE_URL}/applications/${applicationID}/requirement`,
-            method: "GET",
-            responseType: "blob",
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          });
-
-          const url = window.URL.createObjectURL(
-            new Blob([response.data], { type: "application/pdf" })
-          );
-
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = "requirement.pdf";
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-
-        } catch (error) {
-          console.error("Error downloading requirements:", error);
-
-          if (error.response?.status === 404) {
-            alert("Requirement file not found for this application.");
-          } else {
-            alert("Failed to download requirements. Please try again.");
-          }
-        }
-          
-          const url = window.URL.createObjectURL(
-            new Blob([response.data], { type: "application/pdf" })
-          );
-          
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = "requirement.pdf";
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-        }
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "requirement.pdf";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
       } catch (error) {
         console.error("Error downloading requirements:", error);
-        alert("Failed to download requirements. Please try again.");
+
+        if (error.response?.status === 404) {
+          alert("Requirement file not found for this application.");
+        } else {
+          alert("Failed to download requirements. Please try again.");
+        }
       }
-    },
+    } catch (error) {
+      console.error("Error downloading requirements:", error);
+      alert("Failed to download requirements. Please try again.");
+    }
+  },
 
     async confirmSchedule() {
       if (
