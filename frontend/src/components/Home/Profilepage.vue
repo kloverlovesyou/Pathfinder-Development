@@ -727,13 +727,6 @@ onMounted(fetchMyActivities);
                   </span>
                   <button
                     v-if="activity.type === 'career'"
-<<<<<<< HEAD
-                    :class="[
-                      'px-3 py-1 rounded text-white',
-                      'bg-blue-500 hover:bg-blue-600',
-                    ]"
-                    @click="viewRequirement(activity)"
-=======
                     type="button"
                     :class="[
                       'px-3 py-1 rounded text-white',
@@ -742,7 +735,6 @@ onMounted(fetchMyActivities);
                         : 'bg-gray-300 cursor-not-allowed',
                     ]"
                     @click.stop="downloadRequirement(activity, $event)"
->>>>>>> c1d47076dc8da69a8633f36005a0a175b15ebe34
                   >
                     Download Requirement
                   </button>
@@ -1007,14 +999,6 @@ onMounted(fetchMyActivities);
                   <td class="px-6 py-4 whitespace-nowrap text-sm">
                     <button
                       v-if="activity.type === 'career'"
-<<<<<<< HEAD
-                      :class="[
-                        'px-3 py-1 rounded text-white',
-
-                        'bg-blue-500 hover:bg-blue-600',
-                      ]"
-                      @click="viewRequirement(activity)"
-=======
                       type="button"
                       :class="[
                         'px-3 py-1 rounded text-white',
@@ -1023,7 +1007,6 @@ onMounted(fetchMyActivities);
                           : 'bg-gray-300 cursor-not-allowed',
                       ]"
                       @click.stop="downloadRequirement(activity, $event)"
->>>>>>> c1d47076dc8da69a8633f36005a0a175b15ebe34
                     >
                       Download Requirement
                     </button>
