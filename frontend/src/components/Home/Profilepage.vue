@@ -14,22 +14,8 @@ const careerModal = ref(null);
 const trainingModal = ref(null);
 const selectedCareer = ref(null);
 const selectedTraining = ref(null);
-const loading = ref(false);
-
-const viewRequirement = async (activity, event) => {
-  event.stopPropagation();
-
-  try {
-    const response = await axios.get(
-      `/api/applications/${activity.applicationID}/file`
-    );
-
-    window.open(response.data.url, "_blank");
-  } catch (error) {
-    console.error(error);
-    alert("Unable to open requirement file");
-  }
-};
+const isLoadingActivities = ref(false);
+const activitiesError = ref(null);
 
 async function openModal(activity) {
   if (activity.type === "career") {
@@ -184,34 +170,63 @@ function logout() {
 // ✅ Fetch all activities for this user
 async function fetchMyActivities() {
   const savedUser = localStorage.getItem("user");
-  if (!savedUser) return;
+  if (!savedUser) {
+    activitiesError.value = "Please log in to view your activities.";
+    return;
+  }
 
   const user = JSON.parse(savedUser);
   userName.value =
     `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Guest";
 
+  if (!user.applicantID) {
+    activitiesError.value = "User ID not found. Please log in again.";
+    console.error("No applicantID found in user object:", user);
+    return;
+  }
+
+  isLoadingActivities.value = true;
+  activitiesError.value = null;
+
   try {
     const res = await axios.get(
       import.meta.env.VITE_API_BASE_URL + `/my-activities/${user.applicantID}`
     );
-    activities.value = res.data.activities || [];
+    
+    console.log("API Response:", res.data);
+    
+    // Handle both array and object responses
+    const activitiesData = Array.isArray(res.data.activities) 
+      ? res.data.activities 
+      : res.data.activities 
+        ? Object.values(res.data.activities) 
+        : [];
+    
+    activities.value = activitiesData;
+    console.log("Processed activities data:", activities.value);
+    console.log("Number of activities:", activities.value.length);
 
-    console.log("Raw activities data:", activities.value);
     // ✅ Count by status
     upcomingCount.value = activities.value.filter((a) =>
-      ["upcoming", "registered"].includes(a.status?.toLowerCase())
+      ["upcoming", "registered", "applied", "scheduled"].includes(a.status?.toLowerCase())
     ).length;
 
     completedCount.value = activities.value.filter(
-      (a) => a.status?.toLowerCase() === "completed"
+      (a) => a.status?.toLowerCase() === "completed" || a.status?.toLowerCase() === "attended"
     ).length;
 
     // ✅ Start QR countdown timers
     startAllQRCountdowns();
 
-    console.log("Activities fetched:", activities.value);
+    if (activities.value.length === 0) {
+      activitiesError.value = "No activities found. You haven't registered for any trainings or applied for any careers yet.";
+    }
   } catch (error) {
     console.error("Error fetching activities:", error);
+    activitiesError.value = error.response?.data?.message || error.message || "Failed to load activities. Please try again.";
+    activities.value = [];
+  } finally {
+    isLoadingActivities.value = false;
   }
 }
 
@@ -675,7 +690,30 @@ onMounted(fetchMyActivities);
       <div class="bg-white p-4 rounded-lg">
         <h3 class="text-lg font-semibold mb-2">My Activity</h3>
 
-        <ul class="space-y-4">
+        <!-- Loading State -->
+        <div v-if="isLoadingActivities" class="text-center py-8">
+          <span class="loading loading-spinner loading-lg"></span>
+          <p class="mt-2 text-gray-600">Loading activities...</p>
+        </div>
+
+        <!-- Error State -->
+        <div v-else-if="activitiesError" class="text-center py-8">
+          <p class="text-red-600">{{ activitiesError }}</p>
+          <button 
+            @click="fetchMyActivities" 
+            class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Retry
+          </button>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else-if="activities.length === 0" class="text-center py-8">
+          <p class="text-gray-600">No activities found. You haven't registered for any trainings or applied for any careers yet.</p>
+        </div>
+
+        <!-- Activities List -->
+        <ul v-else class="space-y-4">
           <li
             v-for="activity in activities"
             :key="activity.registrationID || activity.applicationID"
@@ -939,7 +977,31 @@ onMounted(fetchMyActivities);
         <!-- Bottom Row: Event Table -->
         <div class="bg-white rounded-lg shadow p-6 flex-1">
           <h3 class="text-2xl font-semibold mb-4">My Activity</h3>
-          <div class="overflow-x-auto">
+          
+          <!-- Loading State -->
+          <div v-if="isLoadingActivities" class="text-center py-12">
+            <span class="loading loading-spinner loading-lg"></span>
+            <p class="mt-2 text-gray-600">Loading activities...</p>
+          </div>
+
+          <!-- Error State -->
+          <div v-else-if="activitiesError" class="text-center py-12">
+            <p class="text-red-600 mb-4">{{ activitiesError }}</p>
+            <button 
+              @click="fetchMyActivities" 
+              class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Retry
+            </button>
+          </div>
+
+          <!-- Empty State -->
+          <div v-else-if="activities.length === 0" class="text-center py-12">
+            <p class="text-gray-600">No activities found. You haven't registered for any trainings or applied for any careers yet.</p>
+          </div>
+
+          <!-- Activities Table -->
+          <div v-else class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                 <tr>
@@ -973,7 +1035,7 @@ onMounted(fetchMyActivities);
               <tbody class="bg-white divide-y divide-gray-200">
                 <tr
                   v-for="activity in activities"
-                  :key="activity.title"
+                  :key="activity.registrationID || activity.applicationID || activity.title"
                   class="hover:bg-gray-100"
                   @click="openModal(activity)"
                 >
