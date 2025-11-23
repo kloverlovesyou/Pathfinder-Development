@@ -379,9 +379,14 @@ export default {
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
 
-        } catch (err) {
-          console.error("Error downloading requirements:", err);
-          alert("Failed to download requirements. Please try again.");
+        } catch (error) {
+          console.error("Error downloading requirements:", error);
+
+          if (error.response?.status === 404) {
+            alert("Requirement file not found for this application.");
+          } else {
+            alert("Failed to download requirements. Please try again.");
+          }
         }
           
           const url = window.URL.createObjectURL(
