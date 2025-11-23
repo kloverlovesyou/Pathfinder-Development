@@ -95,35 +95,17 @@ class ApplicationController extends Controller
             return response()->json(['message' => 'User is not an applicant'], 403);
         }
 
-        // Check if file path is provided (from Supabase upload) or file is uploaded directly
-        $filePath = $request->input('requirement_directory');
-        $hasFileUpload = $request->hasFile('requirement_directory');
-        
-        if ($hasFileUpload) {
-            $file = $request->file('requirement_directory');
-            Log::info('File received (direct upload)', [
-                'name' => $file->getClientOriginalName(),
-                'size' => $file->getSize(),
-                'mime' => $file->getMimeType(),
-            ]);
-        } elseif ($filePath) {
-            Log::info('File path received (from Supabase)', [
-                'path' => $filePath,
-            ]);
-        } else {
-            Log::warning('No file or file path received in request', [
-                'all_input_keys' => array_keys($request->all()),
-            ]);
-        }
+        // ✅ RESTORED VALIDATION
+        $validated = $request->validate([
+            'careerID' => 'required|exists:career,careerID',
+            'requirement_directory' => 'nullable', // file or string
+        ]);
 
-        //$validated = $request->validate([
-          //  'careerID' => 'required|exists:career,careerID',
-            //'requirement_directory' => 'nullable', // Can be file path (string) or file upload
-        //]);
+        $careerID = (int) $validated['careerID'];
 
         // prevent duplicates
         $existing = Application::where('applicantID', $user->applicantID)
-            ->where('careerID', (int) $validated['careerID'])
+            ->where('careerID', $careerID)
             ->first();
 
         if ($existing) {
@@ -133,16 +115,19 @@ class ApplicationController extends Controller
             ], 409);
         }
 
-        // Get file path - either from Supabase upload (string) or handle direct file upload
+        // File handling
+        $filePath = $request->input('requirement_directory');
+        $hasFileUpload = $request->hasFile('requirement_directory');
         $requirementsPath = null;
         
-        if ($filePath) {
-            // File was already uploaded to Supabase by frontend, just use the path
-            $requirementsPath = $filePath;
-            Log::info('Using file path from Supabase upload', [
-                'path' => $requirementsPath,
+        if ($hasFileUpload) {
+            $file = $request->file('requirement_directory');
+            Log::info('File received (direct upload)', [
+                'name' => $file->getClientOriginalName(),
+                'size' => $file->getSize(),
+                'mime' => $file->getMimeType(),
             ]);
-        } elseif ($hasFileUpload) {
+
             try {
                 $requirementsPath = $this->uploadRequirementToSupabase($file);
             } catch (\Exception $e) {
@@ -151,16 +136,22 @@ class ApplicationController extends Controller
                     'trace' => $e->getTraceAsString(),
                 ]);
                 return response()->json([
-                    'message' => 'Failed to upload requirements. Please try again later.',
+                    'message' => 'Failed to upload requirements.',
                     'error' => 'SUPABASE_UPLOAD_FAILED',
                 ], 500);
             }
-        }
-        
 
+        } elseif ($filePath) {
+            $requirementsPath = $filePath;
+            Log::info('Using file path from Supabase upload', [
+                'path' => $requirementsPath,
+            ]);
+        }
+
+        // Save application
         try {
             $app = Application::create([
-                'requirement_directory' => $requirementsPath, // Can be null if no file uploaded
+                'requirement_directory' => $requirementsPath,
                 'dateSubmitted' => Carbon::now(),
                 'applicationStatus' => 'Submitted',
 
@@ -169,7 +160,7 @@ class ApplicationController extends Controller
                 'interviewLocation' => null,
                 'interviewLink' => null,
 
-                'careerID' => (int) $validated['careerID'],
+                'careerID' => $careerID,
                 'applicantID' => $user->applicantID,
             ]);
 
@@ -184,52 +175,40 @@ class ApplicationController extends Controller
                 'message' => 'APPLICATION SUBMITTED SUCCESSFULLY!!!',
                 'data' => $app,
             ], 201);
+
         } catch (\Illuminate\Database\QueryException $e) {
             Log::error('❌ Database error creating application', [
                 'error' => $e->getMessage(),
                 'sql_state' => $e->getCode(),
-                'careerID' => $validated['careerID'] ?? null,
-                'applicantID' => $user->applicantID ?? null,
+                'careerID' => $careerID,
+                'applicantID' => $user->applicantID,
             ]);
-            
-            // Check for specific database errors
-            if (str_contains($e->getMessage(), 'SQLSTATE[HY000]') || str_contains($e->getMessage(), '1364')) {
-                return response()->json([
-                    'message' => 'Failed to submit application: Missing required field. Please ensure all required information is provided.',
-                    'error' => 'DATABASE_CONSTRAINT_ERROR',
-                    'details' => 'A required database field is missing. Please contact support if this issue persists.'
-                ], 500);
-            }
-            
+
             return response()->json([
                 'message' => 'Failed to submit application: Database error occurred.',
                 'error' => 'DATABASE_ERROR',
-                'details' => $e->getMessage()
             ], 500);
         }
+
     } catch (\Illuminate\Validation\ValidationException $e) {
-        Log::error('Validation error in store method', [
-            'errors' => $e->errors(),
-            'message' => $e->getMessage()
+        Log::error('Validation error', [
+            'errors' => $e->errors()
         ]);
         return response()->json([
             'message' => 'Validation failed',
             'errors' => $e->errors()
         ], 422);
+
     } catch (\Exception $e) {
-        Log::error('Fatal error in store method', [
+        Log::error('Fatal error', [
             'message' => $e->getMessage(),
-            'file' => $e->getFile(),
-            'line' => $e->getLine(),
-            'trace' => $e->getTraceAsString()
         ]);
         return response()->json([
-            'message' => 'An error occurred while submitting the application: ' . $e->getMessage(),
+            'message' => 'An error occurred: ' . $e->getMessage(),
             'error' => 'INTERNAL_SERVER_ERROR'
         ], 500);
     }
 }
-
     /**
      * Upload requirement document to Supabase Storage using the service key.
      */
