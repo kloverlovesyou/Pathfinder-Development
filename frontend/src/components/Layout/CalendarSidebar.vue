@@ -3,6 +3,7 @@ import { ref, reactive, computed, onMounted, watch, nextTick } from "vue";
 import axios from "axios";
 import QrcodeVue from "qrcode.vue"; // make sure to import this if using QR
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const registeredPosts = reactive({}); // stores registered trainings
 
 async function fetchMyRegistrations() {
@@ -34,11 +35,14 @@ const posts = ref([]); // never undefined
 const organizations = ref({}); // never undefined
 
 const fetchApplications = async (applicantID) => {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
   try {
-    const response = await axios.get(
-      import.meta.env.VITE_API_BASE_URL +
-        `/applications?applicantID=${applicantID}`
-    );
+    const response = await axios.get(`${API_BASE_URL}/applications`, {
+      params: { applicantID },
+      headers: { Authorization: `Bearer ${token}` },
+    });
     applications.value = response.data;
   } catch (error) {
     console.error("Failed to fetch applications:", error);
@@ -139,8 +143,13 @@ async function fetchCareerDetails(careerID) {
   }
 }
 async function fetchInterviews() {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
   try {
-    const res = await axios.get("/api/interviews");
+    const res = await axios.get(`${API_BASE_URL}/interviews`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     careerEvents.value = res.data;
   } catch (err) {
     console.error("Error fetching interviews:", err);

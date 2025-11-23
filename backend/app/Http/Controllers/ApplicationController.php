@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Application;
 use Illuminate\Support\Carbon;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 
@@ -121,113 +123,20 @@ class ApplicationController extends Controller
                 'path' => $requirementsPath,
             ]);
         } elseif ($hasFileUpload) {
-            // Legacy: Direct file upload (fallback for old clients)
-            Log::warning('Direct file upload detected - consider using Supabase upload from frontend');
-            // For now, skip direct uploads - frontend should handle Supabase upload
-            $requirementsPath = null;
+            try {
+                $requirementsPath = $this->uploadRequirementToSupabase($file);
+            } catch (\Exception $e) {
+                Log::error('Failed to upload requirement to Supabase', [
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                return response()->json([
+                    'message' => 'Failed to upload requirements. Please try again later.',
+                    'error' => 'SUPABASE_UPLOAD_FAILED',
+                ], 500);
+            }
         }
         
-        // OLD CODE - Keep for reference but not used when frontend uploads to Supabase
-        /*
-      if ($request->hasFile('requirement_directory')) {
-        try {
-            $file = $request->file('requirement_directory');
-            $filename = time() . '_' . $file->getClientOriginalName();
-            
-            // Store in Supabase Storage using native API
-            $storagePath = 'requirement_directory/' . $filename;
-            
-            // Upload to Supabase Storage using HTTP client
-            $supabaseUrl = env('SUPABASE_URL', 'https://hmevengvfponcwslnyye.supabase.co');
-            // Remove any path suffixes that might be in the URL
-            $supabaseUrl = preg_replace('#/storage/v1/object/public/?$#', '', $supabaseUrl);
-            $supabaseUrl = rtrim($supabaseUrl, '/'); // Remove trailing slash
-            // Use service_role key for uploads (has full permissions)
-            // Fallback to SUPABASE_KEY if SUPABASE_SECRET is not set
-            $supabaseKey = env('SUPABASE_SECRET') ?: env('SUPABASE_KEY');
-            $bucket = env('SUPABASE_BUCKET');
-            
-            if (!$supabaseKey || !$bucket) {
-                Log::error('Supabase credentials missing', [
-                    'has_secret' => !empty(env('SUPABASE_SECRET')),
-                    'has_key' => !empty(env('SUPABASE_KEY')),
-                    'has_bucket' => !empty($bucket)
-                ]);
-                throw new \Exception('Supabase Storage not configured - need SUPABASE_SECRET (service_role key) or SUPABASE_KEY');
-            }
-            
-            $fileContents = file_get_contents($file->getPathname());
-            $fileMimeType = $file->getMimeType();
-            
-            // Upload to Supabase Storage
-            // Note: Bucket names in Supabase are case-sensitive
-            // Keep original bucket name (don't force lowercase)
-            $uploadUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}/{$storagePath}";
-            
-            Log::info('Attempting Supabase upload', [
-                'upload_url' => $uploadUrl,
-                'bucket' => $bucket,
-                'storage_path' => $storagePath,
-                'file_size' => strlen($fileContents),
-                'mime_type' => $fileMimeType,
-            ]);
-            
-            $client = new \GuzzleHttp\Client();
-            try {
-                $response = $client->request('POST', $uploadUrl, [
-                    'headers' => [
-                        'Authorization' => "Bearer {$supabaseKey}",
-                        'Content-Type' => $fileMimeType,
-                        'x-upsert' => 'true', // Overwrite if exists
-                    ],
-                    'body' => $fileContents,
-                ]);
-                
-                $statusCode = $response->getStatusCode();
-                $responseBody = $response->getBody()->getContents();
-                
-                Log::info('Supabase upload response', [
-                    'status' => $statusCode,
-                    'response' => $responseBody,
-                ]);
-                
-                if ($statusCode !== 200 && $statusCode !== 201) {
-                    Log::error('Failed to upload file to Supabase', [
-                        'status' => $statusCode,
-                        'response' => $responseBody
-                    ]);
-                    throw new \Exception('Failed to upload file to Supabase Storage: ' . $responseBody);
-                }
-            } catch (\GuzzleHttp\Exception\RequestException $e) {
-                $errorResponse = $e->hasResponse() ? $e->getResponse()->getBody()->getContents() : $e->getMessage();
-                Log::error('Guzzle HTTP error uploading to Supabase', [
-                    'message' => $e->getMessage(),
-                    'response' => $errorResponse,
-                    'upload_url' => $uploadUrl,
-                ]);
-                throw new \Exception('HTTP error uploading to Supabase: ' . $errorResponse);
-            }
-            
-            // Store the path in DB (this will be the path in Supabase)
-            $requirementsPath = $storagePath;
-
-            Log::info('Requirements file stored successfully in Supabase', [
-                'stored_path' => $requirementsPath,
-                'upload_url' => $uploadUrl,
-                'status_code' => $response->getStatusCode()
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error storing requirement file in Supabase', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            // Don't fail the entire application if file upload fails, but log it
-            // Continue without the file path
-            $requirementsPath = null;
-        }
-    }
-        */
-
 
         try {
             $app = Application::create([
@@ -298,6 +207,53 @@ class ApplicationController extends Controller
             'message' => 'An error occurred while submitting the application: ' . $e->getMessage(),
             'error' => 'INTERNAL_SERVER_ERROR'
         ], 500);
+    }
+
+    /**
+     * Upload requirement document to Supabase Storage using the service key.
+     */
+    protected function uploadRequirementToSupabase(UploadedFile $file): string
+    {
+        $supabaseUrl = env('SUPABASE_URL', env('SUPABASE_ENDPOINT', 'https://hmevengvfponcwslnyye.supabase.co'));
+        $supabaseUrl = preg_replace('#/storage/v1/?$#', '', $supabaseUrl);
+        $supabaseUrl = rtrim($supabaseUrl, '/');
+
+        $bucket = env('SUPABASE_BUCKET');
+        $supabaseKey = env('SUPABASE_SECRET') ?: env('SUPABASE_KEY');
+
+        if (!$bucket || !$supabaseKey) {
+            throw new \RuntimeException('Supabase Storage not configured');
+        }
+
+        $sanitizedName = preg_replace('/[^A-Za-z0-9._-]/', '_', $file->getClientOriginalName());
+        $storagePath = 'requirement_directory/' . time() . '_' . $sanitizedName;
+        $uploadUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}/{$storagePath}";
+
+        $response = Http::withHeaders([
+            'Authorization' => "Bearer {$supabaseKey}",
+            'apikey' => $supabaseKey,
+            'Content-Type' => $file->getMimeType() ?: 'application/octet-stream',
+            'x-upsert' => 'true',
+        ])->withBody(
+            file_get_contents($file->getRealPath()),
+            $file->getMimeType() ?: 'application/octet-stream'
+        )->post($uploadUrl);
+
+        if (!$response->successful()) {
+            Log::error('Supabase upload error', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'path' => $storagePath,
+            ]);
+            throw new \RuntimeException('Supabase upload failed: ' . $response->body());
+        }
+
+        Log::info('Requirements file stored in Supabase', [
+            'path' => $storagePath,
+            'status' => $response->status(),
+        ]);
+
+        return $storagePath;
     }
 }
 
