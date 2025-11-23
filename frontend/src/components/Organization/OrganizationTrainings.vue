@@ -533,10 +533,10 @@ import { activeTrainingQR, activeTrainingId, scheduleQR } from "@/composables/us
 import { uploadCertificate, getPDFUrl } from "@/lib/supabase.js";
 import jsPDF from "jspdf";
 import * as pdfjsLib from "pdfjs-dist";
-import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
-// Configure pdfjs worker - use Vite's asset handling for the worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+// Configure pdfjs worker - use worker from public folder
+// Files in public folder are served from root in both dev and production
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 // Helper function to convert PDF blob/ArrayBuffer to PNG image
 async function convertPDFToImage(pdfBlobOrArrayBuffer) {
