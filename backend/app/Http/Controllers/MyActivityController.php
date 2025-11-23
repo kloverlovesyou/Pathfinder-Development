@@ -26,7 +26,7 @@ public function getMyActivities($applicantID)
             'training.trainingLink',
             'registration.registrationStatus as status',
             'registration.certGivenDate',
-            'registration.certificate',
+            'registration.certificatePath as certificate',
             'organization.name as organizationName',
             DB::raw("'training' as type") // 👈 lowercase for consistency
         )
