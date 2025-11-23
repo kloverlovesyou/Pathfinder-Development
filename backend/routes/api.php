@@ -176,7 +176,7 @@ Route::middleware('auth.custom')->group(function () {
 
     // Applications
     Route::get('/applications', [ApplicationController::class, 'index']);
-    Route::post('/applications/store', [ApplicationController::class, 'store']);
+    Route::post('/applications', [ApplicationController::class, 'store']);
     Route::delete('/applications/{id}', [ApplicationController::class, 'destroy']);
     Route::get('/applications/{id}/requirement', [ApplicationController::class, 'viewRequirement']);
     Route::get('/interviews', [InterviewController::class, 'index']);
