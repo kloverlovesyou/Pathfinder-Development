@@ -568,7 +568,7 @@ const downloadCertificate = async (activity, event) => {
       console.log("Found registration:", registration);
       
       if (registration) {
-        filePath = registration.certificate || registration.certificatePath;
+        filePath =  registration.certificatePath;
         console.log("certificate path from API:", filePath);
       }
     } catch (error) {
