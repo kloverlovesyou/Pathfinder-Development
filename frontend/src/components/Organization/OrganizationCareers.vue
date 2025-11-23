@@ -306,7 +306,7 @@ export default {
 
           if (!pdfUrl) {
             const { getPDFUrl } = await import("@/lib/supabase");
-            pdfUrl = await getPDFUrl(filePath, "Requirements"); // ensure await
+            pdfUrl = getPDFUrl(filePath, "Requirements"); // getPDFUrl is synchronous
           }
 
           if (!pdfUrl) throw new Error("Failed to resolve file URL from Supabase");
@@ -328,13 +328,13 @@ export default {
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
 
-          return; // done, no need to use backend fallback
+          return; // done, no need for backend fallback
         } catch (supabaseError) {
           console.warn("Supabase download failed, attempting backend fallback:", supabaseError);
         }
       }
 
-      // --- Backend Fallback (only if Supabase fails) ---
+      // --- Backend Fallback (optional) ---
       try {
         const response = await axios({
           url: `${import.meta.env.VITE_API_BASE_URL}/applications/${applicationID}/requirement`,
