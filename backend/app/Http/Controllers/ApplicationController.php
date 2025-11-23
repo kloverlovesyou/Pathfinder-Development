@@ -228,6 +228,7 @@ class ApplicationController extends Controller
             'error' => 'INTERNAL_SERVER_ERROR'
         ], 500);
     }
+}
 
     /**
      * Upload requirement document to Supabase Storage using the service key.
@@ -275,7 +276,6 @@ class ApplicationController extends Controller
 
         return $storagePath;
     }
-}
 
 
     //withdraw application
