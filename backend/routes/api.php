@@ -87,9 +87,11 @@ Route::get('/get-verification-link/{email}', [AuthController::class, 'getVerific
 Route::post('/clear-cache', function() {
     \Artisan::call('config:clear');
     \Artisan::call('cache:clear');
+    \Artisan::call('route:clear'); // Clear route cache
+    \Artisan::call('view:clear'); // Clear view cache
     return response()->json([
         'status' => 'success',
-        'message' => 'Config and cache cleared successfully'
+        'message' => 'Config, cache, route, and view cache cleared successfully'
     ]);
 });
 
@@ -163,7 +165,7 @@ Route::middleware('auth.custom')->group(function () {
     Route::put('/applications/{applicationID}/interview', [ApplicationController::class, 'updateInterview']);
     Route::get('/applications/{applicationID}/requirements/signed-url', [ApplicationFileController::class, 'generateSignedUrl']);
     Route::get('/applications/{id}/requirements', [ApplicationController::class, 'getRequirements']);
-Route::post('/applications/{id}/upload-requirement', [ApplicationController::class, 'uploadRequirement']);
+    Route::post('/applications/{id}/upload-requirement', [ApplicationController::class, 'uploadRequirement']);
 
 
     // Registrations

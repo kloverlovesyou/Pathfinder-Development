@@ -190,9 +190,13 @@ async function submitApplication() {
     } else if (error.response?.status === 401) {
       addToast("UNAUTHORIZED. PLEASE LOG IN AGAIN", "accent");
     } else if (error.response?.status === 422) {
-      addToast("INVALID INPUT. ONLY PDF UP TO 5MB", "accent");
+      const errorMsg = error.response?.data?.message || error.response?.data?.errors?.[0] || "INVALID INPUT. ONLY PDF UP TO 5MB";
+      addToast(errorMsg, "accent");
     } else {
-      addToast("FAILED TO SUBMIT APPLICATION", "accent");
+      // Show backend error message if available, otherwise show generic message
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || "FAILED TO SUBMIT APPLICATION";
+      addToast(errorMsg, "accent");
+      console.error("Application submission error:", error.response?.data || error);
     }
   }
 }

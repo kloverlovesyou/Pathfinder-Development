@@ -249,24 +249,55 @@ class ApplicationController extends Controller
         */
 
 
-        $app = Application::create([
-            'requirement_directory' => $filePath,
-            'dateSubmitted' => Carbon::now(),
-            'applicationStatus' => 'Submitted',
+        try {
+            $app = Application::create([
+                'requirement_directory' => $requirementsPath, // Can be null if no file uploaded
+                'dateSubmitted' => Carbon::now(),
+                'applicationStatus' => 'Submitted',
 
-            'interviewSchedule' => null,
-            'interviewMode' => null,
-            'interviewLocation' => null,
-            'interviewLink' => null,
+                'interviewSchedule' => null,
+                'interviewMode' => null,
+                'interviewLocation' => null,
+                'interviewLink' => null,
 
-            'careerID' => (int) $validated['careerID'],
-            'applicantID' => $user->applicantID,
-        ]);
+                'careerID' => (int) $validated['careerID'],
+                'applicantID' => $user->applicantID,
+            ]);
 
-        return response()->json([
-            'message' => 'APPLICATION SUBMITTED SUCCESSFULLY!!!',
-            'data' => $app,
-        ], 201);
+            Log::info('✅ Application created successfully', [
+                'applicationID' => $app->applicationID,
+                'careerID' => $app->careerID,
+                'applicantID' => $app->applicantID,
+                'has_requirement' => !empty($requirementsPath),
+            ]);
+
+            return response()->json([
+                'message' => 'APPLICATION SUBMITTED SUCCESSFULLY!!!',
+                'data' => $app,
+            ], 201);
+        } catch (\Illuminate\Database\QueryException $e) {
+            Log::error('❌ Database error creating application', [
+                'error' => $e->getMessage(),
+                'sql_state' => $e->getCode(),
+                'careerID' => $validated['careerID'] ?? null,
+                'applicantID' => $user->applicantID ?? null,
+            ]);
+            
+            // Check for specific database errors
+            if (str_contains($e->getMessage(), 'SQLSTATE[HY000]') || str_contains($e->getMessage(), '1364')) {
+                return response()->json([
+                    'message' => 'Failed to submit application: Missing required field. Please ensure all required information is provided.',
+                    'error' => 'DATABASE_CONSTRAINT_ERROR',
+                    'details' => 'A required database field is missing. Please contact support if this issue persists.'
+                ], 500);
+            }
+            
+            return response()->json([
+                'message' => 'Failed to submit application: Database error occurred.',
+                'error' => 'DATABASE_ERROR',
+                'details' => $e->getMessage()
+            ], 500);
+        }
     } catch (\Illuminate\Validation\ValidationException $e) {
         Log::error('Validation error in store method', [
             'errors' => $e->errors(),

@@ -353,6 +353,7 @@ class RegistrationController extends Controller
                         'certificate_path' => $certificatePath, // Store the Supabase path
                         'applicantID' => $registration->applicantID,
                         'IsSelected' => 0, // Default to not selected for resume
+                        'certificate' => '', // Empty string for organization certificates (field is NOT NULL)
                     ]);
                     
                     Log::info('✅ Certificate automatically added to Certification model', [
