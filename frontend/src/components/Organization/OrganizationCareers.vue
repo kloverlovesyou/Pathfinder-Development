@@ -278,12 +278,12 @@ export default {
 
     async downloadRequirements(applicationID, rawFilePath) {
     try {
+      // Helper to sanitize filePath input
       const sanitizeFilePath = (value) => {
         if (typeof value === "string") {
           const trimmed = value.trim();
           return trimmed.length ? trimmed : null;
         }
-
         if (value && typeof value === "object") {
           const candidates = ["requirement_directory", "filePath", "path", "url"];
           for (const key of candidates) {
@@ -297,24 +297,21 @@ export default {
         return null;
       };
 
-      let filePath = sanitizeFilePath(rawFilePath);
+      const filePath = sanitizeFilePath(rawFilePath);
 
       // --- Supabase Download ---
-      if (
-        filePath &&
-        (filePath.startsWith("http") ||
-          filePath.includes("requirement_directory") ||
-          filePath.toLowerCase().includes(".pdf"))
-      ) {
+      if (filePath) {
         try {
           let pdfUrl = filePath.startsWith("http") ? filePath : null;
 
           if (!pdfUrl) {
             const { getPDFUrl } = await import("@/lib/supabase");
-            pdfUrl = await getPDFUrl(filePath, "Requirements"); // <- await
+            pdfUrl = await getPDFUrl(filePath, "Requirements"); // ensure await
           }
 
-          if (!pdfUrl) throw new Error("Failed to resolve requirements file URL");
+          if (!pdfUrl) throw new Error("Failed to resolve file URL from Supabase");
+
+          console.log("Fetching PDF from Supabase:", pdfUrl);
 
           const response = await fetch(pdfUrl);
           if (!response.ok) throw new Error("Failed to fetch PDF from Supabase");
@@ -330,16 +327,14 @@ export default {
           a.click();
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
-          return;
+
+          return; // done, no need to use backend fallback
         } catch (supabaseError) {
-          console.warn(
-            "Supabase download failed, falling back to backend endpoint:",
-            supabaseError
-          );
+          console.warn("Supabase download failed, attempting backend fallback:", supabaseError);
         }
       }
 
-      // --- Backend Download Fallback ---
+      // --- Backend Fallback (only if Supabase fails) ---
       try {
         const response = await axios({
           url: `${import.meta.env.VITE_API_BASE_URL}/applications/${applicationID}/requirement`,
@@ -348,10 +343,7 @@ export default {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
 
-        const url = window.URL.createObjectURL(
-          new Blob([response.data], { type: "application/pdf" })
-        );
-
+        const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
         const a = document.createElement("a");
         a.href = url;
         a.download = "requirement.pdf";
@@ -360,8 +352,7 @@ export default {
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
       } catch (error) {
-        console.error("Error downloading requirements:", error);
-
+        console.error("Backend fallback failed:", error);
         if (error.response?.status === 404) {
           alert("Requirement file not found for this application.");
         } else {
@@ -369,7 +360,7 @@ export default {
         }
       }
     } catch (error) {
-      console.error("Error downloading requirements:", error);
+      console.error("Unexpected error in downloadRequirements:", error);
       alert("Failed to download requirements. Please try again.");
     }
   },
