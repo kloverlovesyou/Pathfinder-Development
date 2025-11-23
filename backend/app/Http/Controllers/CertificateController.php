@@ -28,31 +28,37 @@ public function index($applicantID)
     
     $allCertificates = [];
     
-    // Step 1: Fetch all certificates from certifications table that have certificate_path
-    // All certificates now use certificate_path (stored in Supabase)
-    $certifications = Certification::where('applicantID', $applicantID)
-        ->whereNotNull('certificate_path')
+    // Step 1: Fetch manually uploaded certificates from certifications table (binary data)
+    $manualCertifications = Certification::where('applicantID', $applicantID)
+        ->whereNull('certificate_path')
+        ->whereNotNull('certificate')
         ->get();
     
-    foreach ($certifications as $cert) {
-        if (empty($cert->certificate_path)) {
-            continue;
+    foreach ($manualCertifications as $cert) {
+        if (empty($cert->certificate) || strlen($cert->certificate) < 10) {
+            continue; // Skip invalid binary data
         }
         
-        // Generate Supabase public URL for this certificate
-        $publicUrl = $this->generateSupabaseUrl($cert->certificate_path);
+        $mimeType = 'image/png'; // default
+        if (function_exists('finfo_open')) {
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $detectedMime = finfo_buffer($finfo, $cert->certificate);
+            finfo_close($finfo);
+            
+            if ($detectedMime && str_starts_with($detectedMime, 'image/')) {
+                $mimeType = $detectedMime;
+            }
+        }
         
-        // Determine source: if it's from a registration, it's organization-issued, otherwise manual
-        $source = 'manual'; // Default to manual for user-uploaded certificates
+        $dataUrl = 'data:' . $mimeType . ';base64,' . base64_encode($cert->certificate);
         
         $allCertificates[] = [
             'certificationID' => $cert->certificationID,
             'certificationName' => $cert->certificationName,
-            'certificate' => $publicUrl, // Supabase public URL
+            'certificate' => $dataUrl,
             'applicantID' => $cert->applicantID,
             'IsSelected' => (int) $cert->IsSelected,
-            'source' => $source,
-            'certificate_path' => $cert->certificate_path,
+            'source' => 'manual',
         ];
     }
     
@@ -70,18 +76,11 @@ public function index($applicantID)
     ]);
     
     // Step 3: Create certificates from registrations - fetch from Supabase using certificate_path
-    $existingPaths = array_column($allCertificates, 'certificate_path');
-    
     foreach ($registrations as $registration) {
         $certificatePath = $registration->certificatePath;
         $training = $registration->training;
         
         if (empty($certificatePath)) {
-            continue;
-        }
-        
-        // Skip if already added from certifications table
-        if (in_array($certificatePath, $existingPaths)) {
             continue;
         }
         
@@ -117,6 +116,7 @@ public function index($applicantID)
             try {
                 Certification::create([
                     'certificationName' => $certificationName,
+                    'certificate' => null,
                     'certificate_path' => $certificatePath,
                     'applicantID' => $registration->applicantID,
                     'IsSelected' => 0,
@@ -134,6 +134,30 @@ public function index($applicantID)
         }
     }
     
+    // Step 4: Also fetch certificates from certifications table that have certificate_path
+    $certificationsWithPath = Certification::where('applicantID', $applicantID)
+        ->whereNotNull('certificate_path')
+        ->get();
+    
+    // Add certificates that have certificate_path but might not be in registrations
+    $existingPaths = array_column($allCertificates, 'certificate_path');
+    
+    foreach ($certificationsWithPath as $cert) {
+        if (!empty($cert->certificate_path) && !in_array($cert->certificate_path, $existingPaths)) {
+            $publicUrl = $this->generateSupabaseUrl($cert->certificate_path);
+            
+            $allCertificates[] = [
+                'certificationID' => $cert->certificationID,
+                'certificationName' => $cert->certificationName,
+                'certificate' => $publicUrl,
+                'applicantID' => $cert->applicantID,
+                'IsSelected' => (int) $cert->IsSelected,
+                'source' => 'organization',
+                'certificate_path' => $cert->certificate_path,
+            ];
+        }
+    }
+    
     Log::info('🎯 Returning certificates', [
         'applicantID' => $applicantID,
         'totalCount' => count($allCertificates),
@@ -147,12 +171,54 @@ public function index($applicantID)
     // Upload a new certificate
     public function store(Request $request)
     {
-        $request->validate([
+        // Log request details for debugging
+        Log::info('📝 Certificate store request', [
+            'hasFile' => $request->hasFile('certificate'),
+            'hasPath' => $request->has('certificate_path'),
+            'certificate_path' => $request->input('certificate_path'),
+            'all_input' => $request->except(['certificate']), // Don't log binary data
+        ]);
+        
+        // Validate based on whether we have a file or certificate_path
+        $hasFile = $request->hasFile('certificate');
+        $hasPath = $request->has('certificate_path') && !empty($request->certificate_path);
+        
+        // If neither file nor path is provided, that's an error
+        if (!$hasFile && !$hasPath) {
+            return response()->json([
+                'message' => 'Either certificate file or certificate_path must be provided',
+                'errors' => ['certificate' => ['Either certificate file or certificate_path must be provided']]
+            ], 422);
+        }
+        
+        // At least one of certificate (file) or certificate_path must be provided
+        // But not both are required - organization certificates have path, manual have file
+        $validationRules = [
             'certificationName' => 'required|string|max:255',
-            'certificate' => 'required|file|mimes:jpeg,png,jpg,pdf|max:4096',
             'applicantID' => 'required|integer',
             'IsSelected' => 'sometimes|integer|in:0,1',
-        ]);
+        ];
+        
+        // Only validate certificate as file if it's actually being uploaded
+        // Don't include certificate in validation rules at all if not uploading a file
+        if ($hasFile) {
+            $validationRules['certificate'] = 'required|file|mimes:jpeg,png,jpg|max:4096';
+        }
+        
+        // Validate certificate_path if provided
+        if ($hasPath) {
+            $validationRules['certificate_path'] = 'required|string';
+        }
+        
+        try {
+            $request->validate($validationRules);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('❌ Certificate validation failed', [
+                'errors' => $e->errors(),
+                'rules' => $validationRules,
+            ]);
+            throw $e;
+        }
 
         // Handle IsSelected - convert string to integer if needed
         $isSelected = $request->IsSelected ?? 1;
@@ -166,59 +232,78 @@ public function index($applicantID)
             'IsSelected' => $isSelected ? 1 : 0,
         ];
 
-        // Handle file upload - upload to Supabase and store path
-        if ($request->hasFile('certificate')) {
+        // Handle file upload (manual certificates)
+        if ($hasFile) {
             $file = $request->file('certificate');
+            $binaryData = file_get_contents($file->getRealPath());
+            $data['certificate'] = $binaryData;
+        }
+        // For organization certificates without file, don't include certificate field at all
+        // This matches RegistrationController which creates certificates without certificate field
+        // (see RegistrationController line 193-198)
+
+        // Handle certificate_path (organization-issued certificates)
+        if ($hasPath) {
+            // Check if certification already exists for this path
+            $existing = Certification::where('applicantID', $request->applicantID)
+                ->where('certificate_path', $request->certificate_path)
+                ->first();
             
-            // Initialize Supabase client
-            $storage = new StorageClient(
-                env('SUPABASE_URL'),
-                env('SUPABASE_SECRET')
-            );
-            
-            $bucket = env('SUPABASE_BUCKET', 'Requirements');
-            
-            // Generate unique filename
-            $fileName = 'certificate_directory/' . time() . '_' . $request->applicantID . '_' . $file->getClientOriginalName();
-            $fileBytes = file_get_contents($file->getRealPath());
-            
-            // Upload to Supabase
-            $result = $storage->from($bucket)->upload($fileName, $fileBytes);
-            
-            if (!empty($result['error'])) {
-                Log::error('❌ Failed to upload certificate to Supabase', [
-                    'error' => $result['error'],
-                    'fileName' => $fileName,
-                ]);
+            if ($existing) {
+                // Update existing certification
+                $existing->certificationName = $request->certificationName;
+                $updateIsSelected = $request->IsSelected ?? $existing->IsSelected;
+                if (is_string($updateIsSelected)) {
+                    $updateIsSelected = (int) $updateIsSelected;
+                }
+                $existing->IsSelected = $updateIsSelected ? 1 : 0;
+                $existing->save();
+                
+                $safeCert = $existing->toArray();
+                unset($safeCert['certificate']);
+                
                 return response()->json([
-                    'message' => 'Failed to upload certificate to storage',
-                    'error' => $result['error']
-                ], 500);
+                    'message' => 'Certificate updated successfully!',
+                    'data' => $safeCert,
+                    'certificationID' => $existing->certificationID,
+                ]);
             }
             
-            // Store the path instead of binary data
-            $data['certificate_path'] = $fileName;
-            
-            Log::info('✅ Certificate uploaded to Supabase', [
-                'certificate_path' => $fileName,
-                'applicantID' => $request->applicantID,
+            $data['certificate_path'] = $request->certificate_path;
+        }
+
+        // Create the certification
+        // For organization certificates, don't include certificate field (like RegistrationController does)
+        try {
+            Log::info('📦 Attempting to create certification', [
+                'data_keys' => array_keys($data),
+                'has_certificate' => isset($data['certificate']),
+                'has_certificate_path' => isset($data['certificate_path']),
             ]);
-        }
-
-        // Ensure certificate_path is set
-        if (empty($data['certificate_path'])) {
+            
+            $cert = Certification::create($data);
+            
+            Log::info('✅ Certification created successfully', [
+                'certificationID' => $cert->certificationID,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('❌ Failed to create certification', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'data_keys' => array_keys($data),
+            ]);
+            
             return response()->json([
-                'message' => 'Certificate upload failed.',
-            ], 422);
+                'message' => 'Failed to create certificate: ' . $e->getMessage(),
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        $cert = Certification::create($data);
 
         $safeCert = $cert->toArray();
         unset($safeCert['certificate']);
 
         return response()->json([
-            'message' => 'Certificate saved successfully!',
+            'message' => 'Certificate uploaded successfully!',
             'data' => $safeCert,
             'certificationID' => $cert->certificationID,
         ]);
@@ -241,94 +326,22 @@ public function index($applicantID)
 
 public function toggleSelection($id)
 {
-    try {
-        $cert = Certification::find($id);
+    $cert = Certification::find($id);
 
-        if (!$cert) {
-            return response()->json(['message' => 'Certificate not found'], 404);
-        }
-
-        // ✅ Flip the IsSelected value properly (handle null, 0, 1, or string values)
-        // Convert to integer first to handle null/string cases
-        $currentValue = (int) ($cert->IsSelected ?? 0);
-        $cert->IsSelected = $currentValue ? 0 : 1;
-        
-        if (!$cert->save()) {
-            Log::error('Failed to save certificate toggle', [
-                'certificationID' => $id,
-                'IsSelected' => $cert->IsSelected
-            ]);
-            return response()->json([
-                'message' => 'Failed to update certificate selection'
-            ], 500);
-        }
-
-        return response()->json([
-            'message' => $cert->IsSelected
-                ? 'Certificate added to resume'
-                : 'Certificate removed from resume',
-            'IsSelected' => (int) $cert->IsSelected, // ✅ always return as integer
-            'certificationID' => $cert->certificationID,
-        ]);
-    } catch (\Exception $e) {
-        Log::error('Error toggling certificate selection', [
-            'certificationID' => $id,
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        
-        return response()->json([
-            'message' => 'An error occurred while updating certificate selection',
-            'error' => $e->getMessage()
-        ], 500);
+    if (!$cert) {
+        return response()->json(['message' => 'Certificate not found'], 404);
     }
-}
 
-// ✅ Toggle or create organization certificate selection (name only for resume)
-public function toggleOrganizationCertificate(Request $request)
-{
-    $request->validate([
-        'applicantID' => 'required|integer',
-        'certificationName' => 'required|string|max:255',
-        'certificate_path' => 'required|string',
-    ]);
-    
-    $applicantID = $request->applicantID;
-    $certificatePath = $request->certificate_path;
-    
-    // Find existing certification by certificate_path
-    $existing = Certification::where('applicantID', $applicantID)
-        ->where('certificate_path', $certificatePath)
-        ->first();
-    
-    if ($existing) {
-        // Toggle existing certification
-        $existing->IsSelected = $existing->IsSelected ? 0 : 1;
-        $existing->save();
-        
-        return response()->json([
-            'message' => $existing->IsSelected
-                ? 'Certificate added to resume'
-                : 'Certificate removed from resume',
-            'IsSelected' => (int) $existing->IsSelected,
-            'certificationID' => $existing->certificationID,
-            'certificationName' => $existing->certificationName,
-        ]);
-    }
-    
-    // Create new certification entry (name only for resume)
-    $cert = Certification::create([
-        'certificationName' => $request->certificationName,
-        'certificate_path' => $certificatePath,
-        'applicantID' => $applicantID,
-        'IsSelected' => 1, // Auto-select when adding to resume
-    ]);
-    
+    // ✅ Flip the IsSelected value properly (handle null or string values)
+    $cert->IsSelected = $cert->IsSelected ? 0 : 1;
+    $cert->save();
+
     return response()->json([
-        'message' => 'Certificate added to resume',
-        'IsSelected' => 1,
+        'message' => $cert->IsSelected
+            ? 'Certificate added to resume'
+            : 'Certificate removed from resume',
+        'IsSelected' => (int) $cert->IsSelected, // ✅ always return as integer
         'certificationID' => $cert->certificationID,
-        'certificationName' => $cert->certificationName,
     ]);
 }
 

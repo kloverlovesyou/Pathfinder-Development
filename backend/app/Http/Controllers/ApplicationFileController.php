@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Application;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use App\Services\SupabaseClient;
 
 class ApplicationFileController extends Controller
 {
@@ -64,4 +65,46 @@ class ApplicationFileController extends Controller
             ]
         );
     }
+
+    public function getFileUrl($filename)
+    {
+        $storage = SupabaseClient::storage();
+
+        $bucket = $storage->from('Requirements');
+
+        $filePath = "requirement_directory/" . $filename;
+
+        $publicUrl = $bucket->getPublicUrl($filePath);
+
+        return response()->json([
+            'url' => $publicUrl
+        ]);
+    }
+
+    public function show($applicationId)
+{
+    // find the application
+    $app = Application::findOrFail($applicationId);
+
+    // check if file exists
+    if (!$app->requirement_directory) {
+        return response()->json([
+            'error' => 'No requirement uploaded'
+        ], 404);
+    }
+
+    // generate public URL
+    $storage = SupabaseClient::storage();
+    $bucket = $storage->from('Requirements');
+
+    // NOTE: you stored the full path like "requirement_directory/xyz.pdf"
+    $filePath = $app->requirement_directory;
+
+    $publicUrl = $bucket->getPublicUrl($filePath);
+
+    return response()->json([
+        'url' => $publicUrl
+    ]);
+}
+
 }

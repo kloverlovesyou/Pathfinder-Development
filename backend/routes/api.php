@@ -174,7 +174,7 @@ Route::post('/applications/{id}/upload-requirement', [ApplicationController::cla
 
     // Applications
     Route::get('/applications', [ApplicationController::class, 'index']);
-    Route::post('/applications', [ApplicationController::class, 'store']);
+    Route::post('/applications/store', [ApplicationController::class, 'store']);
     Route::delete('/applications/{id}', [ApplicationController::class, 'destroy']);
     Route::get('/applications/{id}/requirement', [ApplicationController::class, 'viewRequirement']);
     Route::get('/interviews', [InterviewController::class, 'index']);
@@ -253,3 +253,9 @@ Route::get('/admin/pending-organizations', [OrganizationController::class, 'pend
 Route::post('/organization/{id}/approve', [OrganizationController::class, 'approve']);
 Route::post('/organization/{id}/reject', [OrganizationController::class, 'reject']);
 Route::delete('/trainings/{trainingID}', [TrainingController::class, 'destroyById']);
+
+use App\Http\Controllers\FileController;
+
+Route::get('/file-url/{filename}', [ApplicationFileController::class, 'getFileUrl']);
+Route::get('/applications/{id}/file', [ApplicationFileController::class, 'show']);
+

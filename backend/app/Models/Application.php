@@ -33,6 +33,7 @@ class Application extends Model
 	protected $table = 'application';
 	protected $primaryKey = 'applicationID';
 	public $timestamps = false;
+	public $requirement_directory;
 
 	protected $casts = [
 		'dateSubmitted' => 'datetime',

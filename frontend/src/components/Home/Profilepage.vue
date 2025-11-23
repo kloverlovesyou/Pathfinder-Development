@@ -14,10 +14,24 @@ const careerModal = ref(null);
 const trainingModal = ref(null);
 const selectedCareer = ref(null);
 const selectedTraining = ref(null);
+const loading = ref(false);
+
+const viewRequirement = async (activity, event) => {
+  event.stopPropagation();
+
+  try {
+    const response = await axios.get(
+      `/api/applications/${activity.applicationID}/file`
+    );
+
+    window.open(response.data.url, "_blank");
+  } catch (error) {
+    console.error(error);
+    alert("Unable to open requirement file");
+  }
+};
 
 async function openModal(activity) {
-  console.log("🟢 Activity clicked:", activity);
-
   if (activity.type === "career") {
     try {
       const token = localStorage.getItem("token");
@@ -30,6 +44,8 @@ async function openModal(activity) {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
+      console.log("🟢 Activity clicked:", activity);
+      console.log("Applications from API:", res.data);
 
       // Find the full application for this career
 
@@ -38,10 +54,15 @@ async function openModal(activity) {
       );
 
       if (app) {
-        console.log("✅ Application + interview found:", app);
-        selectedCareer.value = app; // now has interview details
+        console.log("🎯 Matching application found:", app);
+        selectedCareer.value = {
+          ...app,
+          ...Object.fromEntries(
+            Object.entries(activity).filter(([_, v]) => v !== "" && v !== null)
+          ),
+        };
       } else {
-        console.log("ℹ️ No application found, using activity data only.");
+        console.log("ℹ️ No matching application found — showing career info.");
         selectedCareer.value = activity;
       }
 
@@ -587,6 +608,13 @@ const downloadCertificate = async (activity, event) => {
   }
 };
 
+// Helper method to handle certificate download click
+function handleCertificateClick(activity, event) {
+  if (activity.status?.toLowerCase() === 'attended') {
+    downloadCertificate(activity, event);
+  }
+}
+
 onMounted(fetchMyActivities);
 </script>
 
@@ -728,7 +756,7 @@ onMounted(fetchMyActivities);
                         : 'bg-gray-300 cursor-not-allowed',
                     ]"
                     :disabled="activity.status?.toLowerCase() !== 'attended'"
-                    @click.stop="activity.status?.toLowerCase() === 'attended' ? downloadCertificate(activity, $event) : null"
+                    @click.stop="handleCertificateClick(activity, $event)"
                   >
                     {{
                       activity.status?.toLowerCase() === 'attended'
@@ -1000,7 +1028,7 @@ onMounted(fetchMyActivities);
                           : 'bg-gray-300 cursor-not-allowed',
                       ]"
                       :disabled="activity.status?.toLowerCase() !== 'attended'"
-                      @click.stop="activity.status?.toLowerCase() === 'attended' ? downloadCertificate(activity, $event) : null"
+                      @click.stop="handleCertificateClick(activity, $event)"
                     >
                       {{
                         activity.status?.toLowerCase() === 'attended'
@@ -1056,8 +1084,11 @@ onMounted(fetchMyActivities);
               }}
             </p>
             <p>
-              <strong>Requirements: </strong>
-              {{ selectedCareer.requirements }}
+              <strong>Requirement: </strong>
+              {{
+                selectedCareer.requirements ||
+                selectedCareer.career?.requirements
+              }}
             </p>
             <p>
               <strong>Application Address:</strong>
