@@ -5,7 +5,7 @@ import axios from "axios";
 import QrcodeVue from "qrcode.vue";
 
 const router = useRouter();
-
+const toasts = ref([]);
 const userName = ref("Guest");
 const activities = ref([]);
 const upcomingCount = ref(0);
@@ -15,6 +15,14 @@ const trainingModal = ref(null);
 const selectedCareer = ref(null);
 const selectedTraining = ref(null);
 
+function showToast(message, type = "success", duration = 3000) {
+  const id = Date.now();
+  toasts.value.push({ id, message, type });
+
+  setTimeout(() => {
+    toasts.value = toasts.value.filter((t) => t.id !== id);
+  }, duration);
+}
 async function openModal(activity) {
   if (activity.type === "career") {
     try {
@@ -307,12 +315,12 @@ async function submitAttendance(activity) {
 
   const token = localStorage.getItem("token");
   if (!token) {
-    alert("Please log in to submit attendance.");
+    showToast("Please log in to submit attendance.");
     return;
   }
 
   if (!activity.qrInput || activity.qrInput.trim() === "") {
-    alert("Please enter the attendance code.");
+    showToast("Please enter the attendance code.");
     return;
   }
 
@@ -330,7 +338,7 @@ async function submitAttendance(activity) {
       }
     );
 
-    alert(res.data.message || "Attendance recorded successfully!");
+    showToast(res.data.message || "Attendance recorded successfully!");
     activity.qrInput = "";
     await fetchMyActivities();
   } catch (error) {
@@ -338,7 +346,7 @@ async function submitAttendance(activity) {
       "Attendance submission error:",
       error.response?.data || error
     );
-    alert(
+    showToast(
       error.response?.data?.message ||
         "Failed to submit attendance. Please check the code."
     );
@@ -362,15 +370,15 @@ const downloadRequirement = async (activity, event) => {
 
   const applicationID = activity.applicationID;
   const token = localStorage.getItem("token");
-  
+
   if (!token) {
-    alert("Please log in to download requirements.");
+    showToast("Please log in to download requirements.");
     return;
   }
 
   if (!applicationID) {
     console.error("Application ID not found in activity:", activity);
-    alert("Application ID not found. Please try refreshing the page.");
+    showToast("Application ID not found. Please try refreshing the page.");
     return;
   }
 
@@ -378,9 +386,9 @@ const downloadRequirement = async (activity, event) => {
   let filePath = activity.requirement_directory;
   console.log("Activity data:", activity);
   console.log("Initial filePath from activity:", filePath);
-  
+
   // Check if filePath is null, undefined, or empty string
-  if (!filePath || filePath === null || filePath === '') {
+  if (!filePath || filePath === null || filePath === "") {
     console.log("requirement_directory not in activity, fetching from API...");
     try {
       const appResponse = await axios.get(
@@ -391,26 +399,29 @@ const downloadRequirement = async (activity, event) => {
           },
         }
       );
-      
+
       console.log("Applications API response:", appResponse.data);
-      
+
       const application = appResponse.data.find(
         (app) => app.applicationID === applicationID
       );
-      
+
       console.log("Found application:", application);
-      
+
       if (application) {
         filePath = application.requirement_directory;
         console.log("filePath from API:", filePath);
-        
+
         // If still no filePath, try using the backend endpoint directly
-        if (!filePath || filePath === null || filePath === '') {
+        if (!filePath || filePath === null || filePath === "") {
           console.log("No filePath found, trying backend endpoint directly...");
           // We'll handle this in the try block below by using the backend endpoint
         }
       } else {
-        console.error("Application not found for applicationID:", applicationID);
+        console.error(
+          "Application not found for applicationID:",
+          applicationID
+        );
         // Try backend endpoint anyway - it might have the file
         filePath = null;
       }
@@ -420,27 +431,27 @@ const downloadRequirement = async (activity, event) => {
       filePath = null;
     }
   }
-  
+
   try {
     // If filePath is provided (from Supabase), use it directly
-    if (filePath && filePath !== null && filePath !== '') {
+    if (filePath && filePath !== null && filePath !== "") {
       try {
         // Import getPDFUrl dynamically
         const { getPDFUrl } = await import("@/lib/supabase");
         const pdfUrl = getPDFUrl(filePath, "Requirements");
-        
+
         // Fetch the PDF from Supabase
         const response = await fetch(pdfUrl);
         if (!response.ok) {
           throw new Error("Failed to fetch PDF from Supabase");
         }
-        
+
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        
+
         // Extract filename from path or use default
         const fileName = filePath.split("/").pop() || "requirement.pdf";
-        
+
         const a = document.createElement("a");
         a.href = url;
         a.download = fileName;
@@ -450,24 +461,29 @@ const downloadRequirement = async (activity, event) => {
         window.URL.revokeObjectURL(url);
         return; // Success, exit early
       } catch (supabaseError) {
-        console.warn("Supabase download failed, trying backend endpoint:", supabaseError);
+        console.warn(
+          "Supabase download failed, trying backend endpoint:",
+          supabaseError
+        );
         // Fall through to backend endpoint
       }
     }
-    
+
     // Fallback to backend endpoint (works even if filePath is missing - backend will find it)
     try {
       const response = await axios({
-        url: `${import.meta.env.VITE_API_BASE_URL}/applications/${applicationID}/requirement`,
+        url: `${
+          import.meta.env.VITE_API_BASE_URL
+        }/applications/${applicationID}/requirement`,
         method: "GET",
         responseType: "blob",
         headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       const url = window.URL.createObjectURL(
         new Blob([response.data], { type: "application/pdf" })
       );
-      
+
       const a = document.createElement("a");
       a.href = url;
       a.download = "requirement.pdf";
@@ -478,14 +494,16 @@ const downloadRequirement = async (activity, event) => {
     } catch (backendError) {
       console.error("Backend endpoint also failed:", backendError);
       if (backendError.response?.status === 404) {
-        alert("No requirement file has been uploaded for this application.");
+        showToast(
+          "No requirement file has been uploaded for this application."
+        );
       } else {
-        alert("Failed to download requirements. Please try again.");
+        showToast("Failed to download requirements. Please try again.");
       }
     }
   } catch (error) {
     console.error("Error downloading requirements:", error);
-    alert("Failed to download requirements. Please try again.");
+    showToast("Failed to download requirements. Please try again.");
   }
 };
 
@@ -497,15 +515,15 @@ const downloadCertificate = async (activity, event) => {
 
   const registrationID = activity.registrationID;
   const token = localStorage.getItem("token");
-  
+
   if (!token) {
-    alert("Please log in to download certificates.");
+    showToast("Please log in to download certificates.");
     return;
   }
 
   if (!registrationID) {
     console.error("Registration ID not found in activity:", activity);
-    alert("Registration ID not found. Please try refreshing the page.");
+    showToast("Registration ID not found. Please try refreshing the page.");
     return;
   }
 
@@ -513,9 +531,9 @@ const downloadCertificate = async (activity, event) => {
   let filePath = activity.certificate;
   console.log("Activity data:", activity);
   console.log("Initial certificate path from activity:", filePath);
-  
+
   // If certificate path is not in activity, try to fetch it from the API
-  if (!filePath || filePath === null || filePath === '') {
+  if (!filePath || filePath === null || filePath === "") {
     console.log("certificate not in activity, fetching from API...");
     try {
       // Try to fetch registrations to get certificate
@@ -527,17 +545,18 @@ const downloadCertificate = async (activity, event) => {
           },
         }
       );
-      
+
       console.log("Registrations API response:", regResponse.data);
-      
+
       const registration = regResponse.data.find(
-        (reg) => reg.registrationID === registrationID || reg.id === registrationID
+        (reg) =>
+          reg.registrationID === registrationID || reg.id === registrationID
       );
-      
+
       console.log("Found registration:", registration);
-      
+
       if (registration) {
-        filePath =  registration.certificatePath;
+        filePath = registration.certificatePath;
         console.log("certificate path from API:", filePath);
       }
     } catch (error) {
@@ -545,10 +564,10 @@ const downloadCertificate = async (activity, event) => {
       // Continue to try downloading anyway
     }
   }
-  
+
   // Final check
-  if (!filePath || filePath === null || filePath === '') {
-    alert("No certificate has been issued for this training yet.");
+  if (!filePath || filePath === null || filePath === "") {
+    showToast("No certificate has been issued for this training yet.");
     return;
   }
 
@@ -560,19 +579,21 @@ const downloadCertificate = async (activity, event) => {
         const { getPDFUrl } = await import("@/lib/supabase");
         // Certificates are stored in "Requirements" bucket
         const pdfUrl = getPDFUrl(filePath, "Requirements");
-        
+
         // Fetch the PDF from Supabase
         const response = await fetch(pdfUrl);
         if (!response.ok) {
           throw new Error("Failed to fetch certificate from Supabase");
         }
-        
+
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        
+
         // Extract filename from path or use default
-        const fileName = filePath.split("/").pop() || `certificate_${activity.title || 'training'}.pdf`;
-        
+        const fileName =
+          filePath.split("/").pop() ||
+          `certificate_${activity.title || "training"}.pdf`;
+
         const a = document.createElement("a");
         a.href = url;
         a.download = fileName;
@@ -583,12 +604,14 @@ const downloadCertificate = async (activity, event) => {
         return; // Success
       } catch (supabaseError) {
         console.warn("Supabase download failed:", supabaseError);
-        alert("Failed to download certificate from Supabase. Please try again.");
+        showToast(
+          "Failed to download certificate from Supabase. Please try again."
+        );
       }
     }
   } catch (error) {
     console.error("Error downloading certificate:", error);
-    alert("Failed to download certificate. Please try again.");
+    showToast("Failed to download certificate. Please try again.");
   }
 };
 
@@ -733,10 +756,14 @@ onMounted(fetchMyActivities);
                         : 'bg-gray-300 cursor-not-allowed',
                     ]"
                     :disabled="activity.status?.toLowerCase() !== 'attended'"
-                    @click.stop="activity.status?.toLowerCase() === 'attended' ? downloadCertificate(activity, $event) : null"
+                    @click.stop="
+                      activity.status?.toLowerCase() === 'attended'
+                        ? downloadCertificate(activity, $event)
+                        : null
+                    "
                   >
                     {{
-                      activity.status?.toLowerCase() === 'attended'
+                      activity.status?.toLowerCase() === "attended"
                         ? "Download Certificate"
                         : "Certificate Unavailable"
                     }}
@@ -1005,10 +1032,14 @@ onMounted(fetchMyActivities);
                           : 'bg-gray-300 cursor-not-allowed',
                       ]"
                       :disabled="activity.status?.toLowerCase() !== 'attended'"
-                      @click.stop="activity.status?.toLowerCase() === 'attended' ? downloadCertificate(activity, $event) : null"
+                      @click.stop="
+                        activity.status?.toLowerCase() === 'attended'
+                          ? downloadCertificate(activity, $event)
+                          : null
+                      "
                     >
                       {{
-                        activity.status?.toLowerCase() === 'attended'
+                        activity.status?.toLowerCase() === "attended"
                           ? "Download Certificate"
                           : "Certificate Unavailable"
                       }}
@@ -1193,5 +1224,21 @@ onMounted(fetchMyActivities);
         </div>
       </div>
     </dialog>
+    <div class="fixed top-5 right-5 space-y-2 z-50">
+      <div
+        v-for="toast in toasts"
+        :key="toast.id"
+        :class="[
+          'px-4 py-2 rounded shadow ',
+          toast.type === 'success'
+            ? 'bg-white text-black'
+            : toast.type === 'error'
+            ? 'bg-red-500 text-white'
+            : 'bg-gray-500',
+        ]"
+      >
+        {{ toast.message }}
+      </div>
+    </div>
   </div>
 </template>
