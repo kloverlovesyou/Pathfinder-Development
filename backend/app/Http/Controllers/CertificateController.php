@@ -116,10 +116,10 @@ public function index($applicantID)
             try {
                 Certification::create([
                     'certificationName' => $certificationName,
-                    'certificate' => null,
                     'certificate_path' => $certificatePath,
                     'applicantID' => $registration->applicantID,
                     'IsSelected' => 0,
+                    'certificate' => '', // Empty string for organization certificates (field is NOT NULL)
                 ]);
                 Log::info('✅ Created Certification entry', [
                     'certificatePath' => $certificatePath,
@@ -270,6 +270,9 @@ public function index($applicantID)
             }
             
             $data['certificate_path'] = $request->certificate_path;
+            // For organization certificates, provide empty string for certificate field
+            // since the database column is NOT NULL and doesn't have a default value
+            $data['certificate'] = '';
         }
 
         // Create the certification

@@ -414,9 +414,16 @@ const submitApplication = async () => {
       addToast("Already applied", "info");
       const careerId = Number(selectedPost.value?.careerID);
       appliedCareers.value.add(selectedPost.value.careerID); // ✅ mark applied anyway
+    } else if (error.response?.status === 401) {
+      addToast("UNAUTHORIZED. PLEASE LOG IN AGAIN", "error");
+    } else if (error.response?.status === 422) {
+      const errorMsg = error.response?.data?.message || error.response?.data?.errors?.[0] || "INVALID INPUT";
+      addToast(errorMsg, "error");
     } else {
+      // Show backend error message if available, otherwise show generic message
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || "Failed to submit application";
+      addToast(errorMsg, "error");
       console.error("❌ Application error:", error.response?.data || error);
-      addToast("Failed to submit application", "error");
     }
   }
 };
