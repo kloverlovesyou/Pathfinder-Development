@@ -608,6 +608,13 @@ const downloadCertificate = async (activity, event) => {
   }
 };
 
+// Helper method to handle certificate download click
+function handleCertificateClick(activity, event) {
+  if (activity.status?.toLowerCase() === 'attended') {
+    downloadCertificate(activity, event);
+  }
+}
+
 onMounted(fetchMyActivities);
 </script>
 
@@ -749,7 +756,7 @@ onMounted(fetchMyActivities);
                         : 'bg-gray-300 cursor-not-allowed',
                     ]"
                     :disabled="activity.status?.toLowerCase() !== 'attended'"
-                    @click.stop="activity.status?.toLowerCase() === 'attended' ? downloadCertificate(activity, $event) : null"
+                    @click.stop="handleCertificateClick(activity, $event)"
                   >
                     {{
                       activity.status?.toLowerCase() === 'attended'
@@ -1021,7 +1028,7 @@ onMounted(fetchMyActivities);
                           : 'bg-gray-300 cursor-not-allowed',
                       ]"
                       :disabled="activity.status?.toLowerCase() !== 'attended'"
-                      @click.stop="activity.status?.toLowerCase() === 'attended' ? downloadCertificate(activity, $event) : null"
+                      @click.stop="handleCertificateClick(activity, $event)"
                     >
                       {{
                         activity.status?.toLowerCase() === 'attended'
