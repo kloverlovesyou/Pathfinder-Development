@@ -278,164 +278,118 @@ export default {
 
     async downloadRequirements(applicationID, rawFilePath) {
       const token = localStorage.getItem("token");
-
       if (!token) {
         alert("Please log in to download requirements.");
         return;
       }
 
       if (!applicationID) {
-        console.error("Application ID not found:", applicationID);
-        alert("Application ID not found. Please try refreshing the page.");
+        alert("Application ID missing. Please refresh the page.");
         return;
       }
 
-      // Normalize filePath - ensure it's a string (not an array or object)
-      let filePath = null;
-      if (rawFilePath && typeof rawFilePath === 'string' && rawFilePath.trim() !== '') {
-        filePath = rawFilePath.trim();
-      }
-      console.log("Initial filePath:", filePath);
+      const normalizedAppID = String(applicationID);
+      let filePath =
+        typeof rawFilePath === "string" && rawFilePath.trim() ? rawFilePath.trim() : null;
 
-      // If requirement_directory is not provided, try to fetch it from the API
-      // First check applicantsList, then try /applications endpoint (same as ProfilePage.vue)
-      if (!filePath || filePath === null || filePath === "") {
-        // First, try to find the application in the already-loaded applicantsList
-        if (this.applicantsList && Array.isArray(this.applicantsList) && this.applicantsList.length > 0) {
-          const normalizedAppID = String(applicationID);
-          const application = this.applicantsList.find(
-            (app) => {
-              const appId = String(app.id ?? app.applicationID ?? '');
-              const appApplicationID = String(app.applicationID ?? app.id ?? '');
-              return appId === normalizedAppID || appApplicationID === normalizedAppID;
+      /**
+       * Helper: try to resolve the requirement path from the already loaded applicants list.
+       */
+      const resolvePathFromApplicants = () => {
+        if (!Array.isArray(this.applicantsList) || this.applicantsList.length === 0) {
+          return null;
+        }
+        const applicant = this.applicantsList.find((app) => {
+          const candidates = [
+            app.id,
+            app.applicationID,
+            app.applicationId,
+            app._id,
+          ]
+            .filter(Boolean)
+            .map((val) => String(val));
+          return candidates.includes(normalizedAppID);
+        });
+        return applicant?.requirement_directory ?? null;
+      };
+
+      /**
+       * Helper: hit the public /applications API to fetch the requirement path.
+       * This mirrors the logic that previously worked for the applicant portal.
+       */
+      const resolvePathFromApi = async () => {
+        try {
+          // Prefer a scoped endpoint if available, otherwise fall back to the full list.
+          const detailEndpoint = `${import.meta.env.VITE_API_BASE_URL}/applications/${applicationID}`;
+          let response;
+          try {
+            response = await axios.get(detailEndpoint, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (response?.data?.requirement_directory) {
+              return response.data.requirement_directory;
+            }
+          } catch (detailError) {
+            // The detail endpoint might not exist; fall back to listing.
+            if (detailError.response?.status !== 404) {
+              console.warn("Applications detail endpoint failed:", detailError);
+            }
+          }
+
+          const listResponse = await axios.get(
+            `${import.meta.env.VITE_API_BASE_URL}/applications`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
             }
           );
-          
-          if (application && application.requirement_directory) {
-            filePath = application.requirement_directory;
-            console.log("filePath found in applicantsList:", filePath);
+          if (Array.isArray(listResponse.data)) {
+            const match = listResponse.data.find(
+              (app) =>
+                String(app.applicationID ?? app.id ?? "") === normalizedAppID
+            );
+            return match?.requirement_directory ?? null;
           }
+        } catch (apiError) {
+          console.error("Unable to fetch applications for requirement path:", apiError);
         }
+        return null;
+      };
 
-        // If still not found, try fetching from career-specific endpoint first (for organizations)
-        if (!filePath || filePath === null || filePath === "") {
-          // Try career-specific endpoint first (organizations have access to this)
-          if (this.selectedCareer && this.selectedCareer.careerID) {
-            try {
-              console.log("requirement_directory not found, fetching from career applicants API...");
-              const appResponse = await axios.get(
-                `${import.meta.env.VITE_API_BASE_URL}/careers/${this.selectedCareer.careerID}/applicants`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                    Accept: "application/json",
-                    "Content-Type": "application/json",
-                  },
-                }
-              );
-
-              console.log("Career applicants API response:", appResponse.data);
-
-              if (appResponse.data && Array.isArray(appResponse.data)) {
-                const normalizedAppID = String(applicationID);
-                const application = appResponse.data.find(
-                  (app) => {
-                    const appId = String(app.id ?? app.applicationID ?? '');
-                    const appApplicationID = String(app.applicationID ?? app.id ?? '');
-                    return appId === normalizedAppID || appApplicationID === normalizedAppID;
-                  }
-                );
-
-                console.log("Found application:", application);
-
-                if (application && application.requirement_directory) {
-                  filePath = application.requirement_directory;
-                  console.log("filePath from career API:", filePath);
-                }
-              }
-            } catch (error) {
-              console.error("Error fetching from career applicants API:", error);
-            }
-          }
-
-          // Fallback to /applications endpoint (same as ProfilePage.vue)
-          if (!filePath || filePath === null || filePath === "") {
-            try {
-              console.log("requirement_directory not found, trying /applications API...");
-              const appResponse = await axios.get(
-                `${import.meta.env.VITE_API_BASE_URL}/applications`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                  },
-                }
-              );
-
-              console.log("Applications API response:", appResponse.data);
-
-              const application = appResponse.data.find(
-                (app) => app.applicationID === applicationID || app.id === applicationID
-              );
-
-              console.log("Found application:", application);
-
-              if (application) {
-                filePath = application.requirement_directory;
-                console.log("filePath from /applications API:", filePath);
-              } else {
-                console.log("Application not found in /applications endpoint");
-              }
-            } catch (error) {
-              console.error("Error fetching from /applications API:", error);
-              // Don't return here - try the backend endpoint as fallback
-            }
-          }
-        }
+      if (!filePath) {
+        filePath = resolvePathFromApplicants();
+      }
+      if (!filePath) {
+        filePath = await resolvePathFromApi();
       }
 
       try {
-        // If filePath is provided (from Supabase), use it directly
-        if (filePath && filePath !== null && filePath !== "") {
-          try {
-            // Import getPDFUrl dynamically
-            const { getPDFUrl } = await import("@/lib/supabase");
-            const pdfUrl = getPDFUrl(filePath, "Requirements");
-
-            // Fetch the PDF from Supabase
-            const response = await fetch(pdfUrl);
-            if (!response.ok) {
-              throw new Error("Failed to fetch PDF from Supabase");
-            }
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-
-            // Extract filename from path or use default
-            const fileName = filePath.split("/").pop() || "requirement.pdf";
-
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-            return; // Success, exit early
-          } catch (supabaseError) {
-            console.warn(
-              "Supabase download failed, trying backend endpoint:",
-              supabaseError
-            );
-            // Fall through to backend endpoint
+        if (filePath) {
+          // Supabase path available – download directly.
+          const { getPDFUrl } = await import("@/lib/supabase");
+          const pdfUrl = getPDFUrl(filePath, "Requirements");
+          const response = await fetch(pdfUrl);
+          if (!response.ok) {
+            throw new Error("Failed to fetch PDF from Supabase");
           }
+
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const fileName = filePath.split("/").pop() || "requirement.pdf";
+
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          return;
         }
 
-        // Fallback to backend endpoint (works even if filePath is missing - backend will find it)
+        // Still no path – rely on backend endpoint (handles legacy uploads stored outside Supabase).
         try {
           const response = await axios({
-            url: `${
-              import.meta.env.VITE_API_BASE_URL
-            }/applications/${applicationID}/requirement`,
+            url: `${import.meta.env.VITE_API_BASE_URL}/applications/${applicationID}/requirement`,
             method: "GET",
             responseType: "blob",
             headers: { Authorization: `Bearer ${token}` },
@@ -444,7 +398,6 @@ export default {
           const url = window.URL.createObjectURL(
             new Blob([response.data], { type: "application/pdf" })
           );
-
           const a = document.createElement("a");
           a.href = url;
           a.download = "requirement.pdf";
@@ -453,11 +406,9 @@ export default {
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
         } catch (backendError) {
-          console.error("Backend endpoint also failed:", backendError);
+          console.error("Backend requirement download failed:", backendError);
           if (backendError.response?.status === 404) {
-            alert(
-              "No requirement file has been uploaded for this application."
-            );
+            alert("No requirement file has been uploaded for this application.");
           } else {
             alert("Failed to download requirements. Please try again.");
           }
@@ -1651,11 +1602,8 @@ async function viewRequirement(id) {
                     </select>
                   </td>
                   <td class="requirements-col">
-                    <button 
-                      v-if="person.requirement_directory || person.requirements" 
-                      class="download-btn" 
-                      @click="downloadRequirements(person.id, person.requirement_directory)"
-                    >
+                    <button v-if="person.requirement_directory || person.requirements" class="download-btn"
+                      @click="downloadRequirements(person.id, person.requirement_directory)">
                       Download Requirements
                     </button>
 
@@ -1826,21 +1774,12 @@ async function viewRequirement(id) {
             <!-- Tags -->
             <div class="relative mb-4">
               <label class="block font-semibold text-gray-600 mb-2">Tags</label>
-              <input 
-                v-model="newTagName" 
-                type="text" 
-                placeholder="Search or type a new tag..." 
-                class="career-input mb-2" 
-              />
+              <input v-model="newTagName" type="text" placeholder="Search or type a new tag..."
+                class="career-input mb-2" />
               <div class="tag-list-wrapper">
                 <div class="tag-list">
-                  <span 
-                    v-for="tag in filteredTags" 
-                    :key="tag.TagID" 
-                    class="tag-chip" 
-                    @click="toggleTag(tag.TagID)"
-                    :class="{ 'tag-chip-selected': isTagSelected(tag.TagID) }"
-                  >
+                  <span v-for="tag in filteredTags" :key="tag.TagID" class="tag-chip" @click="toggleTag(tag.TagID)"
+                    :class="{ 'tag-chip-selected': isTagSelected(tag.TagID) }">
                     {{ tag.TagName }}
                   </span>
                 </div>
