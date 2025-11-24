@@ -277,93 +277,196 @@ export default {
     },
 
     async downloadRequirements(applicationID, rawFilePath) {
-    try {
-      // Helper to sanitize filePath input
-      const sanitizeFilePath = (value) => {
-        if (typeof value === "string") {
-          const trimmed = value.trim();
-          return trimmed.length ? trimmed : null;
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        alert("Please log in to download requirements.");
+        return;
+      }
+
+      if (!applicationID) {
+        console.error("Application ID not found:", applicationID);
+        alert("Application ID not found. Please try refreshing the page.");
+        return;
+      }
+
+      // Normalize filePath - ensure it's a string (not an array or object)
+      let filePath = null;
+      if (rawFilePath && typeof rawFilePath === 'string' && rawFilePath.trim() !== '') {
+        filePath = rawFilePath.trim();
+      }
+      console.log("Initial filePath:", filePath);
+
+      // If requirement_directory is not provided, try to fetch it from the API
+      // First check applicantsList, then try /applications endpoint (same as ProfilePage.vue)
+      if (!filePath || filePath === null || filePath === "") {
+        // First, try to find the application in the already-loaded applicantsList
+        if (this.applicantsList && Array.isArray(this.applicantsList) && this.applicantsList.length > 0) {
+          const normalizedAppID = String(applicationID);
+          const application = this.applicantsList.find(
+            (app) => {
+              const appId = String(app.id ?? app.applicationID ?? '');
+              const appApplicationID = String(app.applicationID ?? app.id ?? '');
+              return appId === normalizedAppID || appApplicationID === normalizedAppID;
+            }
+          );
+          
+          if (application && application.requirement_directory) {
+            filePath = application.requirement_directory;
+            console.log("filePath found in applicantsList:", filePath);
+          }
         }
-        if (value && typeof value === "object") {
-          const candidates = ["requirement_directory", "filePath", "path", "url"];
-          for (const key of candidates) {
-            const candidate = value[key];
-            if (typeof candidate === "string") {
-              const trimmed = candidate.trim();
-              if (trimmed.length) return trimmed;
+
+        // If still not found, try fetching from career-specific endpoint first (for organizations)
+        if (!filePath || filePath === null || filePath === "") {
+          // Try career-specific endpoint first (organizations have access to this)
+          if (this.selectedCareer && this.selectedCareer.careerID) {
+            try {
+              console.log("requirement_directory not found, fetching from career applicants API...");
+              const appResponse = await axios.get(
+                `${import.meta.env.VITE_API_BASE_URL}/careers/${this.selectedCareer.careerID}/applicants`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                  },
+                }
+              );
+
+              console.log("Career applicants API response:", appResponse.data);
+
+              if (appResponse.data && Array.isArray(appResponse.data)) {
+                const normalizedAppID = String(applicationID);
+                const application = appResponse.data.find(
+                  (app) => {
+                    const appId = String(app.id ?? app.applicationID ?? '');
+                    const appApplicationID = String(app.applicationID ?? app.id ?? '');
+                    return appId === normalizedAppID || appApplicationID === normalizedAppID;
+                  }
+                );
+
+                console.log("Found application:", application);
+
+                if (application && application.requirement_directory) {
+                  filePath = application.requirement_directory;
+                  console.log("filePath from career API:", filePath);
+                }
+              }
+            } catch (error) {
+              console.error("Error fetching from career applicants API:", error);
+            }
+          }
+
+          // Fallback to /applications endpoint (same as ProfilePage.vue)
+          if (!filePath || filePath === null || filePath === "") {
+            try {
+              console.log("requirement_directory not found, trying /applications API...");
+              const appResponse = await axios.get(
+                `${import.meta.env.VITE_API_BASE_URL}/applications`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                }
+              );
+
+              console.log("Applications API response:", appResponse.data);
+
+              const application = appResponse.data.find(
+                (app) => app.applicationID === applicationID || app.id === applicationID
+              );
+
+              console.log("Found application:", application);
+
+              if (application) {
+                filePath = application.requirement_directory;
+                console.log("filePath from /applications API:", filePath);
+              } else {
+                console.log("Application not found in /applications endpoint");
+              }
+            } catch (error) {
+              console.error("Error fetching from /applications API:", error);
+              // Don't return here - try the backend endpoint as fallback
             }
           }
         }
-        return null;
-      };
+      }
 
-      const filePath = sanitizeFilePath(rawFilePath);
-
-      // --- Supabase Download ---
-      if (filePath) {
-        try {
-          let pdfUrl = filePath.startsWith("http") ? filePath : null;
-
-          if (!pdfUrl) {
+      try {
+        // If filePath is provided (from Supabase), use it directly
+        if (filePath && filePath !== null && filePath !== "") {
+          try {
+            // Import getPDFUrl dynamically
             const { getPDFUrl } = await import("@/lib/supabase");
-            pdfUrl = getPDFUrl(filePath, "Requirements"); // getPDFUrl is synchronous
+            const pdfUrl = getPDFUrl(filePath, "Requirements");
+
+            // Fetch the PDF from Supabase
+            const response = await fetch(pdfUrl);
+            if (!response.ok) {
+              throw new Error("Failed to fetch PDF from Supabase");
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+
+            // Extract filename from path or use default
+            const fileName = filePath.split("/").pop() || "requirement.pdf";
+
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            return; // Success, exit early
+          } catch (supabaseError) {
+            console.warn(
+              "Supabase download failed, trying backend endpoint:",
+              supabaseError
+            );
+            // Fall through to backend endpoint
           }
+        }
 
-          if (!pdfUrl) throw new Error("Failed to resolve file URL from Supabase");
+        // Fallback to backend endpoint (works even if filePath is missing - backend will find it)
+        try {
+          const response = await axios({
+            url: `${
+              import.meta.env.VITE_API_BASE_URL
+            }/applications/${applicationID}/requirement`,
+            method: "GET",
+            responseType: "blob",
+            headers: { Authorization: `Bearer ${token}` },
+          });
 
-          console.log("Fetching PDF from Supabase:", pdfUrl);
-
-          const response = await fetch(pdfUrl);
-          if (!response.ok) throw new Error("Failed to fetch PDF from Supabase");
-
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          const fileName = filePath.split("/").pop() || "requirement.pdf";
+          const url = window.URL.createObjectURL(
+            new Blob([response.data], { type: "application/pdf" })
+          );
 
           const a = document.createElement("a");
           a.href = url;
-          a.download = fileName;
+          a.download = "requirement.pdf";
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
-
-          return; // done, no need for backend fallback
-        } catch (supabaseError) {
-          console.warn("Supabase download failed, attempting backend fallback:", supabaseError);
+        } catch (backendError) {
+          console.error("Backend endpoint also failed:", backendError);
+          if (backendError.response?.status === 404) {
+            alert(
+              "No requirement file has been uploaded for this application."
+            );
+          } else {
+            alert("Failed to download requirements. Please try again.");
+          }
         }
-      }
-
-      // --- Backend Fallback (optional) ---
-      try {
-        const response = await axios({
-          url: `${import.meta.env.VITE_API_BASE_URL}/applications/${applicationID}/requirement`,
-          method: "GET",
-          responseType: "blob",
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
-
-        const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "requirement.pdf";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
       } catch (error) {
-        console.error("Backend fallback failed:", error);
-        if (error.response?.status === 404) {
-          alert("Requirement file not found for this application.");
-        } else {
-          alert("Failed to download requirements. Please try again.");
-        }
+        console.error("Error downloading requirements:", error);
+        alert("Failed to download requirements. Please try again.");
       }
-    } catch (error) {
-      console.error("Unexpected error in downloadRequirements:", error);
-      alert("Failed to download requirements. Please try again.");
-    }
-  },
+    },
 
     async confirmSchedule() {
       if (
@@ -1551,7 +1654,7 @@ async function viewRequirement(id) {
                     <button 
                       v-if="person.requirement_directory || person.requirements" 
                       class="download-btn" 
-                      @click="downloadRequirements(person.id, person.requirement_directory || person.requirements)"
+                      @click="downloadRequirements(person.id, person.requirement_directory)"
                     >
                       Download Requirements
                     </button>
