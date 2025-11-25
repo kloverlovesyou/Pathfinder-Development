@@ -1,8 +1,11 @@
 <template>
   <div class="organization-trainings">
-
     <!-- Hamburger Toggle -->
-    <button class="hamburger" @click="toggleSidebar" :class="{ open: isSidebarOpen, shifted: isSidebarOpen }">
+    <button
+      class="hamburger"
+      @click="toggleSidebar"
+      :class="{ open: isSidebarOpen, shifted: isSidebarOpen }"
+    >
       <span></span>
       <span></span>
       <span></span>
@@ -11,10 +14,7 @@
     <!-- Sidebar -->
     <transition name="slide">
       <aside class="sidebar" :class="{ collapsed: !isSidebarOpen }">
-
-        <div class="space">
-
-        </div>
+        <div class="space"></div>
         <!-- Avatar always visible -->
         <div class="avatar">
           <img :src="dictLogo" alt="DICT Logo" class="avatar-img" />
@@ -25,11 +25,21 @@
           <div v-if="isSidebarOpen" class="profile-section">
             <h3 class="org-name">{{ organizationName }}</h3>
             <div class="profile-actions">
-              <div class="action" @click="navigateTo({ name: 'OrgUpdateProfile' })">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <div
+                class="action"
+                @click="navigateTo({ name: 'OrgUpdateProfile' })"
+              >
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
                   <path
                     d="M11.7278 8.27191C12.7534 9.87525 14.1247 11.2375 15.7464 12.2534L8.85673 19.144C8.43166 19.569 8.21841 19.7816 7.95731 19.9213C7.69637 20.0609 7.40171 20.1199 6.81278 20.2377L3.73563 20.853C3.40302 20.9195 3.23649 20.9525 3.14188 20.8578C3.04759 20.7632 3.08035 20.5971 3.14677 20.2651L3.76298 17.1879C3.88087 16.5985 3.93965 16.3035 4.07938 16.0424C4.21912 15.7814 4.43173 15.569 4.85673 15.144L11.7278 8.27191ZM16.1116 4.03656C16.6711 3.75929 17.3284 3.75931 17.888 4.03656C18.1821 4.18229 18.455 4.45518 19.0003 5.00043C19.5453 5.54545 19.8184 5.81774 19.9641 6.11175C20.2414 6.67123 20.2413 7.32861 19.9641 7.88812C19.8184 8.18221 19.5455 8.45517 19.0003 9.00043L17.2034 10.7963C15.5308 9.84498 14.1456 8.46859 13.1819 6.81781L15.0003 5.00043C15.5453 4.45539 15.8176 4.18234 16.1116 4.03656Z"
-                    fill="#FFFDFD" />
+                    fill="#FFFDFD"
+                  />
                 </svg>
                 <span>Update Profile</span>
               </div>
@@ -38,64 +48,122 @@
         </transition>
 
         <div class="icon" @click="navigateTo('/organization')">
-          <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg
+            width="30"
+            height="30"
+            viewBox="0 0 30 30"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
             <path
               d="M6.25 17.0585C6.25 16.0494 6.25 15.5448 6.47166 15.1141C6.69333 14.6833 7.1039 14.3901 7.92505 13.8035L13.8375 9.58034C14.3989 9.17938 14.6795 8.9789 15 8.9789C15.3205 8.9789 15.6011 9.17938 16.1625 9.58034L22.075 13.8035C22.8961 14.3901 23.3067 14.6833 23.5283 15.1141C23.75 15.5448 23.75 16.0494 23.75 17.0585V24.25C23.75 25.1928 23.75 25.6642 23.4571 25.9571C23.1642 26.25 22.6928 26.25 21.75 26.25H8.25C7.30719 26.25 6.83579 26.25 6.54289 25.9571C6.25 25.6642 6.25 25.1928 6.25 24.25V17.0585Z"
-              fill="white" />
+              fill="white"
+            />
             <path
               d="M3.75 15.6366C3.75 15.9035 3.75 16.0369 3.8341 16.0781C3.91819 16.1192 4.02352 16.0373 4.23418 15.8734L13.7721 8.45502C14.362 7.99625 14.6569 7.76686 15 7.76686C15.3431 7.76686 15.638 7.99625 16.2279 8.45502L25.7658 15.8734C25.9765 16.0373 26.0818 16.1192 26.1659 16.0781C26.25 16.0369 26.25 15.9035 26.25 15.6366V14.7282C26.25 14.2478 26.25 14.0076 26.1483 13.7997C26.0466 13.5918 25.857 13.4444 25.4779 13.1495L16.2279 5.95502C15.638 5.49625 15.3431 5.26686 15 5.26686C14.6569 5.26686 14.362 5.49625 13.7721 5.95502L4.52212 13.1495C4.14295 13.4444 3.95337 13.5918 3.85168 13.7997C3.75 14.0076 3.75 14.2478 3.75 14.7282V15.6366Z"
-              fill="white" />
+              fill="white"
+            />
             <path
               d="M16.125 18.75H13.875C12.7704 18.75 11.875 19.6454 11.875 20.75V26.1C11.875 26.1828 11.9422 26.25 12.025 26.25H17.975C18.0578 26.25 18.125 26.1828 18.125 26.1V20.75C18.125 19.6454 17.2296 18.75 16.125 18.75Z"
-              fill="white" />
-            <rect x="20" y="6.25" width="2.5" height="5" rx="0.5" fill="white" />
+              fill="white"
+            />
+            <rect
+              x="20"
+              y="6.25"
+              width="2.5"
+              height="5"
+              rx="0.5"
+              fill="white"
+            />
           </svg>
           <span>Home</span>
         </div>
         <div class="icon" @click="navigateTo({ name: 'OrgTrainings' })">
-          <svg width="29" height="29" viewBox="0 0 29 29" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg
+            width="29"
+            height="29"
+            viewBox="0 0 29 29"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
             <path
               d="M20.5837 3.625C23.4119 3.625 24.8261 3.62526 25.7048 4.50391C26.5833 5.3826 26.5837 6.79675 26.5837 9.625V19.375C26.5837 22.2033 26.5833 23.6174 25.7048 24.4961C24.8261 25.3747 23.4119 25.375 20.5837 25.375H8.41666C5.58824 25.375 4.17425 25.3748 3.29557 24.4961C2.41689 23.6174 2.41666 22.2034 2.41666 19.375V9.625C2.41666 6.79657 2.41689 5.38259 3.29557 4.50391C4.17425 3.62523 5.58824 3.625 8.41666 3.625H20.5837ZM9.66666 12.292C9.11438 12.292 8.66666 12.7397 8.66666 13.292V20.542L8.67155 20.6445C8.72303 21.1485 9.1491 21.542 9.66666 21.542C10.1842 21.542 10.6103 21.1485 10.6618 20.6445L10.6667 20.542V13.292C10.6667 12.7397 10.2189 12.292 9.66666 12.292ZM19.3337 9.875C18.7814 9.875 18.3337 10.3227 18.3337 10.875V20.542L18.3385 20.6436C18.3896 21.148 18.8158 21.542 19.3337 21.542C19.8514 21.5418 20.2778 21.1479 20.3288 20.6436L20.3337 20.542V10.875C20.3337 10.3228 19.8858 9.87518 19.3337 9.875ZM14.4997 14.708C13.9476 14.7082 13.4998 15.156 13.4997 15.708V20.541L13.5046 20.6436C13.5557 21.1477 13.982 21.5408 14.4997 21.541C15.0175 21.541 15.4436 21.1478 15.4948 20.6436L15.4997 20.541V15.708C15.4995 15.1559 15.0518 14.708 14.4997 14.708Z"
-              fill="white" />
+              fill="white"
+            />
           </svg>
           <span>Trainings</span>
         </div>
         <div class="icon" @click="navigateTo({ name: 'OrgCareers' })">
-          <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg
+            width="25"
+            height="25"
+            viewBox="0 0 25 25"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
             <path
               d="M22.8798 11.0484C23.4046 10.8642 23.9845 11.1431 24.1081 11.6855C24.4792 13.3134 24.4217 15.0018 23.9268 16.6191C23.4739 18.0989 22.6698 19.4685 21.5787 20.6449C21.2148 21.0372 20.6017 21.0197 20.2239 20.6408L14.9487 15.3495C14.4292 14.8284 14.6314 13.9436 15.3257 13.6999L22.8798 11.0484ZM13 4.0826C13 3.50231 13.4932 3.04057 14.0672 3.12592C15.8633 3.39302 17.5788 4.00579 19.085 4.93161C20.3794 5.72731 21.4793 6.72976 22.3343 7.87824C22.709 8.38157 22.4513 9.07932 21.8592 9.28718L14.3313 11.9301C13.6809 12.1584 13 11.6758 13 10.9865V4.0826Z"
-              fill="white" />
+              fill="white"
+            />
             <path
               d="M11.9511 13.2908C11.9512 13.5763 12.0581 13.8518 12.25 14.0632L19.2677 21.7886C19.6714 22.233 19.5963 22.9337 19.0759 23.2331C18.245 23.7112 17.354 24.0924 16.4209 24.365C14.5402 24.9144 12.5476 25.0087 10.6201 24.6394C8.69236 24.2701 6.88846 23.4478 5.36911 22.2468C3.84993 21.0459 2.66126 19.5025 1.90915 17.7537C1.15711 16.0048 0.864996 14.1043 1.05759 12.2205C1.25024 10.3365 1.92171 8.52693 3.01364 6.95288C4.1056 5.37884 5.58398 4.08845 7.31735 3.19605C8.43484 2.62073 9.63633 2.22318 10.8757 2.01305C11.4515 1.91541 11.9511 2.37876 11.9511 2.96284V13.2908Z"
-              fill="white" />
+              fill="white"
+            />
           </svg>
           <span>Career</span>
         </div>
         <div class="icon" @click="navigateTo({ name: 'OrgCalendar' })">
-          <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 26 26"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
             <path
               d="M2.16675 9.4165C2.16675 7.53089 2.16675 6.58808 2.75253 6.00229C3.33832 5.4165 4.28113 5.4165 6.16675 5.4165H19.8334C21.719 5.4165 22.6618 5.4165 23.2476 6.00229C23.8334 6.58808 23.8334 7.53089 23.8334 9.4165V9.83317C23.8334 10.3046 23.8334 10.5403 23.687 10.6867C23.5405 10.8332 23.3048 10.8332 22.8334 10.8332H3.16675C2.69534 10.8332 2.45964 10.8332 2.31319 10.6867C2.16675 10.5403 2.16675 10.3046 2.16675 9.83317V9.4165Z"
-              fill="white" />
+              fill="white"
+            />
             <path
               d="M22.833 13C23.3042 13 23.5401 13.0002 23.6865 13.1465C23.833 13.2929 23.833 13.5286 23.833 14V19.833C23.833 21.7186 23.8329 22.6613 23.2471 23.2471C22.6613 23.8329 21.7186 23.833 19.833 23.833H6.16699C4.28137 23.833 3.33872 23.8329 2.75293 23.2471C2.16714 22.6613 2.16699 21.7186 2.16699 19.833V14C2.16699 13.5286 2.16703 13.2929 2.31348 13.1465C2.45994 13.0002 2.69576 13 3.16699 13H22.833ZM8.58301 19.5C8.11182 19.5 7.87591 19.5001 7.72949 19.6465C7.58321 19.7929 7.58301 20.0288 7.58301 20.5V20.667C7.58301 21.1382 7.58308 21.3741 7.72949 21.5205C7.87591 21.6669 8.11182 21.667 8.58301 21.667H10.917C11.3882 21.667 11.6241 21.6669 11.7705 21.5205C11.9169 21.3741 11.917 21.1382 11.917 20.667V20.5C11.917 20.0288 11.9168 19.7929 11.7705 19.6465C11.6241 19.5001 11.3882 19.5 10.917 19.5H8.58301ZM15.083 19.5C14.6118 19.5 14.3759 19.5001 14.2295 19.6465C14.0832 19.7929 14.083 20.0288 14.083 20.5V20.667C14.083 21.1382 14.0831 21.3741 14.2295 21.5205C14.3759 21.6669 14.6118 21.667 15.083 21.667H17.417C17.8882 21.667 18.1241 21.6669 18.2705 21.5205C18.4169 21.3741 18.417 21.1382 18.417 20.667V20.5C18.417 20.0288 18.4168 19.7929 18.2705 19.6465C18.1241 19.5001 17.8882 19.5 17.417 19.5H15.083ZM8.58301 15.167C8.11182 15.167 7.87591 15.1671 7.72949 15.3135C7.58337 15.4599 7.58301 15.6959 7.58301 16.167V16.333C7.58301 16.8041 7.58337 17.0401 7.72949 17.1865C7.87591 17.3329 8.11182 17.333 8.58301 17.333H10.917C11.3882 17.333 11.6241 17.3329 11.7705 17.1865C11.9166 17.0401 11.917 16.8041 11.917 16.333V16.167C11.917 15.6959 11.9166 15.4599 11.7705 15.3135C11.6241 15.1671 11.3882 15.167 10.917 15.167H8.58301ZM15.083 15.167C14.6118 15.167 14.3759 15.1671 14.2295 15.3135C14.0834 15.4599 14.083 15.6959 14.083 16.167V16.333C14.083 16.8041 14.0834 17.0401 14.2295 17.1865C14.3759 17.3329 14.6118 17.333 15.083 17.333H17.417C17.8882 17.333 18.1241 17.3329 18.2705 17.1865C18.4166 17.0401 18.417 16.8041 18.417 16.333V16.167C18.417 15.6959 18.4166 15.4599 18.2705 15.3135C18.1241 15.1671 17.8882 15.167 17.417 15.167H15.083Z"
-              fill="white" />
-            <path d="M7.58325 3.25L7.58325 6.5" stroke="white" stroke-width="2" stroke-linecap="round" />
-            <path d="M18.4167 3.25L18.4167 6.5" stroke="white" stroke-width="2" stroke-linecap="round" />
+              fill="white"
+            />
+            <path
+              d="M7.58325 3.25L7.58325 6.5"
+              stroke="white"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+            <path
+              d="M18.4167 3.25L18.4167 6.5"
+              stroke="white"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
           </svg>
           <span>Calendar</span>
         </div>
 
-        <div class="spacer"></div> <!-- pushes signout down -->
+        <div class="spacer"></div>
+        <!-- pushes signout down -->
         <div class="icon signout" @click="logout">
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
             <polyline points="16 17 21 12 16 7"></polyline>
             <line x1="21" y1="12" x2="9" y2="12"></line>
           </svg>
           <span>Sign Out</span>
         </div>
-
       </aside>
     </transition>
 
@@ -110,8 +178,12 @@
       <!-- ✅ GLOBAL SEARCH -->
       <section class="global-search-section">
         <div class="flex justify-center my-6 px-4">
-          <input type="text" v-model="globalSearchQuery" placeholder="Search trainings..."
-            class="global-search-bar text-black px-4 py-2 border rounded-lg w-full sm:w-3/4 md:w-1/2 lg:w-1/3" />
+          <input
+            type="text"
+            v-model="globalSearchQuery"
+            placeholder="Search trainings..."
+            class="global-search-bar text-black px-4 py-2 border rounded-lg w-full sm:w-3/4 md:w-1/2 lg:w-1/3"
+          />
         </div>
       </section>
 
@@ -120,7 +192,9 @@
         <div class="flex items-center justify-between">
           <h2 class="section-title flex items-center gap-1">
             Upcoming Trainings
-            <span class="count-badge">{{ sortedUpcomingTrainings.length }}</span>
+            <span class="count-badge">{{
+              sortedUpcomingTrainings.length
+            }}</span>
           </h2>
 
           <button class="plus-btn-text" @click="openTrainingPopup()">+</button>
@@ -128,23 +202,39 @@
 
         <!-- ✅ Grid Layout -->
         <div class="trainings-grid">
-          <div v-for="training in visibleFilteredUpcoming" :key="training.trainingID" class="training-card"
-            @click="openTrainingDetails(training)">
+          <div
+            v-for="training in visibleFilteredUpcoming"
+            :key="training.trainingID"
+            class="training-card"
+            @click="openTrainingDetails(training)"
+          >
             <div class="training-right" @click="openTrainingDetails(training)">
               <h3 class="training-title">{{ training.title }}</h3>
-              <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
-
+              <p class="training-date">
+                {{ formatSchedule(training.schedule) }}
+              </p>
             </div>
 
             <!-- Menu -->
             <div class="menu">
-              <div class="menu-icon" @click.stop="toggleUpcomingMenu(training.trainingID)">
+              <div
+                class="menu-icon"
+                @click.stop="toggleUpcomingMenu(training.trainingID)"
+              >
                 ⋮
               </div>
-              <div v-if="openUpcomingMenu === training.trainingID" class="dropdown-menu" @click.stop>
+              <div
+                v-if="openUpcomingMenu === training.trainingID"
+                class="dropdown-menu"
+                @click.stop
+              >
                 <ul>
-                  <li @click="deleteTraining(training.trainingID)">Delete Training</li>
-                  <li @click="updateTraining(training.trainingID)">Update Training</li>
+                  <li @click="deleteTraining(training.trainingID)">
+                    Delete Training
+                  </li>
+                  <li @click="updateTraining(training.trainingID)">
+                    Update Training
+                  </li>
                 </ul>
               </div>
             </div>
@@ -152,9 +242,12 @@
         </div>
 
         <!-- Show More Button -->
-        <button v-if="sortedUpcomingTrainings.length > 4" class="show-more-btn"
-          @click="showAllUpcoming = !showAllUpcoming">
-          {{ showAllUpcoming ? 'Show Less' : 'Show More' }}
+        <button
+          v-if="sortedUpcomingTrainings.length > 4"
+          class="show-more-btn"
+          @click="showAllUpcoming = !showAllUpcoming"
+        >
+          {{ showAllUpcoming ? "Show Less" : "Show More" }}
         </button>
       </section>
 
@@ -163,27 +256,44 @@
         <div class="flex items-center justify-between">
           <h2 class="section-title flex items-center gap-1">
             Completed Trainings
-            <span class="count-badge">{{ sortedCompletedTrainings.length }}</span>
+            <span class="count-badge">{{
+              sortedCompletedTrainings.length
+            }}</span>
           </h2>
         </div>
 
         <!-- ✅ Grid Layout -->
         <div class="trainings-grid">
-          <div v-for="training in visibleFilteredCompleted" :key="training.trainingID" class="training-card"
-            @click="openTrainingDetails(training)">
+          <div
+            v-for="training in visibleFilteredCompleted"
+            :key="training.trainingID"
+            class="training-card"
+            @click="openTrainingDetails(training)"
+          >
             <div class="training-right" @click="openTrainingDetails(training)">
               <h3 class="training-title">{{ training.title }}</h3>
-              <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
+              <p class="training-date">
+                {{ formatSchedule(training.schedule) }}
+              </p>
             </div>
 
             <!-- Menu -->
             <div class="menu">
-              <div class="menu-icon" @click.stop="toggleCompletedMenu(training.trainingID)">
+              <div
+                class="menu-icon"
+                @click.stop="toggleCompletedMenu(training.trainingID)"
+              >
                 ⋮
               </div>
-              <div v-if="openCompletedMenu === training.trainingID" class="dropdown-menu" @click.stop>
+              <div
+                v-if="openCompletedMenu === training.trainingID"
+                class="dropdown-menu"
+                @click.stop
+              >
                 <ul>
-                  <li @click="deleteTraining(training.trainingID)">Delete Training</li>
+                  <li @click="deleteTraining(training.trainingID)">
+                    Delete Training
+                  </li>
                 </ul>
               </div>
             </div>
@@ -191,23 +301,38 @@
         </div>
 
         <!-- Show More Button -->
-        <button v-if="sortedCompletedTrainings.length > 4" class="show-more-btn"
-          @click="showAllCompleted = !showAllCompleted">
-          {{ showAllCompleted ? 'Show Less' : 'Show More' }}
+        <button
+          v-if="sortedCompletedTrainings.length > 4"
+          class="show-more-btn"
+          @click="showAllCompleted = !showAllCompleted"
+        >
+          {{ showAllCompleted ? "Show Less" : "Show More" }}
         </button>
       </section>
 
-            <!-- Registrants Modal -->
-      <div v-if="showRegistrantsModal" class="modal-overlay" @click.self="closeModal">
+      <!-- Registrants Modal -->
+      <div
+        v-if="showRegistrantsModal"
+        class="modal-overlay"
+        @click.self="closeModal"
+      >
         <div class="modal-content">
           <button class="modal-close-btn" @click="closeModal">✕</button>
-          <h3 class="modal-title">Registrants for {{ selectedTraining.title }}</h3>
+          <h3 class="modal-title">
+            Registrants for {{ selectedTraining.title }}
+          </h3>
 
           <div class="registrants-table-container">
             <table>
               <thead>
                 <tr>
-                  <th><input type="checkbox" v-model="selectAll" @change="toggleSelectAll"></th>
+                  <th>
+                    <input
+                      type="checkbox"
+                      v-model="selectAll"
+                      @change="toggleSelectAll"
+                    />
+                  </th>
                   <th>CERTIFICATE TRACKING ID</th>
                   <th>FULL NAME</th>
                   <th>REGISTRATION DATE</th>
@@ -218,7 +343,7 @@
               <tbody>
                 <tr v-for="person in registrantsList" :key="person.id">
                   <td>
-                    <input type="checkbox" v-model="person.selected">
+                    <input type="checkbox" v-model="person.selected" />
                   </td>
                   <td>
                     <p class="registrant-certid">{{ person.id }}</p>
@@ -229,25 +354,40 @@
                   <td>
                     <p class="registration-date">{{ person.dateRegistered }}</p>
                   </td>
-                  <td :class="{
-                    'status-attended': person.status === 'Attended',
-                    'status-registered': person.status === 'Registered',
-                    'status-did-not-attend': person.status === 'Did not Attend'
-                  }">
+                  <td
+                    :class="{
+                      'status-attended': person.status === 'Attended',
+                      'status-registered': person.status === 'Registered',
+                      'status-did-not-attend':
+                        person.status === 'Did not Attend',
+                    }"
+                  >
                     {{ person.status }}
                   </td>
                   <td>
-                    <button class="action-btn"
-                            :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
-                            :disabled="person.hasCertificate"
-                            @click="issueCertificate(person)">
-                      {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
+                    <button
+                      class="action-btn"
+                      :class="
+                        person.hasCertificate
+                          ? 'certificate-issued-btn'
+                          : 'issue-cert-btn'
+                      "
+                      :disabled="person.hasCertificate"
+                      @click="issueCertificate(person)"
+                    >
+                      {{
+                        person.hasCertificate
+                          ? "Certificate Issued"
+                          : "Issue Certificate"
+                      }}
                     </button>
 
                     <!-- View Certificate Button (only show when certificate exists) -->
-                    <button class="action-btn"
-                            v-if="person.hasCertificate && person.certificateUrl"
-                            @click="viewCertificate(person.certificateUrl)">
+                    <button
+                      class="action-btn"
+                      v-if="person.hasCertificate && person.certificateUrl"
+                      @click="viewCertificate(person.certificateUrl)"
+                    >
                       View Certificate
                     </button>
                   </td>
@@ -266,20 +406,29 @@
       </div>
 
       <!-- Training Details Modal -->
-      <div v-if="showTrainingDetailsModal" class="modal-overlay" @click.self="closeTrainingDetails">
+      <div
+        v-if="showTrainingDetailsModal"
+        class="modal-overlay"
+        @click.self="closeTrainingDetails"
+      >
         <div class="training-details-modal">
-          <button class="modal-close-btn" @click="closeTrainingDetails">✕</button>
+          <button class="modal-close-btn" @click="closeTrainingDetails">
+            ✕
+          </button>
 
           <h3 class="modal-title">{{ selectedTraining.title }}</h3>
           <p class="training-info">
             <strong>Description:</strong> {{ selectedTraining.description }}
           </p>
           <p class="training-info">
-            <strong>Date and Start Time:</strong> {{ formatSchedule(selectedTraining.schedule) }}
+            <strong>Date and Start Time:</strong>
+            {{ formatSchedule(selectedTraining.schedule) }}
           </p>
           <p class="training-info">
-            <strong>End Time:</strong> {{ formatSchedule(selectedTraining.end_time) }}
-          </p> <!-- 👈 Show end_time -->
+            <strong>End Time:</strong>
+            {{ formatSchedule(selectedTraining.end_time) }}
+          </p>
+          <!-- 👈 Show end_time -->
           <p class="training-info">
             <strong>Mode:</strong> {{ selectedTraining.mode }}
           </p>
@@ -292,20 +441,32 @@
           <!-- ✅ Show only if training is Online -->
           <p class="training-info" v-if="selectedTraining.mode === 'Online'">
             <strong>Training Link: </strong>
-            <a :href="selectedTraining.trainingLink" target="_blank" class="training-link">
+            <a
+              :href="selectedTraining.trainingLink"
+              target="_blank"
+              class="training-link"
+            >
               {{ selectedTraining.trainingLink }}
             </a>
           </p>
 
           <div class="training-actions">
-            <button class="btn-view-registrants" @click="handleViewRegistrants(selectedTraining)">
+            <button
+              class="btn-view-registrants"
+              @click="handleViewRegistrants(selectedTraining)"
+            >
               View Registrants
             </button>
           </div>
           <!-- ✅ Show QR only if training is live/upcoming within allowed time -->
           <div
-            v-if="activeTrainingQR && activeTrainingId === selectedTraining.trainingID && isTrainingActive(selectedTraining)"
-            class="qr-container">
+            v-if="
+              activeTrainingQR &&
+              activeTrainingId === selectedTraining.trainingID &&
+              isTrainingActive(selectedTraining)
+            "
+            class="qr-container"
+          >
             <h3>QR Code (Expires at: {{ activeTrainingQRExpiresAt }})</h3>
             <qrcode-vue :value="activeTrainingQR" :size="200" />
           </div>
@@ -313,73 +474,144 @@
       </div>
 
       <!-- Certificate Upload -->
-      <div v-if="showCertUploadModal" class="modal-overlay" @click.self="closeCertUploadModal">
+      <div
+        v-if="showCertUploadModal"
+        class="modal-overlay"
+        @click.self="closeCertUploadModal"
+      >
         <div class="certificate-modal">
-
           <button class="cert-close-btn" @click="dismissModal">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 6L6 18M6 6L18 18" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round" />
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M18 6L6 18M6 6L18 18"
+                stroke="#4a4a4a"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
             </svg>
           </button>
 
           <div class="cert-modal-header">
             <div class="profile-avatar-wrapper">
-              <img :src="selectedRegistrant.img" alt="Registrant Profile" class="profile-avatar-img"
-                v-if="selectedRegistrant.img" />
+              <img
+                :src="selectedRegistrant.img"
+                alt="Registrant Profile"
+                class="profile-avatar-img"
+                v-if="selectedRegistrant.img"
+              />
               <div class="profile-avatar-placeholder" v-else>
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
                   <circle cx="12" cy="7" r="4" fill="#a7a7a7" />
-                  <path d="M17.5 19.5c0-3.314-2.239-6-5-6s-5 2.686-5 6h10z" fill="#a7a7a7" />
+                  <path
+                    d="M17.5 19.5c0-3.314-2.239-6-5-6s-5 2.686-5 6h10z"
+                    fill="#a7a7a7"
+                  />
                 </svg>
               </div>
             </div>
             <p class="registrant-name">{{ selectedRegistrant.name }}</p>
           </div>
 
-          <p class="status">
-            Status: {{ selectedRegistrant.status }}
-          </p>
+          <p class="status">Status: {{ selectedRegistrant.status }}</p>
 
           <p class="date-registered">
             Date Registered: {{ selectedRegistrant.dateRegistered }}
           </p>
 
           <form @submit.prevent="sendCertificateDetails" class="cert-form">
-            <input type="text" v-model="selectedRegistrant.certificateTrackingID" placeholder="Certificate Tracking ID"
-              class="cert-input" required />
+            <input
+              type="text"
+              v-model="selectedRegistrant.certificateTrackingID"
+              placeholder="Certificate Tracking ID"
+              class="cert-input"
+              required
+            />
 
             <div class="cert-input-wrapper">
-              <input type="date" v-model="selectedRegistrant.certificateGivenDate" placeholder="dd/mm/yyyy"
-                class="cert-input date-input" required />
+              <input
+                type="date"
+                v-model="selectedRegistrant.certificateGivenDate"
+                placeholder="dd/mm/yyyy"
+                class="cert-input date-input"
+                required
+              />
 
               <span class="calendar-icon">
-                <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg
+                  width="26"
+                  height="26"
+                  viewBox="0 0 26 26"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
                   <path
                     d="M2.16669 9.4165C2.16669 7.53089 2.16669 6.58808 2.75247 6.00229C3.33826 5.4165 4.28107 5.4165 6.16669 5.4165H19.8334C21.719 5.4165 22.6618 5.4165 23.2476 6.00229C23.8334 6.58808 23.8334 7.53089 23.8334 9.4165V9.83317C23.8334 10.3046 23.8334 10.5403 23.6869 10.6867C23.5405 10.8332 23.3048 10.8332 22.8334 10.8332H3.16669C2.69528 10.8332 2.45958 10.8332 2.31313 10.687C2.16669 10.5405 2.16669 10.3048 2.16669 9.83317V9.4165Z"
-                    fill="#4a4a4a" />
+                    fill="#4a4a4a"
+                  />
                   <path
                     d="M22.833 13C23.3042 13 23.5401 13.0002 23.6865 13.1465C23.833 13.2929 23.833 13.5286 23.833 14V19.833C23.833 21.7186 23.8329 22.6613 23.2471 23.2471C22.6613 23.8329 21.7186 23.833 19.833 23.833H6.16699C4.28137 23.833 3.33872 23.8329 2.75293 23.2471C2.16714 22.6613 2.16699 21.7186 2.16699 19.833V14C2.16699 13.5286 2.16703 13.2929 2.31348 13.1465C2.45994 13.0002 2.69576 13 3.16699 13H22.833ZM8.58301 19.5C8.11182 19.5 7.87591 19.5001 7.72949 19.6465C7.58321 19.7929 7.58301 20.0288 7.58301 20.5V20.667C7.58301 21.1382 7.58308 21.3741 7.72949 21.5205C7.87591 21.6669 8.11182 21.667 8.58301 21.667H10.917C11.3882 21.667 11.6241 21.6669 11.7705 21.5205C11.9169 21.3741 11.917 21.1382 11.917 20.667V20.5C11.917 20.0288 11.9168 19.7929 11.7705 19.6465C11.6241 19.5001 11.3882 19.5 10.917 19.5H8.58301ZM15.083 19.5C14.6118 19.5 14.3759 19.5001 14.2295 19.6465C14.0832 19.7929 14.083 20.0288 14.083 20.5V20.667C14.083 21.1382 14.0831 21.3741 14.2295 21.5205C14.3759 21.6669 14.6118 21.667 15.083 21.667H17.417C17.8882 21.667 18.1241 21.6669 18.2705 21.5205C18.4169 21.3741 18.417 21.1382 18.417 20.667V20.5C18.417 20.0288 18.4168 19.7929 18.2705 19.6465C18.1241 19.5001 17.8882 19.5 17.417 19.5H15.083ZM8.58301 15.167C8.11182 15.167 7.87591 15.1671 7.72949 15.3135C7.58337 15.4599 7.58301 15.6959 7.58301 16.167V16.333C7.58301 16.8041 7.58337 17.0401 7.72949 17.1865C7.87591 17.3329 8.11182 17.333 8.58301 17.333H10.917C11.3882 17.333 11.6241 17.3329 11.7705 17.1865C11.9166 17.0401 11.917 16.8041 11.917 16.333V16.167C11.917 15.6959 11.9166 15.4599 11.7705 15.3135C11.6241 15.1671 11.3882 15.167 10.917 15.167H8.58301ZM15.083 15.167C14.6118 15.167 14.3759 15.1671 14.2295 15.3135C14.0834 15.4599 14.083 15.6959 14.083 16.167V16.333C14.083 16.8041 14.0834 17.0401 14.2295 17.1865C14.3759 17.3329 14.6118 17.333 15.083 17.333H17.417C17.8882 17.333 18.1241 17.3329 18.2705 17.1865C18.4166 17.0401 18.417 16.8041 18.417 16.333V16.167C18.417 15.6959 18.4166 15.4599 18.2705 15.3135C18.1241 15.1671 17.8882 15.167 17.417 15.167H15.083Z"
-                    fill="#4a4a4a" />
-                  <path d="M7.58331 3.25L7.58331 6.5" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round" />
-                  <path d="M18.4167 3.25L18.4167 6.5" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round" />
+                    fill="#4a4a4a"
+                  />
+                  <path
+                    d="M7.58331 3.25L7.58331 6.5"
+                    stroke="#4a4a4a"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M18.4167 3.25L18.4167 6.5"
+                    stroke="#4a4a4a"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
                 </svg>
               </span>
             </div>
 
             <div class="cert-input-wrapper file-input-wrapper">
-              <input type="file" id="certificate-upload" accept="image/*,application/pdf" @change="handleFileUpload" class="hidden-file-input" />
+              <input
+                type="file"
+                id="certificate-upload"
+                accept="image/*,application/pdf"
+                @change="handleFileUpload"
+                class="hidden-file-input"
+              />
               <label for="certificate-upload" class="cert-input upload-label">
-                {{ selectedRegistrant.uploadedFile ? selectedRegistrant.uploadedFile.name : 'Upload File (PDF or Image)' }}
+                {{
+                  selectedRegistrant.uploadedFile
+                    ? selectedRegistrant.uploadedFile.name
+                    : "Upload File (PDF or Image)"
+                }}
               </label>
               <span class="upload-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
                   <path
                     d="M12 20L11.4 20.8L12 21.25L12.6 20.8L12 20ZM13 8C13 7.44772 12.5523 7 12 7C11.4477 7 11 7.44772 11 8H13ZM8 17L7.4 17.8L11.4 20.8L12 20L12.6 19.2L8.6 16.2L8 17ZM12 20L12.6 20.8L16.6 17.8L16 17L15.4 16.2L11.4 19.2L12 20ZM12 20H13V8H12H11V20H12Z"
-                    fill="#4a4a4a" />
+                    fill="#4a4a4a"
+                  />
                   <path
                     d="M8 13C7.07003 13 6.60504 13 6.22354 12.8978C5.18827 12.6204 4.37962 11.8117 4.10222 10.7765C4 10.395 4 9.92997 4 9V8C4 6.13077 4 5.19615 4.40192 4.5C4.66523 4.04394 5.04394 3.66523 5.5 3.40192C6.19615 3 7.13077 3 9 3H15C16.8692 3 17.8038 3 18.5 3.40192C18.9561 3.66523 19.3348 4.04394 19.5981 4.5C20 5.19615 20 6.13077 20 8V9C20 9.92997 20 10.395 19.8978 10.7765C19.6204 11.8117 18.8117 12.6204 17.7765 12.8978C17.395 13 16.93 13 16 13"
-                    stroke="#4a4a4a" stroke-width="2" stroke-linecap="round" />
+                    stroke="#4a4a4a"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
                 </svg>
               </span>
             </div>
@@ -398,12 +630,23 @@
           </button>
 
           <!-- Title -->
-          <h2 class="training-popup-title">{{ isEditMode ? "Update Training" : "Post Training" }}</h2>
+          <h2 class="training-popup-title">
+            {{ isEditMode ? "Update Training" : "Post Training" }}
+          </h2>
 
           <!-- Form -->
           <form @submit.prevent="saveTraining" class="training-popup-form">
-            <input v-model="newTraining.title" type="text" placeholder="Title" class="training-input" />
-            <textarea v-model="newTraining.description" placeholder="Description" class="training-input"></textarea>
+            <input
+              v-model="newTraining.title"
+              type="text"
+              placeholder="Title"
+              class="training-input"
+            />
+            <textarea
+              v-model="newTraining.description"
+              placeholder="Description"
+              class="training-input"
+            ></textarea>
 
             <!-- Schedule -->
             <div class="popup-form-group schedule-group">
@@ -411,17 +654,41 @@
               <div class="schedule-input-wrapper">
                 <!-- Date input with calendar icon -->
                 <div class="date-input-wrapper">
-                  <input type="date" id="schedule" v-model="newTraining.date" :min="todayDate" placeholder="Schedule" />
+                  <input
+                    type="date"
+                    id="schedule"
+                    v-model="newTraining.date"
+                    :min="todayDate"
+                    placeholder="Schedule"
+                  />
                   <span class="calendar-icon">
-                    <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg
+                      width="26"
+                      height="26"
+                      viewBox="0 0 26 26"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
                       <path
                         d="M2.16669 9.41675C2.16669 7.53113 2.16669 6.58832 2.75247 6.00253C3.33826 5.41675 4.28107 5.41675 6.16669 5.41675H19.8334C21.719 5.41675 22.6618 5.41675 23.2476 6.00253C23.8334 6.58832 23.8334 7.53113 23.8334 9.41675V9.83342C23.8334 10.3048 23.8334 10.5405 23.6869 10.687C23.5405 10.8334 23.3048 10.8334 22.8334 10.8334H3.16669C2.69528 10.8334 2.45958 10.8334 2.31313 10.687C2.16669 10.5405 2.16669 10.3048 2.16669 9.83341V9.41675Z"
-                        fill="black" />
+                        fill="black"
+                      />
                       <path
                         d="M22.833 13C23.3042 13 23.5401 13.0002 23.6865 13.1465C23.833 13.2929 23.833 13.5286 23.833 14V19.833C23.833 21.7186 23.8329 22.6613 23.2471 23.2471C22.6613 23.8329 21.7186 23.833 19.833 23.833H6.16699C4.28137 23.833 3.33872 23.8329 2.75293 23.2471C2.16714 22.6613 2.16699 21.7186 2.16699 19.833V14C2.16699 13.5286 2.16703 13.2929 2.31348 13.1465C2.45994 13.0002 2.69576 13 3.16699 13H22.833Z"
-                        fill="black" />
-                      <path d="M7.58331 3.25L7.58331 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
-                      <path d="M18.4167 3.25L18.4167 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
+                        fill="black"
+                      />
+                      <path
+                        d="M7.58331 3.25L7.58331 6.5"
+                        stroke="black"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                      />
+                      <path
+                        d="M18.4167 3.25L18.4167 6.5"
+                        stroke="black"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                      />
                     </svg>
                   </span>
                 </div>
@@ -430,14 +697,28 @@
                 <div class="time-input-wrapper">
                   <label for="startTime">Start Time</label>
                   <div class="date-input-wrapper">
-                    <input type="time" id="startTime" v-model="newTraining.startTime" placeholder="Start Time" />
+                    <input
+                      type="time"
+                      id="startTime"
+                      v-model="newTraining.startTime"
+                      placeholder="Start Time"
+                    />
                     <span class="calendar-icon">
-                      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <svg
+                        width="26"
+                        height="26"
+                        viewBox="0 0 26 26"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
                         <path
                           d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
-                          fill="black" />
-                        <path d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
-                          fill="black" />
+                          fill="black"
+                        />
+                        <path
+                          d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
+                          fill="black"
+                        />
                       </svg>
                     </span>
                   </div>
@@ -447,14 +728,28 @@
                 <div class="time-input-wrapper">
                   <label for="endTime">End Time</label>
                   <div class="date-input-wrapper">
-                    <input type="time" id="endTime" v-model="newTraining.endTime" placeholder="End Time" />
+                    <input
+                      type="time"
+                      id="endTime"
+                      v-model="newTraining.endTime"
+                      placeholder="End Time"
+                    />
                     <span class="calendar-icon">
-                      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <svg
+                        width="26"
+                        height="26"
+                        viewBox="0 0 26 26"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
                         <path
                           d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
-                          fill="black" />
-                        <path d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
-                          fill="black" />
+                          fill="black"
+                        />
+                        <path
+                          d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
+                          fill="black"
+                        />
                       </svg>
                     </span>
                   </div>
@@ -465,7 +760,11 @@
             <!-- On-Site / Online -->
             <div class="training-radio-group">
               <label>
-                <input type="radio" value="On-Site" v-model="newTraining.mode" />
+                <input
+                  type="radio"
+                  value="On-Site"
+                  v-model="newTraining.mode"
+                />
                 On-Site
               </label>
               <label>
@@ -475,29 +774,39 @@
             </div>
 
             <!-- Conditional field -->
-            <input v-if="newTraining.mode === 'On-Site'" v-model="newTraining.location" type="text"
-              placeholder="Location" class="training-input" />
+            <input
+              v-if="newTraining.mode === 'On-Site'"
+              v-model="newTraining.location"
+              type="text"
+              placeholder="Location"
+              class="training-input"
+            />
 
-            <input v-else-if="newTraining.mode === 'Online'" v-model="newTraining.trainingLink" type="url"
-              placeholder="Training Link" class="training-input" />
+            <input
+              v-else-if="newTraining.mode === 'Online'"
+              v-model="newTraining.trainingLink"
+              type="url"
+              placeholder="Training Link"
+              class="training-input"
+            />
 
             <!-- Tag selection -->
             <div class="relative mb-4">
               <label class="block font-semibold text-gray-600 mb-2">Tags</label>
               <!-- Search/Input for New Tag -->
-              <input 
-                v-model="newTagName" 
-                type="text" 
-                placeholder="Search or type a new tag..." 
-                class="training-input mb-2" 
+              <input
+                v-model="newTagName"
+                type="text"
+                placeholder="Search or type a new tag..."
+                class="training-input mb-2"
               />
               <!-- Tag List Wrapper for horizontal scrolling -->
               <div class="tag-list-wrapper">
                 <div class="tag-list">
-                  <span 
-                    v-for="tag in filteredTags" 
-                    :key="tag.TagID" 
-                    class="tag-chip" 
+                  <span
+                    v-for="tag in filteredTags"
+                    :key="tag.TagID"
+                    class="tag-chip"
                     @click="toggleTag(tag.TagID)"
                     :class="{ 'tag-chip-selected': isTagSelected(tag.TagID) }"
                   >
@@ -506,18 +815,68 @@
                 </div>
               </div>
               <!-- Display Selected Tags as Chips -->
-              <div v-if="newTraining.Tags.length" class="flex flex-wrap gap-2 mt-2">
-                <span v-for="tagID in newTraining.Tags" :key="tagID"
-                  class="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-full">
+              <div
+                v-if="newTraining.Tags.length"
+                class="flex flex-wrap gap-2 mt-2"
+              >
+                <span
+                  v-for="tagID in newTraining.Tags"
+                  :key="tagID"
+                  class="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-full"
+                >
                   {{ getTagName(tagID) }}
-                  <button @click.stop="removeTag(tagID)" class="ml-1 text-red-500">×</button> <!-- Remove Button -->
+                  <button
+                    @click.stop="removeTag(tagID)"
+                    class="ml-1 text-red-500"
+                  >
+                    ×
+                  </button>
+                  <!-- Remove Button -->
                 </span>
               </div>
-              <button @click.prevent="addTag" class="training-save-btn mt-2">Add Tag</button>
+              <button @click.prevent="addTag" class="training-save-btn mt-2">
+                Add Tag
+              </button>
             </div>
             <!-- Save -->
-            <button type="submit" class="training-post-btn">{{ isEditMode ? "Update" : "Post" }}</button>
+            <button type="submit" class="training-post-btn">
+              {{ isEditMode ? "Update" : "Post" }}
+            </button>
           </form>
+        </div>
+      </div>
+      <div class="fixed top-5 right-5 space-y-2 z-50">
+        <div
+          v-for="toast in toasts"
+          :key="toast.id"
+          :class="[
+            'px-4 py-2 rounded shadow flex items-center gap-2',
+            toast.type === 'success'
+              ? 'bg-white text-black'
+              : toast.type === 'error'
+              ? 'bg-red-500 text-white'
+              : toast.type === 'confirm'
+              ? 'bg-dark-slate text-white'
+              : 'bg-gray-500 text-white',
+          ]"
+        >
+          <span class="flex-1">{{ toast.message }}</span>
+
+          <!-- ONLY SHOW WHEN CONFIRM -->
+          <template v-if="toast.type === 'confirm'">
+            <button
+              @click="toast.onConfirm()"
+              class="px-2 py-1 bg-white text-black rounded"
+            >
+              Yes
+            </button>
+            <button
+              @click="toast.onCancel()"
+              class="px-2 py-1 bg-gray-700 text-white rounded"
+            >
+              No
+            </button>
+          </template>
         </div>
       </div>
     </main>
@@ -529,51 +888,61 @@ import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
 import axios from "axios";
 import QrcodeVue from "qrcode.vue";
 import api from "@/composables/api.js";
-import { activeTrainingQR, activeTrainingId, scheduleQR } from "@/composables/useTrainingQR.js";
+import {
+  activeTrainingQR,
+  activeTrainingId,
+  scheduleQR,
+} from "@/composables/useTrainingQR.js";
 import { uploadCertificate, getPDFUrl } from "@/lib/supabase.js";
 import jsPDF from "jspdf";
 import * as pdfjsLib from "pdfjs-dist";
 
+const toasts = ref([]);
 // Configure pdfjs worker - use worker from public folder
 // Files in public folder are served from root in both dev and production
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
 // Helper function to convert PDF blob/ArrayBuffer to PNG image
 async function convertPDFToImage(pdfBlobOrArrayBuffer) {
   try {
     // Convert to ArrayBuffer if it's a Blob
-    const data = pdfBlobOrArrayBuffer instanceof Blob 
-      ? await pdfBlobOrArrayBuffer.arrayBuffer() 
-      : pdfBlobOrArrayBuffer;
-    
+    const data =
+      pdfBlobOrArrayBuffer instanceof Blob
+        ? await pdfBlobOrArrayBuffer.arrayBuffer()
+        : pdfBlobOrArrayBuffer;
+
     const pdf = await pdfjsLib.getDocument({ data }).promise;
     const page = await pdf.getPage(1); // Get first page
-    
+
     // Set scale for high quality (2x for better resolution)
     const scale = 2;
     const viewport = page.getViewport({ scale });
-    
+
     // Create canvas
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
     canvas.height = viewport.height;
     canvas.width = viewport.width;
-    
+
     // Render PDF page to canvas
     await page.render({
       canvasContext: context,
-      viewport: viewport
+      viewport: viewport,
     }).promise;
-    
+
     // Convert canvas to blob (PNG)
     return new Promise((resolve, reject) => {
-      canvas.toBlob((blob) => {
-        if (blob) {
-          resolve(blob);
-        } else {
-          reject(new Error("Failed to convert canvas to blob"));
-        }
-      }, "image/png", 0.95); // 95% quality
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error("Failed to convert canvas to blob"));
+          }
+        },
+        "image/png",
+        0.95
+      ); // 95% quality
     });
   } catch (error) {
     console.error("Error converting PDF to image:", error);
@@ -581,17 +950,16 @@ async function convertPDFToImage(pdfBlobOrArrayBuffer) {
   }
 }
 
-
 export default {
   components: { QrcodeVue }, // ✅ register component
   data() {
     return {
       dictLogo,
-      globalSearchQuery: '',
+      globalSearchQuery: "",
       showAllUpcoming: false,
       showAllCompleted: false,
-      activeTrainingQR,  // <-- QR code value (reactive)
-      activeTrainingId,  // <-- which training is active
+      activeTrainingQR, // <-- QR code value (reactive)
+      activeTrainingId, // <-- which training is active
       isEditMode: false,
       trainingToEditId: null,
       qrCodeValue: null,
@@ -601,17 +969,16 @@ export default {
 
       showBulkCertModal: false,
       certificateData: {
-        certTrackingID: '',
-        certGivenDate: '',
+        certTrackingID: "",
+        certGivenDate: "",
         file: null,
       },
 
-      
       selectedRegistrant: null,
       bulkCertData: {
-        baseTrackingID: '',
-        certGivenDate: '',
-        certificates: []
+        baseTrackingID: "",
+        certGivenDate: "",
+        certificates: [],
       },
 
       /* ==========================
@@ -651,252 +1018,341 @@ export default {
         mode: "",
         location: "",
         trainingLink: "",
-        Tags: []
+        Tags: [],
       },
 
       QrcodeVue: "",
       qrExpiresAt: "",
       activeTrainingId: null, // which training shows the QR
       tagOptions: [],
-      newTagName: ''
+      newTagName: "",
     };
   },
 
   methods: {
+    showToast(message, type = "success", duration = 3000) {
+      const id = Date.now();
+      toasts.value.push({ id, message, type });
 
-     viewCertificate(certificatePath) {
-    if (!certificatePath) return alert("Certificate not found.");
+      setTimeout(() => {
+        toasts.value = toasts.value.filter((t) => t.id !== id);
+      }, duration);
+    },
+    showConfirmToast(message) {
+      return new Promise((resolve) => {
+        const id = Date.now();
 
-    // Get public URL from Supabase
-    const publicUrl = getPDFUrl(certificatePath);
-    if (!publicUrl) return alert("Unable to generate certificate URL.");
-
-    window.open(publicUrl, "_blank"); // Open in new tab
-  },
-
-   async issueCertificate(person) {
-try {
-if (person.hasCertificate) return;
-
-// Generate PDF Certificate
-const givenDate = new Date().toISOString().split("T")[0];
-
-const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-const pageWidth = doc.internal.pageSize.getWidth();
-const pageHeight = doc.internal.pageSize.getHeight();
-
-const lines = [
-  { text: "Certificate of Completion", size: 28 },
-  { text: `This is to certify that ${person.name}`, size: 22 },
-  { text: `has completed the training: ${this.selectedTraining.title}`, size: 18 },
-  { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
-  { text: `Date Issued: ${givenDate}`, size: 14 }
-];
-
-let startY = (pageHeight - lines.reduce((sum, line) => sum + line.size + 10, 0)) / 2;
-lines.forEach(line => {
-  doc.setFontSize(line.size);
-  doc.text(line.text, pageWidth / 2, startY, null, null, "center");
-  startY += line.size + 10;
-});
-
-const pdfBlob = doc.output("blob");
-const safeName = person.name.replace(/[/\\?%*:|"<>]/g, "_");
-
-// Convert PDF to image on frontend (since Imagick is not available on server)
-const imageBlob = await convertPDFToImage(pdfBlob);
-const imageFile = new File([imageBlob], `${safeName}.png`, { type: "image/png" });
-
-// Send image file to backend - backend will upload to Supabase
-const token = localStorage.getItem("token");
-if (!token) {
-  alert("Please log in to continue.");
-  return;
-}
-
-const formData = new FormData();
-formData.append("certificateTrackingID", String(person.id)); // Ensure it's a string
-formData.append("certificateGivenDate", givenDate);
-formData.append("file", imageFile); // Send image (PDF already converted)
-formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
-
-      // Send to backend (backend handles conversion and Supabase upload)
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
+        toasts.value.push({
+          id,
+          message,
+          type: "confirm",
+          onConfirm: () => {
+            toasts.value = toasts.value.filter((t) => t.id !== id);
+            resolve(true);
           },
-        }
-      );
+          onCancel: () => {
+            toasts.value = toasts.value.filter((t) => t.id !== id);
+            resolve(false);
+          },
+        });
+      });
+    },
 
-// Update UI
-person.hasCertificate = true;
-person.certificateTrackingID = person.id;
-person.certificatePath = response.data.data?.certificatePath || null;
+    viewCertificate(certificatePath) {
+      if (!certificatePath) return this.showToast("Certificate not found.");
 
-// Generate public URL for viewing
-if (person.certificatePath) {
-  const { getPDFUrl } = await import("@/lib/supabase");
-  person.certificateUrl = getPDFUrl(person.certificatePath);
-}
+      // Get public URL from Supabase
+      const publicUrl = getPDFUrl(certificatePath);
+      if (!publicUrl)
+        return this.showToast("Unable to generate certificate URL.");
 
-alert(`Certificate issued for ${person.name}!`);
+      window.open(publicUrl, "_blank"); // Open in new tab
+    },
 
-} catch (error) {
-console.error("Error issuing certificate:", error);
-alert(`Failed to issue certificate for ${person.name}.`);
-}
-},
-    async issueBulkCertificates(selectedRegistrants) {
-    try {
-      const givenDate = new Date().toISOString().split("T")[0];
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Please log in to continue.");
-        return;
-      }
+    async issueCertificate(person) {
+      try {
+        if (person.hasCertificate) return;
 
-      // Issue certificates one by one (backend converts PDF to image)
-      for (const person of selectedRegistrants) {
-        const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+        // Generate PDF Certificate
+        const givenDate = new Date().toISOString().split("T")[0];
+
+        const doc = new jsPDF({
+          orientation: "landscape",
+          unit: "pt",
+          format: "a4",
+        });
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
         const lines = [
           { text: "Certificate of Completion", size: 28 },
           { text: `This is to certify that ${person.name}`, size: 22 },
-          { text: `has completed the training: ${this.selectedTraining.title}`, size: 18 },
+          {
+            text: `has completed the training: ${this.selectedTraining.title}`,
+            size: 18,
+          },
           { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
-          { text: `Date Issued: ${givenDate}`, size: 14 }
+          { text: `Date Issued: ${givenDate}`, size: 14 },
         ];
 
-        let startY = (pageHeight - lines.reduce((sum, line) => sum + line.size + 10, 0)) / 2;
-        lines.forEach(line => {
+        let startY =
+          (pageHeight - lines.reduce((sum, line) => sum + line.size + 10, 0)) /
+          2;
+        lines.forEach((line) => {
           doc.setFontSize(line.size);
           doc.text(line.text, pageWidth / 2, startY, null, null, "center");
           startY += line.size + 10;
         });
 
         const pdfBlob = doc.output("blob");
-        
+        const safeName = person.name.replace(/[/\\?%*:|"<>]/g, "_");
+
         // Convert PDF to image on frontend (since Imagick is not available on server)
         const imageBlob = await convertPDFToImage(pdfBlob);
-        const imageFile = new File([imageBlob], `${person.name}.png`, { type: "image/png" });
+        const imageFile = new File([imageBlob], `${safeName}.png`, {
+          type: "image/png",
+        });
 
-        // Send image file to backend - backend uploads to Supabase
+        // Send image file to backend - backend will upload to Supabase
+        const token = localStorage.getItem("token");
+        if (!token) {
+          this.showToast("Please log in to continue.");
+          return;
+        }
+
         const formData = new FormData();
         formData.append("certificateTrackingID", String(person.id)); // Ensure it's a string
         formData.append("certificateGivenDate", givenDate);
         formData.append("file", imageFile); // Send image (PDF already converted)
         formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
 
-        await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
+        // Send to backend (backend handles conversion and Supabase upload)
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL}/registrations/${
+            person.id
+          }/certificate`,
           formData,
-          { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+
+        // Update UI
+        person.hasCertificate = true;
+        person.certificateTrackingID = person.id;
+        person.certificatePath = response.data.data?.certificatePath || null;
+
+        // Generate public URL for viewing
+        if (person.certificatePath) {
+          const { getPDFUrl } = await import("@/lib/supabase");
+          person.certificateUrl = getPDFUrl(person.certificatePath);
+        }
+
+        this.showToast(`Certificate issued for ${person.name}!`);
+      } catch (error) {
+        console.error("Error issuing certificate:", error);
+        this.showToast(`Failed to issue certificate for ${person.name}.`);
+      }
+    },
+    async issueBulkCertificates(selectedRegistrants) {
+      try {
+        const givenDate = new Date().toISOString().split("T")[0];
+        const token = localStorage.getItem("token");
+        if (!token) {
+          this.showToast("Please log in to continue.");
+          return;
+        }
+
+        // Issue certificates one by one (backend converts PDF to image)
+        for (const person of selectedRegistrants) {
+          const doc = new jsPDF({
+            orientation: "landscape",
+            unit: "pt",
+            format: "a4",
+          });
+          const pageWidth = doc.internal.pageSize.getWidth();
+          const pageHeight = doc.internal.pageSize.getHeight();
+
+          const lines = [
+            { text: "Certificate of Completion", size: 28 },
+            { text: `This is to certify that ${person.name}`, size: 22 },
+            {
+              text: `has completed the training: ${this.selectedTraining.title}`,
+              size: 18,
+            },
+            { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
+            { text: `Date Issued: ${givenDate}`, size: 14 },
+          ];
+
+          let startY =
+            (pageHeight -
+              lines.reduce((sum, line) => sum + line.size + 10, 0)) /
+            2;
+          lines.forEach((line) => {
+            doc.setFontSize(line.size);
+            doc.text(line.text, pageWidth / 2, startY, null, null, "center");
+            startY += line.size + 10;
+          });
+
+          const pdfBlob = doc.output("blob");
+
+          // Convert PDF to image on frontend (since Imagick is not available on server)
+          const imageBlob = await convertPDFToImage(pdfBlob);
+          const imageFile = new File([imageBlob], `${person.name}.png`, {
+            type: "image/png",
+          });
+
+          // Send image file to backend - backend uploads to Supabase
+          const formData = new FormData();
+          formData.append("certificateTrackingID", String(person.id)); // Ensure it's a string
+          formData.append("certificateGivenDate", givenDate);
+          formData.append("file", imageFile); // Send image (PDF already converted)
+          formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
+
+          await axios.post(
+            `${import.meta.env.VITE_API_BASE_URL}/registrations/${
+              person.id
+            }/certificate`,
+            formData,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+        }
+
+        this.showToast("Bulk certificates issued successfully!");
+      } catch (error) {
+        console.error("Error issuing bulk certificates:", error);
+        this.showToast(
+          "Failed to issue bulk certificates. " +
+            (error.response?.data?.message || error.message)
         );
       }
+    },
 
-      alert("Bulk certificates issued successfully!");
-    } catch (error) {
-      console.error("Error issuing bulk certificates:", error);
-      alert("Failed to issue bulk certificates. " + (error.response?.data?.message || error.message));
-    }
-  },
+    async issueCertificatesToSelected() {
+      const selectedPeople = this.registrantsList.filter(
+        (p) => p.selected && !p.hasCertificate
+      );
+      if (!selectedPeople.length)
+        return this.showToast("No selected registrants or all already issued.");
 
-  async issueCertificatesToSelected() {
-    const selectedPeople = this.registrantsList.filter(p => p.selected && !p.hasCertificate);
-    if (!selectedPeople.length) return alert("No selected registrants or all already issued.");
+      try {
+        const certGivenDate = new Date().toISOString().split("T")[0];
+        const token = localStorage.getItem("token");
+        if (!token) {
+          this.showToast("Please log in to continue.");
+          return;
+        }
 
-    try {
-      const certGivenDate = new Date().toISOString().split("T")[0];
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Please log in to continue.");
-        return;
-      }
+        // Issue certificates one by one (backend converts PDF to image)
+        for (const person of selectedPeople) {
+          const doc = new jsPDF({
+            orientation: "landscape",
+            unit: "pt",
+            format: "a4",
+          });
+          const pageWidth = doc.internal.pageSize.getWidth();
+          const pageHeight = doc.internal.pageSize.getHeight();
 
-      // Issue certificates one by one (backend converts PDF to image)
-      for (const person of selectedPeople) {
-        const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
+          const lines = [
+            { text: "Certificate of Completion", size: 28 },
+            { text: `This is to certify that ${person.name}`, size: 22 },
+            {
+              text: `has completed the training: ${this.selectedTraining.title}`,
+              size: 18,
+            },
+            { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
+            { text: `Date Issued: ${certGivenDate}`, size: 14 },
+          ];
 
-        const lines = [
-          { text: "Certificate of Completion", size: 28 },
-          { text: `This is to certify that ${person.name}`, size: 22 },
-          { text: `has completed the training: ${this.selectedTraining.title}`, size: 18 },
-          { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
-          { text: `Date Issued: ${certGivenDate}`, size: 14 }
-        ];
+          let startY =
+            (pageHeight -
+              lines.reduce((sum, line) => sum + line.size + 10, 0)) /
+            2;
+          lines.forEach((line) => {
+            doc.setFontSize(line.size);
+            doc.text(line.text, pageWidth / 2, startY, null, null, "center");
+            startY += line.size + 10;
+          });
 
-        let startY = (pageHeight - lines.reduce((sum, line) => sum + line.size + 10, 0)) / 2;
-        lines.forEach(line => {
-          doc.setFontSize(line.size);
-          doc.text(line.text, pageWidth / 2, startY, null, null, "center");
-          startY += line.size + 10;
+          const pdfBlob = doc.output("blob");
+
+          // Convert PDF to image on frontend (since Imagick is not available on server)
+          const imageBlob = await convertPDFToImage(pdfBlob);
+          const imageFile = new File([imageBlob], `${person.id}.png`, {
+            type: "image/png",
+          });
+
+          // Send image file to backend - backend uploads to Supabase
+          const formData = new FormData();
+          formData.append("certificateTrackingID", String(person.id)); // Ensure it's a string
+          formData.append("certificateGivenDate", certGivenDate);
+          formData.append("file", imageFile); // Send image (PDF already converted)
+          formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
+
+          await axios.post(
+            `${import.meta.env.VITE_API_BASE_URL}/registrations/${
+              person.id
+            }/certificate`,
+            formData,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+        }
+
+        // Update UI
+        selectedPeople.forEach((p) => {
+          p.hasCertificate = true;
+          p.certificateTrackingID = p.id;
         });
 
-        const pdfBlob = doc.output("blob");
-        
-        // Convert PDF to image on frontend (since Imagick is not available on server)
-        const imageBlob = await convertPDFToImage(pdfBlob);
-        const imageFile = new File([imageBlob], `${person.id}.png`, { type: "image/png" });
+        this.showToast("Certificates issued successfully!");
 
-        // Send image file to backend - backend uploads to Supabase
-        const formData = new FormData();
-        formData.append("certificateTrackingID", String(person.id)); // Ensure it's a string
-        formData.append("certificateGivenDate", certGivenDate);
-        formData.append("file", imageFile); // Send image (PDF already converted)
-        formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
-
-        await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
-          formData,
-          { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
+        // Refresh registrants list
+        if (this.selectedTraining) {
+          await this.openRegistrantsModal(this.selectedTraining);
+        }
+      } catch (error) {
+        console.error("Bulk issuance error:", error);
+        this.showToast(
+          "Failed to issue certificates. " +
+            (error.response?.data?.message || error.message)
         );
       }
+    },
 
-      // Update UI
-      selectedPeople.forEach(p => {
-        p.hasCertificate = true;
-        p.certificateTrackingID = p.id;
+    toggleSelectAll() {
+      this.registrantsList.forEach((person) => {
+        person.selected = this.selectAll;
       });
+    },
 
-      alert("Certificates issued successfully!");
-      
-      // Refresh registrants list
-      if (this.selectedTraining) {
-        await this.openRegistrantsModal(this.selectedTraining);
-      }
-    } catch (error) {
-      console.error("Bulk issuance error:", error);
-      alert("Failed to issue certificates. " + (error.response?.data?.message || error.message));
-    }
-  },
-
-  toggleSelectAll() {
-    this.registrantsList.forEach(person => {
-      person.selected = this.selectAll;
-    });
-  },
-
-   updateSelectAll() {
-    this.selectAll = this.registrantsList.every(person => person.selected);
-  },
+    updateSelectAll() {
+      this.selectAll = this.registrantsList.every((person) => person.selected);
+    },
     openBulkCertModal() {
-      const registrantsWithoutCert = this.registrantsList.filter(r => !r.hasCertificate);
+      const registrantsWithoutCert = this.registrantsList.filter(
+        (r) => !r.hasCertificate
+      );
       if (registrantsWithoutCert.length === 0) {
-        alert("All registrants already have certificates.");
+        this.showToast("All registrants already have certificates.");
         return;
       }
       this.bulkCertData = {
-        baseTrackingID: '',
-        certGivenDate: '',
-        certificates: new Array(registrantsWithoutCert.length).fill(null)
+        baseTrackingID: "",
+        certGivenDate: "",
+        certificates: new Array(registrantsWithoutCert.length).fill(null),
       };
       this.showBulkCertModal = true;
     },
@@ -904,9 +1360,9 @@ alert(`Failed to issue certificate for ${person.name}.`);
     closeBulkCertModal() {
       this.showBulkCertModal = false;
       this.bulkCertData = {
-        baseTrackingID: '',
-        certGivenDate: '',
-        certificates: []
+        baseTrackingID: "",
+        certGivenDate: "",
+        certificates: [],
       };
     },
 
@@ -918,53 +1374,61 @@ alert(`Failed to issue certificate for ${person.name}.`);
     async sendBulkCertificates() {
       const token = localStorage.getItem("token");
       if (!token) {
-        alert("Please log in to continue.");
+        this.showToast("Please log in to continue.");
         return;
       }
 
       try {
         const formData = new FormData();
-        formData.append('baseTrackingID', this.bulkCertData.baseTrackingID);
-        formData.append('certGivenDate', this.bulkCertData.certGivenDate);
+        formData.append("baseTrackingID", this.bulkCertData.baseTrackingID);
+        formData.append("certGivenDate", this.bulkCertData.certGivenDate);
 
         this.bulkCertData.certificates.forEach((file, index) => {
           if (!file) {
-            throw new Error(`Please upload a certificate file for all registrants. Missing file at index ${index}`);
+            throw new Error(
+              `Please upload a certificate file for all registrants. Missing file at index ${index}`
+            );
           }
           formData.append(`certificates[${index}]`, file);
         });
 
         const response = await axios.post(
-          import.meta.env.VITE_API_BASE_URL + `trainings/${this.selectedTraining.trainingID}/certificates/bulk`,
+          import.meta.env.VITE_API_BASE_URL +
+            `trainings/${this.selectedTraining.trainingID}/certificates/bulk`,
           formData,
           {
             headers: {
               Authorization: `Bearer ${token}`,
-              'Content-Type': 'multipart/form-data',
+              "Content-Type": "multipart/form-data",
             },
           }
         );
 
-        alert("Certificates issued successfully to all registrants!");
+        this.showToast("Certificates issued successfully to all registrants!");
         this.closeBulkCertModal();
         await this.openRegistrantsModal(this.selectedTraining); // Refresh list
       } catch (error) {
         console.error("Error issuing bulk certificates:", error);
         if (error.response) {
-          alert(error.response.data.message || "Failed to issue certificates.");
+          this.showToast(
+            error.response.data.message || "Failed to issue certificates."
+          );
         } else {
-          alert(error.message || "An error occurred while issuing certificates.");
+          this.showToast(
+            error.message || "An error occurred while issuing certificates."
+          );
         }
       }
     },
 
-    
     async fetchTags() {
       try {
-        const response = await axios.get(import.meta.env.VITE_API_BASE_URL + '/tags');
+        const response = await axios.get(
+          import.meta.env.VITE_API_BASE_URL + "/tags"
+        );
         this.tagOptions = response.data; // Update tagOptions correctly
       } catch (error) {
-        console.error('Error fetching tags:', error);
+        console.error("Error fetching tags:", error);
       }
     },
 
@@ -994,13 +1458,13 @@ alert(`Failed to issue certificate for ${person.name}.`);
     async addTag() {
       const trimmedTagName = this.newTagName.trim();
       if (!trimmedTagName) {
-        alert("Please enter a tag name.");
+        this.showToast("Please enter a tag name.");
         return;
       }
 
       // Check if tag already exists (case-insensitive)
       const existingTag = this.tagOptions.find(
-        tag => tag.TagName.toLowerCase() === trimmedTagName.toLowerCase()
+        (tag) => tag.TagName.toLowerCase() === trimmedTagName.toLowerCase()
       );
 
       if (existingTag) {
@@ -1017,86 +1481,112 @@ alert(`Failed to issue certificate for ${person.name}.`);
       // Tag doesn't exist, create it
       try {
         // Send the new tag to the backend
-        const response = await axios.post(import.meta.env.VITE_API_BASE_URL + '/tags', {
-          TagName: trimmedTagName
-        });
+        const response = await axios.post(
+          import.meta.env.VITE_API_BASE_URL + "/tags",
+          {
+            TagName: trimmedTagName,
+          }
+        );
 
         // Add the new tag to the tagOptions and newTraining.Tags
         this.tagOptions.push(response.data);
         this.newTraining.Tags.push(Number(response.data.TagID));
 
         // Clear the input field
-        this.newTagName = '';
+        this.newTagName = "";
       } catch (error) {
         console.error("Error adding tag:", error);
-        alert("Failed to add tag.");
+        this.showToast("Failed to add tag.");
       }
     },
     async sendCertificateDetails() {
-    if (!this.selectedRegistrant || !this.selectedRegistrant.id) {
-      console.error("No registrant ID found!");
-      return;
-    }
-
-    if (!this.selectedRegistrant.uploadedFile) {
-      alert("Please select a certificate file before sending.");
-      return;
-    }
-
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("Please log in to continue.");
-      return;
-    }
-
-    // Convert PDF to image if uploaded file is a PDF
-    let fileToUpload = this.selectedRegistrant.uploadedFile;
-    if (fileToUpload.type === "application/pdf" || fileToUpload.name.toLowerCase().endsWith(".pdf")) {
-      try {
-        const pdfBlob = await fileToUpload.arrayBuffer();
-        const imageBlob = await convertPDFToImage(pdfBlob);
-        fileToUpload = new File([imageBlob], fileToUpload.name.replace(/\.pdf$/i, ".png"), { type: "image/png" });
-      } catch (error) {
-        console.error("Error converting PDF to image:", error);
-        alert("Failed to convert PDF to image. Please try uploading an image file instead.");
+      if (!this.selectedRegistrant || !this.selectedRegistrant.id) {
+        console.error("No registrant ID found!");
         return;
       }
-    }
 
-    const formData = new FormData();
-    formData.append("certificateTrackingID", String(this.selectedRegistrant.certificateTrackingID || this.selectedRegistrant.id));
-    formData.append("certificateGivenDate", this.selectedRegistrant.certificateGivenDate);
-    formData.append("file", fileToUpload); // Send image (PDF already converted if it was a PDF)
-    formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
-
-    try {
-      const res = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/registrations/${this.selectedRegistrant.id}/certificate`,
-        formData,
-        { 
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data" 
-          } 
-        }
-      );
-      console.log("Certificate uploaded successfully", res.data);
-      alert("Certificate uploaded successfully!");
-      this.showCertUploadModal = false;
-      
-      // Refresh registrants list if modal is open
-      if (this.showRegistrantsModal && this.selectedTraining) {
-        await this.openRegistrantsModal(this.selectedTraining);
+      if (!this.selectedRegistrant.uploadedFile) {
+        this.showToast("Please select a certificate file before sending.");
+        return;
       }
-    } catch (err) {
-      console.error("Error uploading certificate: ", err);
-      alert(err.response?.data?.message || "Failed to upload certificate. Please try again.");
-    }
-  },
+
+      const token = localStorage.getItem("token");
+      if (!token) {
+        this.showToast("Please log in to continue.");
+        return;
+      }
+
+      // Convert PDF to image if uploaded file is a PDF
+      let fileToUpload = this.selectedRegistrant.uploadedFile;
+      if (
+        fileToUpload.type === "application/pdf" ||
+        fileToUpload.name.toLowerCase().endsWith(".pdf")
+      ) {
+        try {
+          const pdfBlob = await fileToUpload.arrayBuffer();
+          const imageBlob = await convertPDFToImage(pdfBlob);
+          fileToUpload = new File(
+            [imageBlob],
+            fileToUpload.name.replace(/\.pdf$/i, ".png"),
+            { type: "image/png" }
+          );
+        } catch (error) {
+          console.error("Error converting PDF to image:", error);
+          this.showToast(
+            "Failed to convert PDF to image. Please try uploading an image file instead."
+          );
+          return;
+        }
+      }
+
+      const formData = new FormData();
+      formData.append(
+        "certificateTrackingID",
+        String(
+          this.selectedRegistrant.certificateTrackingID ||
+            this.selectedRegistrant.id
+        )
+      );
+      formData.append(
+        "certificateGivenDate",
+        this.selectedRegistrant.certificateGivenDate
+      );
+      formData.append("file", fileToUpload); // Send image (PDF already converted if it was a PDF)
+      formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
+
+      try {
+        const res = await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL}/registrations/${
+            this.selectedRegistrant.id
+          }/certificate`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+        console.log("Certificate uploaded successfully", res.data);
+        this.showToast("Certificate uploaded successfully!");
+        this.showCertUploadModal = false;
+
+        // Refresh registrants list if modal is open
+        if (this.showRegistrantsModal && this.selectedTraining) {
+          await this.openRegistrantsModal(this.selectedTraining);
+        }
+      } catch (err) {
+        console.error("Error uploading certificate: ", err);
+        this.showToast(
+          err.response?.data?.message ||
+            "Failed to upload certificate. Please try again."
+        );
+      }
+    },
 
     getTagName(tagID) {
       const normalizedId = Number(tagID);
-      const tag = this.tagOptions.find(t => Number(t.TagID) === normalizedId);
+      const tag = this.tagOptions.find((t) => Number(t.TagID) === normalizedId);
       return tag ? tag.TagName : normalizedId; // Return the tag name or ID if not found
     },
 
@@ -1138,84 +1628,99 @@ alert(`Failed to issue certificate for ${person.name}.`);
       }
     },
 
-
     // ✅ Generate QR and call backend
-
 
     /* ==========================
   ✅ Registrants Modal
 ========================== */
     async issueCertificate(person) {
-    try {
-      if (person.hasCertificate) return;
+      try {
+        if (person.hasCertificate) return;
 
-      const givenDate = new Date().toISOString().split("T")[0];
+        const givenDate = new Date().toISOString().split("T")[0];
 
-      // Generate PDF
-      const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
+        // Generate PDF
+        const doc = new jsPDF({
+          orientation: "landscape",
+          unit: "pt",
+          format: "a4",
+        });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
 
-      const lines = [
-        { text: "Certificate of Completion", size: 28 },
-        { text: `This is to certify that ${person.name}`, size: 22 },
-        { text: `has completed the training: ${this.selectedTraining.title}`, size: 18 },
-        { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
-        { text: `Date Issued: ${givenDate}`, size: 14 }
-      ];
+        const lines = [
+          { text: "Certificate of Completion", size: 28 },
+          { text: `This is to certify that ${person.name}`, size: 22 },
+          {
+            text: `has completed the training: ${this.selectedTraining.title}`,
+            size: 18,
+          },
+          { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
+          { text: `Date Issued: ${givenDate}`, size: 14 },
+        ];
 
-      let startY = (pageHeight - lines.reduce((sum, l) => sum + l.size + 10, 0)) / 2;
+        let startY =
+          (pageHeight - lines.reduce((sum, l) => sum + l.size + 10, 0)) / 2;
 
-      lines.forEach(line => {
-        doc.setFontSize(line.size);
-        doc.text(line.text, pageWidth / 2, startY, null, null, "center");
-        startY += line.size + 10;
-      });
+        lines.forEach((line) => {
+          doc.setFontSize(line.size);
+          doc.text(line.text, pageWidth / 2, startY, null, null, "center");
+          startY += line.size + 10;
+        });
 
-      const pdfBlob = doc.output("blob");
-      const safeName = person.name.replace(/[/\\?%*:|"<>]/g, "_");
+        const pdfBlob = doc.output("blob");
+        const safeName = person.name.replace(/[/\\?%*:|"<>]/g, "_");
 
-      // Convert PDF to image on frontend (since Imagick is not available on server)
-      const imageBlob = await convertPDFToImage(pdfBlob);
-      const imageFile = new File([imageBlob], `${safeName}.png`, { type: "image/png" });
+        // Convert PDF to image on frontend (since Imagick is not available on server)
+        const imageBlob = await convertPDFToImage(pdfBlob);
+        const imageFile = new File([imageBlob], `${safeName}.png`, {
+          type: "image/png",
+        });
 
-      // Send image file to backend - backend will upload to Supabase
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Please log in to continue.");
-        return;
+        // Send image file to backend - backend will upload to Supabase
+        const token = localStorage.getItem("token");
+        if (!token) {
+          this.showToast("Please log in to continue.");
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("certificateTrackingID", String(person.id)); // Ensure it's a string
+        formData.append("certificateGivenDate", givenDate);
+        formData.append("file", imageFile); // Send image (PDF already converted)
+        formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
+
+        // Send to backend (backend handles conversion and Supabase upload)
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL}/registrations/${
+            person.id
+          }/certificate`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+
+        // Update UI
+        person.hasCertificate = true;
+        person.certificateTrackingID = person.id;
+        person.certificatePath = response.data.data?.certificatePath || null;
+
+        // Generate public URL for viewing
+        if (person.certificatePath) {
+          const { getPDFUrl } = await import("@/lib/supabase");
+          person.certificateUrl = getPDFUrl(person.certificatePath);
+        }
+
+        this.showToast(`Certificate issued for ${person.name}!`);
+      } catch (error) {
+        console.error("Error issuing certificate:", error);
+        this.showToast(`Failed to issue certificate for ${person.name}.`);
       }
-
-      const formData = new FormData();
-      formData.append("certificateTrackingID", String(person.id)); // Ensure it's a string
-      formData.append("certificateGivenDate", givenDate);
-      formData.append("file", imageFile); // Send image (PDF already converted)
-      formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
-
-      // Send to backend (backend handles conversion and Supabase upload)
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
-        formData,
-        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
-      );
-
-      // Update UI
-      person.hasCertificate = true;
-      person.certificateTrackingID = person.id;
-      person.certificatePath = response.data.data?.certificatePath || null;
-
-      // Generate public URL for viewing
-      if (person.certificatePath) {
-        const { getPDFUrl } = await import("@/lib/supabase");
-        person.certificateUrl = getPDFUrl(person.certificatePath);
-      }
-
-      alert(`Certificate issued for ${person.name}!`);
-    } catch (error) {
-      console.error("Error issuing certificate:", error);
-      alert(`Failed to issue certificate for ${person.name}.`);
-    }
-  },
+    },
 
     closeRegistrantsModal() {
       this.showRegistrantsModal = false;
@@ -1225,19 +1730,19 @@ alert(`Failed to issue certificate for ${person.name}.`);
     /* ==========================
        ✅ Certificate Upload Modal
     ========================== */
-openCertUploadModal(registrant) {
-  console.log("REGISTRANT DATA:", registrant);
+    openCertUploadModal(registrant) {
+      console.log("REGISTRANT DATA:", registrant);
 
-  this.selectedRegistrant = {
-    ...registrant,
-    certificateTrackingID: registrant.id || "",
-    certificateGivenDate: registrant.certificateGivenDate || "",
-    uploadedFile: null,
-  };
+      this.selectedRegistrant = {
+        ...registrant,
+        certificateTrackingID: registrant.id || "",
+        certificateGivenDate: registrant.certificateGivenDate || "",
+        uploadedFile: null,
+      };
 
-  console.log("SELECTED REGISTRANT:", this.selectedRegistrant);
-  this.showCertUploadModal = true;
-},
+      console.log("SELECTED REGISTRANT:", this.selectedRegistrant);
+      this.showCertUploadModal = true;
+    },
 
     closeCertUploadModal() {
       this.showCertUploadModal = false;
@@ -1248,22 +1753,24 @@ openCertUploadModal(registrant) {
       this.selectedRegistrant.uploadedFile = event.target.files[0];
     },
 
-  sendCertificateDetails() {
-    if (!this.selectedRegistrant.uploadedFile) {
-      alert("Please select a certificate file before sending.");
-      return;
-    }
-    
-    this.sendCertificate(
-      this.selectedRegistrant.uploadedFile,
-      this.selectedRegistrant.id
-    ).then(() => {
-      this.closeCertUploadModal();
-    }).catch(err => {
-      console.error(err);
-      alert("Failed to send certificate.");
-    });
-  },
+    sendCertificateDetails() {
+      if (!this.selectedRegistrant.uploadedFile) {
+        this.showToast("Please select a certificate file before sending.");
+        return;
+      }
+
+      this.sendCertificate(
+        this.selectedRegistrant.uploadedFile,
+        this.selectedRegistrant.id
+      )
+        .then(() => {
+          this.closeCertUploadModal();
+        })
+        .catch((err) => {
+          console.error(err);
+          this.showToast("Failed to send certificate.");
+        });
+    },
 
     dismissModal() {
       this.showCertUploadModal = false;
@@ -1289,44 +1796,57 @@ openCertUploadModal(registrant) {
     },
 
     async openRegistrantsModal(training) {
-    try {
-      this.selectedTraining = training;
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("No token found");
+      try {
+        this.selectedTraining = training;
+        const token = localStorage.getItem("token");
+        if (!token) throw new Error("No token found");
 
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/trainings/${training.trainingID}/registrants`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_BASE_URL}/trainings/${
+            training.trainingID
+          }/registrants`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-      // Map certificatePath -> public URL for UI
-      this.registrantsList = response.data.map(r => ({
-        ...r,
-        certificateUrl: r.certificatePath ? getPDFUrl(r.certificatePath) : null
-      }));
+        // Map certificatePath -> public URL for UI
+        this.registrantsList = response.data.map((r) => ({
+          ...r,
+          certificateUrl: r.certificatePath
+            ? getPDFUrl(r.certificatePath)
+            : null,
+        }));
 
-      this.showRegistrantsModal = true;
-      this.closeAllMenus();
-    } catch (error) {
-      console.error("Error fetching registrants:", error);
-      alert("Failed to fetch registrants.");
-    }
-  },
+        this.showRegistrantsModal = true;
+        this.closeAllMenus();
+      } catch (error) {
+        console.error("Error fetching registrants:", error);
+        this.showToast("Failed to fetch registrants.");
+      }
+    },
     async fetchTrainings() {
       try {
         const storedUser = localStorage.getItem("user");
         const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-        const organizationID = parsedUser?.organizationID ?? parsedUser?.organization?.organizationID ?? null;
+        const organizationID =
+          parsedUser?.organizationID ??
+          parsedUser?.organization?.organizationID ??
+          null;
 
         let newTrainings = [];
         try {
           const { data } = await api.get("/organization/trainings");
           newTrainings = data;
         } catch (err) {
-          console.warn("Org trainings endpoint unavailable, falling back:", err?.response?.status);
+          console.warn(
+            "Org trainings endpoint unavailable, falling back:",
+            err?.response?.status
+          );
           const storedUser = localStorage.getItem("user");
           const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-          const organizationID = parsedUser?.organizationID ?? parsedUser?.organization?.organizationID ?? null;
+          const organizationID =
+            parsedUser?.organizationID ??
+            parsedUser?.organization?.organizationID ??
+            null;
 
           const { data } = await api.get("/trainings", {
             params: organizationID ? { organizationID } : {},
@@ -1334,11 +1854,16 @@ openCertUploadModal(registrant) {
           newTrainings = data;
         }
 
-        newTrainings.forEach(training => {
-          const existingIndex = this.upcomingtrainings.findIndex(t => t.trainingID === training.trainingID);
+        newTrainings.forEach((training) => {
+          const existingIndex = this.upcomingtrainings.findIndex(
+            (t) => t.trainingID === training.trainingID
+          );
 
           if (existingIndex > -1) {
-            this.upcomingtrainings[existingIndex] = { ...this.upcomingtrainings[existingIndex], ...training };
+            this.upcomingtrainings[existingIndex] = {
+              ...this.upcomingtrainings[existingIndex],
+              ...training,
+            };
           } else {
             this.upcomingtrainings.push(training);
           }
@@ -1365,8 +1890,10 @@ openCertUploadModal(registrant) {
         this.newTraining = {
           ...training,
           Tags: training.Tags
-            ? training.Tags.map(tag => Number(tag.TagID ?? tag.tagID ?? tag.id))
-            : []
+            ? training.Tags.map((tag) =>
+                Number(tag.TagID ?? tag.tagID ?? tag.id)
+              )
+            : [],
         };
       } else {
         this.isEditMode = false;
@@ -1379,7 +1906,7 @@ openCertUploadModal(registrant) {
           mode: "",
           location: "",
           trainingLink: "",
-          Tags: []
+          Tags: [],
         };
       }
 
@@ -1401,15 +1928,17 @@ openCertUploadModal(registrant) {
         mode: "",
         location: "",
         trainingLink: "",
-        Tags: []
+        Tags: [],
       };
       this.newTagName = ""; // optional: clear the tag input too
     },
 
     async updateTraining(trainingID) {
-      const training = this.upcomingtrainings.find(t => t.trainingID === trainingID);
+      const training = this.upcomingtrainings.find(
+        (t) => t.trainingID === trainingID
+      );
       if (!training) {
-        alert("Training not found.");
+        this.showToast("Training not found.");
         return;
       }
 
@@ -1422,7 +1951,10 @@ openCertUploadModal(registrant) {
       this.newTraining.date = scheduleParts[0] || "";
       this.newTraining.startTime = scheduleParts[1]?.slice(0, 5) || "";
       this.newTraining.endTime = training.end_time
-        ? (training.end_time.includes("T") ? training.end_time.split("T")[1] : training.end_time.split(" ")[1])?.slice(0, 5)
+        ? (training.end_time.includes("T")
+            ? training.end_time.split("T")[1]
+            : training.end_time.split(" ")[1]
+          )?.slice(0, 5)
         : "";
       this.newTraining.mode = training.mode;
       this.newTraining.location = training.location || "";
@@ -1431,7 +1963,7 @@ openCertUploadModal(registrant) {
 
       // ✅ Fix for tags
       this.newTraining.Tags = training.Tags
-        ? training.Tags.map(tag => Number(tag.TagID ?? tag.tagID ?? tag.id))
+        ? training.Tags.map((tag) => Number(tag.TagID ?? tag.tagID ?? tag.id))
         : [];
 
       if (!Array.isArray(this.newTraining.Tags)) {
@@ -1450,12 +1982,14 @@ openCertUploadModal(registrant) {
     async saveTraining() {
       try {
         if (!this.newTraining.date || !this.newTraining.startTime) {
-          alert("PLEASE SELECT BOTH A DATE AND TIME FOR THE TRAINING");
+          this.showToast("PLEASE SELECT BOTH A DATE AND TIME FOR THE TRAINING");
           return;
         }
 
         const combinedSchedule = `${this.newTraining.date} ${this.newTraining.startTime}`; // NO :00
-        const endTimeSchedule = this.newTraining.endTime ? `${this.newTraining.date} ${this.newTraining.endTime}` : null;
+        const endTimeSchedule = this.newTraining.endTime
+          ? `${this.newTraining.date} ${this.newTraining.endTime}`
+          : null;
 
         const payload = {
           title: this.newTraining.title,
@@ -1463,44 +1997,54 @@ openCertUploadModal(registrant) {
           schedule: combinedSchedule,
           end_time: endTimeSchedule,
           mode: this.newTraining.mode,
-          location: this.newTraining.mode === "On-Site" ? this.newTraining.location || null : null,
-          training_link: this.newTraining.mode === "Online" ? this.newTraining.trainingLink || null : null,
-          Tags: this.newTraining.Tags || []
+          location:
+            this.newTraining.mode === "On-Site"
+              ? this.newTraining.location || null
+              : null,
+          training_link:
+            this.newTraining.mode === "Online"
+              ? this.newTraining.trainingLink || null
+              : null,
+          Tags: this.newTraining.Tags || [],
         };
 
         const token = localStorage.getItem("token");
 
         if (this.isEditMode && this.trainingToEditId) {
           await axios.put(
-            `${import.meta.env.VITE_API_BASE_URL}/trainings/${this.trainingToEditId}`,
+            `${import.meta.env.VITE_API_BASE_URL}/trainings/${
+              this.trainingToEditId
+            }`,
             payload,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          alert("✅ TRAINING UPDATED SUCCESSFULLY!");
+          this.showToast("✅ TRAINING UPDATED SUCCESSFULLY!");
         } else {
           await axios.post(
             `${import.meta.env.VITE_API_BASE_URL}/trainings`,
             payload,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          alert("✅ TRAINING POSTED SUCCESSFULLY!");
+          this.showToast("✅ TRAINING POSTED SUCCESSFULLY!");
         }
 
         await this.fetchTrainings();
         this.closeTrainingPopup();
         this.isEditMode = false;
         this.trainingToEditId = null;
-
       } catch (error) {
         console.error("ERROR SAVING TRAINING:", error.response?.data || error);
-        alert("❌ SOMETHING WENT WRONG WHILE SAVING THE TRAINING");
+        this.showToast("❌ SOMETHING WENT WRONG WHILE SAVING THE TRAINING");
       }
     },
 
     // For deleting training
     async deleteTraining(trainingID) {
       try {
-        if (!confirm("Are you sure you want to delete this training?")) return;
+        const confirmed = await this.showConfirmToast(
+          "Are you sure you want to delete this training?"
+        );
+        if (!confirmed) return;
 
         const token = localStorage.getItem("token");
 
@@ -1509,7 +2053,7 @@ openCertUploadModal(registrant) {
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        alert("✅ Training deleted successfully!");
+        this.showToast("✅ Training deleted successfully!");
         await this.fetchTrainings();
 
         if (this.activeTrainingId === trainingID) {
@@ -1518,10 +2062,12 @@ openCertUploadModal(registrant) {
           this.activeTrainingId = null;
           if (this.qrExpireTimeout) clearTimeout(this.qrExpireTimeout);
         }
-
       } catch (error) {
-        console.error("Failed to delete training:", error.response?.data || error);
-        alert("❌ Something went wrong while deleting the training.");
+        console.error(
+          "Failed to delete training:",
+          error.response?.data || error
+        );
+        this.showToast("❌ Something went wrong while deleting the training.");
       }
     },
 
@@ -1557,9 +2103,7 @@ openCertUploadModal(registrant) {
     },
 
     /* ✅ ADD THIS FUNCTION HERE */
-
   },
-
 
   mounted() {
     this.fetchTrainings();
@@ -1596,27 +2140,27 @@ openCertUploadModal(registrant) {
     sortedUpcomingTrainings() {
       const now = new Date();
       return this.upcomingtrainings
-        .filter(t => new Date(t.schedule) >= now)
+        .filter((t) => new Date(t.schedule) >= now)
         .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
     },
 
     sortedCompletedTrainings() {
       const now = new Date();
       return this.upcomingtrainings
-        .filter(t => new Date(t.schedule) < now)
+        .filter((t) => new Date(t.schedule) < now)
         .sort((a, b) => new Date(b.schedule) - new Date(a.schedule));
     },
     filteredUpcoming() {
       const query = this.globalSearchQuery.toLowerCase();
       if (!query) return this.sortedUpcomingTrainings;
-      return this.sortedUpcomingTrainings.filter(training =>
-        training.title.toLowerCase().startsWith(query) // 🔹 only matches if letters typed are in order from the start
+      return this.sortedUpcomingTrainings.filter(
+        (training) => training.title.toLowerCase().startsWith(query) // 🔹 only matches if letters typed are in order from the start
       );
     },
     filteredCompleted() {
       const query = this.globalSearchQuery.toLowerCase();
       if (!query) return this.sortedCompletedTrainings;
-      return this.sortedCompletedTrainings.filter(training =>
+      return this.sortedCompletedTrainings.filter((training) =>
         training.title.toLowerCase().startsWith(query)
       );
     },
@@ -1634,7 +2178,7 @@ openCertUploadModal(registrant) {
     visibleUpcomingTrainings() {
       const orgId = this.currentOrganizationId;
       const list = this.sortedUpcomingTrainings.filter(
-        training => training.organization_id === orgId
+        (training) => training.organization_id === orgId
       );
       return this.showAllUpcoming ? list : list.slice(0, 4);
     },
@@ -1642,7 +2186,7 @@ openCertUploadModal(registrant) {
     visibleCompletedTrainings() {
       const orgId = this.currentOrganizationId;
       const list = this.sortedCompletedTrainings.filter(
-        training => training.organization_id === orgId
+        (training) => training.organization_id === orgId
       );
       return this.showAllCompleted ? list : list.slice(0, 4);
     },
@@ -1650,14 +2194,14 @@ openCertUploadModal(registrant) {
     sortedUpcomingTrainings() {
       const now = new Date();
       return this.upcomingtrainings
-        .filter(t => new Date(t.schedule) >= now)
+        .filter((t) => new Date(t.schedule) >= now)
         .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
     },
 
     sortedCompletedTrainings() {
       const now = new Date();
       return this.upcomingtrainings
-        .filter(t => new Date(t.schedule) < now)
+        .filter((t) => new Date(t.schedule) < now)
         .sort((a, b) => new Date(b.schedule) - new Date(a.schedule));
     },
     // Filter tags based on search input
@@ -1666,14 +2210,13 @@ openCertUploadModal(registrant) {
         return this.tagOptions;
       }
       const searchQuery = this.newTagName.toLowerCase().trim();
-      return this.tagOptions.filter(tag =>
+      return this.tagOptions.filter((tag) =>
         tag.TagName.toLowerCase().includes(searchQuery)
       );
     },
   },
 };
 </script>
-
 
 <script setup>
 import { ref, onMounted, computed } from "vue";
@@ -1682,7 +2225,6 @@ const isSidebarOpen = ref(true);
 const organizationName = ref("");
 const now = ref(new Date());
 
-
 // Toggle sidebar
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
@@ -1690,17 +2232,16 @@ const toggleSidebar = () => {
 
 const router = useRouter();
 // Sidebar navigation functions
-const goToProfile = () => router.push('/profile');
-const goToHome = () => router.push('/organization');
-const goToTrainings = () => router.push({ name: 'OrgTrainings' });
-const goToCareers = () => router.push({ name: 'OrgCareers' });
-const goToCalendar = () => router.push('/app/calendar');
+const goToProfile = () => router.push("/profile");
+const goToHome = () => router.push("/organization");
+const goToTrainings = () => router.push({ name: "OrgTrainings" });
+const goToCareers = () => router.push({ name: "OrgCareers" });
+const goToCalendar = () => router.push("/app/calendar");
 
 // Generic navigation function
 const navigateTo = (route) => {
   router.push(route);
-}
-
+};
 
 function isTrainingActive(training) {
   const trainingDate = new Date(training.schedule);
@@ -1722,10 +2263,10 @@ onMounted(() => {
 });
 
 const logout = () => {
-  localStorage.removeItem('user');
-  localStorage.removeItem('token');
-  router.push({ name: 'Login' });
-}
+  localStorage.removeItem("user");
+  localStorage.removeItem("token");
+  router.push({ name: "Login" });
+};
 </script>
 
 <style scoped>
@@ -1773,7 +2314,7 @@ const logout = () => {
 .organization-trainings {
   display: flex;
   height: 100vh;
-  font-family: 'Poppins', sans-serif;
+  font-family: "Poppins", sans-serif;
   background-color: #f4f4f4;
 }
 
@@ -1781,7 +2322,7 @@ const logout = () => {
 .sidebar {
   width: 200px;
   /* Expanded width */
-  background-color: #44576D;
+  background-color: #44576d;
   color: white;
   display: flex;
   flex-direction: column;
@@ -1880,8 +2421,8 @@ const logout = () => {
 .logo-text {
   font-size: 26px;
   font-weight: 700;
-  color: #44576D;
-  font-family: 'Poppins', sans-serif;
+  color: #44576d;
+  font-family: "Poppins", sans-serif;
 }
 
 .search-container {
@@ -1904,9 +2445,8 @@ const logout = () => {
   text-align: center;
 }
 
-
 .applicants-btn {
-  background-color: #44576D;
+  background-color: #44576d;
   color: white;
   border: none;
   padding: 6px 12px;
@@ -1916,7 +2456,7 @@ const logout = () => {
 }
 
 .applicants-btn {
-  background-color: #44576D;
+  background-color: #44576d;
 }
 
 .applicants-btn:hover {
@@ -2123,7 +2663,7 @@ const logout = () => {
 }
 
 .edit-btn {
-  background-color: #44576D;
+  background-color: #44576d;
   color: white;
   border: none;
   padding: 6px 12px;
@@ -2229,7 +2769,7 @@ const logout = () => {
   background-color: #004a99;
 }
 
-.dropdown-menu li+li {
+.dropdown-menu li + li {
   border-top: 1px solid #eee;
 }
 
@@ -2279,7 +2819,7 @@ tbody td {
 
 /* Status Colors (like in your image) */
 .status-attended {
-  color: #4CAF50;
+  color: #4caf50;
   /* Green */
   font-weight: 500;
 }
@@ -2309,9 +2849,8 @@ tbody td {
   background-color: #374151;
 }
 
-.bulk-issue-btn
-{
-   /* Set a consistent minimum width for all buttons (fixes the sizing issue) */
+.bulk-issue-btn {
+  /* Set a consistent minimum width for all buttons (fixes the sizing issue) */
   min-width: 150px;
   white-space: nowrap;
   /* Prevents text wrapping */
@@ -2697,12 +3236,11 @@ tbody td {
   margin-bottom: 20px;
 }
 
-
 .profile-avatar-wrapper {
   width: 100px;
   height: 100px;
   border-radius: 50%;
-  background-color: #E6E0E9;
+  background-color: #e6e0e9;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2757,7 +3295,7 @@ tbody td {
   color: #4a4a4a;
   box-sizing: border-box;
   outline: none;
-  background-color: #FFFFFF;
+  background-color: #ffffff;
   height: 44px;
   /* Explicit height ensures consistent vertical centering */
 }
@@ -2860,7 +3398,7 @@ tbody td {
 
 .upload-label {
   /* *** MODIFICATION: Ensure upload label background is white *** */
-  background-color: #FFFFFF;
+  background-color: #ffffff;
   border: 1px solid #ccc;
   color: #888;
   padding: 12px 15px;
@@ -2875,7 +3413,6 @@ tbody td {
 .upload-label:not(:empty) {
   color: #4a4a4a;
 }
-
 
 /* Send Button */
 .cert-send-btn {
@@ -3037,7 +3574,7 @@ tbody td {
   padding: 10px 36px 10px 12px;
   border: 1px solid #ccc;
   border-radius: 8px;
-  font-family: 'Poppins', sans-serif;
+  font-family: "Poppins", sans-serif;
   font-size: 14px;
   outline: none;
   transition: border-color 0.2s;
@@ -3046,7 +3583,6 @@ tbody td {
 .input-field:focus {
   border-color: #4c6ef5;
 }
-
 
 /* To fix the alignment of schedule and time */
 /* ✅ Shared wrapper for date and time inputs */
@@ -3064,7 +3600,7 @@ tbody td {
   /* extra right padding for the icon */
   border: 1px solid #ccc;
   border-radius: 8px;
-  font-family: 'Poppins', sans-serif;
+  font-family: "Poppins", sans-serif;
   font-size: 14px;
   color: #333;
   outline: none;
