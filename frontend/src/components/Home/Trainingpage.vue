@@ -1,41 +1,30 @@
 <script setup>
-import { ref, reactive, computed, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import axios from "axios";
-import QrcodeVue from "qrcode.vue";
 import { useRegistrationStore } from "@/stores/registrationStore";
 import { useTrainingStore } from "@/stores/trainingStore";
 import CalendarSidebar from "@/components/Layout/CalendarSidebar.vue";
+
 const trainingStore = useTrainingStore();
 const regStore = useRegistrationStore();
 const myRegistrations = computed(() => regStore.myRegistrations);
-// Remove this local reactive store
-// const registeredPosts = reactive({});
+const organizations = ref([]);
+const selectedTraining = ref(null);
+const toasts = ref([]);
 
-// ---------------------------
-// 🔹 Use store for registrations
-// ---------------------------
-onMounted(() => {
-  regStore.fetchMyRegistrations().then(() => {
-    // Update local QR logic se
+// ✅ Only include trainings whose schedule is not past
+const upcomingTrainings = computed(() => {
+  const today = new Date().setHours(0, 0, 0, 0);
+
+  return trainingStore.trainings.filter((t) => {
+    const end = new Date(t.endDate || t.date).setHours(0, 0, 0, 0);
+    return end >= today;
   });
 });
 
-// Date of PH
-const PH_TIME_OFFSET = 8 * 60; // +8 hours in minutes
+// Replace original "trainings" usage with this:
+const trainingsToShow = upcomingTrainings;
 
-// Organizations
-const organizations = ref([]);
-const isSidebarOpen = ref(false);
-// Trainings data
-const qrCountdowns = reactive({});
-let qrIntervals = {};
-const qrCodeValue = ref(null);
-const selectedTraining = ref(null);
-const isModalOpen = ref(false);
-const toasts = ref([]);
-const selectedPost = ref(null);
-
-// Computed trainings with org info
 const trainingsWithOrg = computed(() =>
   trainingStore.trainings.map((t) => {
     const org = organizations.value.find(
@@ -54,25 +43,10 @@ const trainingsWithOrg = computed(() =>
 async function openTrainingModal(training) {
   selectedTraining.value = training;
   showModal.value = true;
-
-  // ✅ Only generate QR if training has started
-  if (myRegistrations.value.has(training.trainingID) && hasTrainingStarted(training.schedule)) {
-    await trainingStore.generateQR(training);
-  }
-}
-
-function closeModal() {
-  isModalOpen.value = false;
-  selectedTraining.value = null;
-  selectedPost.value = null;
 }
 
 function isTraining(post) {
   return post && (post.type === "training" || post.trainingID);
-}
-
-function closeTrainingModal() {
-  selectedTraining.value = null;
 }
 
 // ============================
@@ -118,24 +92,6 @@ async function fetchOrganizations() {
   } catch {}
 }
 
-function hasTrainingStarted(schedule) {
-  if (!schedule) return false;
-  const now = new Date();
-  const trainingTime = new Date(schedule);
-  return now >= trainingTime;
-}
-
-// ---------------------------
-// Training Modal
-// ---------------------------
-function openTrainingListModal(training) {
-  selectedTraining.value = training;
-}
-
-function closeTrainingListModal() {
-  selectedTraining.value = null;
-}
-
 // ---------------------------
 // Toggle Registration using store
 // ---------------------------
@@ -147,10 +103,9 @@ const trainings = computed(() => trainingStore.trainings);
 // Lifecycle
 // ---------------------------
 onMounted(async () => {
-  await trainingStore.fetchTrainings(); // store now has trainings and auto-generates QR
+  await trainingStore.fetchTrainings();
   await fetchOrganizations();
   await regStore.fetchMyRegistrations();
-  trainingStore.autoGenerateQRs(); // Auto-generate QR codes for current trainings
 });
 
 const calendarOpen = ref(false);
@@ -174,40 +129,29 @@ const showModal = ref(false);
       </div>
       <!-- Training Cards -->
       <div class="space-y-4">
-        <div
-          v-for="training in trainingsWithOrg"
-          :key="training.trainingID"
-          class="p-4 bg-blue-gray rounded-lg hover:bg-gray-300 transition cursor-pointer flex justify-between items-center"
-          @click="openTrainingModal(training)"
-        >
-          <!-- Left: Training info -->
-          <div>
-            <h3 class="font-semibold">{{ training.title }}</h3>
-            <p class="text-gray-700">
-              {{ training.organization.name }}
-            </p>
-          </div>
-
-          <!-- Right: QR code -->
-          <div v-if="myRegistrations.has(training.trainingID)">
-            <div
-              v-if="
-                trainingStore.qrCodes[training.trainingID]?.value &&
-                new Date(training.end_time) > new Date()
-              "
-            >
-              <qrcode-vue
-                :value="trainingStore.qrCodes[training.trainingID].value"
-                :size="80"
-              />
-            </div>
-
-            <div v-else>
-              <p class="text-sm text-gray-500 text-center">
-                QR code not yet generated or expired.
+        <div v-if="trainingsToShow.length > 0">
+          <div
+            v-for="training in trainingsToShow"
+            :key="training.trainingID"
+            class="p-4 mb-2 bg-blue-gray rounded-lg hover:bg-gray-300 transition cursor-pointer flex justify-between items-center"
+            @click="openTrainingModal(training)"
+          >
+            <!-- Left: Training info -->
+            <div>
+              <h3 class="font-semibold">{{ training.title }}</h3>
+              <p class="text-gray-700">
+                {{ training.organization.name }}
               </p>
             </div>
           </div>
+        </div>
+
+        <!-- 🚫 Nothing available -->
+        <div
+          v-else
+          class="p-6 text-center text-gray-600 bg-gray-100 rounded-lg"
+        >
+          No available trainings at the moment.
         </div>
       </div>
     </div>

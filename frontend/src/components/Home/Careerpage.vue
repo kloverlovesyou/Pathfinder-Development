@@ -21,9 +21,6 @@ function addToast(message, type = "info") {
   }, 3000);
 }
 
-// ✅ Fetch user's applications
-
-// ✅ Fetch careers
 onMounted(async () => {
   try {
     const response = await axios.get(
@@ -117,6 +114,16 @@ function formatDateTime(dateStr) {
 import CareerModal from "@/components/Layout/CareerModal.vue";
 
 const careers = ref([]);
+// ✅ Careers that have NOT passed their deadline
+const upcomingCareers = computed(() => {
+  const today = new Date().setHours(0, 0, 0, 0);
+
+  return careers.value.filter((career) => {
+    const deadline = new Date(career.deadlineOfSubmission).setHours(0, 0, 0, 0);
+    return deadline >= today; // Not past
+  });
+});
+
 const selectedCareer = ref(null);
 const showModal = ref(false);
 
@@ -142,7 +149,6 @@ async function fetchMyApplications() {
   );
   myApplications.value = new Set(res.data.map((a) => a.careerID));
 }
-
 </script>
 
 <template>
@@ -158,16 +164,23 @@ async function fetchMyApplications() {
       </div>
       <!-- Career Cards -->
       <div class="space-y-4">
+        <div v-if="upcomingCareers.length > 0">
+          <div
+            v-for="career in upcomingCareers"
+            :key="career.careerID"
+            class="p-4 mb-2 bg-blue-gray rounded-lg hover:bg-gray-300 transition cursor-pointer"
+            @click="openModal(career)"
+          >
+            <h3 class="font-semibold">{{ career.position }}</h3>
+            <p class="text-gray-700">{{ career.organization }}</p>
+          </div>
+        </div>
+
         <div
-          v-for="career in careers"
-          :key="career.careerID"
-          class="p-4 bg-blue-gray rounded-lg relative hover:bg-gray-300 transition cursor-pointer"
-          @click="openModal(career)"
+          v-else
+          class="p-6 text-center text-gray-600 bg-gray-100 rounded-lg"
         >
-          <h3 class="font-semibold">{{ career.position }}</h3>
-          <p class="text-gray-700">
-            {{ career.organization }}
-          </p>
+          No available career postings at the moment.
         </div>
       </div>
     </div>

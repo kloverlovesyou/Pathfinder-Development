@@ -13,15 +13,14 @@ class EducationController extends Controller
         $resumeID = $request->query('resumeID');
         $education = Education::where('resumeID', $resumeID)->get();
 
-        // The column is an INT, so it already holds a 4-digit year.
-        // We will keep the following transformation logic in case the data
-        // was originally stored as a full date string (legacy data) or if
-        // the front-end strictly expects a string representation of the year.
         $education->transform(function ($edu) {
-        if (!empty($edu->graduationYear)) {
-            $edu->graduationYear = (int) $edu->graduationYear; // ensure number
-        }
-        return $edu;
+            if (!empty($edu->graduationYear)) {
+                $edu->graduationYear = (int) $edu->graduationYear;
+            }
+            if (!is_null($edu->GWA)) {
+                $edu->GWA = (float) $edu->GWA;
+            }
+            return $edu;
         });
 
         return response()->json($education);
@@ -31,22 +30,27 @@ class EducationController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-    'educationLevel' => 'required|string|max:255',
-    'major' => 'nullable|string|max:255',
-    'institutionName' => 'required|string|max:255',
-    'institutionAddress' => 'nullable|string|max:255',
-    'graduationYear' => 'nullable|digits:4',
-    'resumeID' => 'required|exists:resume,resumeID',
-]);
+            'educationLevel' => 'required|string|max:255',
+            'program' => 'nullable|string|max:255',
+            'major' => 'nullable|string|max:255',
+            'minor' => 'nullable|string|max:255',
+            'strand' => 'nullable|string|max:255',
+            'GWA' => 'nullable|numeric|min:1|max:5',
+            'institutionName' => 'required|string|max:255',
+            'institutionAddress' => 'nullable|string|max:255',
+            'graduationYear' => 'nullable|digits:4',
+            'resumeID' => 'required|exists:resume,resumeID',
+        ]);
 
-// Save year as integer, do NOT append -01-01
-if (!empty($validated['graduationYear'])) {
-    $validated['graduationYear'] = (int) $validated['graduationYear'];
-}
+        // Save year as integer
+        if (!empty($validated['graduationYear'])) {
+            $validated['graduationYear'] = (int) $validated['graduationYear'];
+        }
+        if (array_key_exists('GWA', $validated) && $validated['GWA'] !== null && $validated['GWA'] !== '') {
+            $validated['GWA'] = (float) $validated['GWA'];
+        }
 
-$education = Education::create($validated);
-
-
+        $education = Education::create($validated);
 
         return response()->json($education, 201);
     }
@@ -58,17 +62,24 @@ $education = Education::create($validated);
 
         $validated = $request->validate([
             'educationLevel' => 'nullable|string|max:255',
+            'program' => 'nullable|string|max:255',
             'major' => 'nullable|string|max:255',
+            'minor' => 'nullable|string|max:255',
+            'strand' => 'nullable|string|max:255',
+            'GWA' => 'nullable|numeric|min:1|max:5',
             'institutionName' => 'nullable|string|max:255',
             'institutionAddress' => 'nullable|string|max:255',
             'graduationYear' => 'nullable|digits:4',
         ]);
 
-         if (!empty($validated['graduationYear'])) {
-        $validated['graduationYear'] = (int) $validated['graduationYear'];
-    }
+        if (!empty($validated['graduationYear'])) {
+            $validated['graduationYear'] = (int) $validated['graduationYear'];
+        }
+        if (array_key_exists('GWA', $validated)) {
+            $validated['GWA'] = $validated['GWA'] !== null && $validated['GWA'] !== '' ? (float) $validated['GWA'] : null;
+        }
 
-    $education->update($validated);
+        $education->update($validated);
 
         return response()->json($education);
     }

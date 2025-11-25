@@ -306,7 +306,7 @@ onMounted(async () => {
               Select Your Target Career
             </label>
             <select id="career-select" v-model="selectedCareerId" @change="fetchRecommendedCareers"
-              class="block w-full px-4 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-gray-100">
+              class="block w-full px-4 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-gray-300">
               <option :value="null" disabled>Select a target career</option>
               <option v-for="career in allCareers" :key="career.careerID" :value="career.careerID">
                 {{ career.position }}

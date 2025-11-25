@@ -426,7 +426,7 @@ async function handleResultClick(item) {
         >
           <!-- Search Input -->
           <label
-            class="bg-blue-gray input w-full flex items-center gap-2 border-none rounded-full px-3 py-2 cursor-text"
+            class="bg-white input w-full flex items-center gap-2 border-none rounded-full px-3 py-2 cursor-text"
             @click="showDropdown = true"
           >
             <!-- Search Icon -->

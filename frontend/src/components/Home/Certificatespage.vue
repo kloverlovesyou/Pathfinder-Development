@@ -2,9 +2,11 @@
 import { useRouter } from "vue-router";
 import axios from "axios";
 import { ref, onMounted, onUnmounted } from "vue";
+import { useActivityStore } from "@/stores/activityStore";
 
 const toasts = ref([]);
 const router = useRouter();
+const activityStore = useActivityStore();
 
 const certificates = ref([]); // Pending uploads
 const uploadedCertificates = ref([]); // Successfully uploaded
@@ -12,9 +14,6 @@ const userName = ref("");
 const isModalOpen = ref(false);
 const selectedImage = ref(null);
 const selectedTitle = ref(null);
-const upcomingCount = ref(0);
-const completedCount = ref(0);
-let trainingCounterInterval = null;
 let certificateRefreshInterval = null;
 
 // ➤ Add a new upload entry
@@ -29,18 +28,6 @@ function addCertificate() {
 // ➤ Remove an upload entry
 function removeCertificate(index) {
   certificates.value.splice(index, 1);
-}
-
-function startTrainingCounterUpdater() {
-  fetchTrainingCounters(); // initial fetch
-  console.log("upcoming:", upcomingCount.value, "completed:", completedCount.value);
-  // Update every 60 seconds
-  trainingCounterInterval = setInterval(fetchTrainingCounters, 60 * 1000);
-}
-
-// Stop interval if needed (optional)
-function stopTrainingCounterUpdater() {
-  if (trainingCounterInterval) clearInterval(trainingCounterInterval);
 }
 
 // Start certificate refresh interval
@@ -79,46 +66,6 @@ function handleFileUpload(event, index) {
     certificates.value[index].image = e.target.result;
   };
   reader.readAsDataURL(file);
-}
-
-// Fetch TrainingCounter
-async function fetchTrainingCounters() {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    const response = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + "/registrations",
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    const trainings = response.data || [];
-
-    let newUpcoming = 0;
-    let newCompleted = 0;
-    const now = new Date().getTime();
-
-    trainings.forEach((r) => {
-    console.log("end_time:", r.end_time, "parsed:", Date.parse(r.end_time));
-
-      const statusLower = (r.registrationStatus || "").toLowerCase();
-      const endTimePassed = r.end_time
-        ? now > Date.parse(r.end_time)
-        : false;
-
-      // Mark as completed if end_time passed or status is completed
-      if (statusLower === "completed" || endTimePassed) {
-        newCompleted++;
-      } else if (["upcoming", "registered"].includes(statusLower)) {
-        newUpcoming++;
-      }
-    });
-
-    upcomingCount.value = newUpcoming;
-    completedCount.value = newCompleted;
-  } catch (error) {
-    console.error("❌ Error fetching training counters:", error);
-  }
 }
 
 // ➤ Fetch certificates using the same method as Profilepage - from registrations via Supabase
@@ -654,13 +601,11 @@ onMounted(async () => {
     return;
   }
   
-  startTrainingCounterUpdater();
-  await fetchTrainingCounters();
+  await activityStore.fetchCounts();
 });
 
 // Clean up intervals on unmount
 onUnmounted(() => {
-  stopTrainingCounterUpdater();
   stopCertificateRefresh();
 });
 
@@ -758,6 +703,7 @@ const deselectAllCertificates = async () => {
     <div class="min-h-screen font-poppins lg:flex">
       <!-- Sidebar -->
       <div
+        v-if="false"
         class="w-full lg:w-1/4 bg-white rounded-lg shadow p-6 flex flex-col items-center hidden lg:flex"
       >
         <div class="w-24 h-24 rounded-full bg-white mb-4">
@@ -783,7 +729,7 @@ const deselectAllCertificates = async () => {
             <span
               class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
             >
-              {{ upcomingCount }}
+              {{ activityStore.upcomingCount }}
             </span>
           </div>
 
@@ -798,7 +744,7 @@ const deselectAllCertificates = async () => {
             <span
               class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
             >
-              {{ completedCount  }}
+              {{ activityStore.completedCount  }}
             </span>
           </div>
         </div>
@@ -894,7 +840,7 @@ const deselectAllCertificates = async () => {
       </div>
 
       <!-- Right content -->
-      <div class="w-full lg:w-3/4 lg:pl-6 lg:mt-0 flex flex-col gap-6">
+      <div class="w-full lg:pl-6 lg:mt-0 flex flex-col gap-6">
         <!-- Upload form -->
         <div class="border bg-white rounded-lg p-4 space-y-4 relative">
           <div class="flex justify-between items-center">

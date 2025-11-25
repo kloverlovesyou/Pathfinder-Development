@@ -19,7 +19,10 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $institutionAddress
  * @property int $graduationYear
  * @property int|null $resumeID
- * 
+ * @property string|null $program
+ * @property string|null $minor
+ * @property float|null $GWA
+ * @property string|null $strand
  * @property Resume|null $resume
  *
  * @package App\Models
@@ -32,17 +35,23 @@ class Education extends Model
 
 	protected $casts = [
 		'graduationYear' => 'int',
-		'resumeID' => 'int'
+		'resumeID' => 'int',
+		'GWA' => 'float',
 	];
 
 	protected $fillable = [
 		'educationLevel',
+		'program',
 		'major',
+		'minor',
+		'strand',
+		'GWA',
 		'institutionName',
 		'institutionAddress',
 		'graduationYear',
-		'resumeID'
+		'resumeID',
 	];
+
 
 	public function resume()
 	{

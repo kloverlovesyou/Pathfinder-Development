@@ -144,7 +144,7 @@
             </router-link>
           </p>
         </div>
-                <!-- Toast (bottom-right) -->
+        <!-- Toast (bottom-right) -->
         <div class="toast toast-end toast-top z-50" v-if="toastMessage">
           <div class="alert alert-error text-white">
             <span>{{ toastMessage }}</span>
@@ -154,31 +154,60 @@
     </div>
 
     <!-- Email Verification Modal -->
-    <div v-if="showVerificationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="closeVerificationModal">
+    <div
+      v-if="showVerificationModal"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      @click.self="closeVerificationModal"
+    >
       <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-xl font-semibold text-gray-800">Verify Your Email</h3>
-          <button @click="closeVerificationModal" class="text-gray-500 hover:text-gray-700">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          <button
+            @click="closeVerificationModal"
+            class="text-gray-500 hover:text-gray-700"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
             </svg>
           </button>
         </div>
-        
+
         <div class="mb-4">
           <div class="flex items-center justify-center mb-4">
-            <svg class="w-16 h-16 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+            <svg
+              class="w-16 h-16 text-yellow-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              ></path>
             </svg>
           </div>
           <p class="text-gray-700 mb-2">
             Please verify your email address before logging in.
           </p>
           <p class="text-sm text-gray-600 mb-4">
-            We've sent a verification link to <strong>{{ email }}</strong>. Please check your inbox and click the verification link.
+            We've sent a verification link to <strong>{{ email }}</strong
+            >. Please check your inbox and click the verification link.
           </p>
           <p class="text-sm text-gray-500 mb-4">
-            Didn't receive the email? Check your spam folder or click the button below to resend.
+            Didn't receive the email? Check your spam folder or click the button
+            below to resend.
           </p>
         </div>
 
@@ -199,7 +228,15 @@
           </button>
         </div>
 
-        <div v-if="resendMessage" class="mt-4 p-3 rounded" :class="resendMessageType === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
+        <div
+          v-if="resendMessage"
+          class="mt-4 p-3 rounded"
+          :class="
+            resendMessageType === 'success'
+              ? 'bg-green-100 text-green-700'
+              : 'bg-red-100 text-red-700'
+          "
+        >
           <p class="text-sm">{{ resendMessage }}</p>
         </div>
       </div>
@@ -211,7 +248,7 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
-import { useRegistrationStore } from "@/stores/registrationStore"; 
+import { useRegistrationStore } from "@/stores/registrationStore";
 const regStore = useRegistrationStore();
 
 const router = useRouter();
@@ -232,12 +269,12 @@ const userType = ref(""); // 'applicant' or 'organization'
 const validateEmail = (emailVal) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
 const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
 
-  const showToast = (msg) => {
-    toastMessage.value = msg;
-    setTimeout(() => {
-      toastMessage.value = "";
-    }, 3000); // Toast disappears after 3s
-  };
+const showToast = (msg) => {
+  toastMessage.value = msg;
+  setTimeout(() => {
+    toastMessage.value = "";
+  }, 3000); // Toast disappears after 3s
+};
 
 const handleLogin = async () => {
   emailError.value = !validateEmail(email.value);
@@ -257,7 +294,8 @@ const handleLogin = async () => {
 
     const userData = response.data.user || response.data.organization;
     const token = response.data.token;
-    const role = userData.role || (userData.adminID ? "organization" : "applicant");
+    const role =
+      userData.role || (userData.adminID ? "organization" : "applicant");
 
     // Handle pending status
     if (role === "organization" && userData.status === "pending") {
@@ -274,7 +312,8 @@ const handleLogin = async () => {
 
     let displayName = "";
     if (role === "organization") {
-      displayName = userData.organizationName || userData.name || "Organization";
+      displayName =
+        userData.organizationName || userData.name || "Organization";
     } else if (role === "admin") {
       displayName = userData.name || "Admin";
     } else {
@@ -298,30 +337,28 @@ const handleLogin = async () => {
     } else {
       router.push("/app");
     }
+  } catch (err) {
+    console.error("FULL ERROR RESPONSE:", err);
 
-      } catch (err) {
-  console.error("FULL ERROR RESPONSE:", err);
+    if (err.response?.status === 403) {
+      let data = err.response.data;
+      console.log("FULL RESPONSE DATA:", data);
 
-  if (err.response?.status === 403) {
-    let data = err.response.data;
-    console.log("FULL RESPONSE DATA:", data);
+      // Ensure reason exists
+      const reason = data && typeof data === "object" ? data.reason : undefined;
+      console.log("REJECTION REASON:", reason);
 
-    // Ensure reason exists
-    const reason = data && typeof data === "object" ? data.reason : undefined;
-    console.log("REJECTION REASON:", reason);
+      const msg = reason
+        ? `Your registration was rejected. Reason: ${reason}`
+        : data.message || "Your registration is not approved.";
 
-    const msg = reason
-      ? `Your registration was rejected. Reason: ${reason}`
-      : data.message || "Your registration is not approved.";
+      showToast(msg);
+      return;
+    }
 
-    showToast(msg);
-    return;
+    showToast("Invalid credentials. Please try again.");
   }
-
-  showToast("Invalid credentials. Please try again.");
-}
 };
-
 </script>
 
 <style>
