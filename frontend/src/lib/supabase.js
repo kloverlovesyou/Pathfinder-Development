@@ -68,8 +68,19 @@ export async function uploadCertificate(file, bucketName = "Requirements") {
 }
 
 export function getPDFUrl(filePath, bucketName = "Requirements") {
-  const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
-  return data?.publicUrl || null;
+  // Validate filePath is a non-empty string
+  if (!filePath || typeof filePath !== "string" || filePath.trim().length === 0) {
+    console.error("getPDFUrl: Invalid filePath provided", filePath);
+    return null;
+  }
+
+  try {
+    const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath.trim());
+    return data?.publicUrl || null;
+  } catch (error) {
+    console.error("getPDFUrl: Error generating public URL", error);
+    return null;
+  }
 }
 
 /**

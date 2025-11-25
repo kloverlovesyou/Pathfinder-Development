@@ -120,76 +120,37 @@
                 </div>
             </header>
 
-            <div class="update-profile-container">
-                <h2 class="update-title">Update Account</h2>
+            <div class="change-password-container">
+                <h2 class="change-password-title">Change Password</h2>
 
-                <form @submit.prevent="updateAccount">
+                <form @submit.prevent="changePassword">
                     <div class="input-group">
-                        <label>Organization Name</label>
-                        <input type="text" v-model="form.organizationName" placeholder="Enter organization name" />
+                        <label>Current Password</label>
+                        <input type="password" v-model="form.currentPassword" placeholder="Enter current password" required />
                     </div>
 
                     <div class="input-group">
-                        <label>Location</label>
-                        <input type="text" v-model="form.organizationLocation" placeholder="Enter location" />
+                        <label>New Password</label>
+                        <input type="password" v-model="form.newPassword" placeholder="Enter new password" required />
                     </div>
 
                     <div class="input-group">
-                        <label>Website URL</label>
-                        <input type="text" v-model="form.organizationWebsiteURL" placeholder="Enter website URL" />
-                    </div>
-
-                    <div class="input-group">
-                        <label>Phone Number</label>
-                        <input type="text" v-model="form.organizationPhoneNumber" placeholder="Enter phone number" />
-                    </div>
-
-                    <div class="input-group">
-                        <label>Confirm Password</label>
-                        <input type="password" v-model="form.organizationConfirmPassword"
-                            placeholder="Enter your password to confirm changes" required />
+                        <label>Confirm New Password</label>
+                        <input type="password" v-model="form.confirmPassword" placeholder="Confirm new password" required />
+                        <p v-if="showPasswordMismatch" class="error-message">
+                            Passwords do not match.
+                        </p>
                     </div>
                     
-                    <button type="submit" class="save-btn">Save Changes</button>
+                    <button type="submit" class="save-btn">Change Password</button>
                 </form>
             </div>
         </main>
     </div>
 </template>
 
-<script>
-import { ref, onMounted } from "vue";
-import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
-
-export default {
-    name: "OrganizationHomePage",
-
-    data() {
-        return {
-            dictLogo,
-        };
-    },
-
-    setup() {
-        const isSidebarOpen = ref(true);
-
-        const organizationName = ref("Loading...");
-
-        onMounted(() => {
-            const storedName = localStorage.getItem("organizationName");
-            organizationName.value = storedName || "My Organization";
-        });
-
-        // Functions
-        const toggleSidebar = () => {
-            isSidebarOpen.value = !isSidebarOpen.value;
-        };
-    },
-};
-</script>
-
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
 import axios from "axios";
@@ -198,11 +159,9 @@ const router = useRouter();
 
 // Form data
 const form = ref({
-    organizationName: "",
-    organizationLocation: "",
-    organizationWebsiteURL: "",
-    organizationPhoneNumber: "",
-    organizationConfirmPassword: "", // Only for verification, not for updating password
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
 });
 
 // Sidebar state
@@ -214,6 +173,12 @@ const toggleSidebar = () => {
 // Organization name (sidebar)
 const organizationName = ref("Loading...");
 
+// Password mismatch check
+const showPasswordMismatch = computed(() => {
+    return form.value.newPassword && form.value.confirmPassword && 
+           form.value.newPassword !== form.value.confirmPassword;
+});
+
 // Fetch organization details on mount
 onMounted(() => {
     const stored = localStorage.getItem("user");
@@ -222,12 +187,10 @@ onMounted(() => {
         organizationName.value =
             user.organizationName || user.displayName || user.name || "Unknown Org";
     }
-
-    getOrgDetails();
 });
 
-// ✅ Fetch organization details from backend
-const getOrgDetails = async () => {
+// Change password
+const changePassword = async () => {
     const token = localStorage.getItem("token");
 
     if (!token) {
@@ -236,70 +199,26 @@ const getOrgDetails = async () => {
         return;
     }
 
+    // Validate passwords match
+    if (form.value.newPassword !== form.value.confirmPassword) {
+        alert("New password and confirmation do not match.");
+        return;
+    }
+
+    // Validate password length
+    if (form.value.newPassword.length < 8) {
+        alert("New password must be at least 8 characters long.");
+        return;
+    }
+
     try {
-        const response = await axios.get(
-            import.meta.env.VITE_API_BASE_URL + "/organization/details",
+        const response = await axios.post(
+            import.meta.env.VITE_API_BASE_URL + "/organization/change-password",
             {
-                headers: { Authorization: `Bearer ${token}` }
-            }
-        );
-
-        const org = response.data.organization;
-
-        // Fill form with data from backend
-        form.value.organizationName = org.organizationName || "";
-        form.value.organizationLocation = org.location || "";
-        form.value.organizationWebsiteURL = org.websiteURL || "";
-        form.value.organizationPhoneNumber = org.phoneNumber || "";
-
-        // Leave confirm password field empty for security
-        form.value.organizationConfirmPassword = "";
-
-    } catch (error) {
-        console.error("Error fetching organization details:", error);
-        alert("Failed to load organization details.");
-    }
-};
-
-// Navigation
-const navigateTo = (route) => {
-    router.push(route);
-};
-
-// Update account
-const updateAccount = async () => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-        alert("Please log in again.");
-        router.push({ name: "OrgLogin" });
-        return;
-    }
-
-    // Verify confirm password is provided
-    if (!form.value.organizationConfirmPassword) {
-        alert("Please enter your password to confirm changes.");
-        return;
-    }
-
-    try {
-        // First, verify the password by attempting to get organization details
-        // We'll verify the password by checking if the user is authenticated
-        // In a real scenario, you might want a separate endpoint to verify password
-        
-        // Prepare update payload (without password fields)
-        const updatePayload = {
-            organizationName: form.value.organizationName,
-            location: form.value.organizationLocation,
-            websiteURL: form.value.organizationWebsiteURL,
-            phoneNumber: form.value.organizationPhoneNumber,
-            confirmPassword: form.value.organizationConfirmPassword, // Send for verification only
-        };
-
-        // Update organization profile
-        const response = await axios.put(
-            import.meta.env.VITE_API_BASE_URL + "/organization/update",
-            updatePayload,
+                currentPassword: form.value.currentPassword,
+                newPassword: form.value.newPassword,
+                newPassword_confirmation: form.value.confirmPassword,
+            },
             {
                 headers: { 
                     Authorization: `Bearer ${token}`,
@@ -309,18 +228,23 @@ const updateAccount = async () => {
         );
 
         if (response.data.message) {
-            alert("Profile updated successfully!");
-            // Clear confirm password field
-            form.value.organizationConfirmPassword = "";
-            // Refresh organization details
-            await getOrgDetails();
+            alert("Password changed successfully!");
+            // Clear form
+            form.value.currentPassword = "";
+            form.value.newPassword = "";
+            form.value.confirmPassword = "";
         }
 
     } catch (error) {
-        console.error("Error updating profile:", error);
-        const errorMessage = error.response?.data?.message || "Failed to update profile. Please check your password and try again.";
+        console.error("Error changing password:", error);
+        const errorMessage = error.response?.data?.message || "Failed to change password. Please check your current password and try again.";
         alert(errorMessage);
     }
+};
+
+// Navigation
+const navigateTo = (route) => {
+    router.push(route);
 };
 
 // Logout
@@ -574,8 +498,8 @@ const logout = () => {
     /* Adjust this to your sidebar width (230px - 60px = 170px) */
 }
 
-/* Update Profile CSS */
-.update-profile-container {
+/* Change Password CSS */
+.change-password-container {
     color: #374151;
     max-width: 450px;
     background: white;
@@ -585,14 +509,11 @@ const logout = () => {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
-.update-title {
+.change-password-title {
     font-size: 20px;
     font-weight: 700;
     color: #44576D;
     font-family: 'Poppins', sans-serif;
-}
-
-.update-profile-container h2 {
     text-align: center;
     margin-bottom: 20px;
 }
@@ -616,6 +537,12 @@ const logout = () => {
     border-radius: 6px;
 }
 
+.error-message {
+    color: #b91c1c;
+    font-size: 0.85rem;
+    margin-top: 5px;
+}
+
 .save-btn {
     width: 100%;
     padding: 12px;
@@ -631,3 +558,4 @@ const logout = () => {
     background: #3b4960;
 }
 </style>
+

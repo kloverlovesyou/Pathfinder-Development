@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
 import axios from "axios";
-import { uploadPDF } from "@/lib/supabase";
 
 // Props from parent
 const props = defineProps({
@@ -15,6 +14,8 @@ const emits = defineEmits(["close", "update-applications"]);
 const showUploadModal = ref(false);
 const uploadedFile = ref(null);
 const toasts = ref([]);
+const bookmarkLoading = ref(false);
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const modalRef = ref(null);
 
@@ -65,41 +66,22 @@ async function submitApplication() {
     return;
   }
 
-  let filePath = null;
-
-  if (uploadedFile.value) {
-    addToast("Uploading file to Supabase...", "info");
-
-    // Always upload to requirement_directory
-    filePath = await uploadPDF(
-      uploadedFile.value,
-      "Requirements",
-      "requirement_directory"
-    );
-
-    if (!filePath) {
-      addToast("FAILED TO UPLOAD FILE TO SUPABASE", "accent");
-      return;
-    }
-    addToast("File uploaded successfully!", "success");
+  if (!uploadedFile.value) {
+    addToast("PLEASE ATTACH YOUR REQUIREMENTS PDF", "accent");
+    return;
   }
 
   try {
-    const payload = {
-      careerID: props.career.careerID ?? props.career.id,
-      requirement_directory: filePath, // Always requirement
-    };
+    const formData = new FormData();
+    formData.append("careerID", props.career.careerID ?? props.career.id);
+    formData.append("requirement_directory", uploadedFile.value);
 
-    await axios.post(
-      import.meta.env.VITE_API_BASE_URL + "/applications",
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    await axios.post(`${API_BASE_URL}/applications`, formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      },
+    });
 
     addToast("APPLICATION SUBMITTED SUCCESSFULLY", "success");
 
@@ -115,11 +97,16 @@ async function submitApplication() {
     } else if (error.response?.status === 401) {
       addToast("UNAUTHORIZED. PLEASE LOG IN AGAIN", "accent");
     } else if (error.response?.status === 422) {
-      const errorMsg = error.response?.data?.message || error.response?.data?.errors?.[0] || "INVALID INPUT. ONLY PDF UP TO 5MB";
+      const errorMsg =
+        error.response?.data?.message ||
+        error.response?.data?.errors?.[0] ||
+        "INVALID INPUT. ONLY PDF UP TO 5MB";
       addToast(errorMsg, "accent");
     } else {
-      // Show backend error message if available, otherwise show generic message
-      const errorMsg = error.response?.data?.message || error.response?.data?.error || "FAILED TO SUBMIT APPLICATION";
+      const errorMsg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "FAILED TO SUBMIT APPLICATION";
       addToast(errorMsg, "accent");
       console.error("Application submission error:", error.response?.data || error);
     }
@@ -145,10 +132,8 @@ function formatDateTime(dateStr) {
     <!-- Career Modal -->
     <dialog v-if="show" open class="modal sm:modal-middle">
       <div class="modal-box max-w-3xl relative font-poppins">
-        <button
-          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
-          @click="$emit('close')"
-        >
+        <button class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
+          @click="$emit('close')">
           ✕
         </button>
 
@@ -189,10 +174,8 @@ function formatDateTime(dateStr) {
     <!-- Upload Modal -->
     <dialog v-if="showUploadModal" open class="modal sm:modal-middle">
       <div class="modal-box max-w-lg relative font-poppins">
-        <button
-          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
-          @click="closeUploadModal"
-        >
+        <button class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
+          @click="closeUploadModal">
           ✕
         </button>
 
@@ -203,27 +186,15 @@ function formatDateTime(dateStr) {
             <label class="block text-sm font-medium mb-1">
               Upload PDF Requirements
             </label>
-            <input
-              type="file"
-              accept="application/pdf"
-              @change="handleFileUpload"
-              required
-              class="file-input file-input-bordered w-full"
-            />
+            <input type="file" accept="application/pdf" @change="handleFileUpload" required
+              class="file-input file-input-bordered w-full" />
           </div>
 
           <div class="flex justify-end gap-2">
-            <button
-              type="button"
-              class="btn btn-outline btn-sm"
-              @click="closeUploadModal"
-            >
+            <button type="button" class="btn btn-outline btn-sm" @click="closeUploadModal">
               Cancel
             </button>
-            <button
-              type="submit"
-              class="btn bg-customButton hover:bg-dark-slate text-white btn-sm"
-            >
+            <button type="submit" class="btn bg-customButton hover:bg-dark-slate text-white btn-sm">
               Submit
             </button>
           </div>
@@ -233,16 +204,11 @@ function formatDateTime(dateStr) {
 
     <!-- Toasts -->
     <div class="toast toast-end toast-top z-50">
-      <div
-        v-for="toast in toasts"
-        :key="toast.id"
-        class="alert"
-        :class="{
-          'alert-info': toast.type === 'info',
-          'alert-success': toast.type === 'success',
-          'alert-accent': toast.type === 'accent',
-        }"
-      >
+      <div v-for="toast in toasts" :key="toast.id" class="alert" :class="{
+        'alert-info': toast.type === 'info',
+        'alert-success': toast.type === 'success',
+        'alert-accent': toast.type === 'accent',
+      }">
         {{ toast.message }}
       </div>
     </div>

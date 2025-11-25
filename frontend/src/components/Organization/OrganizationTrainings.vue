@@ -43,6 +43,17 @@
                 </svg>
                 <span>Update Profile</span>
               </div>
+              <div class="action" @click="navigateTo({ name: 'OrgChangePassword' })">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
+                    stroke="#FFFDFD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path
+                    d="M19.4 15C19.2669 15.3016 19.2272 15.6362 19.286 15.9606C19.3448 16.285 19.4995 16.5843 19.73 16.82L19.79 16.88C19.976 17.0657 20.1235 17.2863 20.2241 17.5291C20.3248 17.7719 20.3766 18.0322 20.3766 18.295C20.3766 18.5578 20.3248 18.8181 20.2241 19.0609C20.1235 19.3037 19.976 19.5243 19.79 19.71C19.6043 19.896 19.3837 20.0435 19.1409 20.1441C18.8981 20.2448 18.6378 20.2966 18.375 20.2966C18.1122 20.2966 17.8519 20.2448 17.6091 20.1441C17.3663 20.0435 17.1457 19.896 16.96 19.71L16.9 19.65C16.6643 19.4195 16.365 19.2648 16.0406 19.206C15.7162 19.1472 15.3816 19.1869 15.08 19.32C14.7842 19.4468 14.532 19.6572 14.3543 19.9255C14.1766 20.1938 14.0813 20.5082 14.08 20.83V21C14.08 21.5304 13.8693 22.0391 13.4942 22.4142C13.1191 22.7893 12.6104 23 12.08 23C11.5496 23 11.0409 22.7893 10.6658 22.4142C10.2907 22.0391 10.08 21.5304 10.08 21V20.91C10.0723 20.579 9.96512 20.258 9.77251 19.9887C9.5799 19.7194 9.31074 19.5143 9 19.4C8.69838 19.2669 8.36381 19.2272 8.03941 19.286C7.71502 19.3448 7.41568 19.4995 7.18 19.73L7.12 19.79C6.93425 19.976 6.71368 20.1235 6.47088 20.2241C6.22808 20.3248 5.96783 20.3766 5.705 20.3766C5.44217 20.3766 5.18192 20.3248 4.93912 20.2241C4.69632 20.1235 4.47575 19.976 4.29 19.79C4.10405 19.6043 3.95653 19.3837 3.85588 19.1409C3.75523 18.8981 3.70343 18.6378 3.70343 18.375C3.70343 18.1122 3.75523 17.8519 3.85588 17.6091C3.95653 17.3663 4.10405 17.1457 4.29 16.96L4.35 16.9C4.58054 16.6643 4.73519 16.365 4.794 16.0406C4.85282 15.7162 4.81312 15.3816 4.68 15.08C4.55324 14.7842 4.34276 14.532 4.07447 14.3543C3.80618 14.1766 3.49179 14.0813 3.17 14.08H3C2.46957 14.08 1.96086 13.8693 1.58579 13.4942C1.21071 13.1191 1 12.6104 1 12.08C1 11.5496 1.21071 11.0409 1.58579 10.6658C1.96086 10.2907 2.46957 10.08 3 10.08H3.09C3.42099 10.0723 3.742 9.96512 4.01129 9.77251C4.28059 9.5799 4.48571 9.31074 4.6 9C4.73312 8.69838 4.77282 8.36381 4.714 8.03941C4.65519 7.71502 4.50054 7.41568 4.27 7.18L4.21 7.12C4.02405 6.93425 3.87653 6.71368 3.77588 6.47088C3.67523 6.22808 3.62343 5.96783 3.62343 5.705C3.62343 5.44217 3.67523 5.18192 3.77588 4.93912C3.87653 4.69632 4.02405 4.47575 4.21 4.29C4.39575 4.10405 4.61632 3.95653 4.85912 3.85588C5.10192 3.75523 5.36217 3.70343 5.625 3.70343C5.88783 3.70343 6.14808 3.75523 6.39088 3.85588C6.63368 3.95653 6.85425 4.10405 7.04 4.29L7.1 4.35C7.33568 4.58054 7.63502 4.73519 7.95941 4.794C8.28381 4.85282 8.61838 4.81312 8.92 4.68H9C9.29577 4.55324 9.54802 4.34276 9.72569 4.07447C9.90337 3.80618 9.99872 3.49179 10 3.17V3C10 2.46957 10.2107 1.96086 10.5858 1.58579C10.9609 1.21071 11.4696 1 12 1C12.5304 1 13.0391 1.21071 13.4142 1.58579C13.7893 1.96086 14 2.46957 14 3V3.09C14.0013 3.41179 14.0966 3.72618 14.2743 3.99447C14.452 4.26276 14.7042 4.47324 15 4.6C15.3016 4.73312 15.6362 4.77282 15.9606 4.714C16.285 4.65519 16.5843 4.50054 16.82 4.27L16.88 4.21C17.0657 4.02405 17.2863 3.87653 17.5291 3.77588C17.7719 3.67523 18.0322 3.62343 18.295 3.62343C18.5578 3.62343 18.8181 3.67523 19.0609 3.77588C19.3037 3.87653 19.5243 4.02405 19.71 4.21C19.896 4.39575 20.0435 4.61632 20.1441 4.85912C20.2448 5.10192 20.2966 5.36217 20.2966 5.625C20.2966 5.88783 20.2448 6.14808 20.1441 6.39088C20.0435 6.63368 19.896 6.85425 19.71 7.04L19.65 7.1C19.4195 7.33568 19.2648 7.63502 19.206 7.95941C19.1472 8.28381 19.1869 8.61838 19.32 8.92V9C19.4468 9.29577 19.6572 9.54802 19.9255 9.72569C20.1938 9.90337 20.5082 9.99872 20.83 10H21C21.5304 10 22.0391 10.2107 22.4142 10.5858C22.7893 10.9609 23 11.4696 23 12C23 12.5304 22.7893 13.0391 22.4142 13.4142C22.0391 13.7893 21.5304 14 21 14H20.91C20.5882 14.0013 20.2738 14.0966 20.0055 14.2743C19.7372 14.452 19.5268 14.7042 19.4 15Z"
+                    stroke="#FFFDFD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Change Password</span>
+              </div>
             </div>
           </div>
         </transition>
@@ -310,101 +321,6 @@
         </button>
       </section>
 
-      <!-- Registrants Modal -->
-      <div
-        v-if="showRegistrantsModal"
-        class="modal-overlay"
-        @click.self="closeModal"
-      >
-        <div class="modal-content">
-          <button class="modal-close-btn" @click="closeModal">✕</button>
-          <h3 class="modal-title">
-            Registrants for {{ selectedTraining.title }}
-          </h3>
-
-          <div class="registrants-table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>
-                    <input
-                      type="checkbox"
-                      v-model="selectAll"
-                      @change="toggleSelectAll"
-                    />
-                  </th>
-                  <th>CERTIFICATE TRACKING ID</th>
-                  <th>FULL NAME</th>
-                  <th>REGISTRATION DATE</th>
-                  <th>STATUS</th>
-                  <th class="cert-col-header">CERTIFICATE</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="person in registrantsList" :key="person.id">
-                  <td>
-                    <input type="checkbox" v-model="person.selected" />
-                  </td>
-                  <td>
-                    <p class="registrant-certid">{{ person.id }}</p>
-                  </td>
-                  <td>
-                    <p class="registrant-name">{{ person.name }}</p>
-                  </td>
-                  <td>
-                    <p class="registration-date">{{ person.dateRegistered }}</p>
-                  </td>
-                  <td
-                    :class="{
-                      'status-attended': person.status === 'Attended',
-                      'status-registered': person.status === 'Registered',
-                      'status-did-not-attend':
-                        person.status === 'Did not Attend',
-                    }"
-                  >
-                    {{ person.status }}
-                  </td>
-                  <td>
-                    <button
-                      class="action-btn"
-                      :class="
-                        person.hasCertificate
-                          ? 'certificate-issued-btn'
-                          : 'issue-cert-btn'
-                      "
-                      :disabled="person.hasCertificate"
-                      @click="issueCertificate(person)"
-                    >
-                      {{
-                        person.hasCertificate
-                          ? "Certificate Issued"
-                          : "Issue Certificate"
-                      }}
-                    </button>
-
-                    <!-- View Certificate Button (only show when certificate exists) -->
-                    <button
-                      class="action-btn"
-                      v-if="person.hasCertificate && person.certificateUrl"
-                      @click="viewCertificate(person.certificateUrl)"
-                    >
-                      View Certificate
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Issue Certificates To All Button -->
-          <div class="modal-footer">
-            <button class="bulk-issue-btn" @click="issueCertificatesToSelected">
-              Issue Certificates to Selected
-            </button>
-          </div>
-        </div>
-      </div>
-
       <!-- Training Details Modal -->
       <div
         v-if="showTrainingDetailsModal"
@@ -450,13 +366,95 @@
             </a>
           </p>
 
-          <div class="training-actions">
-            <button
-              class="btn-view-registrants"
-              @click="handleViewRegistrants(selectedTraining)"
-            >
-              View Registrants
-            </button>
+          <div class="registrants-section">
+            <div class="registrants-header">
+              <h4>Registrants ({{ filteredRegistrants.length }})</h4>
+              <button class="registrants-refresh-btn" @click="loadRegistrantsForTraining()"
+                :disabled="registrantsLoading">
+                {{ registrantsLoading ? "Refreshing..." : "Refresh" }}
+              </button>
+            </div>
+
+            <!-- Search Bar for Registrants -->
+            <div class="registrants-search-wrapper" v-if="registrantsList.length > 0 && !registrantsLoading">
+              <input 
+                type="text" 
+                v-model="registrantSearchQuery" 
+                placeholder="Search by name, ID, or status..." 
+                class="registrants-search-input"
+              />
+            </div>
+
+            <p v-if="registrantsError" class="registrants-error">
+              {{ registrantsError }}
+            </p>
+            <p v-else-if="registrantsLoading" class="registrants-loading">
+              Loading registrants...
+            </p>
+            <p v-else-if="registrantsList.length === 0" class="registrants-empty">
+              No registrants found for this training.
+            </p>
+            <p v-else-if="filteredRegistrants.length === 0" class="registrants-empty">
+              No registrants match your search.
+            </p>
+
+            <div v-else-if="filteredRegistrants.length > 0" class="registrants-table-container inline">
+              <table>
+                <thead>
+                  <tr>
+                    <th>
+                      <input type="checkbox" v-model="selectAll" @change="toggleSelectAll" />
+                    </th>
+                    <th>Certificate Tracking ID</th>
+                    <th>Full Name</th>
+                    <th>Registration Date</th>
+                    <th>Status</th>
+                    <th class="cert-col-header">Certificate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="person in filteredRegistrants" :key="person.id">
+                    <td>
+                      <input type="checkbox" v-model="person.selected" @change="updateSelectAll" />
+                    </td>
+                    <td>
+                      <p class="registrant-certid">{{ person.id }}</p>
+                    </td>
+                    <td>
+                      <p class="registrant-name">{{ person.name }}</p>
+                    </td>
+                    <td>
+                      <p class="registration-date">{{ person.dateRegistered }}</p>
+                    </td>
+                    <td :class="{
+                      'status-attended': person.status === 'Attended',
+                      'status-registered': person.status === 'Registered',
+                      'status-did-not-attend': person.status === 'Did not Attend'
+                    }">
+                      {{ person.status }}
+                    </td>
+                    <td>
+                      <button class="action-btn"
+                        :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
+                        :disabled="person.hasCertificate" @click="issueCertificate(person)">
+                        {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
+                      </button>
+                      <button class="action-btn" v-if="person.hasCertificate && person.certificateUrl"
+                        @click="viewCertificate(person.certificateUrl)">
+                        View Certificate
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="registrants-footer" v-if="filteredRegistrants.length">
+              <button class="bulk-issue-btn" @click="issueCertificatesToSelected"
+                :disabled="!filteredRegistrants.some((p) => p.selected && !p.hasCertificate)">
+                Issue Certificates to Selected
+              </button>
+            </div>
           </div>
           <!-- ✅ Show QR only if training is live/upcoming within allowed time -->
           <div
@@ -580,18 +578,10 @@
             </div>
 
             <div class="cert-input-wrapper file-input-wrapper">
-              <input
-                type="file"
-                id="certificate-upload"
-                accept="image/*,application/pdf"
-                @change="handleFileUpload"
-                class="hidden-file-input"
-              />
+              <input type="file" id="certificate-upload" accept="image/*,application/pdf" @change="handleFileUpload"
+                class="hidden-file-input" />
               <label for="certificate-upload" class="cert-input upload-label">
-                {{
-                  selectedRegistrant.uploadedFile
-                    ? selectedRegistrant.uploadedFile.name
-                    : "Upload File (PDF or Image)"
+                {{ selectedRegistrant.uploadedFile ? selectedRegistrant.uploadedFile.name : 'Upload File (PDF or Image)'
                 }}
               </label>
               <span class="upload-icon">
@@ -648,19 +638,13 @@
               class="training-input"
             ></textarea>
 
-            <!-- Schedule -->
+            <!-- Schedule - Multiple Dates -->
             <div class="popup-form-group schedule-group">
-              <label for="schedule">Schedule</label>
+              <label for="schedule">Select Dates</label>
               <div class="schedule-input-wrapper">
-                <!-- Date input with calendar icon -->
+                <!-- Date input with calendar icon for adding dates -->
                 <div class="date-input-wrapper">
-                  <input
-                    type="date"
-                    id="schedule"
-                    v-model="newTraining.date"
-                    :min="todayDate"
-                    placeholder="Schedule"
-                  />
+                  <input type="date" id="schedule" v-model="tempDateInput" :min="todayDate" placeholder="Select Date" />
                   <span class="calendar-icon">
                     <svg
                       width="26"
@@ -692,124 +676,91 @@
                     </svg>
                   </span>
                 </div>
+                <button type="button" @click="addDate" class="add-date-btn" :disabled="!tempDateInput">Add Date</button>
+              </div>
 
-                <!-- Start Time -->
-                <div class="time-input-wrapper">
-                  <label for="startTime">Start Time</label>
-                  <div class="date-input-wrapper">
-                    <input
-                      type="time"
-                      id="startTime"
-                      v-model="newTraining.startTime"
-                      placeholder="Start Time"
-                    />
-                    <span class="calendar-icon">
-                      <svg
-                        width="26"
-                        height="26"
-                        viewBox="0 0 26 26"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
-                          fill="black"
-                        />
-                        <path
-                          d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
-                          fill="black"
-                        />
-                      </svg>
-                    </span>
+              <!-- List of selected dates with time and mode -->
+              <div v-if="newTraining.schedules.length > 0" class="selected-dates-list">
+                <div v-for="(schedule, index) in newTraining.schedules" :key="index" class="schedule-item">
+                  <div class="schedule-item-header">
+                    <span class="schedule-date">{{ formatDateDisplay(schedule.date) }}</span>
+                    <button type="button" @click="removeSchedule(index)" class="remove-schedule-btn">×</button>
                   </div>
-                </div>
 
-                <!-- End Time -->
-                <div class="time-input-wrapper">
-                  <label for="endTime">End Time</label>
-                  <div class="date-input-wrapper">
-                    <input
-                      type="time"
-                      id="endTime"
-                      v-model="newTraining.endTime"
-                      placeholder="End Time"
-                    />
-                    <span class="calendar-icon">
-                      <svg
-                        width="26"
-                        height="26"
-                        viewBox="0 0 26 26"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
-                          fill="black"
-                        />
-                        <path
-                          d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
-                          fill="black"
-                        />
-                      </svg>
-                    </span>
+                  <div class="schedule-item-details">
+                    <!-- Start Time -->
+                    <div class="time-input-wrapper">
+                      <label :for="'startTime-' + index">Start Time</label>
+                      <div class="date-input-wrapper">
+                        <input type="time" :id="'startTime-' + index" v-model="schedule.startTime"
+                          placeholder="Start Time" />
+                        <span class="calendar-icon">
+                          <svg width="26" height="26" viewBox="0 0 26 26" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path
+                              d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
+                              fill="black" />
+                            <path
+                              d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
+                              fill="black" />
+                          </svg>
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- End Time -->
+                    <div class="time-input-wrapper">
+                      <label :for="'endTime-' + index">End Time</label>
+                      <div class="date-input-wrapper">
+                        <input type="time" :id="'endTime-' + index" v-model="schedule.endTime" placeholder="End Time" />
+                        <span class="calendar-icon">
+                          <svg width="26" height="26" viewBox="0 0 26 26" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path
+                              d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
+                              fill="black" />
+                            <path
+                              d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
+                              fill="black" />
+                          </svg>
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Mode Selection -->
+                    <div class="training-radio-group">
+                      <label>
+                        <input type="radio" :value="'On-Site'" v-model="schedule.mode" />
+                        On-Site
+                      </label>
+                      <label>
+                        <input type="radio" :value="'Online'" v-model="schedule.mode" />
+                        Online
+                      </label>
+                    </div>
+
+                    <!-- Conditional fields based on mode -->
+                    <input v-if="schedule.mode === 'On-Site'" v-model="schedule.location" type="text"
+                      placeholder="Location" class="training-input" />
+
+                    <input v-else-if="schedule.mode === 'Online'" v-model="schedule.trainingLink" type="url"
+                      placeholder="Training Link" class="training-input" />
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- On-Site / Online -->
-            <div class="training-radio-group">
-              <label>
-                <input
-                  type="radio"
-                  value="On-Site"
-                  v-model="newTraining.mode"
-                />
-                On-Site
-              </label>
-              <label>
-                <input type="radio" value="Online" v-model="newTraining.mode" />
-                Online
-              </label>
-            </div>
-
-            <!-- Conditional field -->
-            <input
-              v-if="newTraining.mode === 'On-Site'"
-              v-model="newTraining.location"
-              type="text"
-              placeholder="Location"
-              class="training-input"
-            />
-
-            <input
-              v-else-if="newTraining.mode === 'Online'"
-              v-model="newTraining.trainingLink"
-              type="url"
-              placeholder="Training Link"
-              class="training-input"
-            />
-
             <!-- Tag selection -->
             <div class="relative mb-4">
               <label class="block font-semibold text-gray-600 mb-2">Tags</label>
               <!-- Search/Input for New Tag -->
-              <input
-                v-model="newTagName"
-                type="text"
-                placeholder="Search or type a new tag..."
-                class="training-input mb-2"
-              />
+              <input v-model="newTagName" type="text" placeholder="Search or type a new tag..."
+                class="training-input mb-2" />
               <!-- Tag List Wrapper for horizontal scrolling -->
               <div class="tag-list-wrapper">
                 <div class="tag-list">
-                  <span
-                    v-for="tag in filteredTags"
-                    :key="tag.TagID"
-                    class="tag-chip"
-                    @click="toggleTag(tag.TagID)"
-                    :class="{ 'tag-chip-selected': isTagSelected(tag.TagID) }"
-                  >
+                  <span v-for="tag in filteredTags" :key="tag.TagID" class="tag-chip" @click="toggleTag(tag.TagID)"
+                    :class="{ 'tag-chip-selected': isTagSelected(tag.TagID) }">
                     {{ tag.TagName }}
                   </span>
                 </div>
@@ -906,10 +857,9 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 async function convertPDFToImage(pdfBlobOrArrayBuffer) {
   try {
     // Convert to ArrayBuffer if it's a Blob
-    const data =
-      pdfBlobOrArrayBuffer instanceof Blob
-        ? await pdfBlobOrArrayBuffer.arrayBuffer()
-        : pdfBlobOrArrayBuffer;
+    const data = pdfBlobOrArrayBuffer instanceof Blob
+      ? await pdfBlobOrArrayBuffer.arrayBuffer()
+      : pdfBlobOrArrayBuffer;
 
     const pdf = await pdfjsLib.getDocument({ data }).promise;
     const page = await pdf.getPage(1); // Get first page
@@ -991,8 +941,10 @@ export default {
       selectedTraining: {},
 
       registrantsList: [], // removed hardcoded list, fetch from DB
+      registrantsLoading: false,
+      registrantsError: "",
+      registrantSearchQuery: "", // Search query for filtering registrants
 
-      showRegistrantsModal: false,
       showCertUploadModal: false,
 
       selectedRegistrant: {
@@ -1012,14 +964,10 @@ export default {
       newTraining: {
         title: "",
         description: "",
-        date: "",
-        startTime: "",
-        endTime: "",
-        mode: "",
-        location: "",
-        trainingLink: "",
-        Tags: [],
+        schedules: [], // Array of { date, startTime, endTime, mode, location, trainingLink }
+        Tags: []
       },
+      tempDateInput: "", // Temporary date input for adding new dates
 
       QrcodeVue: "",
       qrExpiresAt: "",
@@ -1034,37 +982,12 @@ export default {
       const id = Date.now();
       toasts.value.push({ id, message, type });
 
-      setTimeout(() => {
-        toasts.value = toasts.value.filter((t) => t.id !== id);
-      }, duration);
-    },
-    showConfirmToast(message) {
-      return new Promise((resolve) => {
-        const id = Date.now();
-
-        toasts.value.push({
-          id,
-          message,
-          type: "confirm",
-          onConfirm: () => {
-            toasts.value = toasts.value.filter((t) => t.id !== id);
-            resolve(true);
-          },
-          onCancel: () => {
-            toasts.value = toasts.value.filter((t) => t.id !== id);
-            resolve(false);
-          },
-        });
-      });
-    },
-
     viewCertificate(certificatePath) {
-      if (!certificatePath) return this.showToast("Certificate not found.");
+      if (!certificatePath) return alert("Certificate not found.");
 
       // Get public URL from Supabase
       const publicUrl = getPDFUrl(certificatePath);
-      if (!publicUrl)
-        return this.showToast("Unable to generate certificate URL.");
+      if (!publicUrl) return alert("Unable to generate certificate URL.");
 
       window.open(publicUrl, "_blank"); // Open in new tab
     },
@@ -1076,11 +999,7 @@ export default {
         // Generate PDF Certificate
         const givenDate = new Date().toISOString().split("T")[0];
 
-        const doc = new jsPDF({
-          orientation: "landscape",
-          unit: "pt",
-          format: "a4",
-        });
+        const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
@@ -1109,14 +1028,12 @@ export default {
 
         // Convert PDF to image on frontend (since Imagick is not available on server)
         const imageBlob = await convertPDFToImage(pdfBlob);
-        const imageFile = new File([imageBlob], `${safeName}.png`, {
-          type: "image/png",
-        });
+        const imageFile = new File([imageBlob], `${safeName}.png`, { type: "image/png" });
 
         // Send image file to backend - backend will upload to Supabase
         const token = localStorage.getItem("token");
         if (!token) {
-          this.showToast("Please log in to continue.");
+          alert("Please log in to continue.");
           return;
         }
 
@@ -1128,9 +1045,7 @@ export default {
 
         // Send to backend (backend handles conversion and Supabase upload)
         const response = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/registrations/${
-            person.id
-          }/certificate`,
+          `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
           formData,
           {
             headers: {
@@ -1151,10 +1066,11 @@ export default {
           person.certificateUrl = getPDFUrl(person.certificatePath);
         }
 
-        this.showToast(`Certificate issued for ${person.name}!`);
+        alert(`Certificate issued for ${person.name}!`);
+
       } catch (error) {
         console.error("Error issuing certificate:", error);
-        this.showToast(`Failed to issue certificate for ${person.name}.`);
+        alert(`Failed to issue certificate for ${person.name}.`);
       }
     },
     async issueBulkCertificates(selectedRegistrants) {
@@ -1162,36 +1078,26 @@ export default {
         const givenDate = new Date().toISOString().split("T")[0];
         const token = localStorage.getItem("token");
         if (!token) {
-          this.showToast("Please log in to continue.");
+          alert("Please log in to continue.");
           return;
         }
 
         // Issue certificates one by one (backend converts PDF to image)
         for (const person of selectedRegistrants) {
-          const doc = new jsPDF({
-            orientation: "landscape",
-            unit: "pt",
-            format: "a4",
-          });
+          const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
           const pageWidth = doc.internal.pageSize.getWidth();
           const pageHeight = doc.internal.pageSize.getHeight();
 
           const lines = [
             { text: "Certificate of Completion", size: 28 },
             { text: `This is to certify that ${person.name}`, size: 22 },
-            {
-              text: `has completed the training: ${this.selectedTraining.title}`,
-              size: 18,
-            },
+            { text: `has completed the training: ${this.selectedTraining.title}`, size: 18 },
             { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
-            { text: `Date Issued: ${givenDate}`, size: 14 },
+            { text: `Date Issued: ${givenDate}`, size: 14 }
           ];
 
-          let startY =
-            (pageHeight -
-              lines.reduce((sum, line) => sum + line.size + 10, 0)) /
-            2;
-          lines.forEach((line) => {
+          let startY = (pageHeight - lines.reduce((sum, line) => sum + line.size + 10, 0)) / 2;
+          lines.forEach(line => {
             doc.setFontSize(line.size);
             doc.text(line.text, pageWidth / 2, startY, null, null, "center");
             startY += line.size + 10;
@@ -1201,9 +1107,7 @@ export default {
 
           // Convert PDF to image on frontend (since Imagick is not available on server)
           const imageBlob = await convertPDFToImage(pdfBlob);
-          const imageFile = new File([imageBlob], `${person.name}.png`, {
-            type: "image/png",
-          });
+          const imageFile = new File([imageBlob], `${person.name}.png`, { type: "image/png" });
 
           // Send image file to backend - backend uploads to Supabase
           const formData = new FormData();
@@ -1213,70 +1117,47 @@ export default {
           formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
 
           await axios.post(
-            `${import.meta.env.VITE_API_BASE_URL}/registrations/${
-              person.id
-            }/certificate`,
+            `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
             formData,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "multipart/form-data",
-              },
-            }
+            { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
           );
         }
 
-        this.showToast("Bulk certificates issued successfully!");
+        alert("Bulk certificates issued successfully!");
       } catch (error) {
         console.error("Error issuing bulk certificates:", error);
-        this.showToast(
-          "Failed to issue bulk certificates. " +
-            (error.response?.data?.message || error.message)
-        );
+        alert("Failed to issue bulk certificates. " + (error.response?.data?.message || error.message));
       }
     },
 
     async issueCertificatesToSelected() {
-      const selectedPeople = this.registrantsList.filter(
-        (p) => p.selected && !p.hasCertificate
-      );
-      if (!selectedPeople.length)
-        return this.showToast("No selected registrants or all already issued.");
+      const selectedPeople = this.registrantsList.filter(p => p.selected && !p.hasCertificate);
+      if (!selectedPeople.length) return alert("No selected registrants or all already issued.");
 
       try {
         const certGivenDate = new Date().toISOString().split("T")[0];
         const token = localStorage.getItem("token");
         if (!token) {
-          this.showToast("Please log in to continue.");
+          alert("Please log in to continue.");
           return;
         }
 
         // Issue certificates one by one (backend converts PDF to image)
         for (const person of selectedPeople) {
-          const doc = new jsPDF({
-            orientation: "landscape",
-            unit: "pt",
-            format: "a4",
-          });
+          const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
           const pageWidth = doc.internal.pageSize.getWidth();
           const pageHeight = doc.internal.pageSize.getHeight();
 
           const lines = [
             { text: "Certificate of Completion", size: 28 },
             { text: `This is to certify that ${person.name}`, size: 22 },
-            {
-              text: `has completed the training: ${this.selectedTraining.title}`,
-              size: 18,
-            },
+            { text: `has completed the training: ${this.selectedTraining.title}`, size: 18 },
             { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
-            { text: `Date Issued: ${certGivenDate}`, size: 14 },
+            { text: `Date Issued: ${certGivenDate}`, size: 14 }
           ];
 
-          let startY =
-            (pageHeight -
-              lines.reduce((sum, line) => sum + line.size + 10, 0)) /
-            2;
-          lines.forEach((line) => {
+          let startY = (pageHeight - lines.reduce((sum, line) => sum + line.size + 10, 0)) / 2;
+          lines.forEach(line => {
             doc.setFontSize(line.size);
             doc.text(line.text, pageWidth / 2, startY, null, null, "center");
             startY += line.size + 10;
@@ -1286,9 +1167,7 @@ export default {
 
           // Convert PDF to image on frontend (since Imagick is not available on server)
           const imageBlob = await convertPDFToImage(pdfBlob);
-          const imageFile = new File([imageBlob], `${person.id}.png`, {
-            type: "image/png",
-          });
+          const imageFile = new File([imageBlob], `${person.id}.png`, { type: "image/png" });
 
           // Send image file to backend - backend uploads to Supabase
           const formData = new FormData();
@@ -1298,48 +1177,44 @@ export default {
           formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
 
           await axios.post(
-            `${import.meta.env.VITE_API_BASE_URL}/registrations/${
-              person.id
-            }/certificate`,
+            `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
             formData,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "multipart/form-data",
-              },
-            }
+            { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
           );
         }
 
         // Update UI
-        selectedPeople.forEach((p) => {
+        selectedPeople.forEach(p => {
           p.hasCertificate = true;
           p.certificateTrackingID = p.id;
         });
 
-        this.showToast("Certificates issued successfully!");
+        alert("Certificates issued successfully!");
 
         // Refresh registrants list
         if (this.selectedTraining) {
-          await this.openRegistrantsModal(this.selectedTraining);
+          await this.loadRegistrantsForTraining(this.selectedTraining);
         }
       } catch (error) {
         console.error("Bulk issuance error:", error);
-        this.showToast(
-          "Failed to issue certificates. " +
-            (error.response?.data?.message || error.message)
-        );
+        alert("Failed to issue certificates. " + (error.response?.data?.message || error.message));
       }
     },
 
     toggleSelectAll() {
-      this.registrantsList.forEach((person) => {
+      // Only toggle selection for filtered/visible registrants
+      this.filteredRegistrants.forEach(person => {
         person.selected = this.selectAll;
       });
     },
 
     updateSelectAll() {
-      this.selectAll = this.registrantsList.every((person) => person.selected);
+      // Check if all filtered registrants are selected
+      if (this.filteredRegistrants.length === 0) {
+        this.selectAll = false;
+        return;
+      }
+      this.selectAll = this.filteredRegistrants.every(person => person.selected);
     },
     openBulkCertModal() {
       const registrantsWithoutCert = this.registrantsList.filter(
@@ -1406,7 +1281,7 @@ export default {
 
         this.showToast("Certificates issued successfully to all registrants!");
         this.closeBulkCertModal();
-        await this.openRegistrantsModal(this.selectedTraining); // Refresh list
+        await this.loadRegistrantsForTraining(this.selectedTraining); // Refresh list
       } catch (error) {
         console.error("Error issuing bulk certificates:", error);
         if (error.response) {
@@ -1496,9 +1371,53 @@ export default {
         this.newTagName = "";
       } catch (error) {
         console.error("Error adding tag:", error);
-        this.showToast("Failed to add tag.");
+        alert('Failed to create tag. Please try again.');
       }
     },
+
+    // Schedule management methods
+    addDate() {
+      if (!this.tempDateInput) {
+        alert("Please select a date first.");
+        return;
+      }
+
+      // Check if date already exists
+      const dateExists = this.newTraining.schedules.some(s => s.date === this.tempDateInput);
+      if (dateExists) {
+        alert("This date has already been added.");
+        return;
+      }
+
+      // Add new schedule with default values
+      this.newTraining.schedules.push({
+        date: this.tempDateInput,
+        startTime: "",
+        endTime: "",
+        mode: "",
+        location: "",
+        trainingLink: ""
+      });
+
+      // Clear the temporary input
+      this.tempDateInput = "";
+    },
+
+    removeSchedule(index) {
+      this.newTraining.schedules.splice(index, 1);
+    },
+
+    formatDateDisplay(dateString) {
+      if (!dateString) return "";
+      const date = new Date(dateString + "T00:00:00");
+      return date.toLocaleDateString("en-US", {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+      });
+    },
+
     async sendCertificateDetails() {
       if (!this.selectedRegistrant || !this.selectedRegistrant.id) {
         console.error("No registrant ID found!");
@@ -1506,81 +1425,58 @@ export default {
       }
 
       if (!this.selectedRegistrant.uploadedFile) {
-        this.showToast("Please select a certificate file before sending.");
+        alert("Please select a certificate file before sending.");
         return;
       }
 
       const token = localStorage.getItem("token");
       if (!token) {
-        this.showToast("Please log in to continue.");
+        alert("Please log in to continue.");
         return;
       }
 
       // Convert PDF to image if uploaded file is a PDF
       let fileToUpload = this.selectedRegistrant.uploadedFile;
-      if (
-        fileToUpload.type === "application/pdf" ||
-        fileToUpload.name.toLowerCase().endsWith(".pdf")
-      ) {
+      if (fileToUpload.type === "application/pdf" || fileToUpload.name.toLowerCase().endsWith(".pdf")) {
         try {
           const pdfBlob = await fileToUpload.arrayBuffer();
           const imageBlob = await convertPDFToImage(pdfBlob);
-          fileToUpload = new File(
-            [imageBlob],
-            fileToUpload.name.replace(/\.pdf$/i, ".png"),
-            { type: "image/png" }
-          );
+          fileToUpload = new File([imageBlob], fileToUpload.name.replace(/\.pdf$/i, ".png"), { type: "image/png" });
         } catch (error) {
           console.error("Error converting PDF to image:", error);
-          this.showToast(
-            "Failed to convert PDF to image. Please try uploading an image file instead."
-          );
+          alert("Failed to convert PDF to image. Please try uploading an image file instead.");
           return;
         }
       }
 
       const formData = new FormData();
-      formData.append(
-        "certificateTrackingID",
-        String(
-          this.selectedRegistrant.certificateTrackingID ||
-            this.selectedRegistrant.id
-        )
-      );
-      formData.append(
-        "certificateGivenDate",
-        this.selectedRegistrant.certificateGivenDate
-      );
+      formData.append("certificateTrackingID", String(this.selectedRegistrant.certificateTrackingID || this.selectedRegistrant.id));
+      formData.append("certificateGivenDate", this.selectedRegistrant.certificateGivenDate);
       formData.append("file", fileToUpload); // Send image (PDF already converted if it was a PDF)
       formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
 
       try {
         const res = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/registrations/${
-            this.selectedRegistrant.id
-          }/certificate`,
+          `${import.meta.env.VITE_API_BASE_URL}/registrations/${this.selectedRegistrant.id}/certificate`,
           formData,
           {
             headers: {
               Authorization: `Bearer ${token}`,
-              "Content-Type": "multipart/form-data",
-            },
+              "Content-Type": "multipart/form-data"
+            }
           }
         );
         console.log("Certificate uploaded successfully", res.data);
-        this.showToast("Certificate uploaded successfully!");
+        alert("Certificate uploaded successfully!");
         this.showCertUploadModal = false;
 
-        // Refresh registrants list if modal is open
-        if (this.showRegistrantsModal && this.selectedTraining) {
-          await this.openRegistrantsModal(this.selectedTraining);
+        // Refresh registrants list if details modal is open
+        if (this.showTrainingDetailsModal && this.selectedTraining) {
+          await this.loadRegistrantsForTraining(this.selectedTraining);
         }
       } catch (err) {
         console.error("Error uploading certificate: ", err);
-        this.showToast(
-          err.response?.data?.message ||
-            "Failed to upload certificate. Please try again."
-        );
+        alert(err.response?.data?.message || "Failed to upload certificate. Please try again.");
       }
     },
 
@@ -1594,23 +1490,12 @@ export default {
       this.isSidebarOpen = !this.isSidebarOpen;
     },
 
-    handleViewRegistrants(training) {
-      if (!training) {
-        console.error("❌ handleViewRegistrants called without training");
-        return;
-      }
-      this.openRegistrantsModal(training);
-    },
-
     /* ==========================
        ✅ Dropdown Menu Logic
     ========================== */
     toggleUpcomingMenu(id) {
       this.openUpcomingMenu = this.openUpcomingMenu === id ? null : id;
       this.openCompletedMenu = null;
-    },
-    closeModal() {
-      this.showRegistrantsModal = false;
     },
     toggleCompletedMenu(id) {
       this.openCompletedMenu = this.openCompletedMenu === id ? null : id;
@@ -1640,29 +1525,21 @@ export default {
         const givenDate = new Date().toISOString().split("T")[0];
 
         // Generate PDF
-        const doc = new jsPDF({
-          orientation: "landscape",
-          unit: "pt",
-          format: "a4",
-        });
+        const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
         const lines = [
           { text: "Certificate of Completion", size: 28 },
           { text: `This is to certify that ${person.name}`, size: 22 },
-          {
-            text: `has completed the training: ${this.selectedTraining.title}`,
-            size: 18,
-          },
+          { text: `has completed the training: ${this.selectedTraining.title}`, size: 18 },
           { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
-          { text: `Date Issued: ${givenDate}`, size: 14 },
+          { text: `Date Issued: ${givenDate}`, size: 14 }
         ];
 
-        let startY =
-          (pageHeight - lines.reduce((sum, l) => sum + l.size + 10, 0)) / 2;
+        let startY = (pageHeight - lines.reduce((sum, l) => sum + l.size + 10, 0)) / 2;
 
-        lines.forEach((line) => {
+        lines.forEach(line => {
           doc.setFontSize(line.size);
           doc.text(line.text, pageWidth / 2, startY, null, null, "center");
           startY += line.size + 10;
@@ -1673,14 +1550,12 @@ export default {
 
         // Convert PDF to image on frontend (since Imagick is not available on server)
         const imageBlob = await convertPDFToImage(pdfBlob);
-        const imageFile = new File([imageBlob], `${safeName}.png`, {
-          type: "image/png",
-        });
+        const imageFile = new File([imageBlob], `${safeName}.png`, { type: "image/png" });
 
         // Send image file to backend - backend will upload to Supabase
         const token = localStorage.getItem("token");
         if (!token) {
-          this.showToast("Please log in to continue.");
+          alert("Please log in to continue.");
           return;
         }
 
@@ -1692,16 +1567,9 @@ export default {
 
         // Send to backend (backend handles conversion and Supabase upload)
         const response = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/registrations/${
-            person.id
-          }/certificate`,
+          `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
           formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "multipart/form-data",
-            },
-          }
+          { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
         );
 
         // Update UI
@@ -1715,16 +1583,11 @@ export default {
           person.certificateUrl = getPDFUrl(person.certificatePath);
         }
 
-        this.showToast(`Certificate issued for ${person.name}!`);
+        alert(`Certificate issued for ${person.name}!`);
       } catch (error) {
         console.error("Error issuing certificate:", error);
-        this.showToast(`Failed to issue certificate for ${person.name}.`);
+        alert(`Failed to issue certificate for ${person.name}.`);
       }
-    },
-
-    closeRegistrantsModal() {
-      this.showRegistrantsModal = false;
-      this.registrantsList = [];
     },
 
     /* ==========================
@@ -1755,21 +1618,19 @@ export default {
 
     sendCertificateDetails() {
       if (!this.selectedRegistrant.uploadedFile) {
-        this.showToast("Please select a certificate file before sending.");
+        alert("Please select a certificate file before sending.");
         return;
       }
 
       this.sendCertificate(
         this.selectedRegistrant.uploadedFile,
         this.selectedRegistrant.id
-      )
-        .then(() => {
-          this.closeCertUploadModal();
-        })
-        .catch((err) => {
-          console.error(err);
-          this.showToast("Failed to send certificate.");
-        });
+      ).then(() => {
+        this.closeCertUploadModal();
+      }).catch(err => {
+        console.error(err);
+        alert("Failed to send certificate.");
+      });
     },
 
     dismissModal() {
@@ -1784,43 +1645,63 @@ export default {
       this.selectedTraining = training;
       this.showTrainingDetailsModal = true;
       this.closeAllMenus();
+      this.selectAll = false;
+      this.registrantsError = "";
+      this.registrantsList = [];
+      this.registrantSearchQuery = ""; // Clear search when opening modal
+      this.loadRegistrantsForTraining(training);
     },
 
     closeTrainingDetails() {
       this.showTrainingDetailsModal = false;
+      this.registrantsList = [];
+      this.registrantsError = "";
+      this.registrantsLoading = false;
+      this.registrantSearchQuery = ""; // Clear search when closing modal
     },
 
-    handleViewRegistrants(training) {
-      this.closeTrainingDetails();
-      this.openRegistrantsModal(training); // pass training to fetch registrants
-    },
+    async loadRegistrantsForTraining(training = null) {
+      const targetTraining = training || this.selectedTraining;
+      if (!targetTraining?.trainingID) {
+        console.warn("No training provided for registrants list.");
+        return;
+      }
 
-    async openRegistrantsModal(training) {
+      this.selectedTraining = targetTraining;
+
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please log in to continue.");
+        return;
+      }
+
+      this.registrantsLoading = true;
+      this.registrantsError = "";
+
       try {
-        this.selectedTraining = training;
-        const token = localStorage.getItem("token");
-        if (!token) throw new Error("No token found");
-
         const response = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL}/trainings/${
-            training.trainingID
-          }/registrants`,
+          `${import.meta.env.VITE_API_BASE_URL}/trainings/${targetTraining.trainingID}/registrants`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        // Map certificatePath -> public URL for UI
         this.registrantsList = response.data.map((r) => ({
           ...r,
-          certificateUrl: r.certificatePath
-            ? getPDFUrl(r.certificatePath)
-            : null,
+          selected: false,
+          certificateUrl: r.certificatePath ? getPDFUrl(r.certificatePath) : null,
+          hasCertificate:
+            r.hasCertificate !== undefined
+              ? r.hasCertificate
+              : Boolean(r.certificatePath),
         }));
-
-        this.showRegistrantsModal = true;
+        this.selectAll = false;
         this.closeAllMenus();
       } catch (error) {
         console.error("Error fetching registrants:", error);
-        this.showToast("Failed to fetch registrants.");
+        this.registrantsError =
+          error.response?.data?.message ||
+          "Failed to fetch registrants. Please try again.";
+      } finally {
+        this.registrantsLoading = false;
       }
     },
     async fetchTrainings() {
@@ -1900,18 +1781,17 @@ export default {
         this.newTraining = {
           title: "",
           description: "",
-          date: "",
-          startTime: "",
-          endTime: "",
-          mode: "",
-          location: "",
-          trainingLink: "",
-          Tags: [],
+          schedules: [],
+          Tags: []
         };
+        this.tempDateInput = "";
       }
 
       if (!Array.isArray(this.newTraining.Tags)) {
         this.newTraining.Tags = [];
+      }
+      if (!Array.isArray(this.newTraining.schedules)) {
+        this.newTraining.schedules = [];
       }
 
       this.showTrainingPopup = true;
@@ -1922,14 +1802,10 @@ export default {
       this.newTraining = {
         title: "",
         description: "",
-        date: "",
-        startTime: "",
-        endTime: "",
-        mode: "",
-        location: "",
-        trainingLink: "",
-        Tags: [],
+        schedules: [],
+        Tags: []
       };
+      this.tempDateInput = "";
       this.newTagName = ""; // optional: clear the tag input too
     },
 
@@ -1946,19 +1822,24 @@ export default {
         ? training.schedule.split("T")
         : training.schedule?.split(" ") || [];
 
+      const endTimeParts = training.end_time
+        ? (training.end_time.includes("T") ? training.end_time.split("T") : training.end_time.split(" "))
+        : [];
+
       this.newTraining.title = training.title;
       this.newTraining.description = training.description;
-      this.newTraining.date = scheduleParts[0] || "";
-      this.newTraining.startTime = scheduleParts[1]?.slice(0, 5) || "";
-      this.newTraining.endTime = training.end_time
-        ? (training.end_time.includes("T")
-            ? training.end_time.split("T")[1]
-            : training.end_time.split(" ")[1]
-          )?.slice(0, 5)
-        : "";
-      this.newTraining.mode = training.mode;
-      this.newTraining.location = training.location || "";
-      this.newTraining.trainingLink = training.training_link || "";
+
+      // Convert single schedule to schedules array for editing
+      this.newTraining.schedules = [{
+        date: scheduleParts[0] || "",
+        startTime: scheduleParts[1]?.slice(0, 5) || "",
+        endTime: endTimeParts[1]?.slice(0, 5) || "",
+        mode: training.mode || "",
+        location: training.location || "",
+        trainingLink: training.training_link || ""
+      }];
+
+      this.tempDateInput = "";
       await this.fetchTags();
 
       // ✅ Fix for tags
@@ -1981,36 +1862,49 @@ export default {
     // For saving (create/update) training
     async saveTraining() {
       try {
-        if (!this.newTraining.date || !this.newTraining.startTime) {
-          this.showToast("PLEASE SELECT BOTH A DATE AND TIME FOR THE TRAINING");
+        // Validate schedules
+        if (!this.newTraining.schedules || this.newTraining.schedules.length === 0) {
+          alert("PLEASE ADD AT LEAST ONE DATE WITH TIME AND MODE");
           return;
         }
 
-        const combinedSchedule = `${this.newTraining.date} ${this.newTraining.startTime}`; // NO :00
-        const endTimeSchedule = this.newTraining.endTime
-          ? `${this.newTraining.date} ${this.newTraining.endTime}`
-          : null;
-
-        const payload = {
-          title: this.newTraining.title,
-          description: this.newTraining.description,
-          schedule: combinedSchedule,
-          end_time: endTimeSchedule,
-          mode: this.newTraining.mode,
-          location:
-            this.newTraining.mode === "On-Site"
-              ? this.newTraining.location || null
-              : null,
-          training_link:
-            this.newTraining.mode === "Online"
-              ? this.newTraining.trainingLink || null
-              : null,
-          Tags: this.newTraining.Tags || [],
-        };
+        // Validate each schedule
+        for (let i = 0; i < this.newTraining.schedules.length; i++) {
+          const schedule = this.newTraining.schedules[i];
+          if (!schedule.date || !schedule.startTime || !schedule.endTime || !schedule.mode) {
+            alert(`PLEASE COMPLETE ALL FIELDS FOR DATE: ${this.formatDateDisplay(schedule.date) || 'Date ' + (i + 1)}`);
+            return;
+          }
+          if (schedule.mode === "On-Site" && !schedule.location) {
+            alert(`PLEASE ENTER A LOCATION FOR DATE: ${this.formatDateDisplay(schedule.date)}`);
+            return;
+          }
+          if (schedule.mode === "Online" && !schedule.trainingLink) {
+            alert(`PLEASE ENTER A TRAINING LINK FOR DATE: ${this.formatDateDisplay(schedule.date)}`);
+            return;
+          }
+        }
 
         const token = localStorage.getItem("token");
 
         if (this.isEditMode && this.trainingToEditId) {
+          // For edit mode, update the existing training with the first schedule
+          // (or we could delete and recreate, but for now we'll use the first schedule)
+          const firstSchedule = this.newTraining.schedules[0];
+          const combinedSchedule = `${firstSchedule.date} ${firstSchedule.startTime}`;
+          const endTimeSchedule = `${firstSchedule.date} ${firstSchedule.endTime}`;
+
+          const payload = {
+            title: this.newTraining.title,
+            description: this.newTraining.description,
+            schedule: combinedSchedule,
+            end_time: endTimeSchedule,
+            mode: firstSchedule.mode,
+            location: firstSchedule.mode === "On-Site" ? firstSchedule.location || null : null,
+            training_link: firstSchedule.mode === "Online" ? firstSchedule.trainingLink || null : null,
+            Tags: this.newTraining.Tags || []
+          };
+
           await axios.put(
             `${import.meta.env.VITE_API_BASE_URL}/trainings/${
               this.trainingToEditId
@@ -2020,12 +1914,31 @@ export default {
           );
           this.showToast("✅ TRAINING UPDATED SUCCESSFULLY!");
         } else {
-          await axios.post(
-            `${import.meta.env.VITE_API_BASE_URL}/trainings`,
-            payload,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          this.showToast("✅ TRAINING POSTED SUCCESSFULLY!");
+          // For create mode, create multiple training records (one per schedule)
+          const promises = this.newTraining.schedules.map(schedule => {
+            const combinedSchedule = `${schedule.date} ${schedule.startTime}`;
+            const endTimeSchedule = `${schedule.date} ${schedule.endTime}`;
+
+            const payload = {
+              title: this.newTraining.title,
+              description: this.newTraining.description,
+              schedule: combinedSchedule,
+              end_time: endTimeSchedule,
+              mode: schedule.mode,
+              location: schedule.mode === "On-Site" ? schedule.location || null : null,
+              training_link: schedule.mode === "Online" ? schedule.trainingLink || null : null,
+              Tags: this.newTraining.Tags || []
+            };
+
+            return axios.post(
+              `${import.meta.env.VITE_API_BASE_URL}/trainings`,
+              payload,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          });
+
+          await Promise.all(promises);
+          alert(`✅ ${this.newTraining.schedules.length} TRAINING(S) POSTED SUCCESSFULLY!`);
         }
 
         await this.fetchTrainings();
@@ -2214,6 +2127,19 @@ export default {
         tag.TagName.toLowerCase().includes(searchQuery)
       );
     },
+    // Filter registrants based on search query
+    filteredRegistrants() {
+      if (!this.registrantSearchQuery || this.registrantSearchQuery.trim() === "") {
+        return this.registrantsList;
+      }
+      const query = this.registrantSearchQuery.toLowerCase().trim();
+      return this.registrantsList.filter(registrant => {
+        const name = (registrant.name || "").toLowerCase();
+        const id = String(registrant.id || "").toLowerCase();
+        const status = (registrant.status || "").toLowerCase();
+        return name.includes(query) || id.includes(query) || status.includes(query);
+      });
+    },
   },
 };
 </script>
@@ -2320,9 +2246,9 @@ const logout = () => {
 
 /* Sidebar */
 .sidebar {
-  width: 200px;
-  /* Expanded width */
-  background-color: #44576d;
+  width: 230px;
+  /* Expanded width - increased to fit Change Password option */
+  background-color: #44576D;
   color: white;
   display: flex;
   flex-direction: column;
@@ -2477,10 +2403,12 @@ const logout = () => {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   /* centers everything under avatar */
   text-align: center;
-  gap: 0.3rem;
+  gap: 0.5rem;
   /* spacing between avatar, name, and actions */
+  width: 100%;
 }
 
 .profile-section .avatar {
@@ -2497,20 +2425,24 @@ const logout = () => {
   border-radius: 50%;
   background-color: #ccc;
   /* Placeholder, replace with image if needed */
-  margin: 0 auto 10px auto;
+  margin: 20px auto 10px auto;
 }
 
 .org-name {
   font-weight: 600;
   font-size: 14px;
   text-align: center;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .profile-actions {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
+  width: 100%;
 }
 
 .profile-actions .action {
@@ -2524,6 +2456,8 @@ const logout = () => {
   color: #fff;
   /* keep text color consistent */
   cursor: pointer;
+  width: 100%;
+  text-align: center;
 }
 
 .profile-actions .action svg {
@@ -2862,6 +2796,7 @@ tbody td {
   border: none;
   transition: background-color 0.2s;
 }
+
 /* General Action Button Styles (ensures consistent size) */
 .action-btn {
   /* Set a consistent minimum width for all buttons (fixes the sizing issue) */
@@ -2982,26 +2917,39 @@ tbody td {
   justify-content: center;
   background: rgba(0, 0, 0, 0.5);
   z-index: 50;
+  padding: 20px;
 }
 
 .training-popup {
   background: #f9fafb;
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-  width: 400px;
+  width: min(95vw, 800px);
+  max-width: 800px;
+  max-height: 90vh;
   padding: 24px;
   position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .training-popup-close {
   position: absolute;
   top: 10px;
   right: 12px;
-  background: none;
+  background: rgba(249, 250, 251, 0.95);
   border: none;
   font-size: 18px;
   color: #555;
   cursor: pointer;
+  z-index: 10;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.training-popup-close:hover {
+  background: rgba(249, 250, 251, 1);
 }
 
 .training-popup-title {
@@ -3015,6 +2963,7 @@ tbody td {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding-top: 10px;
 }
 
 .training-input {
@@ -3053,15 +3002,20 @@ tbody td {
   justify-content: center;
   background: rgba(0, 0, 0, 0.5);
   z-index: 50;
+  padding: 20px;
 }
 
 .training-popup {
   background: #f9fafb;
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-  width: 400px;
+  width: min(95vw, 800px);
+  max-width: 800px;
+  max-height: 90vh;
   padding: 24px;
   position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .training-popup-close {
@@ -3073,6 +3027,7 @@ tbody td {
   font-size: 18px;
   color: #555;
   cursor: pointer;
+  z-index: 10;
 }
 
 .training-popup-title {
@@ -3086,6 +3041,7 @@ tbody td {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding-top: 10px;
 }
 
 .training-input {
@@ -3123,10 +3079,13 @@ tbody td {
 /* Schedule input styles */
 .schedule-input-wrapper {
   position: relative;
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
 .schedule-input-wrapper input[type="date"] {
-  width: 100%;
+  flex: 1;
   padding: 10px 40px 10px 10px;
   /* space for icon */
   border: 1px solid #ccc;
@@ -3154,6 +3113,84 @@ tbody td {
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
+}
+
+.add-date-btn {
+  padding: 10px 20px;
+  background: #4c6ef5;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.add-date-btn:hover:not(:disabled) {
+  background: #3b5bdb;
+}
+
+.add-date-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.selected-dates-list {
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.schedule-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 15px;
+  background: #f9fafb;
+}
+
+.schedule-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.schedule-date {
+  font-weight: 600;
+  font-size: 15px;
+  color: #374151;
+}
+
+.remove-schedule-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  transition: background 0.2s;
+}
+
+.remove-schedule-btn:hover {
+  background: #dc2626;
+}
+
+.schedule-item-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 /* Counter Badge */
@@ -3247,6 +3284,7 @@ tbody td {
   overflow: hidden;
   margin-bottom: 10px;
 }
+
 .registrant-certid {
   font-size: 1.1rem;
   font-weight: 600;
@@ -3434,8 +3472,9 @@ tbody td {
   background: #fff;
   padding: 2rem;
   border-radius: 1rem;
-  width: 480px;
-  max-width: 90%;
+  width: min(95vw, 900px);
+  max-height: 90vh;
+  overflow-y: auto;
   position: relative;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
   animation: fadeIn 0.25s ease;
@@ -3454,32 +3493,92 @@ tbody td {
   line-height: 1.5;
 }
 
-.training-actions {
+.registrants-section {
+  margin-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+}
+
+.registrants-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.registrants-header h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.registrants-search-wrapper {
+  margin-bottom: 1rem;
+}
+
+.registrants-search-input {
+  width: 100%;
+  padding: 10px 15px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background: #ffffff;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.registrants-search-input:focus {
+  border-color: #4c6ef5;
+  box-shadow: 0 0 0 3px rgba(76, 110, 245, 0.1);
+}
+
+.registrants-search-input::placeholder {
+  color: #9ca3af;
+}
+
+.registrants-refresh-btn {
+  background-color: #374151;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.registrants-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.registrants-refresh-btn:not(:disabled):hover {
+  background-color: #1f2937;
+}
+
+.registrants-error {
+  color: #b91c1c;
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.registrants-loading,
+.registrants-empty {
+  font-size: 0.9rem;
+  color: #4b5563;
+  margin-bottom: 0.75rem;
+}
+
+.registrants-table-container.inline {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.registrants-footer {
+  margin-top: 0.75rem;
   display: flex;
   justify-content: flex-end;
-  margin-top: 1.25rem;
-}
-
-.btn-view-registrants {
-  background-color: #374151;
-  /* dark gray */
-  color: #ffffff;
-  /* white text */
-  border: none;
-  padding: 0.55rem 1.25rem;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.1s ease;
-  display: inline-block;
-  text-align: center;
-}
-
-.btn-view-registrants:hover {
-  background-color: #4b5563;
-  /* slightly lighter gray on hover */
-  transform: scale(1.02);
 }
 
 /* Smooth appear animation */
@@ -3526,8 +3625,8 @@ tbody td {
 
 /* When sidebar is open, move hamburger to the right */
 .hamburger.shifted {
-  transform: translateX(140px);
-  /* Adjust this to your sidebar width */
+  transform: translateX(170px);
+  /* Adjust this to your sidebar width (230px - 60px = 170px) */
 }
 
 /* Show more css */
