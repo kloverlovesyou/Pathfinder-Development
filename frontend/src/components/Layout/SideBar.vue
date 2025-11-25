@@ -63,10 +63,41 @@
                 </span>
               </div>
             </button>
+
+            <div class="flex gap-3 px-2" v-if="isExpanded">
+              <!-- Upcoming -->
+              <div
+                class="relative flex-1 bg-white rounded-xl px-2 py-2 flex flex-col items-center text-xs uppercase tracking-wide border border-white/10 shadow-lg"
+              >
+                <!-- Floating count badge -->
+                <span
+                  class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold text-white bg-customButton rounded-full shadow-lg"
+                >
+                  {{ activityStore.upcomingCount }}
+                </span>
+
+                <span class="text-dark-slate mb-1">Upcoming</span>
+              </div>
+
+              <!-- Completed -->
+              <div
+                class="relative flex-1 bg-white rounded-xl px-2 py-2 flex flex-col items-center text-xs uppercase tracking-wide border border-white/10 shadow-lg"
+              >
+                <!-- Floating count badge -->
+                <span
+                  class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold text-white bg-customButton rounded-full shadow-lg"
+                >
+                  {{ activityStore.completedCount }}
+                </span>
+
+                <span class="text-dark-slate mb-1">Completed</span>
+              </div>
+            </div>
           </li>
+
           <li>
             <button
-              class="text-white mt-3 gap-3 p-3 py-2 hover:bg-slate-700 rounded-lg w-full flex items-center justify-start"
+              class="text-white mt-4 gap-3 p-3 py-2 hover:bg-slate-700 rounded-lg w-full flex items-center justify-start"
               @click="$router.push({ name: 'Trainingpage' })"
             >
               <svg
@@ -220,50 +251,65 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, onBeforeUnmount, computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
+import { useActivityStore } from "@/stores/activityStore";
 import { useRoute } from "vue-router";
 import { useRouter } from "vue-router";
+
+const props = defineProps({
+  expanded: {
+    type: Boolean,
+    default: true,
+  },
+});
+
+const emit = defineEmits(["update:expanded"]);
+
 const route = useRoute();
 const router = useRouter();
 const userName = ref("");
 const auth = useAuthStore();
+const activityStore = useActivityStore();
+const sidebar = ref(null);
+
+const isExpanded = computed(() => props.expanded);
+
+const setExpanded = (value) => emit("update:expanded", value);
 
 const logout = () => {
-  // Remove user data
   localStorage.removeItem("user");
-  localStorage.removeItem("token"); // if you store an auth token
-  // Redirect to login page
+  localStorage.removeItem("token");
   router.push({ name: "Login" });
 };
 
-const isExpanded = ref(false);
-const sidebar = ref(null);
-
 const toggleSidebar = () => {
-  isExpanded.value = !isExpanded.value;
+  setExpanded(!props.expanded);
 };
 
 const handleClickOutside = (event) => {
   if (
-    isExpanded.value &&
+    props.expanded &&
     sidebar.value &&
     !sidebar.value.contains(event.target)
   ) {
-    isExpanded.value = false;
+    setExpanded(false);
   }
 };
-onMounted(() => {
-  const handleResize = () => {
+
+const resizeSidebar = () => {
+  if (sidebar.value) {
     sidebar.value.style.height = `${window.innerHeight}px`;
-  };
-  window.addEventListener("resize", handleResize);
-  handleResize(); // initial set
-  onBeforeUnmount(() => window.removeEventListener("resize", handleResize));
-});
+  }
+};
 
 onMounted(() => {
+  window.addEventListener("resize", resizeSidebar);
   document.addEventListener("click", handleClickOutside);
+  resizeSidebar();
+
+  activityStore.fetchCounts();
+
   const savedUser = localStorage.getItem("user");
   if (savedUser) {
     const user = JSON.parse(savedUser);
@@ -277,13 +323,8 @@ onMounted(() => {
   }
 });
 
-onMounted(() => {
-  document.addEventListener("click", handleClickOutside);
-});
-
 onBeforeUnmount(() => {
+  window.removeEventListener("resize", resizeSidebar);
   document.removeEventListener("click", handleClickOutside);
 });
 </script>
-
-<style></style>

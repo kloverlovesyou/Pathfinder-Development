@@ -2,11 +2,11 @@
 import { ref, onMounted, computed } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
+import { useActivityStore } from "@/stores/activityStore";
 
 const router = useRouter();
-const upcomingCount = ref(0);
-const completedCount = ref(0);
 const toasts = ref([]);
+const activityStore = useActivityStore();
 const form = ref({
   firstName: "",
   middleName: "",
@@ -47,7 +47,7 @@ const showPasswordMismatch = computed(
 );
 
 onMounted(async () => {
-  fetchTrainingCounters();
+  activityStore.fetchCounts();
   try {
     // --- Fetch user from API ---
     const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/user", {
@@ -94,44 +94,6 @@ onMounted(async () => {
     }
   }
 });
-
-// Fetch TrainingCounter
-async function fetchTrainingCounters() {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    const response = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + "/registrations",
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    const trainings = response.data || [];
-
-    let newUpcoming = 0;
-    let newCompleted = 0;
-    const now = new Date().getTime();
-
-    trainings.forEach((r) => {
-      const statusLower = (r.registrationStatus || "").toLowerCase();
-      const endTimePassed = r.end_time
-        ? now > new Date(r.end_time).getTime()
-        : false;
-
-      // Mark as completed if end_time passed or status is completed
-      if (statusLower === "completed" || endTimePassed) {
-        newCompleted++;
-      } else if (["upcoming", "registered"].includes(statusLower)) {
-        newUpcoming++;
-      }
-    });
-
-    upcomingCount.value = newUpcoming;
-    completedCount.value = newCompleted;
-  } catch (error) {
-    console.error("❌ Error fetching training counters:", error);
-  }
-}
 
 const handleUpdate = async () => {
   const token = localStorage.getItem("token");
@@ -199,6 +161,7 @@ const logout = () => {
     <div class="min-h-screen font-poppins lg:flex">
       <!-- Left Column -->
       <div
+        v-if="false"
         class="w-full lg:w-1/4 lg:mr-3 bg-white rounded-lg shadow p-6 flex flex-col items-center hidden lg:flex"
       >
         <!-- Avatar -->
@@ -228,7 +191,7 @@ const logout = () => {
             <span
               class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
             >
-              {{ upcomingCount }}
+              {{ activityStore.upcomingCount }}
             </span>
           </div>
 
@@ -243,7 +206,7 @@ const logout = () => {
             <span
               class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-customButton rounded-full"
             >
-              {{ completedCount }}
+              {{ activityStore.completedCount }}
             </span>
           </div>
         </div>

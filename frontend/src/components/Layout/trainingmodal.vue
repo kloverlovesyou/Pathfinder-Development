@@ -1,11 +1,4 @@
 <script setup>
-import { ref, watch, onBeforeUnmount } from "vue";
-import QrcodeVue from "qrcode.vue";
-import { useTrainingStore } from "@/stores/trainingStore";
-
-const trainingStore = useTrainingStore();
-
-const qrCode = ref("");
 const props = defineProps({
   isOpen: Boolean,
   training: Object,
@@ -13,68 +6,8 @@ const props = defineProps({
   registerLoading: Boolean,
 });
 
-const emit = defineEmits(["close", "toggle-register"]);
+defineEmits(["close", "toggle-register"]);
 
-// ✅ Helper: Check if training has started
-function hasTrainingStarted(schedule) {
-  if (!schedule) return false;
-  const now = new Date();
-  const trainingTime = new Date(schedule);
-  return now >= trainingTime;
-}
-
-// ⏳ QR countdown state
-const countdown = ref("");
-const qrExpired = ref(false);
-let countdownInterval = null;
-
-// 🕒 Countdown logic
-watch(
-  () => props.training,
-  async (t) => {
-    if (!t || !t.end_time) {
-      countdown.value = "";
-      qrExpired.value = true;
-      qrCode.value = "";
-      return;
-    }
-
-    const endTime = new Date(t.end_time);
-    clearInterval(countdownInterval);
-
-    const update = async () => {
-      const now = new Date();
-      const diff = endTime - now;
-
-      if (diff <= 0) {
-        countdown.value = "00:00";
-        qrExpired.value = true;
-        qrCode.value = "";
-        clearInterval(countdownInterval);
-      } else {
-        const m = Math.floor(diff / 60000).toString().padStart(2, "0");
-        const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, "0");
-        countdown.value = `${m}:${s}`;
-        qrExpired.value = false;
-
-        // 🔹 Only generate QR when training has started
-        if (props.isRegistered && !qrCode.value && hasTrainingStarted(t.schedule)) {
-          await trainingStore.generateQR(t);
-          const storedQR = trainingStore.qrCodes[t.trainingID];
-          qrCode.value = storedQR?.value || "";
-        }
-      }
-    };
-
-    update();
-    countdownInterval = setInterval(update, 1000);
-  },
-  { immediate: true }
-);
-
-onBeforeUnmount(() => clearInterval(countdownInterval));
-
-// 📅 Helpers
 function formatDate(datetime) {
   if (!datetime) return "N/A";
   return new Date(datetime).toLocaleDateString("en-US", {
@@ -83,14 +16,6 @@ function formatDate(datetime) {
     day: "numeric",
     year: "numeric",
   });
-}
-
-async function generateModalQR(training) {
-  await trainingStore.generateQR(training);
-
-  // Grab the QR for this training from the store
-  const storedQR = trainingStore.qrCodes[training.trainingID];
-  qrCode.value = storedQR?.value || "";
 }
 
 function formatTime(datetime) {
@@ -185,16 +110,6 @@ function formatTime(datetime) {
           >
         </p>
 
-        <!-- QR Code -->
-        <div v-if="isRegistered" class="mt-4 text-center">
-          <div v-if="qrCode && !qrExpired" class="flex flex-col items-center">
-            <qrcode-vue :value="qrCode" :size="120" />
-            <p class="text-sm text-gray-600 mt-1">Expires in: {{ countdown }}</p>
-          </div>
-          <div v-else>
-            <p class="text-sm text-gray-500">QR code not yet generated or expired.</p>
-          </div>
-        </div>
       </template>
     </div>
   </dialog>
