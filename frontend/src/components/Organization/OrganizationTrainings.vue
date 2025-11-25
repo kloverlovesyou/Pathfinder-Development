@@ -1,11 +1,8 @@
 <template>
   <div class="organization-trainings">
+
     <!-- Hamburger Toggle -->
-    <button
-      class="hamburger"
-      @click="toggleSidebar"
-      :class="{ open: isSidebarOpen, shifted: isSidebarOpen }"
-    >
+    <button class="hamburger" @click="toggleSidebar" :class="{ open: isSidebarOpen, shifted: isSidebarOpen }">
       <span></span>
       <span></span>
       <span></span>
@@ -14,7 +11,10 @@
     <!-- Sidebar -->
     <transition name="slide">
       <aside class="sidebar" :class="{ collapsed: !isSidebarOpen }">
-        <div class="space"></div>
+
+        <div class="space">
+
+        </div>
         <!-- Avatar always visible -->
         <div class="avatar">
           <img :src="dictLogo" alt="DICT Logo" class="avatar-img" />
@@ -25,21 +25,11 @@
           <div v-if="isSidebarOpen" class="profile-section">
             <h3 class="org-name">{{ organizationName }}</h3>
             <div class="profile-actions">
-              <div
-                class="action"
-                @click="navigateTo({ name: 'OrgUpdateProfile' })"
-              >
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+              <div class="action" @click="navigateTo({ name: 'OrgUpdateProfile' })">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M11.7278 8.27191C12.7534 9.87525 14.1247 11.2375 15.7464 12.2534L8.85673 19.144C8.43166 19.569 8.21841 19.7816 7.95731 19.9213C7.69637 20.0609 7.40171 20.1199 6.81278 20.2377L3.73563 20.853C3.40302 20.9195 3.23649 20.9525 3.14188 20.8578C3.04759 20.7632 3.08035 20.5971 3.14677 20.2651L3.76298 17.1879C3.88087 16.5985 3.93965 16.3035 4.07938 16.0424C4.21912 15.7814 4.43173 15.569 4.85673 15.144L11.7278 8.27191ZM16.1116 4.03656C16.6711 3.75929 17.3284 3.75931 17.888 4.03656C18.1821 4.18229 18.455 4.45518 19.0003 5.00043C19.5453 5.54545 19.8184 5.81774 19.9641 6.11175C20.2414 6.67123 20.2413 7.32861 19.9641 7.88812C19.8184 8.18221 19.5455 8.45517 19.0003 9.00043L17.2034 10.7963C15.5308 9.84498 14.1456 8.46859 13.1819 6.81781L15.0003 5.00043C15.5453 4.45539 15.8176 4.18234 16.1116 4.03656Z"
-                    fill="#FFFDFD"
-                  />
+                    fill="#FFFDFD" />
                 </svg>
                 <span>Update Profile</span>
               </div>
@@ -59,122 +49,64 @@
         </transition>
 
         <div class="icon" @click="navigateTo('/organization')">
-          <svg
-            width="30"
-            height="30"
-            viewBox="0 0 30 30"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+          <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M6.25 17.0585C6.25 16.0494 6.25 15.5448 6.47166 15.1141C6.69333 14.6833 7.1039 14.3901 7.92505 13.8035L13.8375 9.58034C14.3989 9.17938 14.6795 8.9789 15 8.9789C15.3205 8.9789 15.6011 9.17938 16.1625 9.58034L22.075 13.8035C22.8961 14.3901 23.3067 14.6833 23.5283 15.1141C23.75 15.5448 23.75 16.0494 23.75 17.0585V24.25C23.75 25.1928 23.75 25.6642 23.4571 25.9571C23.1642 26.25 22.6928 26.25 21.75 26.25H8.25C7.30719 26.25 6.83579 26.25 6.54289 25.9571C6.25 25.6642 6.25 25.1928 6.25 24.25V17.0585Z"
-              fill="white"
-            />
+              fill="white" />
             <path
               d="M3.75 15.6366C3.75 15.9035 3.75 16.0369 3.8341 16.0781C3.91819 16.1192 4.02352 16.0373 4.23418 15.8734L13.7721 8.45502C14.362 7.99625 14.6569 7.76686 15 7.76686C15.3431 7.76686 15.638 7.99625 16.2279 8.45502L25.7658 15.8734C25.9765 16.0373 26.0818 16.1192 26.1659 16.0781C26.25 16.0369 26.25 15.9035 26.25 15.6366V14.7282C26.25 14.2478 26.25 14.0076 26.1483 13.7997C26.0466 13.5918 25.857 13.4444 25.4779 13.1495L16.2279 5.95502C15.638 5.49625 15.3431 5.26686 15 5.26686C14.6569 5.26686 14.362 5.49625 13.7721 5.95502L4.52212 13.1495C4.14295 13.4444 3.95337 13.5918 3.85168 13.7997C3.75 14.0076 3.75 14.2478 3.75 14.7282V15.6366Z"
-              fill="white"
-            />
+              fill="white" />
             <path
               d="M16.125 18.75H13.875C12.7704 18.75 11.875 19.6454 11.875 20.75V26.1C11.875 26.1828 11.9422 26.25 12.025 26.25H17.975C18.0578 26.25 18.125 26.1828 18.125 26.1V20.75C18.125 19.6454 17.2296 18.75 16.125 18.75Z"
-              fill="white"
-            />
-            <rect
-              x="20"
-              y="6.25"
-              width="2.5"
-              height="5"
-              rx="0.5"
-              fill="white"
-            />
+              fill="white" />
+            <rect x="20" y="6.25" width="2.5" height="5" rx="0.5" fill="white" />
           </svg>
           <span>Home</span>
         </div>
         <div class="icon" @click="navigateTo({ name: 'OrgTrainings' })">
-          <svg
-            width="29"
-            height="29"
-            viewBox="0 0 29 29"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+          <svg width="29" height="29" viewBox="0 0 29 29" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M20.5837 3.625C23.4119 3.625 24.8261 3.62526 25.7048 4.50391C26.5833 5.3826 26.5837 6.79675 26.5837 9.625V19.375C26.5837 22.2033 26.5833 23.6174 25.7048 24.4961C24.8261 25.3747 23.4119 25.375 20.5837 25.375H8.41666C5.58824 25.375 4.17425 25.3748 3.29557 24.4961C2.41689 23.6174 2.41666 22.2034 2.41666 19.375V9.625C2.41666 6.79657 2.41689 5.38259 3.29557 4.50391C4.17425 3.62523 5.58824 3.625 8.41666 3.625H20.5837ZM9.66666 12.292C9.11438 12.292 8.66666 12.7397 8.66666 13.292V20.542L8.67155 20.6445C8.72303 21.1485 9.1491 21.542 9.66666 21.542C10.1842 21.542 10.6103 21.1485 10.6618 20.6445L10.6667 20.542V13.292C10.6667 12.7397 10.2189 12.292 9.66666 12.292ZM19.3337 9.875C18.7814 9.875 18.3337 10.3227 18.3337 10.875V20.542L18.3385 20.6436C18.3896 21.148 18.8158 21.542 19.3337 21.542C19.8514 21.5418 20.2778 21.1479 20.3288 20.6436L20.3337 20.542V10.875C20.3337 10.3228 19.8858 9.87518 19.3337 9.875ZM14.4997 14.708C13.9476 14.7082 13.4998 15.156 13.4997 15.708V20.541L13.5046 20.6436C13.5557 21.1477 13.982 21.5408 14.4997 21.541C15.0175 21.541 15.4436 21.1478 15.4948 20.6436L15.4997 20.541V15.708C15.4995 15.1559 15.0518 14.708 14.4997 14.708Z"
-              fill="white"
-            />
+              fill="white" />
           </svg>
           <span>Trainings</span>
         </div>
         <div class="icon" @click="navigateTo({ name: 'OrgCareers' })">
-          <svg
-            width="25"
-            height="25"
-            viewBox="0 0 25 25"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+          <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M22.8798 11.0484C23.4046 10.8642 23.9845 11.1431 24.1081 11.6855C24.4792 13.3134 24.4217 15.0018 23.9268 16.6191C23.4739 18.0989 22.6698 19.4685 21.5787 20.6449C21.2148 21.0372 20.6017 21.0197 20.2239 20.6408L14.9487 15.3495C14.4292 14.8284 14.6314 13.9436 15.3257 13.6999L22.8798 11.0484ZM13 4.0826C13 3.50231 13.4932 3.04057 14.0672 3.12592C15.8633 3.39302 17.5788 4.00579 19.085 4.93161C20.3794 5.72731 21.4793 6.72976 22.3343 7.87824C22.709 8.38157 22.4513 9.07932 21.8592 9.28718L14.3313 11.9301C13.6809 12.1584 13 11.6758 13 10.9865V4.0826Z"
-              fill="white"
-            />
+              fill="white" />
             <path
               d="M11.9511 13.2908C11.9512 13.5763 12.0581 13.8518 12.25 14.0632L19.2677 21.7886C19.6714 22.233 19.5963 22.9337 19.0759 23.2331C18.245 23.7112 17.354 24.0924 16.4209 24.365C14.5402 24.9144 12.5476 25.0087 10.6201 24.6394C8.69236 24.2701 6.88846 23.4478 5.36911 22.2468C3.84993 21.0459 2.66126 19.5025 1.90915 17.7537C1.15711 16.0048 0.864996 14.1043 1.05759 12.2205C1.25024 10.3365 1.92171 8.52693 3.01364 6.95288C4.1056 5.37884 5.58398 4.08845 7.31735 3.19605C8.43484 2.62073 9.63633 2.22318 10.8757 2.01305C11.4515 1.91541 11.9511 2.37876 11.9511 2.96284V13.2908Z"
-              fill="white"
-            />
+              fill="white" />
           </svg>
           <span>Career</span>
         </div>
         <div class="icon" @click="navigateTo({ name: 'OrgCalendar' })">
-          <svg
-            width="26"
-            height="26"
-            viewBox="0 0 26 26"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M2.16675 9.4165C2.16675 7.53089 2.16675 6.58808 2.75253 6.00229C3.33832 5.4165 4.28113 5.4165 6.16675 5.4165H19.8334C21.719 5.4165 22.6618 5.4165 23.2476 6.00229C23.8334 6.58808 23.8334 7.53089 23.8334 9.4165V9.83317C23.8334 10.3046 23.8334 10.5403 23.687 10.6867C23.5405 10.8332 23.3048 10.8332 22.8334 10.8332H3.16675C2.69534 10.8332 2.45964 10.8332 2.31319 10.6867C2.16675 10.5403 2.16675 10.3046 2.16675 9.83317V9.4165Z"
-              fill="white"
-            />
+              fill="white" />
             <path
               d="M22.833 13C23.3042 13 23.5401 13.0002 23.6865 13.1465C23.833 13.2929 23.833 13.5286 23.833 14V19.833C23.833 21.7186 23.8329 22.6613 23.2471 23.2471C22.6613 23.8329 21.7186 23.833 19.833 23.833H6.16699C4.28137 23.833 3.33872 23.8329 2.75293 23.2471C2.16714 22.6613 2.16699 21.7186 2.16699 19.833V14C2.16699 13.5286 2.16703 13.2929 2.31348 13.1465C2.45994 13.0002 2.69576 13 3.16699 13H22.833ZM8.58301 19.5C8.11182 19.5 7.87591 19.5001 7.72949 19.6465C7.58321 19.7929 7.58301 20.0288 7.58301 20.5V20.667C7.58301 21.1382 7.58308 21.3741 7.72949 21.5205C7.87591 21.6669 8.11182 21.667 8.58301 21.667H10.917C11.3882 21.667 11.6241 21.6669 11.7705 21.5205C11.9169 21.3741 11.917 21.1382 11.917 20.667V20.5C11.917 20.0288 11.9168 19.7929 11.7705 19.6465C11.6241 19.5001 11.3882 19.5 10.917 19.5H8.58301ZM15.083 19.5C14.6118 19.5 14.3759 19.5001 14.2295 19.6465C14.0832 19.7929 14.083 20.0288 14.083 20.5V20.667C14.083 21.1382 14.0831 21.3741 14.2295 21.5205C14.3759 21.6669 14.6118 21.667 15.083 21.667H17.417C17.8882 21.667 18.1241 21.6669 18.2705 21.5205C18.4169 21.3741 18.417 21.1382 18.417 20.667V20.5C18.417 20.0288 18.4168 19.7929 18.2705 19.6465C18.1241 19.5001 17.8882 19.5 17.417 19.5H15.083ZM8.58301 15.167C8.11182 15.167 7.87591 15.1671 7.72949 15.3135C7.58337 15.4599 7.58301 15.6959 7.58301 16.167V16.333C7.58301 16.8041 7.58337 17.0401 7.72949 17.1865C7.87591 17.3329 8.11182 17.333 8.58301 17.333H10.917C11.3882 17.333 11.6241 17.3329 11.7705 17.1865C11.9166 17.0401 11.917 16.8041 11.917 16.333V16.167C11.917 15.6959 11.9166 15.4599 11.7705 15.3135C11.6241 15.1671 11.3882 15.167 10.917 15.167H8.58301ZM15.083 15.167C14.6118 15.167 14.3759 15.1671 14.2295 15.3135C14.0834 15.4599 14.083 15.6959 14.083 16.167V16.333C14.083 16.8041 14.0834 17.0401 14.2295 17.1865C14.3759 17.3329 14.6118 17.333 15.083 17.333H17.417C17.8882 17.333 18.1241 17.3329 18.2705 17.1865C18.4166 17.0401 18.417 16.8041 18.417 16.333V16.167C18.417 15.6959 18.4166 15.4599 18.2705 15.3135C18.1241 15.1671 17.8882 15.167 17.417 15.167H15.083Z"
-              fill="white"
-            />
-            <path
-              d="M7.58325 3.25L7.58325 6.5"
-              stroke="white"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-            <path
-              d="M18.4167 3.25L18.4167 6.5"
-              stroke="white"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
+              fill="white" />
+            <path d="M7.58325 3.25L7.58325 6.5" stroke="white" stroke-width="2" stroke-linecap="round" />
+            <path d="M18.4167 3.25L18.4167 6.5" stroke="white" stroke-width="2" stroke-linecap="round" />
           </svg>
           <span>Calendar</span>
         </div>
 
-        <div class="spacer"></div>
-        <!-- pushes signout down -->
+        <div class="spacer"></div> <!-- pushes signout down -->
         <div class="icon signout" @click="logout">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
             <polyline points="16 17 21 12 16 7"></polyline>
             <line x1="21" y1="12" x2="9" y2="12"></line>
           </svg>
           <span>Sign Out</span>
         </div>
+
       </aside>
     </transition>
 
@@ -189,12 +121,8 @@
       <!-- ✅ GLOBAL SEARCH -->
       <section class="global-search-section">
         <div class="flex justify-center my-6 px-4">
-          <input
-            type="text"
-            v-model="globalSearchQuery"
-            placeholder="Search trainings..."
-            class="global-search-bar text-black px-4 py-2 border rounded-lg w-full sm:w-3/4 md:w-1/2 lg:w-1/3"
-          />
+          <input type="text" v-model="globalSearchQuery" placeholder="Search trainings..."
+            class="global-search-bar text-black px-4 py-2 border rounded-lg w-full sm:w-3/4 md:w-1/2 lg:w-1/3" />
         </div>
       </section>
 
@@ -203,9 +131,7 @@
         <div class="flex items-center justify-between">
           <h2 class="section-title flex items-center gap-1">
             Upcoming Trainings
-            <span class="count-badge">{{
-              sortedUpcomingTrainings.length
-            }}</span>
+            <span class="count-badge">{{ sortedUpcomingTrainings.length }}</span>
           </h2>
 
           <button class="plus-btn-text" @click="openTrainingPopup()">+</button>
@@ -213,39 +139,23 @@
 
         <!-- ✅ Grid Layout -->
         <div class="trainings-grid">
-          <div
-            v-for="training in visibleFilteredUpcoming"
-            :key="training.trainingID"
-            class="training-card"
-            @click="openTrainingDetails(training)"
-          >
+          <div v-for="training in visibleFilteredUpcoming" :key="training.trainingID" class="training-card"
+            @click="openTrainingDetails(training)">
             <div class="training-right" @click="openTrainingDetails(training)">
               <h3 class="training-title">{{ training.title }}</h3>
-              <p class="training-date">
-                {{ formatSchedule(training.schedule) }}
-              </p>
+              <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
+
             </div>
 
             <!-- Menu -->
             <div class="menu">
-              <div
-                class="menu-icon"
-                @click.stop="toggleUpcomingMenu(training.trainingID)"
-              >
+              <div class="menu-icon" @click.stop="toggleUpcomingMenu(training.trainingID)">
                 ⋮
               </div>
-              <div
-                v-if="openUpcomingMenu === training.trainingID"
-                class="dropdown-menu"
-                @click.stop
-              >
+              <div v-if="openUpcomingMenu === training.trainingID" class="dropdown-menu" @click.stop>
                 <ul>
-                  <li @click="deleteTraining(training.trainingID)">
-                    Delete Training
-                  </li>
-                  <li @click="updateTraining(training.trainingID)">
-                    Update Training
-                  </li>
+                  <li @click="deleteTraining(training.trainingID)">Delete Training</li>
+                  <li @click="updateTraining(training.trainingID)">Update Training</li>
                 </ul>
               </div>
             </div>
@@ -253,12 +163,9 @@
         </div>
 
         <!-- Show More Button -->
-        <button
-          v-if="sortedUpcomingTrainings.length > 4"
-          class="show-more-btn"
-          @click="showAllUpcoming = !showAllUpcoming"
-        >
-          {{ showAllUpcoming ? "Show Less" : "Show More" }}
+        <button v-if="sortedUpcomingTrainings.length > 4" class="show-more-btn"
+          @click="showAllUpcoming = !showAllUpcoming">
+          {{ showAllUpcoming ? 'Show Less' : 'Show More' }}
         </button>
       </section>
 
@@ -267,44 +174,27 @@
         <div class="flex items-center justify-between">
           <h2 class="section-title flex items-center gap-1">
             Completed Trainings
-            <span class="count-badge">{{
-              sortedCompletedTrainings.length
-            }}</span>
+            <span class="count-badge">{{ sortedCompletedTrainings.length }}</span>
           </h2>
         </div>
 
         <!-- ✅ Grid Layout -->
         <div class="trainings-grid">
-          <div
-            v-for="training in visibleFilteredCompleted"
-            :key="training.trainingID"
-            class="training-card"
-            @click="openTrainingDetails(training)"
-          >
+          <div v-for="training in visibleFilteredCompleted" :key="training.trainingID" class="training-card"
+            @click="openTrainingDetails(training)">
             <div class="training-right" @click="openTrainingDetails(training)">
               <h3 class="training-title">{{ training.title }}</h3>
-              <p class="training-date">
-                {{ formatSchedule(training.schedule) }}
-              </p>
+              <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
             </div>
 
             <!-- Menu -->
             <div class="menu">
-              <div
-                class="menu-icon"
-                @click.stop="toggleCompletedMenu(training.trainingID)"
-              >
+              <div class="menu-icon" @click.stop="toggleCompletedMenu(training.trainingID)">
                 ⋮
               </div>
-              <div
-                v-if="openCompletedMenu === training.trainingID"
-                class="dropdown-menu"
-                @click.stop
-              >
+              <div v-if="openCompletedMenu === training.trainingID" class="dropdown-menu" @click.stop>
                 <ul>
-                  <li @click="deleteTraining(training.trainingID)">
-                    Delete Training
-                  </li>
+                  <li @click="deleteTraining(training.trainingID)">Delete Training</li>
                 </ul>
               </div>
             </div>
@@ -312,39 +202,27 @@
         </div>
 
         <!-- Show More Button -->
-        <button
-          v-if="sortedCompletedTrainings.length > 4"
-          class="show-more-btn"
-          @click="showAllCompleted = !showAllCompleted"
-        >
-          {{ showAllCompleted ? "Show Less" : "Show More" }}
+        <button v-if="sortedCompletedTrainings.length > 4" class="show-more-btn"
+          @click="showAllCompleted = !showAllCompleted">
+          {{ showAllCompleted ? 'Show Less' : 'Show More' }}
         </button>
       </section>
 
       <!-- Training Details Modal -->
-      <div
-        v-if="showTrainingDetailsModal"
-        class="modal-overlay"
-        @click.self="closeTrainingDetails"
-      >
+      <div v-if="showTrainingDetailsModal" class="modal-overlay" @click.self="closeTrainingDetails">
         <div class="training-details-modal">
-          <button class="modal-close-btn" @click="closeTrainingDetails">
-            ✕
-          </button>
+          <button class="modal-close-btn" @click="closeTrainingDetails">✕</button>
 
           <h3 class="modal-title">{{ selectedTraining.title }}</h3>
           <p class="training-info">
             <strong>Description:</strong> {{ selectedTraining.description }}
           </p>
           <p class="training-info">
-            <strong>Date and Start Time:</strong>
-            {{ formatSchedule(selectedTraining.schedule) }}
+            <strong>Date and Start Time:</strong> {{ formatSchedule(selectedTraining.schedule) }}
           </p>
           <p class="training-info">
-            <strong>End Time:</strong>
-            {{ formatSchedule(selectedTraining.end_time) }}
-          </p>
-          <!-- 👈 Show end_time -->
+            <strong>End Time:</strong> {{ formatSchedule(selectedTraining.end_time) }}
+          </p> <!-- 👈 Show end_time -->
           <p class="training-info">
             <strong>Mode:</strong> {{ selectedTraining.mode }}
           </p>
@@ -357,11 +235,7 @@
           <!-- ✅ Show only if training is Online -->
           <p class="training-info" v-if="selectedTraining.mode === 'Online'">
             <strong>Training Link: </strong>
-            <a
-              :href="selectedTraining.trainingLink"
-              target="_blank"
-              class="training-link"
-            >
+            <a :href="selectedTraining.trainingLink" target="_blank" class="training-link">
               {{ selectedTraining.trainingLink }}
             </a>
           </p>
@@ -458,13 +332,8 @@
           </div>
           <!-- ✅ Show QR only if training is live/upcoming within allowed time -->
           <div
-            v-if="
-              activeTrainingQR &&
-              activeTrainingId === selectedTraining.trainingID &&
-              isTrainingActive(selectedTraining)
-            "
-            class="qr-container"
-          >
+            v-if="activeTrainingQR && activeTrainingId === selectedTraining.trainingID && isTrainingActive(selectedTraining)"
+            class="qr-container">
             <h3>QR Code (Expires at: {{ activeTrainingQRExpiresAt }})</h3>
             <qrcode-vue :value="activeTrainingQR" :size="200" />
           </div>
@@ -472,107 +341,56 @@
       </div>
 
       <!-- Certificate Upload -->
-      <div
-        v-if="showCertUploadModal"
-        class="modal-overlay"
-        @click.self="closeCertUploadModal"
-      >
+      <div v-if="showCertUploadModal" class="modal-overlay" @click.self="closeCertUploadModal">
         <div class="certificate-modal">
+
           <button class="cert-close-btn" @click="dismissModal">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M18 6L6 18M6 6L18 18"
-                stroke="#4a4a4a"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18M6 6L18 18" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
             </svg>
           </button>
 
           <div class="cert-modal-header">
             <div class="profile-avatar-wrapper">
-              <img
-                :src="selectedRegistrant.img"
-                alt="Registrant Profile"
-                class="profile-avatar-img"
-                v-if="selectedRegistrant.img"
-              />
+              <img :src="selectedRegistrant.img" alt="Registrant Profile" class="profile-avatar-img"
+                v-if="selectedRegistrant.img" />
               <div class="profile-avatar-placeholder" v-else>
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <circle cx="12" cy="7" r="4" fill="#a7a7a7" />
-                  <path
-                    d="M17.5 19.5c0-3.314-2.239-6-5-6s-5 2.686-5 6h10z"
-                    fill="#a7a7a7"
-                  />
+                  <path d="M17.5 19.5c0-3.314-2.239-6-5-6s-5 2.686-5 6h10z" fill="#a7a7a7" />
                 </svg>
               </div>
             </div>
             <p class="registrant-name">{{ selectedRegistrant.name }}</p>
           </div>
 
-          <p class="status">Status: {{ selectedRegistrant.status }}</p>
+          <p class="status">
+            Status: {{ selectedRegistrant.status }}
+          </p>
 
           <p class="date-registered">
             Date Registered: {{ selectedRegistrant.dateRegistered }}
           </p>
 
           <form @submit.prevent="sendCertificateDetails" class="cert-form">
-            <input
-              type="text"
-              v-model="selectedRegistrant.certificateTrackingID"
-              placeholder="Certificate Tracking ID"
-              class="cert-input"
-              required
-            />
+            <input type="text" v-model="selectedRegistrant.certificateTrackingID" placeholder="Certificate Tracking ID"
+              class="cert-input" required />
 
             <div class="cert-input-wrapper">
-              <input
-                type="date"
-                v-model="selectedRegistrant.certificateGivenDate"
-                placeholder="dd/mm/yyyy"
-                class="cert-input date-input"
-                required
-              />
+              <input type="date" v-model="selectedRegistrant.certificateGivenDate" placeholder="dd/mm/yyyy"
+                class="cert-input date-input" required />
 
               <span class="calendar-icon">
-                <svg
-                  width="26"
-                  height="26"
-                  viewBox="0 0 26 26"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+                <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M2.16669 9.4165C2.16669 7.53089 2.16669 6.58808 2.75247 6.00229C3.33826 5.4165 4.28107 5.4165 6.16669 5.4165H19.8334C21.719 5.4165 22.6618 5.4165 23.2476 6.00229C23.8334 6.58808 23.8334 7.53089 23.8334 9.4165V9.83317C23.8334 10.3046 23.8334 10.5403 23.6869 10.6867C23.5405 10.8332 23.3048 10.8332 22.8334 10.8332H3.16669C2.69528 10.8332 2.45958 10.8332 2.31313 10.687C2.16669 10.5405 2.16669 10.3048 2.16669 9.83317V9.4165Z"
-                    fill="#4a4a4a"
-                  />
+                    fill="#4a4a4a" />
                   <path
                     d="M22.833 13C23.3042 13 23.5401 13.0002 23.6865 13.1465C23.833 13.2929 23.833 13.5286 23.833 14V19.833C23.833 21.7186 23.8329 22.6613 23.2471 23.2471C22.6613 23.8329 21.7186 23.833 19.833 23.833H6.16699C4.28137 23.833 3.33872 23.8329 2.75293 23.2471C2.16714 22.6613 2.16699 21.7186 2.16699 19.833V14C2.16699 13.5286 2.16703 13.2929 2.31348 13.1465C2.45994 13.0002 2.69576 13 3.16699 13H22.833ZM8.58301 19.5C8.11182 19.5 7.87591 19.5001 7.72949 19.6465C7.58321 19.7929 7.58301 20.0288 7.58301 20.5V20.667C7.58301 21.1382 7.58308 21.3741 7.72949 21.5205C7.87591 21.6669 8.11182 21.667 8.58301 21.667H10.917C11.3882 21.667 11.6241 21.6669 11.7705 21.5205C11.9169 21.3741 11.917 21.1382 11.917 20.667V20.5C11.917 20.0288 11.9168 19.7929 11.7705 19.6465C11.6241 19.5001 11.3882 19.5 10.917 19.5H8.58301ZM15.083 19.5C14.6118 19.5 14.3759 19.5001 14.2295 19.6465C14.0832 19.7929 14.083 20.0288 14.083 20.5V20.667C14.083 21.1382 14.0831 21.3741 14.2295 21.5205C14.3759 21.6669 14.6118 21.667 15.083 21.667H17.417C17.8882 21.667 18.1241 21.6669 18.2705 21.5205C18.4169 21.3741 18.417 21.1382 18.417 20.667V20.5C18.417 20.0288 18.4168 19.7929 18.2705 19.6465C18.1241 19.5001 17.8882 19.5 17.417 19.5H15.083ZM8.58301 15.167C8.11182 15.167 7.87591 15.1671 7.72949 15.3135C7.58337 15.4599 7.58301 15.6959 7.58301 16.167V16.333C7.58301 16.8041 7.58337 17.0401 7.72949 17.1865C7.87591 17.3329 8.11182 17.333 8.58301 17.333H10.917C11.3882 17.333 11.6241 17.3329 11.7705 17.1865C11.9166 17.0401 11.917 16.8041 11.917 16.333V16.167C11.917 15.6959 11.9166 15.4599 11.7705 15.3135C11.6241 15.1671 11.3882 15.167 10.917 15.167H8.58301ZM15.083 15.167C14.6118 15.167 14.3759 15.1671 14.2295 15.3135C14.0834 15.4599 14.083 15.6959 14.083 16.167V16.333C14.083 16.8041 14.0834 17.0401 14.2295 17.1865C14.3759 17.3329 14.6118 17.333 15.083 17.333H17.417C17.8882 17.333 18.1241 17.3329 18.2705 17.1865C18.4166 17.0401 18.417 16.8041 18.417 16.333V16.167C18.417 15.6959 18.4166 15.4599 18.2705 15.3135C18.1241 15.1671 17.8882 15.167 17.417 15.167H15.083Z"
-                    fill="#4a4a4a"
-                  />
-                  <path
-                    d="M7.58331 3.25L7.58331 6.5"
-                    stroke="#4a4a4a"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  />
-                  <path
-                    d="M18.4167 3.25L18.4167 6.5"
-                    stroke="#4a4a4a"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  />
+                    fill="#4a4a4a" />
+                  <path d="M7.58331 3.25L7.58331 6.5" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round" />
+                  <path d="M18.4167 3.25L18.4167 6.5" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round" />
                 </svg>
               </span>
             </div>
@@ -585,23 +403,13 @@
                 }}
               </label>
               <span class="upload-icon">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M12 20L11.4 20.8L12 21.25L12.6 20.8L12 20ZM13 8C13 7.44772 12.5523 7 12 7C11.4477 7 11 7.44772 11 8H13ZM8 17L7.4 17.8L11.4 20.8L12 20L12.6 19.2L8.6 16.2L8 17ZM12 20L12.6 20.8L16.6 17.8L16 17L15.4 16.2L11.4 19.2L12 20ZM12 20H13V8H12H11V20H12Z"
-                    fill="#4a4a4a"
-                  />
+                    fill="#4a4a4a" />
                   <path
                     d="M8 13C7.07003 13 6.60504 13 6.22354 12.8978C5.18827 12.6204 4.37962 11.8117 4.10222 10.7765C4 10.395 4 9.92997 4 9V8C4 6.13077 4 5.19615 4.40192 4.5C4.66523 4.04394 5.04394 3.66523 5.5 3.40192C6.19615 3 7.13077 3 9 3H15C16.8692 3 17.8038 3 18.5 3.40192C18.9561 3.66523 19.3348 4.04394 19.5981 4.5C20 5.19615 20 6.13077 20 8V9C20 9.92997 20 10.395 19.8978 10.7765C19.6204 11.8117 18.8117 12.6204 17.7765 12.8978C17.395 13 16.93 13 16 13"
-                    stroke="#4a4a4a"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  />
+                    stroke="#4a4a4a" stroke-width="2" stroke-linecap="round" />
                 </svg>
               </span>
             </div>
@@ -620,23 +428,12 @@
           </button>
 
           <!-- Title -->
-          <h2 class="training-popup-title">
-            {{ isEditMode ? "Update Training" : "Post Training" }}
-          </h2>
+          <h2 class="training-popup-title">{{ isEditMode ? "Update Training" : "Post Training" }}</h2>
 
           <!-- Form -->
           <form @submit.prevent="saveTraining" class="training-popup-form">
-            <input
-              v-model="newTraining.title"
-              type="text"
-              placeholder="Title"
-              class="training-input"
-            />
-            <textarea
-              v-model="newTraining.description"
-              placeholder="Description"
-              class="training-input"
-            ></textarea>
+            <input v-model="newTraining.title" type="text" placeholder="Title" class="training-input" />
+            <textarea v-model="newTraining.description" placeholder="Description" class="training-input"></textarea>
 
             <!-- Schedule - Multiple Dates -->
             <div class="popup-form-group schedule-group">
@@ -646,33 +443,15 @@
                 <div class="date-input-wrapper">
                   <input type="date" id="schedule" v-model="tempDateInput" :min="todayDate" placeholder="Select Date" />
                   <span class="calendar-icon">
-                    <svg
-                      width="26"
-                      height="26"
-                      viewBox="0 0 26 26"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
+                    <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path
                         d="M2.16669 9.41675C2.16669 7.53113 2.16669 6.58832 2.75247 6.00253C3.33826 5.41675 4.28107 5.41675 6.16669 5.41675H19.8334C21.719 5.41675 22.6618 5.41675 23.2476 6.00253C23.8334 6.58832 23.8334 7.53113 23.8334 9.41675V9.83342C23.8334 10.3048 23.8334 10.5405 23.6869 10.687C23.5405 10.8334 23.3048 10.8334 22.8334 10.8334H3.16669C2.69528 10.8334 2.45958 10.8334 2.31313 10.687C2.16669 10.5405 2.16669 10.3048 2.16669 9.83341V9.41675Z"
-                        fill="black"
-                      />
+                        fill="black" />
                       <path
                         d="M22.833 13C23.3042 13 23.5401 13.0002 23.6865 13.1465C23.833 13.2929 23.833 13.5286 23.833 14V19.833C23.833 21.7186 23.8329 22.6613 23.2471 23.2471C22.6613 23.8329 21.7186 23.833 19.833 23.833H6.16699C4.28137 23.833 3.33872 23.8329 2.75293 23.2471C2.16714 22.6613 2.16699 21.7186 2.16699 19.833V14C2.16699 13.5286 2.16703 13.2929 2.31348 13.1465C2.45994 13.0002 2.69576 13 3.16699 13H22.833Z"
-                        fill="black"
-                      />
-                      <path
-                        d="M7.58331 3.25L7.58331 6.5"
-                        stroke="black"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                      />
-                      <path
-                        d="M18.4167 3.25L18.4167 6.5"
-                        stroke="black"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                      />
+                        fill="black" />
+                      <path d="M7.58331 3.25L7.58331 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
+                      <path d="M18.4167 3.25L18.4167 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
                     </svg>
                   </span>
                 </div>
@@ -766,68 +545,18 @@
                 </div>
               </div>
               <!-- Display Selected Tags as Chips -->
-              <div
-                v-if="newTraining.Tags.length"
-                class="flex flex-wrap gap-2 mt-2"
-              >
-                <span
-                  v-for="tagID in newTraining.Tags"
-                  :key="tagID"
-                  class="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-full"
-                >
+              <div v-if="newTraining.Tags.length" class="flex flex-wrap gap-2 mt-2">
+                <span v-for="tagID in newTraining.Tags" :key="tagID"
+                  class="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-full">
                   {{ getTagName(tagID) }}
-                  <button
-                    @click.stop="removeTag(tagID)"
-                    class="ml-1 text-red-500"
-                  >
-                    ×
-                  </button>
-                  <!-- Remove Button -->
+                  <button @click.stop="removeTag(tagID)" class="ml-1 text-red-500">×</button> <!-- Remove Button -->
                 </span>
               </div>
-              <button @click.prevent="addTag" class="training-save-btn mt-2">
-                Add Tag
-              </button>
+              <button @click.prevent="addTag" class="training-save-btn mt-2">Add Tag</button>
             </div>
             <!-- Save -->
-            <button type="submit" class="training-post-btn">
-              {{ isEditMode ? "Update" : "Post" }}
-            </button>
+            <button type="submit" class="training-post-btn">{{ isEditMode ? "Update" : "Post" }}</button>
           </form>
-        </div>
-      </div>
-      <div class="fixed top-5 right-5 space-y-2 z-50">
-        <div
-          v-for="toast in toasts"
-          :key="toast.id"
-          :class="[
-            'px-4 py-2 rounded shadow flex items-center gap-2',
-            toast.type === 'success'
-              ? 'bg-white text-black'
-              : toast.type === 'error'
-              ? 'bg-red-500 text-white'
-              : toast.type === 'confirm'
-              ? 'bg-dark-slate text-white'
-              : 'bg-gray-500 text-white',
-          ]"
-        >
-          <span class="flex-1">{{ toast.message }}</span>
-
-          <!-- ONLY SHOW WHEN CONFIRM -->
-          <template v-if="toast.type === 'confirm'">
-            <button
-              @click="toast.onConfirm()"
-              class="px-2 py-1 bg-white text-black rounded"
-            >
-              Yes
-            </button>
-            <button
-              @click="toast.onCancel()"
-              class="px-2 py-1 bg-gray-700 text-white rounded"
-            >
-              No
-            </button>
-          </template>
         </div>
       </div>
     </main>
@@ -839,19 +568,14 @@ import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
 import axios from "axios";
 import QrcodeVue from "qrcode.vue";
 import api from "@/composables/api.js";
-import {
-  activeTrainingQR,
-  activeTrainingId,
-  scheduleQR,
-} from "@/composables/useTrainingQR.js";
+import { activeTrainingQR, activeTrainingId, scheduleQR } from "@/composables/useTrainingQR.js";
 import { uploadCertificate, getPDFUrl } from "@/lib/supabase.js";
 import jsPDF from "jspdf";
 import * as pdfjsLib from "pdfjs-dist";
 
-const toasts = ref([]);
 // Configure pdfjs worker - use worker from public folder
 // Files in public folder are served from root in both dev and production
-pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 // Helper function to convert PDF blob/ArrayBuffer to PNG image
 async function convertPDFToImage(pdfBlobOrArrayBuffer) {
@@ -877,22 +601,18 @@ async function convertPDFToImage(pdfBlobOrArrayBuffer) {
     // Render PDF page to canvas
     await page.render({
       canvasContext: context,
-      viewport: viewport,
+      viewport: viewport
     }).promise;
 
     // Convert canvas to blob (PNG)
     return new Promise((resolve, reject) => {
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            resolve(blob);
-          } else {
-            reject(new Error("Failed to convert canvas to blob"));
-          }
-        },
-        "image/png",
-        0.95
-      ); // 95% quality
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error("Failed to convert canvas to blob"));
+        }
+      }, "image/png", 0.95); // 95% quality
     });
   } catch (error) {
     console.error("Error converting PDF to image:", error);
@@ -900,16 +620,17 @@ async function convertPDFToImage(pdfBlobOrArrayBuffer) {
   }
 }
 
+
 export default {
   components: { QrcodeVue }, // ✅ register component
   data() {
     return {
       dictLogo,
-      globalSearchQuery: "",
+      globalSearchQuery: '',
       showAllUpcoming: false,
       showAllCompleted: false,
-      activeTrainingQR, // <-- QR code value (reactive)
-      activeTrainingId, // <-- which training is active
+      activeTrainingQR,  // <-- QR code value (reactive)
+      activeTrainingId,  // <-- which training is active
       isEditMode: false,
       trainingToEditId: null,
       qrCodeValue: null,
@@ -919,16 +640,17 @@ export default {
 
       showBulkCertModal: false,
       certificateData: {
-        certTrackingID: "",
-        certGivenDate: "",
+        certTrackingID: '',
+        certGivenDate: '',
         file: null,
       },
 
+
       selectedRegistrant: null,
       bulkCertData: {
-        baseTrackingID: "",
-        certGivenDate: "",
-        certificates: [],
+        baseTrackingID: '',
+        certGivenDate: '',
+        certificates: []
       },
 
       /* ==========================
@@ -973,14 +695,11 @@ export default {
       qrExpiresAt: "",
       activeTrainingId: null, // which training shows the QR
       tagOptions: [],
-      newTagName: "",
+      newTagName: ''
     };
   },
 
   methods: {
-    showToast(message, type = "success", duration = 3000) {
-      const id = Date.now();
-      toasts.value.push({ id, message, type });
 
     viewCertificate(certificatePath) {
       if (!certificatePath) return alert("Certificate not found.");
@@ -1006,18 +725,13 @@ export default {
         const lines = [
           { text: "Certificate of Completion", size: 28 },
           { text: `This is to certify that ${person.name}`, size: 22 },
-          {
-            text: `has completed the training: ${this.selectedTraining.title}`,
-            size: 18,
-          },
+          { text: `has completed the training: ${this.selectedTraining.title}`, size: 18 },
           { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
-          { text: `Date Issued: ${givenDate}`, size: 14 },
+          { text: `Date Issued: ${givenDate}`, size: 14 }
         ];
 
-        let startY =
-          (pageHeight - lines.reduce((sum, line) => sum + line.size + 10, 0)) /
-          2;
-        lines.forEach((line) => {
+        let startY = (pageHeight - lines.reduce((sum, line) => sum + line.size + 10, 0)) / 2;
+        lines.forEach(line => {
           doc.setFontSize(line.size);
           doc.text(line.text, pageWidth / 2, startY, null, null, "center");
           startY += line.size + 10;
@@ -1217,17 +931,15 @@ export default {
       this.selectAll = this.filteredRegistrants.every(person => person.selected);
     },
     openBulkCertModal() {
-      const registrantsWithoutCert = this.registrantsList.filter(
-        (r) => !r.hasCertificate
-      );
+      const registrantsWithoutCert = this.registrantsList.filter(r => !r.hasCertificate);
       if (registrantsWithoutCert.length === 0) {
-        this.showToast("All registrants already have certificates.");
+        alert("All registrants already have certificates.");
         return;
       }
       this.bulkCertData = {
-        baseTrackingID: "",
-        certGivenDate: "",
-        certificates: new Array(registrantsWithoutCert.length).fill(null),
+        baseTrackingID: '',
+        certGivenDate: '',
+        certificates: new Array(registrantsWithoutCert.length).fill(null)
       };
       this.showBulkCertModal = true;
     },
@@ -1235,9 +947,9 @@ export default {
     closeBulkCertModal() {
       this.showBulkCertModal = false;
       this.bulkCertData = {
-        baseTrackingID: "",
-        certGivenDate: "",
-        certificates: [],
+        baseTrackingID: '',
+        certGivenDate: '',
+        certificates: []
       };
     },
 
@@ -1249,61 +961,53 @@ export default {
     async sendBulkCertificates() {
       const token = localStorage.getItem("token");
       if (!token) {
-        this.showToast("Please log in to continue.");
+        alert("Please log in to continue.");
         return;
       }
 
       try {
         const formData = new FormData();
-        formData.append("baseTrackingID", this.bulkCertData.baseTrackingID);
-        formData.append("certGivenDate", this.bulkCertData.certGivenDate);
+        formData.append('baseTrackingID', this.bulkCertData.baseTrackingID);
+        formData.append('certGivenDate', this.bulkCertData.certGivenDate);
 
         this.bulkCertData.certificates.forEach((file, index) => {
           if (!file) {
-            throw new Error(
-              `Please upload a certificate file for all registrants. Missing file at index ${index}`
-            );
+            throw new Error(`Please upload a certificate file for all registrants. Missing file at index ${index}`);
           }
           formData.append(`certificates[${index}]`, file);
         });
 
         const response = await axios.post(
-          import.meta.env.VITE_API_BASE_URL +
-            `trainings/${this.selectedTraining.trainingID}/certificates/bulk`,
+          import.meta.env.VITE_API_BASE_URL + `trainings/${this.selectedTraining.trainingID}/certificates/bulk`,
           formData,
           {
             headers: {
               Authorization: `Bearer ${token}`,
-              "Content-Type": "multipart/form-data",
+              'Content-Type': 'multipart/form-data',
             },
           }
         );
 
-        this.showToast("Certificates issued successfully to all registrants!");
+        alert("Certificates issued successfully to all registrants!");
         this.closeBulkCertModal();
         await this.loadRegistrantsForTraining(this.selectedTraining); // Refresh list
       } catch (error) {
         console.error("Error issuing bulk certificates:", error);
         if (error.response) {
-          this.showToast(
-            error.response.data.message || "Failed to issue certificates."
-          );
+          alert(error.response.data.message || "Failed to issue certificates.");
         } else {
-          this.showToast(
-            error.message || "An error occurred while issuing certificates."
-          );
+          alert(error.message || "An error occurred while issuing certificates.");
         }
       }
     },
 
+
     async fetchTags() {
       try {
-        const response = await axios.get(
-          import.meta.env.VITE_API_BASE_URL + "/tags"
-        );
+        const response = await axios.get(import.meta.env.VITE_API_BASE_URL + '/tags');
         this.tagOptions = response.data; // Update tagOptions correctly
       } catch (error) {
-        console.error("Error fetching tags:", error);
+        console.error('Error fetching tags:', error);
       }
     },
 
@@ -1333,13 +1037,13 @@ export default {
     async addTag() {
       const trimmedTagName = this.newTagName.trim();
       if (!trimmedTagName) {
-        this.showToast("Please enter a tag name.");
+        alert("Please enter a tag name.");
         return;
       }
 
       // Check if tag already exists (case-insensitive)
       const existingTag = this.tagOptions.find(
-        (tag) => tag.TagName.toLowerCase() === trimmedTagName.toLowerCase()
+        tag => tag.TagName.toLowerCase() === trimmedTagName.toLowerCase()
       );
 
       if (existingTag) {
@@ -1356,19 +1060,16 @@ export default {
       // Tag doesn't exist, create it
       try {
         // Send the new tag to the backend
-        const response = await axios.post(
-          import.meta.env.VITE_API_BASE_URL + "/tags",
-          {
-            TagName: trimmedTagName,
-          }
-        );
+        const response = await axios.post(import.meta.env.VITE_API_BASE_URL + '/tags', {
+          TagName: trimmedTagName
+        });
 
         // Add the new tag to the tagOptions and newTraining.Tags
         this.tagOptions.push(response.data);
         this.newTraining.Tags.push(Number(response.data.TagID));
 
         // Clear the input field
-        this.newTagName = "";
+        this.newTagName = '';
       } catch (error) {
         console.error("Error adding tag:", error);
         alert('Failed to create tag. Please try again.');
@@ -1482,7 +1183,7 @@ export default {
 
     getTagName(tagID) {
       const normalizedId = Number(tagID);
-      const tag = this.tagOptions.find((t) => Number(t.TagID) === normalizedId);
+      const tag = this.tagOptions.find(t => Number(t.TagID) === normalizedId);
       return tag ? tag.TagName : normalizedId; // Return the tag name or ID if not found
     },
 
@@ -1513,7 +1214,9 @@ export default {
       }
     },
 
+
     // ✅ Generate QR and call backend
+
 
     /* ==========================
   ✅ Registrants Modal
@@ -1708,26 +1411,17 @@ export default {
       try {
         const storedUser = localStorage.getItem("user");
         const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-        const organizationID =
-          parsedUser?.organizationID ??
-          parsedUser?.organization?.organizationID ??
-          null;
+        const organizationID = parsedUser?.organizationID ?? parsedUser?.organization?.organizationID ?? null;
 
         let newTrainings = [];
         try {
           const { data } = await api.get("/organization/trainings");
           newTrainings = data;
         } catch (err) {
-          console.warn(
-            "Org trainings endpoint unavailable, falling back:",
-            err?.response?.status
-          );
+          console.warn("Org trainings endpoint unavailable, falling back:", err?.response?.status);
           const storedUser = localStorage.getItem("user");
           const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-          const organizationID =
-            parsedUser?.organizationID ??
-            parsedUser?.organization?.organizationID ??
-            null;
+          const organizationID = parsedUser?.organizationID ?? parsedUser?.organization?.organizationID ?? null;
 
           const { data } = await api.get("/trainings", {
             params: organizationID ? { organizationID } : {},
@@ -1735,16 +1429,11 @@ export default {
           newTrainings = data;
         }
 
-        newTrainings.forEach((training) => {
-          const existingIndex = this.upcomingtrainings.findIndex(
-            (t) => t.trainingID === training.trainingID
-          );
+        newTrainings.forEach(training => {
+          const existingIndex = this.upcomingtrainings.findIndex(t => t.trainingID === training.trainingID);
 
           if (existingIndex > -1) {
-            this.upcomingtrainings[existingIndex] = {
-              ...this.upcomingtrainings[existingIndex],
-              ...training,
-            };
+            this.upcomingtrainings[existingIndex] = { ...this.upcomingtrainings[existingIndex], ...training };
           } else {
             this.upcomingtrainings.push(training);
           }
@@ -1771,10 +1460,8 @@ export default {
         this.newTraining = {
           ...training,
           Tags: training.Tags
-            ? training.Tags.map((tag) =>
-                Number(tag.TagID ?? tag.tagID ?? tag.id)
-              )
-            : [],
+            ? training.Tags.map(tag => Number(tag.TagID ?? tag.tagID ?? tag.id))
+            : []
         };
       } else {
         this.isEditMode = false;
@@ -1810,11 +1497,9 @@ export default {
     },
 
     async updateTraining(trainingID) {
-      const training = this.upcomingtrainings.find(
-        (t) => t.trainingID === trainingID
-      );
+      const training = this.upcomingtrainings.find(t => t.trainingID === trainingID);
       if (!training) {
-        this.showToast("Training not found.");
+        alert("Training not found.");
         return;
       }
 
@@ -1844,7 +1529,7 @@ export default {
 
       // ✅ Fix for tags
       this.newTraining.Tags = training.Tags
-        ? training.Tags.map((tag) => Number(tag.TagID ?? tag.tagID ?? tag.id))
+        ? training.Tags.map(tag => Number(tag.TagID ?? tag.tagID ?? tag.id))
         : [];
 
       if (!Array.isArray(this.newTraining.Tags)) {
@@ -1906,13 +1591,11 @@ export default {
           };
 
           await axios.put(
-            `${import.meta.env.VITE_API_BASE_URL}/trainings/${
-              this.trainingToEditId
-            }`,
+            `${import.meta.env.VITE_API_BASE_URL}/trainings/${this.trainingToEditId}`,
             payload,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          this.showToast("✅ TRAINING UPDATED SUCCESSFULLY!");
+          alert("✅ TRAINING UPDATED SUCCESSFULLY!");
         } else {
           // For create mode, create multiple training records (one per schedule)
           const promises = this.newTraining.schedules.map(schedule => {
@@ -1945,19 +1628,17 @@ export default {
         this.closeTrainingPopup();
         this.isEditMode = false;
         this.trainingToEditId = null;
+
       } catch (error) {
         console.error("ERROR SAVING TRAINING:", error.response?.data || error);
-        this.showToast("❌ SOMETHING WENT WRONG WHILE SAVING THE TRAINING");
+        alert("❌ SOMETHING WENT WRONG WHILE SAVING THE TRAINING");
       }
     },
 
     // For deleting training
     async deleteTraining(trainingID) {
       try {
-        const confirmed = await this.showConfirmToast(
-          "Are you sure you want to delete this training?"
-        );
-        if (!confirmed) return;
+        if (!confirm("Are you sure you want to delete this training?")) return;
 
         const token = localStorage.getItem("token");
 
@@ -1966,7 +1647,7 @@ export default {
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        this.showToast("✅ Training deleted successfully!");
+        alert("✅ Training deleted successfully!");
         await this.fetchTrainings();
 
         if (this.activeTrainingId === trainingID) {
@@ -1975,12 +1656,10 @@ export default {
           this.activeTrainingId = null;
           if (this.qrExpireTimeout) clearTimeout(this.qrExpireTimeout);
         }
+
       } catch (error) {
-        console.error(
-          "Failed to delete training:",
-          error.response?.data || error
-        );
-        this.showToast("❌ Something went wrong while deleting the training.");
+        console.error("Failed to delete training:", error.response?.data || error);
+        alert("❌ Something went wrong while deleting the training.");
       }
     },
 
@@ -2016,7 +1695,9 @@ export default {
     },
 
     /* ✅ ADD THIS FUNCTION HERE */
+
   },
+
 
   mounted() {
     this.fetchTrainings();
@@ -2053,27 +1734,27 @@ export default {
     sortedUpcomingTrainings() {
       const now = new Date();
       return this.upcomingtrainings
-        .filter((t) => new Date(t.schedule) >= now)
+        .filter(t => new Date(t.schedule) >= now)
         .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
     },
 
     sortedCompletedTrainings() {
       const now = new Date();
       return this.upcomingtrainings
-        .filter((t) => new Date(t.schedule) < now)
+        .filter(t => new Date(t.schedule) < now)
         .sort((a, b) => new Date(b.schedule) - new Date(a.schedule));
     },
     filteredUpcoming() {
       const query = this.globalSearchQuery.toLowerCase();
       if (!query) return this.sortedUpcomingTrainings;
-      return this.sortedUpcomingTrainings.filter(
-        (training) => training.title.toLowerCase().startsWith(query) // 🔹 only matches if letters typed are in order from the start
+      return this.sortedUpcomingTrainings.filter(training =>
+        training.title.toLowerCase().startsWith(query) // 🔹 only matches if letters typed are in order from the start
       );
     },
     filteredCompleted() {
       const query = this.globalSearchQuery.toLowerCase();
       if (!query) return this.sortedCompletedTrainings;
-      return this.sortedCompletedTrainings.filter((training) =>
+      return this.sortedCompletedTrainings.filter(training =>
         training.title.toLowerCase().startsWith(query)
       );
     },
@@ -2091,7 +1772,7 @@ export default {
     visibleUpcomingTrainings() {
       const orgId = this.currentOrganizationId;
       const list = this.sortedUpcomingTrainings.filter(
-        (training) => training.organization_id === orgId
+        training => training.organization_id === orgId
       );
       return this.showAllUpcoming ? list : list.slice(0, 4);
     },
@@ -2099,7 +1780,7 @@ export default {
     visibleCompletedTrainings() {
       const orgId = this.currentOrganizationId;
       const list = this.sortedCompletedTrainings.filter(
-        (training) => training.organization_id === orgId
+        training => training.organization_id === orgId
       );
       return this.showAllCompleted ? list : list.slice(0, 4);
     },
@@ -2107,14 +1788,14 @@ export default {
     sortedUpcomingTrainings() {
       const now = new Date();
       return this.upcomingtrainings
-        .filter((t) => new Date(t.schedule) >= now)
+        .filter(t => new Date(t.schedule) >= now)
         .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
     },
 
     sortedCompletedTrainings() {
       const now = new Date();
       return this.upcomingtrainings
-        .filter((t) => new Date(t.schedule) < now)
+        .filter(t => new Date(t.schedule) < now)
         .sort((a, b) => new Date(b.schedule) - new Date(a.schedule));
     },
     // Filter tags based on search input
@@ -2123,7 +1804,7 @@ export default {
         return this.tagOptions;
       }
       const searchQuery = this.newTagName.toLowerCase().trim();
-      return this.tagOptions.filter((tag) =>
+      return this.tagOptions.filter(tag =>
         tag.TagName.toLowerCase().includes(searchQuery)
       );
     },
@@ -2144,12 +1825,14 @@ export default {
 };
 </script>
 
+
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 const isSidebarOpen = ref(true);
 const organizationName = ref("");
 const now = ref(new Date());
+
 
 // Toggle sidebar
 const toggleSidebar = () => {
@@ -2158,16 +1841,17 @@ const toggleSidebar = () => {
 
 const router = useRouter();
 // Sidebar navigation functions
-const goToProfile = () => router.push("/profile");
-const goToHome = () => router.push("/organization");
-const goToTrainings = () => router.push({ name: "OrgTrainings" });
-const goToCareers = () => router.push({ name: "OrgCareers" });
-const goToCalendar = () => router.push("/app/calendar");
+const goToProfile = () => router.push('/profile');
+const goToHome = () => router.push('/organization');
+const goToTrainings = () => router.push({ name: 'OrgTrainings' });
+const goToCareers = () => router.push({ name: 'OrgCareers' });
+const goToCalendar = () => router.push('/app/calendar');
 
 // Generic navigation function
 const navigateTo = (route) => {
   router.push(route);
-};
+}
+
 
 function isTrainingActive(training) {
   const trainingDate = new Date(training.schedule);
@@ -2189,10 +1873,10 @@ onMounted(() => {
 });
 
 const logout = () => {
-  localStorage.removeItem("user");
-  localStorage.removeItem("token");
-  router.push({ name: "Login" });
-};
+  localStorage.removeItem('user');
+  localStorage.removeItem('token');
+  router.push({ name: 'Login' });
+}
 </script>
 
 <style scoped>
@@ -2240,7 +1924,7 @@ const logout = () => {
 .organization-trainings {
   display: flex;
   height: 100vh;
-  font-family: "Poppins", sans-serif;
+  font-family: 'Poppins', sans-serif;
   background-color: #f4f4f4;
 }
 
@@ -2347,8 +2031,8 @@ const logout = () => {
 .logo-text {
   font-size: 26px;
   font-weight: 700;
-  color: #44576d;
-  font-family: "Poppins", sans-serif;
+  color: #44576D;
+  font-family: 'Poppins', sans-serif;
 }
 
 .search-container {
@@ -2371,8 +2055,9 @@ const logout = () => {
   text-align: center;
 }
 
+
 .applicants-btn {
-  background-color: #44576d;
+  background-color: #44576D;
   color: white;
   border: none;
   padding: 6px 12px;
@@ -2382,7 +2067,7 @@ const logout = () => {
 }
 
 .applicants-btn {
-  background-color: #44576d;
+  background-color: #44576D;
 }
 
 .applicants-btn:hover {
@@ -2597,7 +2282,7 @@ const logout = () => {
 }
 
 .edit-btn {
-  background-color: #44576d;
+  background-color: #44576D;
   color: white;
   border: none;
   padding: 6px 12px;
@@ -2703,7 +2388,7 @@ const logout = () => {
   background-color: #004a99;
 }
 
-.dropdown-menu li + li {
+.dropdown-menu li+li {
   border-top: 1px solid #eee;
 }
 
@@ -2753,7 +2438,7 @@ tbody td {
 
 /* Status Colors (like in your image) */
 .status-attended {
-  color: #4caf50;
+  color: #4CAF50;
   /* Green */
   font-weight: 500;
 }
@@ -3273,11 +2958,12 @@ tbody td {
   margin-bottom: 20px;
 }
 
+
 .profile-avatar-wrapper {
   width: 100px;
   height: 100px;
   border-radius: 50%;
-  background-color: #e6e0e9;
+  background-color: #E6E0E9;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3333,7 +3019,7 @@ tbody td {
   color: #4a4a4a;
   box-sizing: border-box;
   outline: none;
-  background-color: #ffffff;
+  background-color: #FFFFFF;
   height: 44px;
   /* Explicit height ensures consistent vertical centering */
 }
@@ -3436,7 +3122,7 @@ tbody td {
 
 .upload-label {
   /* *** MODIFICATION: Ensure upload label background is white *** */
-  background-color: #ffffff;
+  background-color: #FFFFFF;
   border: 1px solid #ccc;
   color: #888;
   padding: 12px 15px;
@@ -3451,6 +3137,7 @@ tbody td {
 .upload-label:not(:empty) {
   color: #4a4a4a;
 }
+
 
 /* Send Button */
 .cert-send-btn {
@@ -3673,7 +3360,7 @@ tbody td {
   padding: 10px 36px 10px 12px;
   border: 1px solid #ccc;
   border-radius: 8px;
-  font-family: "Poppins", sans-serif;
+  font-family: 'Poppins', sans-serif;
   font-size: 14px;
   outline: none;
   transition: border-color 0.2s;
@@ -3682,6 +3369,7 @@ tbody td {
 .input-field:focus {
   border-color: #4c6ef5;
 }
+
 
 /* To fix the alignment of schedule and time */
 /* ✅ Shared wrapper for date and time inputs */
@@ -3699,7 +3387,7 @@ tbody td {
   /* extra right padding for the icon */
   border: 1px solid #ccc;
   border-radius: 8px;
-  font-family: "Poppins", sans-serif;
+  font-family: 'Poppins', sans-serif;
   font-size: 14px;
   color: #333;
   outline: none;
