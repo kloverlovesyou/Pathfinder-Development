@@ -361,7 +361,7 @@ public function viewRequirement(Request $request, $id)
                     'name' => $applicantName,
                     'dateSubmitted' => $app->dateSubmitted ? $app->dateSubmitted->format('M d, Y') : null,
                     'status' => $app->applicationStatus ? strtolower($app->applicationStatus) : 'submitted',
-                    'requirement_directory' => $app->requirement_directory,
+                    'requirement_directory' => $app->getAttribute('requirement_directory'), // Use getAttribute to ensure proper retrieval
                     'interviewSchedule' => $app->interviewSchedule ? $app->interviewSchedule->format('Y-m-d H:i:s') : null,
                     'interviewMode' => $app->interviewMode,
                     'interviewLocation' => $app->interviewLocation,

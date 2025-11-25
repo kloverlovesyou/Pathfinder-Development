@@ -33,7 +33,7 @@ class Application extends Model
 	protected $table = 'application';
 	protected $primaryKey = 'applicationID';
 	public $timestamps = false;
-	public $requirement_directory;
+	// Removed: public $requirement_directory; - This was preventing Eloquent from accessing the database column
 
 	protected $casts = [
 		'dateSubmitted' => 'datetime',

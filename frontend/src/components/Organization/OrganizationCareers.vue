@@ -3,6 +3,7 @@ import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
 import { ref, onMounted } from "vue";
 import axios from "axios";
 import api from "@/api/axios";
+import { uploadPDF, getPDFUrl } from "@/lib/supabase";
 
 const pdfUrl = ref(null);
 const showModal = ref(false);
@@ -45,7 +46,6 @@ export default {
 
       showCareerDetailsModal: false,
 
-      showApplicantsModal: false,
       showViewScheduleModal: false,
       showScheduleModal: false,
       selectedPerson: null,
@@ -63,6 +63,9 @@ export default {
       },
 
       applicantsList: [],
+      applicantsLoading: false,
+      applicantsError: "",
+      applicantSearchQuery: "", // Search query for filtering applicants
       upcomingCareers: [],
 
       // Popup state + form
@@ -75,15 +78,138 @@ export default {
         letterAddress: "",
         deadline: "",
         Tags: [],
+        pdfPath: "",
       },
       tagOptions: [],
+      careerPdfName: "",
+      careerPdfPublicUrl: "",
+      careerPdfUploading: false,
+      careerPdfError: "",
     };
   },
 
   methods: {
-    async openApplicantsModal(career) {
-      // Prefer the passed career; fallback to selectedCareer in component state
-      career = career || this.selectedCareer || null;
+    normalizeCareer(career = {}) {
+      if (!career || typeof career !== "object") {
+        return {};
+      }
+
+      const pdfPath =
+        career.orgPdfPath ??
+        career.org_pdf_directory ??
+        career.pdfPath ??
+        career.pdf_path ??
+        career.pdf ??
+        "";
+
+      return {
+        ...career,
+        pdfPath: pdfPath || "",
+      };
+    },
+
+    updateCareerPdfPreview(filePath) {
+      if (!filePath) {
+        this.careerPdfName = "";
+        this.careerPdfPublicUrl = "";
+        return;
+      }
+      this.careerPdfName = filePath.split("/").pop();
+      this.careerPdfPublicUrl = getPDFUrl(filePath, "Requirements");
+    },
+
+    resetCareerPdfState() {
+      this.careerPdfError = "";
+      this.careerPdfName = "";
+      this.careerPdfPublicUrl = "";
+      this.careerPdfUploading = false;
+      if (this.$refs?.careerPdfInput) {
+        this.$refs.careerPdfInput.value = "";
+      }
+    },
+
+    async handleCareerPdfUpload(event) {
+      const file = event?.target?.files?.[0];
+      if (!file) return;
+
+      if (file.type !== "application/pdf") {
+        alert("Please upload a PDF file.");
+        event.target.value = "";
+        return;
+      }
+
+      const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+      if (file.size > MAX_BYTES) {
+        alert("PDF is too large. Maximum size is 10MB.");
+        event.target.value = "";
+        return;
+      }
+
+      this.careerPdfUploading = true;
+      this.careerPdfError = "";
+
+      try {
+        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+        const orgId = storedUser?.organizationID || "anonymous-org";
+        const folder = `org_pdf_directory/${orgId}`;
+
+        const filePath = await uploadPDF(file, "Requirements", folder);
+        if (!filePath) {
+          throw new Error("Upload failed");
+        }
+
+        this.newCareer.pdfPath = filePath;
+        this.updateCareerPdfPreview(filePath);
+      } catch (error) {
+        console.error("Error uploading career PDF:", error);
+        this.careerPdfError =
+          "Failed to upload PDF. Please try again or choose a different file.";
+        this.newCareer.pdfPath = "";
+        this.updateCareerPdfPreview("");
+      } finally {
+        this.careerPdfUploading = false;
+      }
+    },
+
+    removeCareerPdf() {
+      this.newCareer.pdfPath = "";
+      this.updateCareerPdfPreview("");
+      if (this.$refs?.careerPdfInput) {
+        this.$refs.careerPdfInput.value = "";
+      }
+    },
+
+    viewCareerPdf() {
+      if (!this.newCareer.pdfPath) {
+        alert("No PDF attached yet.");
+        return;
+      }
+      const url =
+        this.careerPdfPublicUrl ||
+        getPDFUrl(this.newCareer.pdfPath, "Requirements");
+      if (url) {
+        window.open(url, "_blank");
+      } else {
+        alert("Unable to open the PDF. Please try again.");
+      }
+    },
+
+    viewSelectedCareerPdf() {
+      if (!this.selectedCareer?.pdfPath) return;
+      const url = getPDFUrl(this.selectedCareer.pdfPath, "Requirements");
+      if (url) {
+        window.open(url, "_blank");
+      } else {
+        alert("Unable to open the PDF. Please try again.");
+      }
+    },
+
+    async loadApplicantsForCareer(career) {
+      const targetCareer = career || this.selectedCareer || null;
+      if (!targetCareer) {
+        console.warn("No career provided for applicants list.");
+        return;
+      }
 
       // Ensure token exists and trim it (remove stray quotes/spaces)
       let token = localStorage.getItem("token");
@@ -93,43 +219,23 @@ export default {
       }
       token = token.trim().replace(/^"(.*)"$/, "$1");
 
-      // Try multiple common property names, but prefer careerID (per your system)
       const careerID =
-        career?.careerID ??
-        career?.careerId ??
-        career?.id ??
-        career?._id ??
-        this.selectedCareer?.careerID ??
-        this.selectedCareer?.careerId ??
+        targetCareer?.careerID ??
+        targetCareer?.careerId ??
+        targetCareer?.id ??
+        targetCareer?._id ??
         null;
 
       if (!careerID) {
-        console.error("Career object missing careerID:", career);
+        console.error("Career object missing careerID:", targetCareer);
         return;
       }
 
-      console.log("Fetching applicants for Career ID:", careerID);
-      console.log(
-        "Token exists:",
-        !!token,
-        "Token length:",
-        token ? token.length : 0
-      );
+      this.applicantsLoading = true;
+      this.applicantsError = "";
+      this.applicantsList = [];
 
       try {
-        // Normalize selectedCareer to always include careerID for future clicks
-        this.selectedCareer = {
-          ...(this.selectedCareer || {}),
-          ...(career || {}),
-          careerID:
-            career?.careerID ??
-            career?.careerId ??
-            career?.id ??
-            career?._id ??
-            this.selectedCareer?.careerID ??
-            null,
-        };
-
         const response = await axios.get(
           import.meta.env.VITE_API_BASE_URL + `/careers/${careerID}/applicants`,
           {
@@ -141,51 +247,105 @@ export default {
           }
         );
 
-        console.log("Applicants API response:", response.data);
+        console.log("📋 Applicants API response:", response.data);
+        console.log("📋 Applicants API response (full):", JSON.stringify(response.data, null, 2));
+        console.log("📋 First applicant raw:", response.data?.[0]);
+        console.log("📋 First applicant requirement_directory:", response.data?.[0]?.requirement_directory);
+        
+        // Check if requirement_directory exists in the raw response for any applicant
+        if (Array.isArray(response.data)) {
+          response.data.forEach((app, index) => {
+            console.log(`📋 Applicant ${index} (ID: ${app.id || app.applicationID}):`, {
+              hasRequirementDirectory: 'requirement_directory' in app,
+              requirementDirectoryValue: app.requirement_directory,
+              allKeys: Object.keys(app),
+              fullObject: app
+            });
+          });
+        }
 
-        // Normalize response -> applicantsList
-        if (
-          response.data &&
-          Array.isArray(response.data) &&
-          response.data.length > 0
-        ) {
-          this.applicantsList = response.data.map((app) => ({
-            id: app.id ?? app.applicationID ?? app._id,
-            name:
-              app.name ?? `${app.firstName || ""} ${app.lastName || ""}`.trim(),
-            dateSubmitted: app.dateSubmitted ?? app.created_at ?? app.createdAt,
-            status: app.status ? String(app.status).toLowerCase() : "submitted",
-            requirement_directory: app.requirement_directory ?? null, // File path in Supabase
-            requirements: app.requirements ?? [], // Keep for backwards compatibility
-            interviewSchedule: app.interviewSchedule ?? null,
-            interviewMode: app.interviewMode ?? null,
-            interviewLocation: app.interviewLocation ?? null,
-            interviewLink: app.interviewLink ?? null,
-          }));
+        if (Array.isArray(response.data) && response.data.length > 0) {
+          this.applicantsList = response.data.map((app) => {
+            // Log the COMPLETE raw applicant object to see ALL available fields
+            console.log("🔍 Raw applicant object (COMPLETE):", JSON.stringify(app, null, 2));
+            console.log("🔍 Available fields:", Object.keys(app));
+            console.log("🔍 Raw requirement_directory value:", app.requirement_directory);
+            console.log("🔍 Raw requirementDirectory value:", app.requirementDirectory);
+            console.log("🔍 Raw requirement_path value:", app.requirement_path);
+            console.log("🔍 Raw requirements value:", app.requirements);
+            console.log("🔍 Type of requirement_directory:", typeof app.requirement_directory);
+            console.log("🔍 Is requirement_directory null?", app.requirement_directory === null);
+            console.log("🔍 Is requirement_directory undefined?", app.requirement_directory === undefined);
+            
+            // Try to get requirement_directory from various possible locations
+            let requirementDir = app.requirement_directory 
+              ?? app.requirementDirectory 
+              ?? app.requirement_path
+              ?? app.requirementPath
+              ?? null;
+            
+            // If requirements is a string (not an array), it might be the path
+            if (!requirementDir && typeof app.requirements === "string" && app.requirements.trim().length > 0) {
+              requirementDir = app.requirements;
+            }
+            
+            // Check nested structures
+            if (!requirementDir && app.application) {
+              requirementDir = app.application.requirement_directory 
+                ?? app.application.requirementDirectory
+                ?? app.application.requirement_path
+                ?? null;
+            }
+            
+            const mapped = {
+              id: app.id ?? app.applicationID ?? app.applicationId ?? app._id,
+              name:
+                app.name ?? `${app.firstName || ""} ${app.lastName || ""}`.trim(),
+              dateSubmitted: app.dateSubmitted ?? app.created_at ?? app.createdAt,
+              status: app.status ? String(app.status).toLowerCase() : "submitted",
+              requirement_directory: requirementDir,
+              requirements: app.requirements ?? [],
+              interviewSchedule: app.interviewSchedule ?? null,
+              interviewMode: app.interviewMode ?? null,
+              interviewLocation: app.interviewLocation ?? null,
+              interviewLink: app.interviewLink ?? null,
+            };
+            
+            // Debug log for requirement_directory
+            console.log(`📋 Applicant ${mapped.id} (${mapped.name}) requirement_directory:`, mapped.requirement_directory);
+            console.log(`📋 Applicant ${mapped.id} full mapped object:`, mapped);
+            
+            // If requirement_directory is still null, log a warning
+            if (!mapped.requirement_directory) {
+              console.warn(`⚠️ WARNING: requirement_directory is NULL for applicant ${mapped.id} even though database has value!`);
+              console.warn(`⚠️ This suggests the backend API is not returning the field correctly.`);
+            }
+            
+            return mapped;
+          });
         } else {
           this.applicantsList = [];
         }
-
-        this.showApplicantsModal = true;
       } catch (error) {
         console.error("Error fetching applicants:", error);
         console.error("Error response:", error.response);
         if (error.response?.status === 401) {
-          alert(
-            "Unauthorized. Please log in again. Error: " +
-            (error.response.data?.message || "Token invalid or expired")
-          );
+          this.applicantsError =
+            error.response.data?.message || "Token invalid or expired.";
+          alert("Unauthorized. Please log in again.");
         } else if (error.response?.status === 403) {
-          alert(
-            "Access denied. You don't have permission to view applicants for this career."
-          );
+          this.applicantsError =
+            "Access denied. You don't have permission to view applicants for this career.";
+          alert(this.applicantsError);
         } else {
-          alert(
+          this.applicantsError =
             error.response?.data?.message ||
-            "An error occurred while fetching applicants. Please try again."
-          );
+            "An error occurred while fetching applicants. Please try again.";
+          alert(this.applicantsError);
         }
         this.applicantsList = [];
+      } finally {
+        this.applicantsLoading = false;
       }
     },
 
@@ -261,6 +421,127 @@ export default {
       this.selectedPerson = null; // optional: clear the selected applicant
     },
 
+    async viewRequirements(applicationID, rawFilePath) {
+      let token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please log in to view requirements.");
+        return;
+      }
+      
+      token = token.trim().replace(/^"(.*)"$/, "$1");
+
+      if (!applicationID) {
+        alert("Application ID missing. Please refresh the page.");
+        return;
+      }
+
+      const normalizedAppID = String(applicationID);
+      let filePath = typeof rawFilePath === "string" && rawFilePath.trim() ? rawFilePath.trim() : null;
+
+      console.log("👁️ View Requirements - applicationID:", applicationID, "rawFilePath:", rawFilePath);
+
+      // First, try to get file path from already-loaded applicants list
+      if (!filePath && Array.isArray(this.applicantsList) && this.applicantsList.length > 0) {
+        const applicant = this.applicantsList.find((app) => {
+          const candidates = [
+            app.id,
+            app.applicationID,
+            app.applicationId,
+            app._id,
+          ]
+            .filter(Boolean)
+            .map((val) => String(val));
+          return candidates.includes(normalizedAppID);
+        });
+        
+        if (applicant) {
+          console.log("👁️ Found applicant in list:", applicant);
+          filePath = applicant?.requirement_directory || null;
+          console.log("👁️ Extracted filePath from applicant list:", filePath);
+        }
+      }
+
+      // If still not found, try refreshing the applicants list to get latest data
+      if (!filePath && this.selectedCareer?.careerID) {
+        try {
+          console.log("👁️ Refreshing applicants list to get latest data...");
+          const response = await axios.get(
+            `${import.meta.env.VITE_API_BASE_URL}/careers/${this.selectedCareer.careerID}/applicants`,
+            {
+              headers: { 
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+              },
+            }
+          );
+          
+          if (Array.isArray(response.data)) {
+            const applicant = response.data.find(
+              (app) => String(app.id ?? app.applicationID ?? app.applicationId ?? app._id ?? "") === normalizedAppID
+            );
+            
+            if (applicant) {
+              console.log("👁️ Found applicant in fresh API response:", applicant);
+              console.log("👁️ All applicant keys:", Object.keys(applicant));
+              
+              // Try all possible field names
+              filePath = applicant?.requirement_directory 
+                ?? applicant?.requirementDirectory
+                ?? applicant?.requirement_path
+                ?? applicant?.requirementPath
+                ?? (typeof applicant?.requirements === "string" ? applicant.requirements : null)
+                ?? null;
+              
+              // Check nested application object
+              if (!filePath && applicant?.application) {
+                filePath = applicant.application?.requirement_directory 
+                  ?? applicant.application?.requirementDirectory
+                  ?? applicant.application?.requirement_path
+                  ?? null;
+              }
+              
+              console.log("👁️ Extracted filePath from fresh API response:", filePath);
+              
+              // Update the applicants list with the fresh data
+              const index = this.applicantsList.findIndex(a => String(a.id) === normalizedAppID);
+              if (index !== -1 && filePath) {
+                this.applicantsList[index].requirement_directory = filePath;
+                console.log("✅ Updated applicants list with filePath");
+              }
+            }
+          }
+        } catch (error) {
+          console.warn("⚠️ Error refreshing applicants list:", error);
+        }
+      }
+
+      // If we have a file path, try to get PDF URL from Supabase
+      if (filePath && typeof filePath === "string" && filePath.trim().length > 0) {
+        console.log("👁️ Attempting to get PDF URL for path:", filePath.trim());
+        const pdfUrl = getPDFUrl(filePath.trim(), "Requirements");
+        console.log("👁️ Generated PDF URL:", pdfUrl);
+        
+        if (pdfUrl) {
+          this.requirementsUrl = pdfUrl;
+          this.selectedPerson = this.applicantsList.find(app => 
+            String(app.id ?? app.applicationID ?? app._id) === normalizedAppID
+          ) || { id: applicationID, name: "Applicant" };
+          this.showRequirementsModal = true;
+          console.log("✅ Opening requirements modal with Supabase URL:", pdfUrl);
+          return;
+        } else {
+          console.warn("⚠️ Could not generate PDF URL from file path");
+        }
+      }
+
+      // If no file path found, show helpful error message
+      console.error("❌ No requirement file path found for application:", applicationID);
+      console.error("❌ This likely means the backend API is not returning the 'requirement_directory' field");
+      console.error("❌ Please check that the /careers/{careerID}/applicants endpoint includes requirement_directory in its response");
+      
+      alert("Unable to view requirements. The requirement file path is not available in the API response. Please contact support or check if the file was uploaded correctly.");
+    },
+
     printRequirements() {
       if (this.requirementsUrl) {
         const printWindow = window.open(this.requirementsUrl, "_blank");
@@ -277,11 +558,14 @@ export default {
     },
 
     async downloadRequirements(applicationID, rawFilePath) {
-      const token = localStorage.getItem("token");
+      let token = localStorage.getItem("token");
       if (!token) {
         alert("Please log in to download requirements.");
         return;
       }
+      
+      // Trim token to remove any extra spaces or quotes
+      token = token.trim().replace(/^"(.*)"$/, "$1");
 
       if (!applicationID) {
         alert("Application ID missing. Please refresh the page.");
@@ -297,8 +581,13 @@ export default {
        */
       const resolvePathFromApplicants = () => {
         if (!Array.isArray(this.applicantsList) || this.applicantsList.length === 0) {
+          console.log("🔍 resolvePathFromApplicants: applicantsList is empty or not an array");
           return null;
         }
+        
+        console.log("🔍 resolvePathFromApplicants: Searching for applicationID:", normalizedAppID);
+        console.log("🔍 resolvePathFromApplicants: applicantsList length:", this.applicantsList.length);
+        
         const applicant = this.applicantsList.find((app) => {
           const candidates = [
             app.id,
@@ -310,7 +599,42 @@ export default {
             .map((val) => String(val));
           return candidates.includes(normalizedAppID);
         });
-        return applicant?.requirement_directory ?? null;
+        
+        if (!applicant) {
+          console.log("🔍 resolvePathFromApplicants: No applicant found with ID:", normalizedAppID);
+          return null;
+        }
+        
+        console.log("🔍 resolvePathFromApplicants: Found applicant:", applicant);
+        
+        // Check requirement_directory first (this should be a string path)
+        let path = applicant?.requirement_directory 
+          ?? applicant?.requirementDirectory 
+          ?? applicant?.requirement_path
+          ?? null;
+        
+        // If requirements is an array, don't use it - we need a string path
+        // Only use requirements if it's a string
+        if (!path && applicant?.requirements) {
+          if (typeof applicant.requirements === "string") {
+            path = applicant.requirements;
+          } else {
+            console.warn("🔍 resolvePathFromApplicants: requirements is not a string, ignoring:", applicant.requirements);
+          }
+        }
+        
+        console.log("🔍 resolvePathFromApplicants: Extracted path:", path, "Type:", typeof path);
+        
+        // Ensure we return a string or null, not an object or array
+        if (path && typeof path === "string" && path.trim().length > 0) {
+          return path.trim();
+        }
+        
+        if (path) {
+          console.warn("🔍 resolvePathFromApplicants: Path exists but is not a valid string:", path, typeof path);
+        }
+        
+        return null;
       };
 
       /**
@@ -319,35 +643,103 @@ export default {
        */
       const resolvePathFromApi = async () => {
         try {
+          // Try the careers endpoint first - it might have the requirement_directory
+          // Since we're already in a career context, try getting the applicant from the career's applicants endpoint
+          if (this.selectedCareer?.careerID) {
+            try {
+              const careerApplicantsResponse = await axios.get(
+                `${import.meta.env.VITE_API_BASE_URL}/careers/${this.selectedCareer.careerID}/applicants`,
+                {
+                  headers: { 
+                    Authorization: `Bearer ${token}`,
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                  },
+                }
+              );
+              
+              if (Array.isArray(careerApplicantsResponse.data)) {
+                const applicant = careerApplicantsResponse.data.find(
+                  (app) => String(app.id ?? app.applicationID ?? app.applicationId ?? app._id ?? "") === normalizedAppID
+                );
+                
+                if (applicant) {
+                  console.log("🔍 Found applicant in career applicants endpoint:", applicant);
+                  const path = applicant?.requirement_directory 
+                    ?? applicant?.requirementDirectory
+                    ?? applicant?.requirement_path
+                    ?? (typeof applicant?.requirements === "string" ? applicant.requirements : null)
+                    ?? null;
+                  
+                  if (path && typeof path === "string") {
+                    console.log("✅ Found requirement path from career applicants endpoint:", path);
+                    return path.trim();
+                  }
+                }
+              }
+            } catch (careerError) {
+              console.warn("Career applicants endpoint failed:", careerError);
+            }
+          }
+          
           // Prefer a scoped endpoint if available, otherwise fall back to the full list.
           const detailEndpoint = `${import.meta.env.VITE_API_BASE_URL}/applications/${applicationID}`;
           let response;
           try {
             response = await axios.get(detailEndpoint, {
-              headers: { Authorization: `Bearer ${token}` },
+              headers: { 
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+                "Content-Type": "application/json",
+              },
             });
-            if (response?.data?.requirement_directory) {
-              return response.data.requirement_directory;
+            console.log("🔍 API detail response:", response.data);
+            
+            // Check multiple possible field names and nested structures
+            const path = response?.data?.requirement_directory 
+              ?? response?.data?.data?.requirement_directory
+              ?? response?.data?.requirementDirectory
+              ?? response?.data?.requirement_path
+              ?? response?.data?.data?.requirementDirectory
+              ?? (typeof response?.data?.requirements === "string" ? response.data.requirements : null)
+              ?? null;
+            
+            if (path && typeof path === "string") {
+              console.log("✅ Found requirement path from detail endpoint:", path);
+              return path.trim();
             }
           } catch (detailError) {
-            // The detail endpoint might not exist; fall back to listing.
-            if (detailError.response?.status !== 404) {
-              console.warn("Applications detail endpoint failed:", detailError);
-            }
+            // The detail endpoint might not exist or might return 500; fall back to listing.
+            console.warn("Applications detail endpoint failed:", detailError.response?.status, detailError.message);
           }
 
           const listResponse = await axios.get(
             `${import.meta.env.VITE_API_BASE_URL}/applications`,
             {
-              headers: { Authorization: `Bearer ${token}` },
+              headers: { 
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+                "Content-Type": "application/json",
+              },
             }
           );
           if (Array.isArray(listResponse.data)) {
             const match = listResponse.data.find(
               (app) =>
-                String(app.applicationID ?? app.id ?? "") === normalizedAppID
+                String(app.applicationID ?? app.id ?? app._id ?? "") === normalizedAppID
             );
-            return match?.requirement_directory ?? null;
+            if (match) {
+              console.log("🔍 Found match in applications list:", match);
+              const path = match?.requirement_directory 
+                ?? match?.requirementDirectory
+                ?? match?.requirement_path
+                ?? match?.requirements
+                ?? null;
+              if (path) {
+                console.log("✅ Found requirement path from list:", path);
+                return path;
+              }
+            }
           }
         } catch (apiError) {
           console.error("Unable to fetch applications for requirement path:", apiError);
@@ -355,67 +747,134 @@ export default {
         return null;
       };
 
+      // Try to resolve file path
+      console.log("🔍 Starting downloadRequirements for applicationID:", applicationID);
+      console.log("🔍 Initial rawFilePath:", rawFilePath);
+      
       if (!filePath) {
         filePath = resolvePathFromApplicants();
+        console.log("🔍 After resolvePathFromApplicants:", filePath);
       }
       if (!filePath) {
         filePath = await resolvePathFromApi();
+        console.log("🔍 After resolvePathFromApi:", filePath);
       }
 
-      try {
-        if (filePath) {
-          // Supabase path available – download directly.
-          const { getPDFUrl } = await import("@/lib/supabase");
-          const pdfUrl = getPDFUrl(filePath, "Requirements");
-          const response = await fetch(pdfUrl);
-          if (!response.ok) {
-            throw new Error("Failed to fetch PDF from Supabase");
-          }
+      // Validate filePath is a non-empty string before proceeding
+      if (filePath && typeof filePath !== "string") {
+        console.warn("Invalid filePath type:", typeof filePath, filePath);
+        filePath = String(filePath); // Try to convert to string
+      }
 
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          const fileName = filePath.split("/").pop() || "requirement.pdf";
+      const hasValidFilePath = filePath && typeof filePath === "string" && filePath.trim().length > 0;
+      console.log("🔍 Final filePath:", filePath);
+      console.log("🔍 hasValidFilePath:", hasValidFilePath);
 
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = fileName;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-          return;
-        }
-
-        // Still no path – rely on backend endpoint (handles legacy uploads stored outside Supabase).
+      // Try Supabase first if we have a valid file path
+      if (hasValidFilePath) {
         try {
-          const response = await axios({
-            url: `${import.meta.env.VITE_API_BASE_URL}/applications/${applicationID}/requirement`,
-            method: "GET",
-            responseType: "blob",
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          const trimmedPath = filePath.trim();
+          console.log("📥 Attempting Supabase download with path:", trimmedPath);
+          
+          const pdfUrl = getPDFUrl(trimmedPath, "Requirements");
+          
+          if (!pdfUrl) {
+            console.warn("❌ Could not generate PDF URL from file path:", trimmedPath);
+            // Fall through to backend attempt
+          } else {
+            console.log("🔗 Generated Supabase URL:", pdfUrl);
+            const response = await fetch(pdfUrl);
+            
+            console.log("📡 Supabase fetch response status:", response.status, response.statusText);
+            
+            if (response.ok) {
+              const blob = await response.blob();
+              console.log("📦 Blob size:", blob.size, "bytes");
+              
+              if (blob.size > 0) {
+                const url = window.URL.createObjectURL(blob);
+                const fileName = trimmedPath.split("/").pop() || `requirement_${applicationID}.pdf`;
 
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                console.log("✅ Requirements downloaded successfully from Supabase");
+                return;
+              } else {
+                console.warn("⚠️ Downloaded file from Supabase is empty, trying backend...");
+              }
+            } else {
+              console.warn(`⚠️ Supabase download failed with status ${response.status}, trying backend...`);
+              // Log response text for debugging
+              try {
+                const text = await response.text();
+                console.warn("Supabase error response:", text);
+              } catch (e) {
+                // Ignore if we can't read response
+              }
+            }
+          }
+        } catch (supabaseError) {
+          console.error("❌ Supabase download error:", supabaseError);
+          // Fall through to backend attempt
+        }
+      } else {
+        console.log("⚠️ No valid file path found, trying backend endpoint...");
+      }
+
+      // Try backend endpoint (either as fallback or primary if no filePath)
+      try {
+        console.log("Attempting to download from backend endpoint...");
+        const response = await axios({
+          url: `${import.meta.env.VITE_API_BASE_URL}/applications/${applicationID}/requirement`,
+          method: "GET",
+          responseType: "blob",
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            Accept: "application/pdf",
+          },
+        });
+
+        if (response.data && response.data.size > 0) {
           const url = window.URL.createObjectURL(
             new Blob([response.data], { type: "application/pdf" })
           );
           const a = document.createElement("a");
           a.href = url;
-          a.download = "requirement.pdf";
+          a.download = `requirement_${applicationID}.pdf`;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
-        } catch (backendError) {
-          console.error("Backend requirement download failed:", backendError);
-          if (backendError.response?.status === 404) {
+          
+          console.log("✅ Requirements downloaded successfully from backend");
+          return;
+        } else {
+          throw new Error("Downloaded file is empty");
+        }
+      } catch (backendError) {
+        console.error("Backend requirement download failed:", backendError);
+        
+        // Only show "No requirement file" if we've confirmed there's no filePath
+        if (backendError.response?.status === 404) {
+          if (!hasValidFilePath) {
             alert("No requirement file has been uploaded for this application.");
           } else {
-            alert("Failed to download requirements. Please try again.");
+            alert("Requirement file not found. The file may have been deleted or moved.");
           }
+        } else if (backendError.response?.status === 401) {
+          alert("Unauthorized. Please log in again.");
+        } else if (backendError.response?.status === 403) {
+          alert("Access denied. You don't have permission to download this requirement.");
+        } else {
+          const errorMsg = backendError.response?.data?.message || backendError.message || "Please try again.";
+          alert(`Failed to download requirements: ${errorMsg}`);
         }
-      } catch (error) {
-        console.error("Error downloading requirements:", error);
-        alert("Failed to download requirements. Please try again.");
       }
     },
 
@@ -696,10 +1155,6 @@ export default {
       }
     },
 
-    closeModal() {
-      this.showApplicantsModal = false;
-    },
-
     showMoreUpcoming() {
       this.visibleUpcomingCount += 4; // show 4 more
     },
@@ -713,12 +1168,41 @@ export default {
         this.selectedPerson = person;
         this.showScheduleModal = true;
         this.showViewScheduleModal = false;
-        // Reset schedule data
-        this.scheduleData = {
-          date: "",
-          mode: "",
-          detail: "",
-        };
+        
+        // If person already has a schedule, populate the form with existing data
+        if (person.interviewSchedule) {
+          // Convert the interview schedule to datetime-local format (YYYY-MM-DDTHH:mm)
+          const scheduleDate = new Date(person.interviewSchedule);
+          if (!isNaN(scheduleDate.getTime())) {
+            const year = scheduleDate.getFullYear();
+            const month = String(scheduleDate.getMonth() + 1).padStart(2, "0");
+            const day = String(scheduleDate.getDate()).padStart(2, "0");
+            const hours = String(scheduleDate.getHours()).padStart(2, "0");
+            const minutes = String(scheduleDate.getMinutes()).padStart(2, "0");
+            this.scheduleData.date = `${year}-${month}-${day}T${hours}:${minutes}`;
+          } else {
+            this.scheduleData.date = "";
+          }
+          
+          // Set mode based on interviewMode
+          if (person.interviewMode === "On-Site") {
+            this.scheduleData.mode = "onSite";
+            this.scheduleData.detail = person.interviewLocation || "";
+          } else if (person.interviewMode === "Online") {
+            this.scheduleData.mode = "online";
+            this.scheduleData.detail = person.interviewLink || "";
+          } else {
+            this.scheduleData.mode = "";
+            this.scheduleData.detail = "";
+          }
+        } else {
+          // Reset schedule data for new schedule
+          this.scheduleData = {
+            date: "",
+            mode: "",
+            detail: "",
+          };
+        }
       }
     },
     closeScheduleModal() {
@@ -768,30 +1252,36 @@ export default {
       // Load tag options first (same as trainings)
       await this.fetchTags();
 
+      const normalizedCareer = this.normalizeCareer(career);
+
       this.showCareerPopup = true;
       this.isEditMode = true;
-      this.careerToEditId = career.careerID || career.id;
+      this.careerToEditId =
+        normalizedCareer.careerID || normalizedCareer.id || this.careerToEditId;
 
       // Prefill career data
       this.newCareer = {
-        position: career.position,
-        details: career.detailsAndInstructions,
-        qualifications: career.qualifications,
-        requirements: career.requirements,
-        letterAddress: career.applicationLetterAddress,
-        deadline: career.deadlineOfSubmission,
+        position: normalizedCareer.position,
+        details: normalizedCareer.detailsAndInstructions,
+        qualifications: normalizedCareer.qualifications,
+        requirements: normalizedCareer.requirements,
+        letterAddress: normalizedCareer.applicationLetterAddress,
+        deadline: normalizedCareer.deadlineOfSubmission,
+        pdfPath: normalizedCareer.pdfPath || "",
 
         // Same fix used in training tab
-        Tags: Array.isArray(career.Tags)
-          ? career.Tags.map(tag =>
-            Number(tag.TagID ?? tag.tagID ?? tag.id)
-          )
+        Tags: Array.isArray(normalizedCareer.Tags)
+          ? normalizedCareer.Tags.map((tag) =>
+              Number(tag.TagID ?? tag.tagID ?? tag.id)
+            )
           : [],
       };
 
       if (!Array.isArray(this.newCareer.Tags)) {
         this.newCareer.Tags = [];
       }
+
+      this.updateCareerPdfPreview(this.newCareer.pdfPath);
 
       console.log("Prefilled career:", this.newCareer);
     },
@@ -807,6 +1297,12 @@ export default {
           letterAddress,
           deadline,
         } = this.newCareer;
+        const pdfPath = this.newCareer.pdfPath || "";
+
+        if (this.careerPdfUploading) {
+          alert("Please wait for the PDF upload to finish before saving.");
+          return;
+        }
 
         if (
           !position ||
@@ -840,6 +1336,8 @@ export default {
             applicationLetterAddress: letterAddress,
             deadlineOfSubmission: deadline,
             organizationID,
+            orgPdfPath: pdfPath || null,
+            org_pdf_directory: pdfPath || null,
           };
 
           const response = await axios.put(
@@ -853,7 +1351,10 @@ export default {
             (c) => (c.careerID || c.id) === this.careerToEditId
           );
           if (index !== -1) {
-            this.upcomingCareers[index] = response.data.data || response.data;
+            const updatedCareer = this.normalizeCareer(
+              response.data.data || response.data
+            );
+            this.upcomingCareers[index] = updatedCareer;
           }
 
           alert("✅ Career updated successfully!");
@@ -867,6 +1368,8 @@ export default {
             applicationLetterAddress: letterAddress,
             deadlineOfSubmission: deadline,
             organizationID,
+            orgPdfPath: pdfPath || null,
+            org_pdf_directory: pdfPath || null,
           };
 
           await axios.post(
@@ -900,9 +1403,11 @@ export default {
         letterAddress: "",
         deadline: "",
         Tags: [],
+        pdfPath: "",
       };
       this.isEditMode = false;
       this.careerToEditId = null;
+      this.resetCareerPdfState();
     },
 
     // ✅ OPEN VIEW SCHEDULE MODAL (only when status = Interview Scheduled)
@@ -990,13 +1495,19 @@ export default {
         const response = await api.get("/organization/careers");
         const newCareers = response.data;
 
-        newCareers.forEach(career => {
-          const existingIndex = this.upcomingCareers.findIndex(c => c.careerID === career.careerID);
+        newCareers.forEach((career) => {
+          const normalizedCareer = this.normalizeCareer(career);
+          const existingIndex = this.upcomingCareers.findIndex(
+            (c) => c.careerID === normalizedCareer.careerID
+          );
 
           if (existingIndex > -1) {
-            this.upcomingCareers[existingIndex] = { ...this.upcomingCareers[existingIndex], ...career };
+            this.upcomingCareers[existingIndex] = {
+              ...this.upcomingCareers[existingIndex],
+              ...normalizedCareer,
+            };
           } else {
-            this.upcomingCareers.push(career);
+            this.upcomingCareers.push(normalizedCareer);
           }
         });
       } catch (error) {
@@ -1005,33 +1516,30 @@ export default {
     },
     openCareerPopup(career = null) {
       if (career) {
+        const normalizedCareer = this.normalizeCareer(career);
         // Editing existing career
         this.newCareer = {
-          position: career.position || "",
-          details: career.detailsAndInstructions || "",
-          qualifications: career.qualifications || "",
-          requirements: career.requirements || "",
-          letterAddress: career.applicationLetterAddress || "",
-          deadline: career.deadlineOfSubmission || "",
-          Tags: Array.isArray(career.Tags)
-            ? career.Tags.map((tag) => tag.TagID ?? tag.tagID ?? tag.id)
+          position: normalizedCareer.position || "",
+          details: normalizedCareer.detailsAndInstructions || "",
+          qualifications: normalizedCareer.qualifications || "",
+          requirements: normalizedCareer.requirements || "",
+          letterAddress: normalizedCareer.applicationLetterAddress || "",
+          deadline: normalizedCareer.deadlineOfSubmission || "",
+          Tags: Array.isArray(normalizedCareer.Tags)
+            ? normalizedCareer.Tags.map(
+                (tag) => tag.TagID ?? tag.tagID ?? tag.id
+              )
             : [],
+          pdfPath: normalizedCareer.pdfPath || "",
         };
         this.isEditMode = true; // editing
-        this.careerToEditId = career.careerID || career.id;
+        this.careerToEditId =
+          normalizedCareer.careerID || normalizedCareer.id || null;
+        this.updateCareerPdfPreview(this.newCareer.pdfPath);
+        this.careerPdfError = "";
       } else {
         // Posting new career
-        this.newCareer = {
-          position: "",
-          details: "",
-          qualifications: "",
-          requirements: "",
-          letterAddress: "",
-          deadline: "",
-          Tags: [],
-        };
-        this.isEditMode = false;
-        this.careerToEditId = null;
+        this.resetNewCareer();
       }
       if (!Array.isArray(this.newCareer.Tags)) {
         this.newCareer.Tags = [];
@@ -1044,21 +1552,23 @@ export default {
       this.resetNewCareer();
     },
     openCareerDetails(career) {
+      const normalizedCareer = this.normalizeCareer(career);
       this.selectedCareer = {
-        ...career,
-        careerID: career.careerID, // keep the correct ID
-        _id: career.careerID, // mirror for safety
+        ...normalizedCareer,
+        careerID: normalizedCareer.careerID, // keep the correct ID
+        _id: normalizedCareer.careerID, // mirror for safety
       };
+      this.applicantsList = [];
+      this.applicantsError = "";
+      this.applicantsLoading = false;
+      this.applicantSearchQuery = ""; // Clear search when opening modal
+      this.loadApplicantsForCareer(normalizedCareer);
       this.showCareerDetailsModal = true;
     },
     closeCareerDetails() {
       this.showCareerDetailsModal = false;
+      this.applicantSearchQuery = ""; // Clear search when closing modal
     },
-    handleViewApplicants(career) {
-      this.closeCareerDetails();
-      this.openApplicantsModal(career);
-    },
-
     async saveCareer() {
       try {
         // 🔹 0. Get token from localStorage
@@ -1096,6 +1606,13 @@ export default {
           if (!proceed) return;
         }
 
+        if (this.careerPdfUploading) {
+          alert("Please wait for the PDF upload to finish before saving.");
+          return;
+        }
+
+        const pdfPath = this.newCareer.pdfPath || "";
+
         // 🔹 3. Prepare payload
         const payload = {
           position: this.newCareer.position,
@@ -1109,6 +1626,8 @@ export default {
           deadline: this.newCareer.deadline,
           deadlineOfSubmission: this.newCareer.deadline,
           Tags: this.newCareer.Tags || [],
+          orgPdfPath: pdfPath || null,
+          org_pdf_directory: pdfPath || null,
         };
         console.log("🔹 Payload:", payload);
 
@@ -1133,7 +1652,10 @@ export default {
           console.log("✅ Career saved:", response.data);
           alert(this.isEditMode ? "Career updated successfully!" : "Career posted successfully!");
           if (!this.isEditMode) {
-            this.upcomingCareers.push(response.data.data || response.data);
+            const savedCareer = this.normalizeCareer(
+              response.data.data || response.data
+            );
+            this.upcomingCareers.push(savedCareer);
           }
           this.closeCareerPopup();
           this.resetNewCareer();
@@ -1175,7 +1697,9 @@ export default {
         letterAddress: "",
         deadline: "",
         Tags: [],
+        pdfPath: "",
       };
+      this.resetCareerPdfState();
     },
 
     formatdeadline(deadline) {
@@ -1288,6 +1812,19 @@ export default {
         tag.TagName.toLowerCase().includes(searchQuery)
       );
     },
+    // Filter applicants based on search query
+    filteredApplicants() {
+      if (!this.applicantSearchQuery || this.applicantSearchQuery.trim() === "") {
+        return this.applicantsList;
+      }
+      const query = this.applicantSearchQuery.toLowerCase().trim();
+      return this.applicantsList.filter(applicant => {
+        const name = (applicant.name || "").toLowerCase();
+        const id = String(applicant.id || "").toLowerCase();
+        const status = (applicant.status || "").toLowerCase();
+        return name.includes(query) || id.includes(query) || status.includes(query);
+      });
+    },
   },
 
   mounted() {
@@ -1377,7 +1914,7 @@ async function viewRequirement(id) {
           <div v-if="isSidebarOpen" class="profile-section">
             <h3 class="org-name">{{ organizationName }}</h3>
             <div class="profile-actions">
-              <div class="action" @click="navigateTo({ name: 'OrgProfile' })">
+              <div class="action" @click="navigateTo({ name: 'OrgUpdateProfile' })">
                 <!-- Update Profile Icon -->
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
@@ -1385,6 +1922,17 @@ async function viewRequirement(id) {
                     fill="#FFFDFD" />
                 </svg>
                 <span>Update Profile</span>
+              </div>
+              <div class="action" @click="navigateTo({ name: 'OrgChangePassword' })">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
+                    stroke="#FFFDFD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path
+                    d="M19.4 15C19.2669 15.3016 19.2272 15.6362 19.286 15.9606C19.3448 16.285 19.4995 16.5843 19.73 16.82L19.79 16.88C19.976 17.0657 20.1235 17.2863 20.2241 17.5291C20.3248 17.7719 20.3766 18.0322 20.3766 18.295C20.3766 18.5578 20.3248 18.8181 20.2241 19.0609C20.1235 19.3037 19.976 19.5243 19.79 19.71C19.6043 19.896 19.3837 20.0435 19.1409 20.1441C18.8981 20.2448 18.6378 20.2966 18.375 20.2966C18.1122 20.2966 17.8519 20.2448 17.6091 20.1441C17.3663 20.0435 17.1457 19.896 16.96 19.71L16.9 19.65C16.6643 19.4195 16.365 19.2648 16.0406 19.206C15.7162 19.1472 15.3816 19.1869 15.08 19.32C14.7842 19.4468 14.532 19.6572 14.3543 19.9255C14.1766 20.1938 14.0813 20.5082 14.08 20.83V21C14.08 21.5304 13.8693 22.0391 13.4942 22.4142C13.1191 22.7893 12.6104 23 12.08 23C11.5496 23 11.0409 22.7893 10.6658 22.4142C10.2907 22.0391 10.08 21.5304 10.08 21V20.91C10.0723 20.579 9.96512 20.258 9.77251 19.9887C9.5799 19.7194 9.31074 19.5143 9 19.4C8.69838 19.2669 8.36381 19.2272 8.03941 19.286C7.71502 19.3448 7.41568 19.4995 7.18 19.73L7.12 19.79C6.93425 19.976 6.71368 20.1235 6.47088 20.2241C6.22808 20.3248 5.96783 20.3766 5.705 20.3766C5.44217 20.3766 5.18192 20.3248 4.93912 20.2241C4.69632 20.1235 4.47575 19.976 4.29 19.79C4.10405 19.6043 3.95653 19.3837 3.85588 19.1409C3.75523 18.8981 3.70343 18.6378 3.70343 18.375C3.70343 18.1122 3.75523 17.8519 3.85588 17.6091C3.95653 17.3663 4.10405 17.1457 4.29 16.96L4.35 16.9C4.58054 16.6643 4.73519 16.365 4.794 16.0406C4.85282 15.7162 4.81312 15.3816 4.68 15.08C4.55324 14.7842 4.34276 14.532 4.07447 14.3543C3.80618 14.1766 3.49179 14.0813 3.17 14.08H3C2.46957 14.08 1.96086 13.8693 1.58579 13.4942C1.21071 13.1191 1 12.6104 1 12.08C1 11.5496 1.21071 11.0409 1.58579 10.6658C1.96086 10.2907 2.46957 10.08 3 10.08H3.09C3.42099 10.0723 3.742 9.96512 4.01129 9.77251C4.28059 9.5799 4.48571 9.31074 4.6 9C4.73312 8.69838 4.77282 8.36381 4.714 8.03941C4.65519 7.71502 4.50054 7.41568 4.27 7.18L4.21 7.12C4.02405 6.93425 3.87653 6.71368 3.77588 6.47088C3.67523 6.22808 3.62343 5.96783 3.62343 5.705C3.62343 5.44217 3.67523 5.18192 3.77588 4.93912C3.87653 4.69632 4.02405 4.47575 4.21 4.29C4.39575 4.10405 4.61632 3.95653 4.85912 3.85588C5.10192 3.75523 5.36217 3.70343 5.625 3.70343C5.88783 3.70343 6.14808 3.75523 6.39088 3.85588C6.63368 3.95653 6.85425 4.10405 7.04 4.29L7.1 4.35C7.33568 4.58054 7.63502 4.73519 7.95941 4.794C8.28381 4.85282 8.61838 4.81312 8.92 4.68H9C9.29577 4.55324 9.54802 4.34276 9.72569 4.07447C9.90337 3.80618 9.99872 3.49179 10 3.17V3C10 2.46957 10.2107 1.96086 10.5858 1.58579C10.9609 1.21071 11.4696 1 12 1C12.5304 1 13.0391 1.21071 13.4142 1.58579C13.7893 1.96086 14 2.46957 14 3V3.09C14.0013 3.41179 14.0966 3.72618 14.2743 3.99447C14.452 4.26276 14.7042 4.47324 15 4.6C15.3016 4.73312 15.6362 4.77282 15.9606 4.714C16.285 4.65519 16.5843 4.50054 16.82 4.27L16.88 4.21C17.0657 4.02405 17.2863 3.87653 17.5291 3.77588C17.7719 3.67523 18.0322 3.62343 18.295 3.62343C18.5578 3.62343 18.8181 3.67523 19.0609 3.77588C19.3037 3.87653 19.5243 4.02405 19.71 4.21C19.896 4.39575 20.0435 4.61632 20.1441 4.85912C20.2448 5.10192 20.2966 5.36217 20.2966 5.625C20.2966 5.88783 20.2448 6.14808 20.1441 6.39088C20.0435 6.63368 19.896 6.85425 19.71 7.04L19.65 7.1C19.4195 7.33568 19.2648 7.63502 19.206 7.95941C19.1472 8.28381 19.1869 8.61838 19.32 8.92V9C19.4468 9.29577 19.6572 9.54802 19.9255 9.72569C20.1938 9.90337 20.5082 9.99872 20.83 10H21C21.5304 10 22.0391 10.2107 22.4142 10.5858C22.7893 10.9609 23 11.4696 23 12C23 12.5304 22.7893 13.0391 22.4142 13.4142C22.0391 13.7893 21.5304 14 21 14H20.91C20.5882 14.0013 20.2738 14.0966 20.0055 14.2743C19.7372 14.452 19.5268 14.7042 19.4 15Z"
+                    stroke="#FFFDFD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Change Password</span>
               </div>
             </div>
           </div>
@@ -1548,103 +2096,11 @@ async function viewRequirement(id) {
         </button>
       </section>
 
-      <!-- Applicants Modal -->
-      <div v-if="showApplicantsModal" class="modal-overlay" @click.self="closeModal">
-        <div class="modal-content">
-          <button class="modal-close-btn" @click="closeModal">✕</button>
-          <h3 class="modal-title">
-            Applicants for {{ selectedCareer.title || selectedCareer.position }}
-          </h3>
-          <div class="applicants-table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>FULL NAME</th>
-                  <th>DATE SUBMITTED</th>
-                  <th>APPLICATION STATUS</th>
-                  <th>REQUIREMENTS</th>
-                  <th>SCHEDULE INTERVIEW</th>
-                  <th>VIEW SCHEDULE</th>
-                </tr>
-              </thead>
-              <tbody>
-                <!-- Check if there are applicants -->
-                <tr v-if="applicantsList.length === 0">
-                  <td colspan="6" style="text-align: center">
-                    <p>No applicants found for this career.</p>
-                  </td>
-                </tr>
-                <!-- Loop through applicants -->
-                <tr v-for="person in applicantsList" :key="person.id">
-                  <td>
-                    <p class="applicant-name">{{ person.name }}</p>
-                  </td>
-                  <td>
-                    <p class="application-date">{{ person.dateSubmitted }}</p>
-                  </td>
-                  <td>
-                    <select v-model="person.status" @change="updateApplicationStatus(person)" class="status-dropdown">
-                      <option value="submitted">
-                        {{ displayStatus("submitted") }}
-                      </option>
-                      <option value="in review">
-                        {{ displayStatus("in review") }}
-                      </option>
-                      <option value="for interview">
-                        {{ displayStatus("for interview") }}
-                      </option>
-                      <option value="accepted">
-                        {{ displayStatus("accepted") }}
-                      </option>
-                      <option value="rejected">
-                        {{ displayStatus("rejected") }}
-                      </option>
-                    </select>
-                  </td>
-                  <td class="requirements-col">
-                    <button v-if="person.requirement_directory || person.requirements" class="download-btn"
-                      @click="downloadRequirements(person.id, person.requirement_directory)">
-                      Download Requirements
-                    </button>
-
-                    <span v-else>No requirements</span>
-                  </td>
-                  <td>
-                    <button v-if="
-                      person.status === 'for interview' &&
-                      !person.interviewSchedule
-                    " class="schedule-btn" @click="openScheduleModal(person)">
-                      Schedule
-                    </button>
-                    <button v-else-if="
-                      person.status === 'for interview' &&
-                      person.interviewSchedule
-                    " class="schedule-btn" disabled>
-                      Scheduled
-                    </button>
-                    <span v-else>-</span>
-                  </td>
-                  <td>
-                    <button v-if="
-                      person.status === 'for interview' &&
-                      person.interviewSchedule
-                    " class="schedule-btn view" @click="openViewScheduleModal(person)">
-                      View Schedule
-                    </button>
-                    <span v-else>-</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
       <!-- Schedule Modal -->
-      <div v-if="showScheduleModal" class="modal-overlay" @click.self="closeScheduleModal">
+      <div v-if="showScheduleModal" class="modal-overlay schedule-modal-overlay" @click.self="closeScheduleModal">
         <div class="modal-box">
           <button class="modal-close-btn" @click="closeScheduleModal">✕</button>
-          <h3>Schedule Interview for {{ selectedPerson?.name }}</h3>
+          <h3>{{ selectedPerson?.interviewSchedule ? 'Update Interview Schedule' : 'Schedule Interview' }} for {{ selectedPerson?.name }}</h3>
 
           <div class="schedule-form">
             <!-- Date & Time -->
@@ -1688,7 +2144,7 @@ async function viewRequirement(id) {
 
             <div class="modal-actions">
               <button class="confirm-btn" @click="confirmSchedule">
-                Confirm
+                {{ selectedPerson?.interviewSchedule ? 'Update Schedule' : 'Confirm' }}
               </button>
               <button class="cancel-btn" @click="closeScheduleModal">
                 Cancel
@@ -1740,6 +2196,30 @@ async function viewRequirement(id) {
         </div>
       </div>
 
+      <!-- Requirements View Modal -->
+      <div v-if="showRequirementsModal" class="modal-overlay" @click.self="closeRequirementsModal">
+        <div class="modal-box requirements-modal">
+          <button class="modal-close-btn" @click="closeRequirementsModal">✕</button>
+          <h3>Requirements for {{ selectedPerson?.name || 'Applicant' }}</h3>
+          
+          <div class="requirements-viewer" v-if="requirementsUrl">
+            <iframe 
+              :src="requirementsUrl" 
+              class="pdf-viewer"
+              frameborder="0">
+            </iframe>
+            <div class="modal-actions">
+              <button class="confirm-btn" @click="printRequirements">Print</button>
+              <button class="cancel-btn" @click="closeRequirementsModal">Close</button>
+            </div>
+          </div>
+          <div v-else class="requirements-error">
+            <p>Unable to load requirements. Please try again.</p>
+            <button class="cancel-btn" @click="closeRequirementsModal">Close</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Career Popup Modal -->
       <div v-if="showCareerPopup" class="career-popup-overlay">
         <div class="career-popup">
@@ -1759,6 +2239,21 @@ async function viewRequirement(id) {
             <input v-model="newCareer.details" type="text" placeholder="Details and Instruction" class="career-input" />
             <textarea v-model="newCareer.qualifications" placeholder="Qualifications" class="career-input"></textarea>
             <textarea v-model="newCareer.requirements" placeholder="Requirements" class="career-input"></textarea>
+            <div class="career-upload-wrapper">
+              <label class="career-upload-label">Attach PDF (optional)</label>
+              <input ref="careerPdfInput" type="file" accept="application/pdf" class="career-input"
+                @change="handleCareerPdfUpload" />
+              <p class="upload-help-text">Accepted format: PDF up to 10MB.</p>
+              <p v-if="careerPdfUploading" class="upload-status">Uploading PDF...</p>
+              <p v-if="careerPdfError" class="upload-error">{{ careerPdfError }}</p>
+              <div v-if="newCareer.pdfPath" class="uploaded-file">
+                <span class="uploaded-file-name">{{ careerPdfName || "uploaded.pdf" }}</span>
+                <div class="upload-actions">
+                  <button type="button" class="upload-action" @click="viewCareerPdf">View</button>
+                  <button type="button" class="upload-action remove" @click="removeCareerPdf">Remove</button>
+                </div>
+              </div>
+            </div>
             <input v-model="newCareer.letterAddress" type="text" placeholder="Application Letter Address"
               class="career-input" />
 
@@ -1826,6 +2321,12 @@ async function viewRequirement(id) {
           <p class="career-info">
             <strong>Requirements:</strong> {{ selectedCareer.requirements }}
           </p>
+          <p class="career-info" v-if="selectedCareer.pdfPath">
+            <strong>Attached PDF:</strong>
+            <button type="button" class="upload-action view-link" @click="viewSelectedCareerPdf">
+              View PDF
+            </button>
+          </p>
           <p class="career-info">
             <strong>Letter Address:</strong>
             {{ selectedCareer.applicationLetterAddress }}
@@ -1834,10 +2335,158 @@ async function viewRequirement(id) {
             <strong>Deadline:</strong>
             {{ formatdeadline(selectedCareer.deadlineOfSubmission) }}
           </p>
-          <div class="career-actions">
-            <button class="btn-view-applicants" @click="handleViewApplicants(selectedCareer)">
-              View Applicants
-            </button>
+          <div class="applicants-section">
+            <div class="applicants-header">
+              <h4>Applicants ({{ filteredApplicants.length }})</h4>
+              <button class="applicants-refresh-btn" @click="loadApplicantsForCareer(selectedCareer)"
+                :disabled="applicantsLoading">
+                {{ applicantsLoading ? "Refreshing..." : "Refresh" }}
+              </button>
+            </div>
+
+            <!-- Search Bar for Applicants -->
+            <div class="applicants-search-wrapper" v-if="applicantsList.length > 0 && !applicantsLoading">
+              <input 
+                type="text" 
+                v-model="applicantSearchQuery" 
+                placeholder="Search by name or status..." 
+                class="applicants-search-input"
+              />
+            </div>
+
+            <p v-if="applicantsError" class="applicants-error">
+              {{ applicantsError }}
+            </p>
+            <p v-else-if="applicantsLoading" class="applicants-loading">
+              Loading applicants...
+            </p>
+            <p v-else-if="applicantsList.length === 0" class="applicants-empty">
+              No applicants found for this career.
+            </p>
+            <p v-else-if="filteredApplicants.length === 0" class="applicants-empty">
+              No applicants match your search.
+            </p>
+            <div v-else-if="filteredApplicants.length > 0" class="applicants-table-container inline">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Full Name</th>
+                    <th>Date Submitted</th>
+                    <th>Status</th>
+                    <th>Requirements</th>
+                    <th>Schedule Interview</th>
+                    <th>View Schedule</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="person in filteredApplicants" :key="person.id">
+                    <td>
+                      <p class="applicant-name">{{ person.name }}</p>
+                    </td>
+                    <td>
+                      <p class="application-date">
+                        {{ person.dateSubmitted }}
+                      </p>
+                    </td>
+                    <td>
+                      <select v-model="person.status" @change="updateApplicationStatus(person)" class="status-dropdown">
+                        <option value="submitted">
+                          {{ displayStatus("submitted") }}
+                        </option>
+                        <option value="in review">
+                          {{ displayStatus("in review") }}
+                        </option>
+                        <option value="for interview">
+                          {{ displayStatus("for interview") }}
+                        </option>
+                        <option value="accepted">
+                          {{ displayStatus("accepted") }}
+                        </option>
+                        <option value="rejected">
+                          {{ displayStatus("rejected") }}
+                        </option>
+                      </select>
+                    </td>
+                    <td class="requirements-col">
+                      <button 
+                        class="download-btn"
+                        @click="viewRequirements(person.id, person.requirement_directory)">
+                        View Requirements
+                      </button>
+                    </td>
+                    <td>
+                      <button v-if="
+                        person.status === 'for interview' &&
+                        !person.interviewSchedule
+                      " class="schedule-btn" @click="openScheduleModal(person)">
+                        Schedule
+                      </button>
+                      <div v-else-if="
+                        person.status === 'for interview' &&
+                        person.interviewSchedule
+                      " class="schedule-card">
+                        <div class="schedule-card-header">
+                          <div class="schedule-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M8 2V6M16 2V6M3 10H21M5 4H19C20.1046 4 21 4.89543 21 6V20C21 21.1046 20.1046 22 19 22H5C3.89543 22 3 21.1046 3 20V6C3 4.89543 3.89543 4 5 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                          </div>
+                          <div class="schedule-date-time">
+                            {{ formatInterviewDateTime(person.interviewSchedule) }}
+                          </div>
+                        </div>
+                        <div class="schedule-card-body">
+                          <div class="schedule-badge" :class="person.interviewMode === 'On-Site' ? 'badge-onsite' : 'badge-online'">
+                            <svg v-if="person.interviewMode === 'On-Site'" width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M21 10C21 17 12 23 12 23C12 23 3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.364 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                              <path d="M12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M16 8C16 6.93913 15.5786 5.92172 14.8284 5.17157C14.0783 4.42143 13.0609 4 12 4C10.9391 4 9.92172 4.42143 9.17157 5.17157C8.42143 5.92172 8 6.93913 8 8C8 9.06087 8.42143 10.0783 9.17157 10.8284C9.92172 11.5786 10.9391 12 12 12C13.0609 12 14.0783 11.5786 14.8284 10.8284C15.5786 10.0783 16 9.06087 16 8Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                              <path d="M12 14C16.4183 14 20 15.7909 20 18V20H4V18C4 15.7909 7.58172 14 12 14Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>{{ person.interviewMode }}</span>
+                          </div>
+                          <div class="schedule-info" v-if="
+                            person.interviewMode === 'On-Site' &&
+                            person.interviewLocation
+                          ">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M21 10C21 17 12 23 12 23C12 23 3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.364 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                              <path d="M12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>{{ person.interviewLocation }}</span>
+                          </div>
+                          <div class="schedule-info" v-else-if="
+                            person.interviewMode === 'Online' &&
+                            person.interviewLink
+                          ">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M18 13V16A2 2 0 0 1 16 18H5A2 2 0 0 1 3 16V8A2 2 0 0 1 5 6H10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                              <path d="M15 3H21V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                              <path d="M10 14L21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <a :href="person.interviewLink" target="_blank" rel="noopener noreferrer" class="schedule-link">
+                              {{ person.interviewLink }}
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                      <span v-else>-</span>
+                    </td>
+                    <td>
+                      <button v-if="
+                        person.status === 'for interview' &&
+                        person.interviewSchedule
+                      " class="schedule-btn update" @click="openScheduleModal(person)">
+                        Update
+                      </button>
+                      <span v-else>-</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -1873,16 +2522,34 @@ async function viewRequirement(id) {
 }
 
 .requirements-modal {
-  max-width: 800px;
-  width: 90%;
+  max-width: 900px;
+  width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .pdf-viewer {
   width: 100%;
-  height: 600px;
+  height: 70vh;
+  min-height: 500px;
   border: 1px solid #ddd;
   border-radius: 6px;
   margin: 15px 0;
+  background: #f5f5f5;
+}
+
+.requirements-viewer {
+  margin: 20px 0;
+}
+
+.requirements-error {
+  padding: 20px;
+  text-align: center;
+}
+
+.requirements-error p {
+  margin-bottom: 15px;
+  color: #666;
 }
 
 .requirements-viewer {
@@ -1939,8 +2606,8 @@ async function viewRequirement(id) {
 
 /* Sidebar */
 .sidebar {
-  width: 200px;
-  /* Expanded width */
+  width: 230px;
+  /* Expanded width - increased to fit Change Password option */
   background-color: #44576d;
   color: white;
   display: flex;
@@ -2096,10 +2763,12 @@ async function viewRequirement(id) {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   /* centers everything under avatar */
   text-align: center;
-  gap: 0.3rem;
+  gap: 0.5rem;
   /* spacing between avatar, name, and actions */
+  width: 100%;
 }
 
 .profile-section .avatar {
@@ -2116,20 +2785,24 @@ async function viewRequirement(id) {
   border-radius: 50%;
   background-color: #ccc;
   /* Placeholder, replace with image if needed */
-  margin: 0 auto 10px auto;
+  margin: 20px auto 10px auto;
 }
 
 .org-name {
   font-weight: 600;
   font-size: 14px;
   text-align: center;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .profile-actions {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
+  width: 100%;
 }
 
 .profile-actions .action {
@@ -2143,6 +2816,8 @@ async function viewRequirement(id) {
   color: #fff;
   /* keep text color consistent */
   cursor: pointer;
+  width: 100%;
+  text-align: center;
 }
 
 .profile-actions .action svg {
@@ -2382,6 +3057,11 @@ async function viewRequirement(id) {
   z-index: 2000;
 }
 
+/* Schedule Modal Overlay - appears above career details modal */
+.schedule-modal-overlay {
+  z-index: 2200;
+}
+
 .modal {
   background: white;
   padding: 25px;
@@ -2570,6 +3250,76 @@ async function viewRequirement(id) {
   background: #1f2937;
 }
 
+.career-upload-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.career-upload-label {
+  font-weight: 600;
+  color: #374151;
+}
+
+.upload-help-text {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.upload-status {
+  font-size: 0.85rem;
+  color: #2563eb;
+}
+
+.upload-error {
+  font-size: 0.85rem;
+  color: #dc2626;
+}
+
+.uploaded-file {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #e5e7eb;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.uploaded-file-name {
+  font-weight: 500;
+  color: #1f2937;
+  flex: 1;
+  margin-right: 10px;
+  word-break: break-all;
+}
+
+.upload-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.upload-action {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+}
+
+.upload-action:hover {
+  text-decoration: underline;
+}
+
+.upload-action.remove {
+  color: #b91c1c;
+}
+
+.upload-action.view-link {
+  padding-left: 0.4rem;
+}
+
 /* Posting Botton */
 .plus-btn-text {
   background: none;
@@ -2592,8 +3342,9 @@ async function viewRequirement(id) {
   background: #fff;
   padding: 2rem;
   border-radius: 1rem;
-  width: 480px;
-  max-width: 90%;
+  width: min(95vw, 1200px);
+  max-height: 90vh;
+  overflow-y: auto;
   position: relative;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
   animation: fadeIn 0.25s ease;
@@ -2612,32 +3363,152 @@ async function viewRequirement(id) {
   line-height: 1.5;
 }
 
-.career-actions {
+.applicants-section {
+  margin-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+}
+
+.applicants-header {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 1.25rem;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
 }
 
-.btn-view-applicants {
+.applicants-header h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.applicants-search-wrapper {
+  margin-bottom: 1rem;
+}
+
+.applicants-search-input {
+  width: 100%;
+  padding: 10px 15px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background: #ffffff;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.applicants-search-input:focus {
+  border-color: #4c6ef5;
+  box-shadow: 0 0 0 3px rgba(76, 110, 245, 0.1);
+}
+
+.applicants-search-input::placeholder {
+  color: #9ca3af;
+}
+
+.applicants-refresh-btn {
   background-color: #374151;
-  /* dark gray */
-  color: #ffffff;
-  /* white text */
+  color: #fff;
   border: none;
-  padding: 0.55rem 1.25rem;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  font-weight: 500;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
   cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.1s ease;
-  display: inline-block;
-  text-align: center;
+  transition: background-color 0.2s ease;
 }
 
-.btn-view-applicants:hover {
-  background-color: #4b5563;
-  /* slightly lighter gray on hover */
-  transform: scale(1.02);
+.applicants-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.applicants-refresh-btn:not(:disabled):hover {
+  background-color: #1f2937;
+}
+
+.applicants-error {
+  color: #b91c1c;
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.applicants-loading,
+.applicants-empty {
+  font-size: 0.9rem;
+  color: #4b5563;
+  margin-bottom: 0.75rem;
+}
+
+.applicants-table-container {
+  overflow-x: auto;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+.applicants-table-container.inline {
+  max-height: 320px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.applicants-table-container.inline table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  min-width: 100%;
+}
+
+.applicants-table-container.inline th,
+.applicants-table-container.inline td {
+  padding: 8px 6px;
+  font-size: 0.85rem;
+  word-break: break-word;
+}
+
+.applicants-table-container.inline th:nth-child(1),
+.applicants-table-container.inline td:nth-child(1) {
+  width: 18%;
+}
+
+.applicants-table-container.inline th:nth-child(2),
+.applicants-table-container.inline td:nth-child(2) {
+  width: 18%;
+}
+
+.applicants-table-container.inline th:nth-child(3),
+.applicants-table-container.inline td:nth-child(3) {
+  width: 18%;
+}
+
+.applicants-table-container.inline th:nth-child(4),
+.applicants-table-container.inline td:nth-child(4) {
+  width: 18%;
+}
+
+.applicants-table-container.inline th:nth-child(5),
+.applicants-table-container.inline td:nth-child(5) {
+  width: 20%; /* Increased width for Schedule Interview column to accommodate schedule display */
+}
+.applicants-table-container.inline th:nth-child(6),
+.applicants-table-container.inline td:nth-child(6) {
+  width: 14%;
+}
+
+.download-btn {
+  white-space: normal;
+  line-height: 1.2;
+  padding: 6px 10px;
+  width: 135px;
+  max-width: 100%;
+}
+
+.schedule-btn {
+  min-width: 105px;
+  padding: 6px 10px;
+  white-space: nowrap;
 }
 
 /* Smooth appear animation */
@@ -2684,8 +3555,8 @@ async function viewRequirement(id) {
 
 /* When sidebar is open, move hamburger to the right */
 .hamburger.shifted {
-  transform: translateX(140px);
-  /* Adjust this to your sidebar width */
+  transform: translateX(170px);
+  /* Adjust this to your sidebar width (230px - 60px = 170px) */
 }
 
 /* Calendar for Deadline of Submission */
@@ -2835,17 +3706,123 @@ tbody td {
   transform: none;
 }
 
-/* View Schedule Style */
-.schedule-btn.view {
+/* Update Schedule Style */
+.schedule-btn.update {
   background-color: #334155;
 }
 
-.schedule-btn.view:hover {
+.schedule-btn.update:hover {
   background-color: #1e293b;
 }
 
-.schedule-btn.view:hover:not(:disabled) {
+.schedule-btn.update:hover:not(:disabled) {
   background-color: #1e293b;
+}
+
+/* Schedule Card (replaces Schedule button when scheduled) - Modern Design */
+.schedule-card {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.schedule-card:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  border-color: #cbd5e1;
+}
+
+.schedule-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.schedule-icon {
+  display: flex;
+  align-items: center;
+  color: #4c6ef5;
+  flex-shrink: 0;
+}
+
+.schedule-date-time {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.85rem;
+  flex: 1;
+}
+
+.schedule-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.schedule-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  width: fit-content;
+  white-space: nowrap;
+}
+
+.schedule-badge.badge-onsite {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+.schedule-badge.badge-online {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.schedule-badge svg {
+  flex-shrink: 0;
+}
+
+.schedule-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #475569;
+  font-size: 0.75rem;
+  padding: 4px 0;
+}
+
+.schedule-info svg {
+  flex-shrink: 0;
+  color: #64748b;
+}
+
+.schedule-info span {
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.schedule-link {
+  color: #4c6ef5;
+  text-decoration: none;
+  word-break: break-all;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.schedule-link:hover {
+  color: #3b5bdb;
+  text-decoration: underline;
 }
 
 .dimmed {
@@ -2955,6 +3932,11 @@ input[type="text"] {
   align-items: center;
   justify-content: center;
   z-index: 2000;
+}
+
+/* Schedule Modal Overlay - appears above career details modal */
+.schedule-modal-overlay {
+  z-index: 2200;
 }
 
 .modal-box {
@@ -3194,3 +4176,5 @@ input[type="text"] {
   box-shadow: 0 0 5px rgba(68, 87, 109, 0.2);
 }
 </style>
+
+
