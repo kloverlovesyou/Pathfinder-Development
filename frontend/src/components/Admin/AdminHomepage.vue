@@ -4,6 +4,7 @@ import axios from "axios";
 
 const organizations = ref([]);
 const selectedOrg = ref(null);
+const approvedOrganizations = ref([]);
 
 // Reject modal state
 const rejectModal = ref(false);
@@ -74,8 +75,19 @@ async function acceptOrg(id) {
   }
 }
 
+async function loadApprovedOrganizations() {
+  try {
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/admin/approved-organizations"
+    );
+    approvedOrganizations.value = res.data;
+  } catch (err) {
+    console.error("Error loading approved organizations:", err);
+  }
+}
 onMounted(() => {
   loadPendingOrganizations();
+  loadApprovedOrganizations();
 });
 </script>
 
@@ -125,6 +137,29 @@ onMounted(() => {
         <p v-else class="text-gray-500 italic">
           No organizations waiting for verification.
         </p>
+      </section>
+
+      <section class="mt-10">
+        <h2 class="text-xl font-bold mb-3">Approved Organizations</h2>
+
+        <div v-if="approvedOrganizations.length" class="space-y-3">
+          <div
+            v-for="org in approvedOrganizations"
+            :key="org.organizationID"
+            class="p-3 border rounded-lg bg-green-50 flex justify-between"
+          >
+            <div>
+              <h3 class="font-semibold">{{ org.name }}</h3>
+              <p class="text-sm text-gray-600">{{ org.emailAddress }}</p>
+            </div>
+
+            <span class="px-3 py-1 bg-green-600 text-white rounded-lg text-sm">
+              Approved
+            </span>
+          </div>
+        </div>
+
+        <p v-else class="text-gray-500 italic">No approved organizations found.</p>
       </section>
     </div>
 

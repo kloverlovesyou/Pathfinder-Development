@@ -101,6 +101,7 @@ Route::post('/applicants/login', [ApplicantController::class, 'login']);
 Route::post('/organization', [OrganizationController::class, 'o_register']);
 Route::post('/organizations/login', [OrganizationController::class, 'login']);
 Route::get('/organizations', [OrganizationController::class, 'index']);
+Route::get('/admin/approved-organizations', [OrganizationController::class, 'index']);
 Route::get('/organizations/{organizationID}', [OrganizationController::class, 'show']);
 Route::get('/organizations/{organizationID}', [OrganizationController::class, 'getOrgDetails']);
 
