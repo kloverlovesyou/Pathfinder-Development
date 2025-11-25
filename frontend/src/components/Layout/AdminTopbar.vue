@@ -134,12 +134,13 @@ async function performSearch() {
 
     // Normalize API keys to lowercase for template
     results.value = data.map((item) => ({
-      id: item.ID,
-      name: item.Name,
-      location: item.Location,
-      email: item.EmailAddress,
-      type: item.Type.toLowerCase(),
-    }));
+    id: item.ID || item.id || item.organizationID,
+    name: item.Name || item.name,
+    location: item.Location || item.location || "N/A",
+    email: item.EmailAddress || item.emailAddress || item.email || "N/A",
+    type: (item.Type || item.type || "applicant").toLowerCase(),
+    websiteURL: item.WebsiteURL || item.websiteURL || item.website || "N/A",
+  }));
   } catch (err) {
     console.error("Search failed:", err);
   }
