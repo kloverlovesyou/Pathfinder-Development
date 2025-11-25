@@ -199,11 +199,30 @@ async function fetchOrganizations() {
 async function openOrganizationModal(searchResult) {
   if (!searchResult) return; // nothing clicked
 
-  // Only show the clicked organization
-  highlightedOrg.value = searchResult;
-  allOrganizations.value = [searchResult]; // show only the clicked one
+  try {
+    // Fetch full organization details by ID
+    const res = await fetch(
+      `${import.meta.env.VITE_API_BASE_URL}/admin/organizations/${searchResult.id}`
+    );
+    if (!res.ok) throw new Error("Failed to fetch organization details");
 
-  showOrganizationModal.value = true;
+    const org = await res.json();
+
+    // Map the keys to your expected format
+    const organizationDetails = {
+      id: org.organizationID || org.id,
+      name: org.name,
+      location: org.location || "N/A",
+      websiteURL: org.websiteURL || org.website || "N/A",
+      emailAddress: org.emailAddress || org.email || "N/A",
+    };
+
+    highlightedOrg.value = organizationDetails;
+    allOrganizations.value = [organizationDetails]; // show only the clicked one
+    showOrganizationModal.value = true;
+  } catch (err) {
+    console.error("Error fetching organization details:", err);
+  }
 }
 // Close modal
 function closeOrganizationModal() {
