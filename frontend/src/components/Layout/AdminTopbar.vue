@@ -196,21 +196,15 @@ async function fetchOrganizations() {
 }
 
 // Open organization modal
-async function openOrganizationModal(searchResult = null) {
+async function openOrganizationModal(searchResult) {
+  if (!searchResult) return; // nothing clicked
+
+  // Only show the clicked organization
   highlightedOrg.value = searchResult;
-
-  if (!allOrganizations.value.length) {
-    await fetchOrganizations();
-  }
-
-  // Move highlighted org to top
-  if (searchResult) {
-    allOrganizations.value.sort((a) => (a.id === searchResult.id ? -1 : 0));
-  }
+  allOrganizations.value = [searchResult]; // show only the clicked one
 
   showOrganizationModal.value = true;
 }
-
 // Close modal
 function closeOrganizationModal() {
   showOrganizationModal.value = false;
