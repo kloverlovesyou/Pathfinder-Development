@@ -197,19 +197,24 @@ async function fetchOrganizations() {
 
 // Open organization modal
 async function openOrganizationModal(searchResult) {
-  if (!searchResult) return; // nothing clicked
+  if (!searchResult) return;
+
+  // Show the modal immediately
+  showOrganizationModal.value = true;
 
   try {
-    // Fetch full organization details by ID
+    // Use the actual organization ID from your search result
+    const orgId = searchResult.id || searchResult.organizationID;
+
     const res = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL}/admin/organizations/${searchResult.id}`
+      `${import.meta.env.VITE_API_BASE_URL}/admin/organizations/${orgId}`
     );
+
     if (!res.ok) throw new Error("Failed to fetch organization details");
 
     const org = await res.json();
 
-    // Map the keys to your expected format
-    const organizationDetails = {
+    highlightedOrg.value = {
       id: org.organizationID || org.id,
       name: org.name,
       location: org.location || "N/A",
@@ -217,13 +222,15 @@ async function openOrganizationModal(searchResult) {
       emailAddress: org.emailAddress || org.email || "N/A",
     };
 
-    highlightedOrg.value = organizationDetails;
-    allOrganizations.value = [organizationDetails]; // show only the clicked one
-    showOrganizationModal.value = true;
+    allOrganizations.value = [highlightedOrg.value]; // show only clicked org
   } catch (err) {
     console.error("Error fetching organization details:", err);
+    // Fallback: just show the clicked result if fetch fails
+    highlightedOrg.value = searchResult;
+    allOrganizations.value = [searchResult];
   }
 }
+
 // Close modal
 function closeOrganizationModal() {
   showOrganizationModal.value = false;
