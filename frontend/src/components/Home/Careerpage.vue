@@ -4,7 +4,6 @@ import axios from "axios";
 import CalendarSidebar from "@/components/Layout/CalendarSidebar.vue";
 
 const calendarOpen = ref(false);
-const careerBookmarkLoading = ref(false);
 
 function openModalCalendar(event) {
   // Handle modal opening for training/career
@@ -24,77 +23,6 @@ function addToast(message, type = "info") {
 
 // ✅ Fetch user's applications
 
-// ✅ Fetch user's bookmarked careers
-const bookmarkedCareers = ref(new Set());
-
-async function fetchCareerBookmarks() {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-    const res = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + "/career-bookmarks",
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    bookmarkedCareers.value = new Set(res.data.map((b) => b.careerID));
-  } catch (error) {
-    console.error("Error fetching career bookmarks:", error);
-  }
-}
-
-// ✅ Check if career is bookmarked
-function isCareerBookmarked(careerId) {
-  return bookmarkedCareers.value.has(careerId);
-}
-
-// ✅ Toggle bookmark with backend sync
-async function toggleCareerBookmark(careerId) {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    addToast("PLEASE LOG IN FIRST", "accent");
-    return;
-  }
-
-  careerBookmarkLoading.value = true;
-
-  try {
-    if (bookmarkedCareers.value.has(careerId)) {
-      await axios.delete(
-        import.meta.env.VITE_API_BASE_URL + `/career-bookmarks/${careerId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      bookmarkedCareers.value.delete(careerId);
-      addToast("Bookmark removed", "success");
-    } else {
-      await axios.post(
-        import.meta.env.VITE_API_BASE_URL + "/career-bookmarks",
-        { careerID: careerId },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      bookmarkedCareers.value.add(careerId);
-      addToast("Bookmark added", "success");
-    }
-  } catch (error) {
-    if (error.response?.status === 409) {
-      addToast("Already bookmarked", "accent");
-    } else if (error.response?.status === 422) {
-      addToast("careerID is required", "accent");
-    } else if (error.response?.status === 401) {
-      addToast("Unauthorized. Please log in again", "accent");
-    } else {
-      addToast("Error toggling career bookmark", "accent");
-      console.error(error);
-    }
-  } finally {
-    careerBookmarkLoading.value = false;
-  }
-}
-
 // ✅ Fetch careers
 onMounted(async () => {
   try {
@@ -107,7 +35,6 @@ onMounted(async () => {
   }
 
   await fetchMyApplications();
-  await fetchCareerBookmarks(); // <-- Fetch bookmarks after login
 });
 
 // Merge careers with organization name
@@ -216,23 +143,6 @@ async function fetchMyApplications() {
   myApplications.value = new Set(res.data.map((a) => a.careerID));
 }
 
-async function fetchBookmarks() {
-  const token = localStorage.getItem("token");
-  if (!token) return;
-  const res = await axios.get(
-    import.meta.env.VITE_API_BASE_URL + "/career-bookmarks",
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    }
-  );
-  bookmarkedCareers.value = new Set(res.data.map((b) => b.careerID));
-}
-
-onMounted(async () => {
-  await fetchCareers();
-  await fetchMyApplications();
-  await fetchBookmarks();
-});
 </script>
 
 <template>
@@ -273,11 +183,8 @@ onMounted(async () => {
       :show="showModal"
       :career="selectedCareer"
       :myApplications="myApplications"
-      :bookmarkedCareers="bookmarkedCareers"
-      :careerBookmarkLoading="careerBookmarkLoading"
       @close="closeModal"
       @update-applications="myApplications = $event"
-      @update-bookmarks="bookmarkedCareers = $event"
     />
     <div class="toast toast-end toast-top z-50">
       <div

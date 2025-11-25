@@ -236,10 +236,6 @@ public function countsPartial()
             $applicationsDeleted = \App\Models\Application::where('careerID', $career->careerID)->delete();
             Log::info('Deleted applications for career', ['careerID' => $career->careerID, 'count' => $applicationsDeleted]);
             
-            // Delete all career bookmarks for this career
-            $bookmarksDeleted = \App\Models\Careerbookmark::where('careerID', $career->careerID)->delete();
-            Log::info('Deleted career bookmarks for career', ['careerID' => $career->careerID, 'count' => $bookmarksDeleted]);
-            
             // Delete from pivot table directly (career_tag)
             $pivotDeleted = DB::table('career_tag')->where('careerID', $career->careerID)->delete();
             Log::info('Deleted career_tag pivot records', ['careerID' => $career->careerID, 'count' => $pivotDeleted]);

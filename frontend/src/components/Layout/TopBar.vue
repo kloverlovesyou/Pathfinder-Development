@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch, reactive } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch } from "vue";
 import axios from "axios";
 import { useRoute } from "vue-router";
 import { useRegistrationStore } from "@/stores/registrationStore";
@@ -10,7 +10,6 @@ const route = useRoute();
 const toasts = ref([]);
 const regStore = useRegistrationStore(); // ✅ Pinia store
 const isRegisterLoading = ref(false);
-const bookmarkLoading = reactive({});
 
 async function toggleRegisterWithLoading(post) {
   if (isRegisterLoading.value) return; // Prevent double clicks
@@ -21,46 +20,6 @@ async function toggleRegisterWithLoading(post) {
   } finally {
     isRegisterLoading.value = false;
   }
-}
-
-// ✅ Toggle bookmark using store
-async function toggleBookmark(post) {
-  const trainingID =
-    post.TrainingID ?? post.trainingID ?? post.CareerID ?? post.ID ?? post.id;
-  if (!trainingID) return;
-
-  const result = await regStore.toggleBookmark(trainingID);
-  if (result.error) {
-    showToast("Failed to toggle bookmark.", "error");
-  } else {
-    showToast(
-      regStore.isTrainingBookmarked(trainingID)
-        ? "Bookmarked successfully!"
-        : "Bookmark removed!",
-      "success"
-    );
-  }
-}
-
-// ✅ Use store instead of local bookmarkedPosts
-async function handleBookmark(post) {
-  const result = await regStore.toggleBookmark(post);
-
-  if (!result.success) {
-    showToast(result.error || "Failed to toggle bookmark", "error");
-  } else {
-    showToast(
-      result.bookmarked ? "Bookmarked successfully!" : "Bookmark removed!",
-      "success"
-    );
-  }
-}
-
-// ✅ Helper function in template
-function isBookmarked(post) {
-  const trainingID =
-    post.TrainingID ?? post.trainingID ?? post.CareerID ?? post.ID ?? post.id;
-  return regStore.isTrainingBookmarked(trainingID);
 }
 
 async function fetchQRCode(trainingID) {
@@ -86,7 +45,6 @@ function showToast(message, type = "info") {
 // ✅ Use store instead of local registeredPosts
 onMounted(() => {
   regStore.fetchMyRegistrations();
-  regStore.fetchBookmarks();
 });
 
 // ✅ Toggle using store
@@ -131,7 +89,6 @@ const results = ref([]);
 const applyModalOpen = ref(false);
 const isModalOpen = ref(false);
 
-const bookmarkedPosts = ref({});
 const appliedPosts = ref({});
 const organizations = ref({});
 const posts = ref([]);
@@ -594,14 +551,6 @@ async function handleResultClick(item) {
 
         <!-- Buttons -->
         <div class="my-4 flex justify-end gap-2">
-          <!-- Bookmark -->
-          <button
-            class="btn btn-outline btn-sm"
-            @click="handleBookmark(selectedPost)"
-          >
-            {{ isBookmarked(selectedPost) ? "Bookmarked" : "Bookmark" }}
-          </button>
-
           <!-- Register -->
           <button
             v-if="isTraining(selectedPost)"
@@ -703,35 +652,6 @@ async function handleResultClick(item) {
 
         <!-- Buttons -->
         <div class="my-4 flex justify-end gap-2">
-          <!-- Bookmark -->
-          <button
-            class="btn btn-outline btn-sm flex items-center gap-2"
-            @click="toggleBookmark(selectedPost)"
-            :disabled="
-              bookmarkLoading[selectedPost.TrainingID || selectedPost.CareerID]
-            "
-          >
-            <!-- Loading spinner -->
-            <span
-              v-if="
-                bookmarkLoading[
-                  selectedPost.TrainingID || selectedPost.CareerID
-                ]
-              "
-              class="animate-spin h-4 w-4 border-2 border-gray-400 rounded-full border-t-transparent"
-            ></span>
-
-            <!-- Text -->
-            <span v-else>
-              {{
-                bookmarkedPosts[
-                  selectedPost.TrainingID || selectedPost.CareerID
-                ]
-                  ? "Bookmarked"
-                  : "Bookmark"
-              }}
-            </span>
-          </button>
           <!-- Apply / Cancel -->
           <button
             v-if="!appliedPosts[selectedPost.ID]"

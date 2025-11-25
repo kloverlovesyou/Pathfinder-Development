@@ -155,12 +155,6 @@ async function fetchInterviews() {
     console.error("Error fetching interviews:", err);
   }
 }
-function toggleBookmark(post) {
-  const id = post.trainingID || post.careerID;
-  bookmarkedPosts.value[id] = !bookmarkedPosts.value[id];
-}
-const bookmarkedPosts = ref({});
-
 // Toggle registration
 async function toggleRegister(training) {
   const token = localStorage.getItem("token");
@@ -600,7 +594,6 @@ onMounted(async () => {
   console.log("✅ Trainings loaded:", trainings.value); // <-- and here
 
   await fetchMyRegistrations();
-  await fetchBookmarks();
   startAllQRCountdowns();
 
   buildEvents();

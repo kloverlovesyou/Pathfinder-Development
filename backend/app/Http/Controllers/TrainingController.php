@@ -404,7 +404,6 @@ public function total() {
         }
 
         DB::transaction(function () use ($training) {
-            $training->trainingbookmarks()->delete();
             $training->registrations()->delete();
             //$training->attendances()->delete();
             $training->tags()->detach();

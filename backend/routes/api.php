@@ -15,9 +15,7 @@ use App\Http\Controllers\EducationController;
 use App\Http\Controllers\SkillController;
 use App\Http\Controllers\TrainingController;
 use App\Http\Controllers\CareerController;
-use App\Http\Controllers\TrainingBookmarkController;
 use App\Http\Controllers\CertificateController;
-use App\Http\Controllers\CareerBookmarkController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\CareerRecommendationController;
 use App\Http\Controllers\ApplicationFileController;
@@ -201,15 +199,6 @@ Route::middleware('auth.custom')->group(function () {
     Route::post('/education', [EducationController::class, 'store']);
     Route::put('/education/{id}', [EducationController::class, 'update']);
     Route::delete('/education/{id}', [EducationController::class, 'destroy']);
-
-    // Bookmarks
-    Route::get('/bookmarks', [TrainingBookmarkController::class, 'index']);
-    Route::post('/bookmarks', [TrainingBookmarkController::class, 'store']);
-    Route::delete('/bookmarks/{trainingID}', [TrainingBookmarkController::class, 'destroy']);
-
-    Route::get('/career-bookmarks', [CareerBookmarkController::class, 'index']);
-    Route::post('/career-bookmarks', [CareerBookmarkController::class, 'store']);
-    Route::delete('/career-bookmarks/{careerID}', [CareerBookmarkController::class, 'destroy']);
 
     Route::get('/organization/details', [OrganizationController::class, 'getOrgDetails']);
 });

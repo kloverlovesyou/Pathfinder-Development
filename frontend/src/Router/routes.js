@@ -6,8 +6,6 @@ import LoginForm from "@/components/Home/LoginForm.vue";
 import Trainingpage from "@/components/Home/Trainingpage.vue";
 import Careerpage from "@/components/Home/Careerpage.vue";
 import Organizationpage from "@/components/Home/Organizationpage.vue";
-import Calendarpage from "@/components/Home/Calendarpage.vue";
-import Bookmarkpage from "@/components/Home/Bookmarkpage.vue";
 import Certificatespage from "@/components/Home/Certificatespage.vue";
 import UpdateDeletepage from "@/components/Home/UpdateDeletepage.vue";
 import ResumeEditorpage from "@/components/Home/ResumeEditorpage.vue";
@@ -82,8 +80,7 @@ const router = createRouter({
           name: "Organizationpage",
           component: Organizationpage,
         },
-        { path: "calendar", name: "Calendarpage", component: Calendarpage },
-        { path: "bookmarks", name: "Bookmarkpage", component: Bookmarkpage },
+
         {
           path: "certificates",
           name: "Certificatespage",

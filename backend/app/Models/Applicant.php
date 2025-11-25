@@ -23,11 +23,9 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $api_token
  * 
  * @property Collection|Application[] $applications
- * @property Collection|Careerbookmark[] $careerbookmarks
  * @property Collection|Certification[] $certifications
  * @property Collection|Registration[] $registrations
  * @property Collection|Resume[] $resumes
- * @property Collection|Trainingbookmark[] $trainingbookmarks
  *
  * @package App\Models
  */
@@ -60,11 +58,6 @@ class Applicant extends Model
 		return $this->hasMany(Application::class, 'applicantID');
 	}
 
-	public function careerbookmarks()
-	{
-		return $this->hasMany(Careerbookmark::class, 'applicantID');
-	}
-
 	public function certifications()
 	{
 		return $this->hasMany(Certification::class, 'applicantID');
@@ -78,11 +71,6 @@ class Applicant extends Model
 	public function resumes()
 	{
 		return $this->hasOne(Resume::class, 'applicantID');
-	}
-
-	public function trainingbookmarks()
-	{
-		return $this->hasMany(Trainingbookmark::class, 'applicantID');
 	}
 
 }

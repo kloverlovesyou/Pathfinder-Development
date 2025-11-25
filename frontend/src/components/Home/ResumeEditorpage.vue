@@ -694,24 +694,6 @@ onActivated(async () => {
             <span>Certificates</span>
           </button>
 
-          <button
-            class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="$router.push({ name: 'Bookmarkpage' })"
-          >
-            <svg
-              class="size-6 flex-shrink-0"
-              viewBox="0 0 31 30"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M7.75 3.75V30L17.4375 20.625L27.125 30V3.75H7.75ZM23.25 0H3.875V26.25L5.8125 24.375V1.875H23.25V0Z"
-                fill="white"
-              />
-            </svg>
-
-            <span>Bookmark</span>
-          </button>
           <div class="divider"></div>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"

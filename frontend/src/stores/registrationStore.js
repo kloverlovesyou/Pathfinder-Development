@@ -12,10 +12,6 @@ export const useRegistrationStore = defineStore("regStore", () => {
     loading.value = { ...loading.value, [trainingID]: value };
   }
 
-  // ✅ Bookmark Data
-  const bookmarkedTrainings = ref([]);
-  const bookmarkLoading = reactive({});
-
   // ✅ Fetch user's registrations
   async function fetchMyRegistrations() {
     const token = localStorage.getItem("token");
@@ -102,59 +98,6 @@ export const useRegistrationStore = defineStore("regStore", () => {
     }
   }
 
-  // ✅ ✅ FETCH BOOKMARKS
-  async function fetchBookmarks() {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    try {
-      const { data } = await axios.get(
-        import.meta.env.VITE_API_BASE_URL + "/bookmarks",
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      bookmarkedTrainings.value = data; // array of trainingIDs
-    } catch (err) {
-      console.error("Failed to fetch bookmarks:", err);
-    }
-  }
-
-  // ✅ ✅ TOGGLE BOOKMARK
-  async function toggleBookmark(trainingID) {
-    const token = localStorage.getItem("token");
-    if (!token) return { error: "NO_TOKEN" };
-
-    bookmarkLoading[trainingID] = true;
-
-    try {
-      const isBookmarked = bookmarkedTrainings.value.includes(trainingID);
-
-      if (isBookmarked) {
-        await axios.delete(
-          import.meta.env.VITE_API_BASE_URL + `/bookmarks/${trainingID}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      } else {
-        await axios.post(
-          import.meta.env.VITE_API_BASE_URL + "/bookmarks",
-          { trainingID },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      }
-
-      await fetchBookmarks();
-      return { success: true };
-    } catch (err) {
-      console.error("Failed to toggle bookmark:", err);
-      return { error: true };
-    } finally {
-      bookmarkLoading[trainingID] = false;
-    }
-  }
-
-  function isTrainingBookmarked(trainingID) {
-    return bookmarkedTrainings.value.includes(trainingID);
-  }
-
   return {
     registeredPosts,
     myRegistrations,
@@ -163,11 +106,5 @@ export const useRegistrationStore = defineStore("regStore", () => {
     toggleRegister,
     fetchTrainingQRCode,
 
-    // ✅ bookmark exports
-    bookmarkedTrainings,
-    bookmarkLoading,
-    fetchBookmarks,
-    toggleBookmark,
-    isTrainingBookmarked,
   };
 });

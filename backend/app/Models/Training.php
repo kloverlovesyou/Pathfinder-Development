@@ -26,7 +26,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * 
  * @property Organization|null $organization
  * @property Collection|Registration[] $registrations
- * @property Collection|Trainingbookmark[] $trainingbookmarks
  *
  * @package App\Models
  */
@@ -67,11 +66,6 @@ class Training extends Model
 	public function registrations()
 	{
 		return $this->hasMany(Registration::class, 'trainingID');
-	}
-
-	public function trainingbookmarks()
-	{
-		return $this->hasMany(Trainingbookmark::class, 'trainingID');
 	}
 
 	

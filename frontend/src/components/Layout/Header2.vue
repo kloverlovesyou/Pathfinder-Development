@@ -176,27 +176,6 @@ onMounted(() => {
                 <a>Calendar</a>
               </button>
             </li>
-            <li class="flex flex-col items-center">
-              <button
-                class="flex flex-col items-center w-full"
-                @click="router.push('/bookmarkpage')"
-              >
-                <svg
-                  width="18"
-                  height="24"
-                  viewBox="0 0 18 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M3 3V24L10.5 16.5L18 24V3H3ZM15 0H0V21L1.5 19.5V1.5H15V0Z"
-                    fill="white"
-                  />
-                </svg>
-
-                <a>Bookmark</a>
-              </button>
-            </li>
           </ul>
         </div>
 
@@ -477,25 +456,6 @@ onMounted(() => {
                 <li>
                   <button
                     class="text-white py-2 text-lg hover:bg-dark-slate flex items-center justify-start gap-2"
-                    @click="router.push('/bookmarkpage')"
-                  >
-                    <svg
-                      class="size-6 flex-shrink-0"
-                      viewBox="0 0 18 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M3 3V24L10.5 16.5L18 24V3H3ZM15 0H0V21L1.5 19.5V1.5H15V0Z"
-                        fill="white"
-                      />
-                    </svg>
-                    <span>Bookmark</span>
-                  </button>
-                </li>
-                <li>
-                  <button
-                    class="text-white py-2 text-lg hover:bg-dark-slate flex items-center justify-start gap-2"
                     @click="router.push('/updatedeletepage')"
                   >
                     <svg
@@ -642,14 +602,13 @@ onMounted(() => {
             v-if="
               route.path !== '/profilepage' &&
               route.path !== '/certificatespage' &&
-              route.path !== '/resumepage' &&
-              route.path !== '/bookmarkpage'
+              route.path !== '/resumepage'
             "
           >
             <h2
               class="text-xl font-bold mb-4"
               v-if="
-                route.path !== '/calendarpage' && route.path !== '/bookmarkpage'
+                route.path !== '/calendarpage'
               "
             >
               Calendar
@@ -661,8 +620,7 @@ onMounted(() => {
                 route.path !== '/profilepage' &&
                 route.path !== '/certificatespage' &&
                 route.path !== '/updatedeletepage' &&
-                route.path !== '/resumepage' &&
-                route.path !== '/bookmarkpage'
+                route.path !== '/resumepage'
               "
             >
               <calendar-date>
@@ -693,7 +651,7 @@ onMounted(() => {
                 <calendar-month></calendar-month>
               </calendar-date>
             </div>
-            <div class="mt-8" v-if="route.path !== '/bookmarkpage'">
+            <div class="mt-8">
               <h2 class="text-xl font-bold mb-4">Upcoming</h2>
               <div class="space-y-4">
                 <div class="p-4 bg-gray-100 rounded-lg">

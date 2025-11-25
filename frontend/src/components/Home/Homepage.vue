@@ -10,7 +10,6 @@ const isSidebarOpen = ref(false);
 
 const registeredPosts = reactive({});
 const appliedPosts = ref({});
-const bookmarkedPosts = ref({});
 const selectedCareerDetails = ref(null);
 const recommendedTrainings = ref([]);
 const allCareers = ref([]);
@@ -146,42 +145,6 @@ function cancelApplication(career) {
   myApplications.value.delete(id);
 }
 
-// Toggle bookmark for career
-async function toggleCareerBookmark(career) {
-  const token = localStorage.getItem('token');
-  if (!token) {
-    addToast('PLEASE LOG IN FIRST', 'accent');
-    return;
-  }
-
-  const careerID = career.careerID;
-  const isBookmarked = bookmarkedPosts.value[careerID];
-
-  try {
-    if (isBookmarked) {
-      await axios.delete(import.meta.env.VITE_API_BASE_URL + `/career-bookmarks/${careerID}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      bookmarkedPosts.value[careerID] = false;
-      addToast('Bookmark removed', 'info');
-    } else {
-      await axios.post(
-        import.meta.env.VITE_API_BASE_URL + '/career-bookmarks',
-        { careerID },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      bookmarkedPosts.value[careerID] = true;
-      addToast('Bookmarked!', 'success');
-    }
-  } catch (error) {
-    if (error.response?.status === 409) {
-      addToast('Already bookmarked', 'accent');
-    } else {
-      addToast('Failed to bookmark', 'error');
-    }
-  }
-}
-
 // Register for training
 async function registerForTraining(training) {
   if (!training) return;
@@ -297,37 +260,6 @@ async function fetchRecommendedCareers() {
 // ------------------ ACTIONS ------------------
 
 
-async function toggleTrainingBookmark(training) {
-  const token = localStorage.getItem("token");
-  if (!token) return addToast("Please log in first", "accent");
-
-  const id = training.trainingID;
-  const isBookmarked = bookmarkedPosts.value[id];
-
-  try {
-    if (isBookmarked) {
-      await axios.delete(
-        import.meta.env.VITE_API_BASE_URL + `/bookmarks/${id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      bookmarkedPosts.value[id] = false;
-      addToast("Bookmark removed", "info");
-    } else {
-      await axios.post(
-        import.meta.env.VITE_API_BASE_URL + "/bookmarks",
-        { trainingID: id },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      bookmarkedPosts.value[id] = true;
-      addToast("Bookmarked!", "success");
-    }
-  } catch (err) {
-    addToast("Failed to toggle bookmark", "error");
-  }
-}
-
 // ------------------ HELPER ------------------
 const isTraining = (post) => !!post.trainingID;
 const isRegisteredOrApplied = (post) =>
@@ -431,17 +363,7 @@ onMounted(async () => {
           Organization: {{ selectedTraining.organization }}
         </p>
 
-        <!-- Buttons -->
-        <div class="my-4 flex justify-end gap-2">
-          <!-- Bookmark -->
-          <button class="btn btn-outline btn-sm" @click="toggleBookmark(selectedTraining)">
-            {{
-              bookmarkedPosts[selectedTraining.trainingID]
-                ? "Bookmarked"
-                : "Bookmark"
-            }}
-          </button>
-
+        <div class="my-4">
           <!-- Events -->
           <div class="bg-white w-full max-w-[250px] h-72 overflow-y-auto">
             <h1 class="text-lg font-semibold">Upcoming Events</h1>
@@ -512,19 +434,7 @@ onMounted(async () => {
             Organization: {{ selectedCareerDetails.organization }}
           </p>
 
-          <!-- Buttons -->
           <div class="my-4 flex justify-end gap-2">
-            <!-- Bookmark -->
-            <button class="btn btn-outline btn-sm border-white text-white hover:bg-white hover:text-gray-800"
-              @click="toggleCareerBookmark(selectedCareerDetails)">
-              {{
-                bookmarkedPosts[selectedCareerDetails.careerID]
-                  ? "BOOKMARKED"
-                  : "BOOKMARK"
-              }}
-            </button>
-
-            <!-- Apply / Cancel -->
             <button v-if="!myApplications.has(selectedCareerDetails.careerID)"
               class="btn btn-sm bg-blue-600 text-white hover:bg-blue-700"
               @click="openApplyModal(selectedCareerDetails)">
@@ -609,25 +519,7 @@ onMounted(async () => {
             }}
           </p>
 
-          <!-- Buttons -->
           <div class="my-4 flex justify-end gap-2">
-            <!-- Bookmark -->
-            <button
-              class="btn btn-outline btn-sm border-white text-white hover:bg-white hover:text-gray-800 flex items-center gap-2"
-              @click="toggleTrainingBookmark(selectedTraining)">
-              <svg v-if="!bookmarkedPosts[selectedTraining.trainingID]" width="20" height="20" viewBox="0 0 24 24"
-                fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M12.89 5.87988H5.10999C3.39999 5.87988 2 7.27987 2 8.98987V20.3499C2 21.7999 3.04 22.4199 4.31 21.7099L8.23999 19.5199C8.65999 19.2899 9.34 19.2899 9.75 19.5199L13.68 21.7099C14.95 22.4199 15.99 21.7999 15.99 20.3499V8.98987C16 7.27987 14.6 5.87988 12.89 5.87988Z"
-                  stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-              <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M12.89 5.87988H5.11C3.4 5.87988 2 7.27988 2 8.98988V20.3499C2 21.7999 3.04 22.4199 4.31 21.7099L8.24 19.5199C8.66 19.2899 9.34 19.2899 9.75 19.5199L13.68 21.7099C14.96 22.4099 16 21.7999 16 20.3499V8.98988C16 7.27988 14.6 5.87988 12.89 5.87988Z"
-                  fill="currentColor" />
-              </svg>
-            </button>
-            <!-- Register -->
             <button v-if="!myRegistrations.has(selectedTraining.trainingID)"
               class="btn btn-sm bg-blue-600 text-white hover:bg-blue-700"
               @click="registerForTraining(selectedTraining)">

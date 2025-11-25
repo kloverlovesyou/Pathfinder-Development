@@ -294,7 +294,6 @@ class OrganizationController extends Controller
         DB::transaction(function () use ($organization) {
             // Delete trainings & related data
             foreach ($organization->trainings as $training) {
-                $training->trainingbookmarks()->delete();
                 $training->registrations()->delete();
                 if (method_exists($training, 'attendances')) {
                     $training->attendances()->delete();

@@ -6,7 +6,7 @@ import { useRouter } from "vue-router";
 const router = useRouter();
 const upcomingCount = ref(0);
 const completedCount = ref(0);
-
+const toasts = ref([]);
 const form = ref({
   firstName: "",
   middleName: "",
@@ -20,6 +20,15 @@ const form = ref({
 });
 
 const userName = ref("");
+
+function showToast(message, type = "success", duration = 3000) {
+  const id = Date.now();
+  toasts.value.push({ id, message, type });
+
+  setTimeout(() => {
+    toasts.value = toasts.value.filter((t) => t.id !== id);
+  }, duration);
+}
 
 // Computed property to check if passwords match
 const passwordsMatch = computed(() => {
@@ -128,18 +137,18 @@ const handleUpdate = async () => {
   const token = localStorage.getItem("token");
 
   if (!token) {
-    alert("You are not logged in.");
+    showToast("You are not logged in.");
     return;
   }
 
   try {
     // --- 1️⃣ Update user profile ---
-    await axios.put(import.meta.env.VITE_API_BASE_URL +"/user", form.value, {
+    await axios.put(import.meta.env.VITE_API_BASE_URL + "/user", form.value, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
     if (form.value.newPassword !== form.value.confirmPassword) {
-      alert("New password and confirmation do not match.");
+      showToast("New password and confirmation do not match.");
       return;
     }
 
@@ -150,7 +159,7 @@ const handleUpdate = async () => {
       form.value.confirmPassword
     ) {
       await axios.post(
-        import.meta.env.VITE_API_BASE_URL +"/update-password",
+        import.meta.env.VITE_API_BASE_URL + "/update-password",
         {
           currentPassword: form.value.currentPassword,
           newPassword: form.value.newPassword,
@@ -161,18 +170,18 @@ const handleUpdate = async () => {
         }
       );
 
-      alert("Password updated successfully!");
+      showToast("Password updated successfully!");
       // ✅ Clear password fields
       form.value.currentPassword = "";
       form.value.newPassword = "";
       form.value.confirmPassword = "";
     }
 
-    alert("Profile updated successfully!");
+    showToast("Profile updated successfully!");
     form.value.currentPassword = "";
   } catch (error) {
     console.error("Error during update:", error);
-    alert(error.response?.data?.message || "Update failed.");
+    showToast(error.response?.data?.message || "Update failed.");
   }
 };
 
@@ -282,24 +291,6 @@ const logout = () => {
             <span>Certificates</span>
           </button>
 
-          <button
-            class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
-            @click="$router.push({ name: 'Bookmarkpage' })"
-          >
-            <svg
-              class="size-6 flex-shrink-0"
-              viewBox="0 0 31 30"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M7.75 3.75V30L17.4375 20.625L27.125 30V3.75H7.75ZM23.25 0H3.875V26.25L5.8125 24.375V1.875H23.25V0Z"
-                fill="white"
-              />
-            </svg>
-
-            <span>Bookmark</span>
-          </button>
           <div class="divider"></div>
           <button
             class="bg-customButton text-white py-2 px-10 rounded-md hover:bg-dark-slate flex items-center justify-start gap-2"
@@ -477,7 +468,22 @@ const logout = () => {
         </div>
       </div>
     </div>
+    <!-- Toast notifications -->
+    <div class="fixed top-5 right-5 space-y-2 z-50">
+      <div
+        v-for="toast in toasts"
+        :key="toast.id"
+        :class="[
+          'px-4 py-2 rounded shadow ',
+          toast.type === 'success'
+            ? 'bg-white text-black'
+            : toast.type === 'error'
+            ? 'bg-red-500 text-white'
+            : 'bg-gray-500',
+        ]"
+      >
+        {{ toast.message }}
+      </div>
+    </div>
   </div>
 </template>
-
-

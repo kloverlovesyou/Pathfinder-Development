@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, onMounted, nextTick, watch } from "vue";
+import { ref, reactive, computed, onMounted } from "vue";
 import axios from "axios";
 import QrcodeVue from "qrcode.vue";
 import { useRegistrationStore } from "@/stores/registrationStore";
@@ -10,8 +10,6 @@ const regStore = useRegistrationStore();
 const myRegistrations = computed(() => regStore.myRegistrations);
 // Remove this local reactive store
 // const registeredPosts = reactive({});
-const bookmarkLoading = reactive({});
-const registerLoading = reactive({});
 
 // ---------------------------
 // 🔹 Use store for registrations
@@ -36,9 +34,6 @@ const selectedTraining = ref(null);
 const isModalOpen = ref(false);
 const toasts = ref([]);
 const selectedPost = ref(null);
-
-// Bookmarked trainings (IDs)
-const bookmarkedTrainings = ref([]);
 
 // Computed trainings with org info
 const trainingsWithOrg = computed(() =>
@@ -70,47 +65,6 @@ function closeModal() {
   isModalOpen.value = false;
   selectedTraining.value = null;
   selectedPost.value = null;
-}
-
-// ============================
-// 🔖 Bookmark Functions
-// ============================
-
-async function toggleBookmark(trainingId) {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    addToast("PLEASE LOG IN FIRST", "accent");
-    return;
-  }
-
-  bookmarkLoading[trainingId] = true;
-
-  try {
-    if (isTrainingBookmarked(trainingId)) {
-      await axios.delete(
-        import.meta.env.VITE_API_BASE_URL + `/bookmarks/${trainingId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      addToast("Bookmark removed", "info");
-    } else {
-      await axios.post(
-        import.meta.env.VITE_API_BASE_URL + "/bookmarks",
-        { trainingID: trainingId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      addToast("Bookmarked!", "success");
-    }
-    await fetchBookmarks();
-  } catch (error) {
-    console.error("Failed to toggle bookmark:", error);
-    addToast("Failed to toggle bookmark", "error");
-  } finally {
-    bookmarkLoading[trainingId] = false;
-  }
-}
-
-function isTrainingBookmarked(trainingId) {
-  return bookmarkedTrainings.value.includes(trainingId);
 }
 
 function isTraining(post) {
@@ -149,18 +103,6 @@ async function fetchTrainings() {
     console.error("❌ fetchTrainings error:", err.response?.data || err);
     addToast("Failed to load trainings", "error");
   }
-}
-
-async function fetchBookmarks() {
-  const token = localStorage.getItem("token");
-  if (!token) return;
-  const { data } = await axios.get(
-    import.meta.env.VITE_API_BASE_URL + "/bookmarks",
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    }
-  );
-  bookmarkedTrainings.value = data;
 }
 
 async function fetchOrganizations() {
@@ -207,7 +149,6 @@ const trainings = computed(() => trainingStore.trainings);
 onMounted(async () => {
   await trainingStore.fetchTrainings(); // store now has trainings and auto-generates QR
   await fetchOrganizations();
-  await regStore.fetchBookmarks();
   await regStore.fetchMyRegistrations();
   trainingStore.autoGenerateQRs(); // Auto-generate QR codes for current trainings
 });
@@ -282,12 +223,9 @@ const showModal = ref(false);
       :isOpen="showModal"
       :training="selectedTraining"
       :isRegistered="myRegistrations.has(selectedTraining?.trainingID)"
-      :isBookmarked="bookmarkedTrainings.includes(selectedTraining?.trainingID)"
-      :bookmarkLoading="bookmarkLoading[selectedTraining?.trainingID]"
       :registerLoading="regStore.loading[selectedTraining?.trainingID]"
       @close="showModal = false"
       @toggle-register="toggleRegister"
-      @bookmark="toggleBookmark"
     />
     <!-- Toast Notifications -->
     <div class="toast toast-end toast-top z-50">

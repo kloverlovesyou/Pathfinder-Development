@@ -161,25 +161,6 @@
               <span v-if="isExpanded">Certificates</span>
             </button>
           </li>
-          <li>
-            <button
-              class="text-white gap-3 p-3 py-2 hover:bg-slate-700 rounded-lg w-full flex items-center justify-start"
-              @click="$router.push({ name: 'Bookmarkpage' })"
-            >
-              <svg
-                class="size-6 flex-shrink-0"
-                viewBox="0 0 18 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M3 3V24L10.5 16.5L18 24V3H3ZM15 0H0V21L1.5 19.5V1.5H15V0Z"
-                  fill="white"
-                />
-              </svg>
-              <span v-if="isExpanded">Bookmark</span>
-            </button>
-          </li>
         </ul>
 
         <!-- LOGOUT -->

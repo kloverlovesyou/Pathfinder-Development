@@ -24,7 +24,6 @@ use Illuminate\Database\Eloquent\Model;
  * 
  * @property Organization|null $organization
  * @property Collection|Application[] $applications
- * @property Collection|Careerbookmark[] $careerbookmarks
  *
  * @package App\Models
  */
@@ -57,11 +56,6 @@ class Career extends Model
 	public function applications()
 	{
 		return $this->hasMany(Application::class, 'careerID');
-	}
-
-	public function careerbookmarks()
-	{
-		return $this->hasMany(Careerbookmark::class, 'careerID');
 	}
 
 	public function tags()

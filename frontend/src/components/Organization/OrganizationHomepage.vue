@@ -225,8 +225,6 @@ const trainingsData = ref([]);
 const careersData = ref([]);
 const registrationsData = ref([]);
 const applicationsData = ref([]);
-const careerBookmarksData = ref([]); // Store career bookmark counts
-const trainingBookmarksData = ref([]); // Store training bookmark counts
 
 const fetchTrainingStats = async () => {
   try {
@@ -324,7 +322,7 @@ const chartConfigs = ref({
   },
   chart3: {
     type: "bar",
-    data: { labels: ["Careers", "Trainings"], datasets: [{ label: "Bookmarks", data: [], backgroundColor: "#44576D" }] },
+    data: { labels: ["Careers", "Trainings"], datasets: [{ label: "Engagement", data: [], backgroundColor: "#44576D" }] },
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -416,42 +414,6 @@ const fetchApplications = async () => {
   }
 };
 
-// Fetch bookmark counts for organization's careers and trainings
-const fetchBookmarkCounts = async () => {
-  try {
-    // We need to count:
-    // 1. Unique applicants who bookmarked any of the organization's careers
-    // 2. Unique registrants (applicants) who bookmarked any of the organization's trainings
-    
-    // Try to fetch bookmark counts from backend endpoint
-    // This would require a backend endpoint like:
-    // GET /organization/bookmarks/counts
-    // Which returns: { careerBookmarks: number, trainingBookmarks: number }
-    
-    try {
-      const { data } = await api.get("/organization/bookmarks/counts");
-      if (data && (data.careerBookmarks !== undefined || data.trainingBookmarks !== undefined)) {
-        careerBookmarksData.value = data.careerBookmarks || 0;
-        trainingBookmarksData.value = data.trainingBookmarks || 0;
-        return;
-      }
-    } catch (err) {
-      // Endpoint doesn't exist, we'll calculate from available data after applications/registrations are fetched
-      console.warn("Bookmark counts endpoint not available, will calculate from data:", err);
-    }
-    
-    // Fallback: Will be calculated in calculateChartData() after applications and registrations are fetched
-    // For now, set empty arrays - they'll be populated in the chart calculation
-    careerBookmarksData.value = [];
-    trainingBookmarksData.value = [];
-    
-  } catch (err) {
-    console.warn("Failed to fetch bookmark counts:", err);
-    careerBookmarksData.value = [];
-    trainingBookmarksData.value = [];
-  }
-};
-
 // Calculate chart data from fetched data
 const calculateChartData = () => {
   // Chart 1: General Overview - Full year (12 months: January to December)
@@ -501,37 +463,17 @@ const calculateChartData = () => {
     trainingModes.online
   ];
 
-  // Chart 3: Applicant Engagement - Count applicants who bookmarked careers and registrants who bookmarked trainings
-  // For careers: Count unique applicants who bookmarked any of the organization's careers
-  // For trainings: Count unique registrants who bookmarked any of the organization's trainings
-  
-  // Use bookmark data if available, otherwise calculate from applications/registrations
-  let careersBookmarked = 0;
-  let trainingsBookmarked = 0;
-  
-  if (Array.isArray(careerBookmarksData.value) && careerBookmarksData.value.length > 0) {
-    // If we have bookmark data array, count unique applicants
-    careersBookmarked = new Set(careerBookmarksData.value).size;
-  } else {
-    // Fallback: Count unique applicants who applied to careers
-    // Note: This is a proxy - actual bookmark count requires backend endpoint
-    const uniqueApplicants = new Set(applicationsData.value.map(a => a.applicantID).filter(Boolean));
-    careersBookmarked = uniqueApplicants.size;
-  }
-  
-  if (Array.isArray(trainingBookmarksData.value) && trainingBookmarksData.value.length > 0) {
-    // If we have bookmark data array, count unique registrants
-    trainingsBookmarked = new Set(trainingBookmarksData.value).size;
-  } else {
-    // Fallback: Count unique registrants
-    // Note: This is a proxy - actual bookmark count requires backend endpoint
-    const uniqueRegistrants = new Set(registrationsData.value.map(r => r.applicantID || r.id).filter(Boolean));
-    trainingsBookmarked = uniqueRegistrants.size;
-  }
-  
+  // Chart 3: Applicant Engagement - unique applicants vs registrants
+  const uniqueApplicants = new Set(
+    applicationsData.value.map(a => a.applicantID).filter(Boolean)
+  );
+  const uniqueRegistrants = new Set(
+    registrationsData.value.map(r => r.applicantID || r.id).filter(Boolean)
+  );
+
   chartConfigs.value.chart3.data.datasets[0].data = [
-    careersBookmarked,
-    trainingsBookmarked
+    uniqueApplicants.size,
+    uniqueRegistrants.size
   ];
 
   // Chart 4: Career Insights - Application statuses: Submitted, In Review, For Interview, Accepted, Rejected
@@ -624,11 +566,10 @@ onMounted(async () => {
     fetchCareerStats()
   ]);
   
-  // Then fetch registrations, applications, and bookmark counts
+  // Then fetch registrations and applications
   await Promise.all([
     fetchRegistrations(),
-    fetchApplications(),
-    fetchBookmarkCounts()
+    fetchApplications()
   ]);
   
   // Finally calculate and render charts
