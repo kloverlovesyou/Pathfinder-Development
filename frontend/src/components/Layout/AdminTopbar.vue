@@ -183,13 +183,13 @@ async function fetchOrganizations() {
     if (!res.ok) throw new Error("Failed to fetch organizations");
     const data = await res.json();
 
-    allOrganizations.value = data.map((org) => ({
-      id: org.organizationID,
-      name: org.name,
-      location: org.location,
-      websiteURL: org.websiteURL,
-      emailAddress: org.emailAddress,
-    }));
+      allOrganizations.value = data.map((org) => ({
+        id: org.organizationID || org.id,
+        name: org.name || org.Name,
+        location: org.location || org.Location || "N/A",
+        websiteURL: org.websiteURL || org.WebsiteURL || org.website || "N/A",
+        emailAddress: org.emailAddress || org.EmailAddress || org.email || "N/A",
+      }));
   } catch (err) {
     console.error("Error fetching organizations:", err);
   }
