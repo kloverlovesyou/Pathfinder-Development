@@ -142,16 +142,16 @@ const router = createRouter({
       meta: { requiresAuth: false },
       children: [
         {
-          path: "adminhomepage",
+          path: "",          // 👈 THIS MAKES /admin LOAD ADMINHOMEPAGE
           name: "AdminHomePage",
           component: AdminHomePage,
         },
 
         {
-          path: "/admin/adminupdatedelete",
+          path: "adminupdatedelete",
           name: "AdminUpdateDelete",
           component: AdminUpdateDelete,
-          meta: { requiresAuth: false }, // public access
+          meta: { requiresAuth: false },
         },
       ],
     },
