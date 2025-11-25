@@ -4,17 +4,27 @@ import axios from "axios";
 import { useRegistrationStore } from "@/stores/registrationStore";
 import { useTrainingStore } from "@/stores/trainingStore";
 import CalendarSidebar from "@/components/Layout/CalendarSidebar.vue";
+
 const trainingStore = useTrainingStore();
 const regStore = useRegistrationStore();
 const myRegistrations = computed(() => regStore.myRegistrations);
-
-// Date of PH
-// Organizations
 const organizations = ref([]);
 const selectedTraining = ref(null);
 const toasts = ref([]);
 
-// Computed trainings with org info
+// ✅ Only include trainings whose schedule is not past
+const upcomingTrainings = computed(() => {
+  const today = new Date().setHours(0, 0, 0, 0);
+
+  return trainingStore.trainings.filter((t) => {
+    const end = new Date(t.endDate || t.date).setHours(0, 0, 0, 0);
+    return end >= today;
+  });
+});
+
+// Replace original "trainings" usage with this:
+const trainingsToShow = upcomingTrainings;
+
 const trainingsWithOrg = computed(() =>
   trainingStore.trainings.map((t) => {
     const org = organizations.value.find(
@@ -119,20 +129,29 @@ const showModal = ref(false);
       </div>
       <!-- Training Cards -->
       <div class="space-y-4">
-        <div
-          v-for="training in trainingsWithOrg"
-          :key="training.trainingID"
-          class="p-4 bg-blue-gray rounded-lg hover:bg-gray-300 transition cursor-pointer flex justify-between items-center"
-          @click="openTrainingModal(training)"
-        >
-          <!-- Left: Training info -->
-          <div>
-            <h3 class="font-semibold">{{ training.title }}</h3>
-            <p class="text-gray-700">
-              {{ training.organization.name }}
-            </p>
+        <div v-if="trainingsToShow.length > 0">
+          <div
+            v-for="training in trainingsToShow"
+            :key="training.trainingID"
+            class="p-4 mb-2 bg-blue-gray rounded-lg hover:bg-gray-300 transition cursor-pointer flex justify-between items-center"
+            @click="openTrainingModal(training)"
+          >
+            <!-- Left: Training info -->
+            <div>
+              <h3 class="font-semibold">{{ training.title }}</h3>
+              <p class="text-gray-700">
+                {{ training.organization.name }}
+              </p>
+            </div>
           </div>
+        </div>
 
+        <!-- 🚫 Nothing available -->
+        <div
+          v-else
+          class="p-6 text-center text-gray-600 bg-gray-100 rounded-lg"
+        >
+          No available trainings at the moment.
         </div>
       </div>
     </div>

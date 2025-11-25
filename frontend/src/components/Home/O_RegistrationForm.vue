@@ -36,7 +36,7 @@
             class="input w-full bg-gray-100"
             type="text"
             required
-            placeholder="Organization Name"
+            placeholder="Organization Name*"
             name="name"
             v-model="form.name"
           />
@@ -47,7 +47,7 @@
             class="input w-full bg-gray-100"
             type="text"
             required
-            placeholder="Location"
+            placeholder="Location*"
             name="location"
             v-model="form.location"
           />
@@ -68,7 +68,7 @@
             class="input validator w-full bg-gray-100"
             type="email"
             required
-            placeholder="Email"
+            placeholder="Email*"
             name="emailAddress"
             v-model="form.emailAddress"
           />
@@ -80,7 +80,7 @@
             type="tel"
             class="input validator tabular-nums w-full bg-gray-100"
             required
-            placeholder="Phone Number"
+            placeholder="Phone Number*"
             minlength="11"
             maxlength="11"
             pattern="[0-9]*"
@@ -95,7 +95,7 @@
             :type="showPassword ? 'text' : 'password'"
             class="input validator w-full pr-10 bg-gray-100"
             required
-            placeholder="Password"
+            placeholder="Password*"
             v-model="form.password"
             pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
             title="Must contain at least 8 characters, including a number, a lowercase and an uppercase letter"
@@ -202,7 +202,7 @@
               :type="showConfirm ? 'text' : 'password'"
               class="input w-full pr-10 focus:outline-none focus:border-transparent bg-gray-100"
               required
-              placeholder="Confirm Password"
+              placeholder="Confirm Password*"
               minlength="8"
               v-model="form.confirmPassword"
             />
@@ -374,14 +374,24 @@
     <div
       v-if="showSuccessModal"
       class="fixed inset-0 flex items-center justify-center"
-      style="background-color: rgba(0, 0, 0, 0.5); z-index: 9999;"
+      style="background-color: rgba(0, 0, 0, 0.5); z-index: 9999"
     >
       <div
         class="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full text-center relative"
       >
         <div class="mb-4">
-          <svg class="mx-auto h-16 w-16 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+          <svg
+            class="mx-auto h-16 w-16 text-blue-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+            ></path>
           </svg>
         </div>
         <h2 class="text-lg font-bold text-blue-600 mb-4">
@@ -391,7 +401,10 @@
           Your organization account has been created successfully!
         </p>
         <p class="text-sm mb-6 text-gray-600">
-          Please check your email (<strong>{{ registeredEmail || form.emailAddress }}</strong>) and click the verification link to activate your account.
+          Please check your email (<strong>{{
+            registeredEmail || form.emailAddress
+          }}</strong
+          >) and click the verification link to activate your account.
         </p>
         <div class="space-y-2">
           <button
@@ -435,7 +448,7 @@ const termsAccepted = ref(false);
 const showModal = ref(false);
 const showSuccessModal = ref(false);
 const registrationResponse = ref(null);
-const registeredEmail = ref('');
+const registeredEmail = ref("");
 
 const handleSubmit = async () => {
   if (!termsAccepted.value) {
@@ -447,28 +460,32 @@ const handleSubmit = async () => {
 
   try {
     const { confirmPassword, ...payload } = form.value;
-    const response = await axios.post(import.meta.env.VITE_API_BASE_URL + "/organization", payload);
+    const response = await axios.post(
+      import.meta.env.VITE_API_BASE_URL + "/organization",
+      payload
+    );
 
-    console.log('Registration response:', response);
-    console.log('Response status:', response.status);
-    console.log('Response data:', response.data);
+    console.log("Registration response:", response);
+    console.log("Response status:", response.status);
+    console.log("Response data:", response.data);
 
     // Store registration response (handle both direct data and nested organization property)
     registrationResponse.value = response.data;
     // Extract verification_url if it exists in the response
     if (response.data.verification_url) {
-      registrationResponse.value.verification_url = response.data.verification_url;
+      registrationResponse.value.verification_url =
+        response.data.verification_url;
     }
     registeredEmail.value = form.value.emailAddress;
 
     // ✅ Show email verification modal
-    console.log('Setting showSuccessModal to true');
+    console.log("Setting showSuccessModal to true");
     showSuccessModal.value = true;
-    console.log('showSuccessModal value:', showSuccessModal.value);
-    
+    console.log("showSuccessModal value:", showSuccessModal.value);
+
     // Force Vue to update
     await nextTick();
-    console.log('After nextTick, showSuccessModal:', showSuccessModal.value);
+    console.log("After nextTick, showSuccessModal:", showSuccessModal.value);
 
     // ✅ Clear form
     form.value = {
@@ -482,17 +499,21 @@ const handleSubmit = async () => {
     };
     termsAccepted.value = false;
   } catch (error) {
-    console.error('Registration error:', error);
-    console.error('Error response:', error.response);
-    console.error('Error data:', error.response?.data);
-    
+    console.error("Registration error:", error);
+    console.error("Error response:", error.response);
+    console.error("Error data:", error.response?.data);
+
     // Check if it's actually a success (201 status) but axios is treating it as error
-    if (error.response?.status === 201 || (error.response?.status >= 200 && error.response?.status < 300)) {
+    if (
+      error.response?.status === 201 ||
+      (error.response?.status >= 200 && error.response?.status < 300)
+    ) {
       // Registration actually succeeded
-      registrationResponse.value = error.response.data.organization || error.response.data;
+      registrationResponse.value =
+        error.response.data.organization || error.response.data;
       registeredEmail.value = form.value.emailAddress;
       showSuccessModal.value = true;
-      
+
       // Clear form
       form.value = {
         name: "",
@@ -506,19 +527,22 @@ const handleSubmit = async () => {
       termsAccepted.value = false;
       return;
     }
-    
+
     // Show validation errors to user
     if (error.response?.status === 422 && error.response?.data?.errors) {
       const errors = error.response.data.errors;
       let errorMessage = "Validation errors:\n";
-      
-      Object.keys(errors).forEach(key => {
-        errorMessage += `${key}: ${errors[key].join(', ')}\n`;
+
+      Object.keys(errors).forEach((key) => {
+        errorMessage += `${key}: ${errors[key].join(", ")}\n`;
       });
-      
+
       alert(errorMessage);
     } else {
-      alert(error.response?.data?.message || "Registration failed. Please try again.");
+      alert(
+        error.response?.data?.message ||
+          "Registration failed. Please try again."
+      );
     }
   }
 };
@@ -530,11 +554,17 @@ const goToLogin = () => {
 
 const copyVerificationLink = () => {
   if (registrationResponse.value?.verification_url) {
-    navigator.clipboard.writeText(registrationResponse.value.verification_url).then(() => {
-      alert('Verification link copied to clipboard!');
-    }).catch(() => {
-      alert('Failed to copy link. Please copy manually:\n' + registrationResponse.value.verification_url);
-    });
+    navigator.clipboard
+      .writeText(registrationResponse.value.verification_url)
+      .then(() => {
+        alert("Verification link copied to clipboard!");
+      })
+      .catch(() => {
+        alert(
+          "Failed to copy link. Please copy manually:\n" +
+            registrationResponse.value.verification_url
+        );
+      });
   }
 };
 

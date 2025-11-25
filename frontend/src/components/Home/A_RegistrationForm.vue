@@ -37,7 +37,7 @@
             class="input w-full bg-gray-100"
             type="text"
             required
-            placeholder="First Name"
+            placeholder="First Name*"
             v-model="form.firstName"
           />
         </div>
@@ -56,7 +56,7 @@
             class="input w-full bg-gray-100"
             type="text"
             required
-            placeholder="Last Name"
+            placeholder="Last Name*"
             v-model="form.lastName"
           />
         </div>
@@ -66,7 +66,7 @@
             class="input w-full bg-gray-100"
             type="text"
             required
-            placeholder="Address"
+            placeholder="Address*"
             v-model="form.address"
           />
         </div>
@@ -76,7 +76,7 @@
             class="input validator w-full bg-gray-100"
             type="email"
             required
-            placeholder="Email"
+            placeholder="Email*"
             v-model="form.emailAddress"
           />
           <p class="validator-hint hidden">Invalid Email</p>
@@ -87,7 +87,7 @@
             type="tel"
             class="input validator tabular-nums w-full bg-gray-100"
             required
-            placeholder="Phone Number"
+            placeholder="Phone Number*"
             minlength="11"
             maxlength="11"
             pattern="[0-9]*"
@@ -102,7 +102,7 @@
             :type="showPassword ? 'text' : 'password'"
             class="input validator w-full pr-10 bg-gray-100"
             required
-            placeholder="Password"
+            placeholder="Password*"
             v-model="form.password"
             pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
             title="Must contain at least 8 characters, including a number, a lowercase and an uppercase letter"
@@ -209,7 +209,7 @@
               :type="showConfirm ? 'text' : 'password'"
               class="input w-full pr-10 focus:outline-none focus:border-transparent bg-gray-100"
               required
-              placeholder="Confirm Password"
+              placeholder="Confirm Password*"
               minlength="8"
               v-model="form.confirmPassword"
             />
@@ -448,8 +448,18 @@
         class="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full text-center relative"
       >
         <div class="mb-4">
-          <svg class="mx-auto h-16 w-16 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+          <svg
+            class="mx-auto h-16 w-16 text-blue-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+            ></path>
           </svg>
         </div>
         <h2 class="text-lg font-bold text-blue-600 mb-4">
@@ -459,7 +469,10 @@
           Your account has been created successfully!
         </p>
         <p class="text-sm mb-6 text-gray-600">
-          Please check your email (<strong>{{ registeredEmail || form.emailAddress }}</strong>) and click the verification link to activate your account.
+          Please check your email (<strong>{{
+            registeredEmail || form.emailAddress
+          }}</strong
+          >) and click the verification link to activate your account.
         </p>
         <div class="space-y-2">
           <button
@@ -503,7 +516,7 @@ const termsAccepted = ref(false);
 const showTermsModal = ref(false); // terms modal
 const showSuccessModal = ref(false); // ✅ success modal
 const registrationResponse = ref(null);
-const registeredEmail = ref('');
+const registeredEmail = ref("");
 const careers = ref([]);
 
 onMounted(async () => {
@@ -529,14 +542,17 @@ const handleSubmit = async () => {
   }
 
   try {
-    const response = await axios.post(import.meta.env.VITE_API_BASE_URL + "/applicants", {
-      ...form.value,
-    });
-    
+    const response = await axios.post(
+      import.meta.env.VITE_API_BASE_URL + "/applicants",
+      {
+        ...form.value,
+      }
+    );
+
     // Store registration response
     registrationResponse.value = response.data;
     registeredEmail.value = form.value.emailAddress;
-    
+
     // ✅ Show email verification modal
     showSuccessModal.value = true;
   } catch (error) {
@@ -556,11 +572,17 @@ const goToLogin = () => {
 
 const copyVerificationLink = () => {
   if (registrationResponse.value?.verification_url) {
-    navigator.clipboard.writeText(registrationResponse.value.verification_url).then(() => {
-      alert('Verification link copied to clipboard!');
-    }).catch(() => {
-      alert('Failed to copy link. Please copy manually:\n' + registrationResponse.value.verification_url);
-    });
+    navigator.clipboard
+      .writeText(registrationResponse.value.verification_url)
+      .then(() => {
+        alert("Verification link copied to clipboard!");
+      })
+      .catch(() => {
+        alert(
+          "Failed to copy link. Please copy manually:\n" +
+            registrationResponse.value.verification_url
+        );
+      });
   }
 };
 
