@@ -19,7 +19,7 @@ class CareerRecommendationController extends Controller
                 'c.position',
                 'o.name as organization',
                 'c.detailsAndInstructions',
-                'c.qualifications',
+                'c.qualificationStandard',
                 'c.requirements',
                 'c.applicationLetterAddress',
                 'c.deadlineOfSubmission'
@@ -119,7 +119,7 @@ class CareerRecommendationController extends Controller
                  'c.position',
                  'o.name as organizationName',
                  'c.detailsAndInstructions',
-                 'c.qualifications',
+                 'c.qualificationStandard',
                  'c.requirements',
                  'c.applicationLetterAddress',
                  'c.deadlineOfSubmission'

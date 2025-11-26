@@ -17,8 +17,10 @@ class Training extends Model
     ];
 
     protected $fillable = [
-        'title',
-        'description',
+        'Title',
+        'title', // backward compatibility
+        'Description',
+        'description', // backward compatibility
         'organizationID',
     ];
 

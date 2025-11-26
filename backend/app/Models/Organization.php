@@ -13,14 +13,22 @@ use Illuminate\Database\Eloquent\Model;
  * Class Organization
  * 
  * @property int $organizationID
- * @property string $name
- * @property string $location
- * @property string|null $websiteURL
- * @property string $emailAddress
- * @property string $password
- * @property string|null $api_token
+ * @property string|null $Logo_directory
+ * @property string $name (database column: name or Name)
+ * @property string $Name (database column: Name or name)
+ * @property string $Location
+ * @property string $location (database column: location or Location)
+ * @property string|null $WebsiteURL
+ * @property string|null $websiteURL (database column: websiteURL or WebsiteURL)
+ * @property string|null $phoneNumber
+ * @property string $EmailAddress
+ * @property string $emailAddress (database column: emailAddress or EmailAddress)
+ * @property string $Password
+ * @property string $password (database column: password or Password)
+ * @property string|null $RegistrationRequirements (pdf)
+ * @property string|null $RegistrationStatus (Registered, In Review, Verified/Declined)
  * @property int|null $adminID
- * @property string|null $status
+ * @property string|null $api_token
  * @property Admin|null $admin
  * @property Collection|Career[] $careers
  * @property Collection|Training[] $trainings
@@ -43,16 +51,24 @@ class Organization extends Model
 	];
 
 	protected $fillable = [
-		'logo_directory',
-		'name',
-		'location',
-		'websiteURL',
-		'emailAddress',
+		'Logo_directory',
+		'logo_directory', // backward compatibility
+		'Name',
+		'name', // backward compatibility
+		'Location',
+		'location', // backward compatibility
+		'WebsiteURL',
+		'websiteURL', // backward compatibility
+		'EmailAddress',
+		'emailAddress', // backward compatibility
+		'Password',
+		'password', // backward compatibility
+		'RegistrationRequirements',
+		'RegistrationStatus',
+		'status', // backward compatibility - map status to RegistrationStatus
 		'phoneNumber',
-		'password',
 		'api_token',
 		'adminID',
-		'status',
 		'email_verification_token',
 		'email_verified_at',
 	];

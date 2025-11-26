@@ -222,8 +222,8 @@ class TrainingController extends Controller
             ],
             'Tags' => $training->tags->map(function ($tag) {
                 return [
-                    'TagID' => $tag->TagID ?? $tag->tagID ?? $tag->id,
-                    'tagName' => $tag->tagName ?? $tag->name ?? '',
+                    'TagID' => $tag->TagID,
+                    'tagName' => $tag->TagName ?? '',
                 ];
             }),
         ];

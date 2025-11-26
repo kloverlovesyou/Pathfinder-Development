@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
  * Class Application
  * 
  * @property int $applicationID
- * @property string|null $requirement_directory
+ * @property string|null $Requirements (pdf)
  * @property int|null $careerID
  * @property int|null $applicantID
  * 
@@ -27,7 +27,8 @@ class Application extends Model
     ];
 
     protected $fillable = [
-        'requirement_directory',
+        'Requirements',
+        'requirement_directory', // backward compatibility
         'careerID',
         'applicantID'
     ];
@@ -88,5 +89,13 @@ class Application extends Model
     public function applicant()
     {
         return $this->belongsTo(Applicant::class, 'applicantID');
+    }
+
+    /**
+     * An application can have many history entries.
+     */
+    public function history()
+    {
+        return $this->hasMany(ApplicationHistory::class, 'applicationID');
     }
 }

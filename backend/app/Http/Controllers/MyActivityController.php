@@ -42,7 +42,7 @@ public function getMyActivities($applicantID)
             'application.requirement_directory',
             'career.position as title',
             'career.detailsAndInstructions',
-            'career.qualifications',
+            'career.qualificationStandard',
             'career.requirements',
             'career.applicationLetterAddress',
             'career.deadlineOfSubmission',

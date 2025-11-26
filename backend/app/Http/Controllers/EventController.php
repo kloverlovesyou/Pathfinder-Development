@@ -46,7 +46,7 @@ $trainings = DB::table('registration')
         'career.careerID as careerID',
         'career.position as title',
         'career.detailsAndInstructions as detailsAndInstructions',
-        'career.qualifications as qualifications',
+        'career.qualificationStandard as qualificationStandard',
         'career.requirements as requirements',
         'career.applicationLetterAddress as applicationLetterAddress',
         DB::raw('DATE(application.interviewSchedule) as date'),

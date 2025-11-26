@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Model;
  * 
  * @property int $certificationID
  * @property string $certificationName
+ * @property string|null $Certificate (png)
+ * @property bool|null $IsSelected
  * @property int|null $resumeID
  * @property int|null $applicantID
  * 
@@ -29,16 +31,18 @@ class Certification extends Model
 
 	protected $casts = [
 		'resumeID' => 'int',
-		'applicantID' => 'int'
+		'applicantID' => 'int',
+		'IsSelected' => 'boolean'
 	];
 
 	protected $fillable = [
 		'certificationName',
+		'Certificate',
+		'certificate', // backward compatibility
+		'certificate_path', // backward compatibility
+		'IsSelected',
 		'resumeID',
 		'applicantID',
-		'IsSelected',
-		'certificate_path',
-		'certificate', // Allow setting certificate field (binary data) - only for manual uploads
 	];
 
 	public function resume()

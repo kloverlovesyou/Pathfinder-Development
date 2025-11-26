@@ -12,12 +12,12 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * Class Admin
  * 
- * @property int $adminID
- * @property string $name
- * @property string $location
- * @property string|null $websiteURL
- * @property string $emailAddress
- * @property string $password
+ * @property int $AdminID
+ * @property string $Name
+ * @property string $Location
+ * @property string|null $WebsiteURL
+ * @property string $EmailAddress
+ * @property string $Password
  * 
  * @property Collection|Organization[] $organizations
  *
@@ -34,11 +34,16 @@ class Admin extends Model
 	];
 
 	protected $fillable = [
-		'name',
-		'location',
-		'websiteURL',
-		'emailAddress',
-		'password'
+		'Name',
+		'name', // backward compatibility
+		'Location',
+		'location', // backward compatibility
+		'WebsiteURL',
+		'websiteURL', // backward compatibility
+		'EmailAddress',
+		'emailAddress', // backward compatibility
+		'Password',
+		'password', // backward compatibility
 	];
 
 	public function organizations()

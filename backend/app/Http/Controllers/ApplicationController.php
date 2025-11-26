@@ -37,7 +37,7 @@ class ApplicationController extends Controller
             'interviewLink' => $app->interviewLink,
             'interviewLocation' => $app->interviewLocation,
             'detailsAndInstructions' => $app->career->detailsAndInstructions ?? null,
-            'qualifications' => $app->career->qualifications ?? null,
+            'qualificationStandard' => $app->career->qualificationStandard ?? null,
             'requirement_directory' => $app->requirement_directory ?? null, // Fixed: get from application, not career
             'applicationLetterAddress' => $app->career->applicationLetterAddress ?? null,
             'deadlineOfSubmission' => $app->career->deadlineOfSubmission ?? null,
@@ -46,7 +46,7 @@ class ApplicationController extends Controller
             // Career table
             'title' => $career->position ?? null,
             'detailsAndInstructions' => $career->detailsAndInstructions ?? null,
-            'qualifications' => $career->qualifications ?? null,
+            'qualificationStandard' => $career->qualificationStandard ?? null,
             'requirements' => $career->requirements ?? null,
             'applicationLetterAddress' => $career->applicationLetterAddress ?? null,
             'deadlineOfSubmission' => $career->deadlineOfSubmission ?? null,

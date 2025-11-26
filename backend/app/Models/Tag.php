@@ -15,9 +15,19 @@ class Tag extends Model
 
     protected $fillable = ['TagName'];
 
-
+    /**
+     * A tag can be associated with many careers.
+     */
     public function careers()
     {
         return $this->belongsToMany(Career::class, 'career_tag', 'TagID', 'careerID');
+    }
+
+    /**
+     * A tag can be associated with many trainings.
+     */
+    public function trainings()
+    {
+        return $this->belongsToMany(Training::class, 'training_tag', 'TagID', 'trainingID');
     }
 }

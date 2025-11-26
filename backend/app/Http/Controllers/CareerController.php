@@ -31,23 +31,25 @@ class CareerController extends Controller
 
         $careers = Career::with(['organization', 'tags'])
             ->where('organizationID', $user->organizationID)
-            ->orderByDesc('deadlineOfSubmission')
+            ->orderByDesc('closingDate')
             ->get()
             ->map(function ($career){
                 return[
                     'careerID' => $career->careerID,
                     'position' => $career->position,
-                    'deadlineOfSubmission' => $career->deadlineOfSubmission,
-                    'detailsAndInstructions' => $career->detailsAndInstructions,
-                    'qualifications' => $career->qualifications,
-                    'requirements' => $career->requirements,
-                    'applicationLetterAddress' => $career->applicationLetterAddress,
+                    'placeOfAssignment' => $career->placeOfAssignment,
+                    'details' => $career->details,
+                    'qualificationStandard' => $career->qualificationStandard,
+                    'pdf_directory' => $career->pdf_directory,
+                    'postingDate' => $career->postingDate,
+                    'closingDate' => $career->closingDate,
+                    'trainingsAttendedPercentage' => $career->trainingsAttendedPercentage,
                     'organizationID' => $career->organizationID,
                     'organizationName' => $career->organization->name ?? 'Unknown',
                     'Tags' => $career->tags->map(function ($tag) {
                         return [
-                            'TagID' => $tag->TagID ?? $tag->tagID ?? $tag->id,
-                            'tagName' => $tag->tagName ?? $tag->name ?? '',
+                            'TagID' => $tag->TagID,
+                            'tagName' => $tag->TagName ?? '',
                         ];
                     }),
                 ];
@@ -67,28 +69,35 @@ class CareerController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        // Validate request
+        // Validate request - using actual database column name
         $validated = $request->validate([
             'position' => 'required|string|max:255',
-            'details' => 'required|string|max:255',
-            'qualifications' => 'required|string|max:255',
-            'requirements' => 'required|string|max:255',
-            'letterAddress' => 'required|string|max:255',
-            'deadline' => 'required|date',
+            'placeOfAssignment' => 'required|string|max:255',
+            'details' => 'required|string',
+            'qualificationStandard' => 'nullable|string',
+            'pdf_directory' => 'nullable|string|max:255',
+            'postingDate' => 'required|date',
+            'closingDate' => 'required|date',
+            'trainingsAttendedPercentage' => 'nullable|integer|min:0|max:100',
             'Tags' => 'nullable|array',
             'Tags.*' => 'integer|exists:tag,TagID',
         ]);
 
-        $deadline = Carbon::parse($validated['deadline'])->format('Y-m-d');
+        $postingDateFormatted = Carbon::parse($validated['postingDate'])->format('Y-m-d');
+        $closingDateFormatted = Carbon::parse($validated['closingDate'])->format('Y-m-d');
 
-        // Create career linked to organization
+        $qualificationStandard = $validated['qualificationStandard'] ?? null;
+
+        // Create career linked to organization - using actual database column names
         $career = Career::create([
             'position' => $validated['position'],
-            'detailsAndInstructions' => $validated['details'],
-            'qualifications' => $validated['qualifications'],
-            'requirements' => $validated['requirements'],
-            'applicationLetterAddress' => $validated['letterAddress'],
-            'deadlineOfSubmission' => $deadline,
+            'placeOfAssignment' => $validated['placeOfAssignment'],
+            'details' => $validated['details'],
+            'qualificationStandard' => $qualificationStandard,
+            'pdf_directory' => $validated['pdf_directory'] ?? null,
+            'postingDate' => $postingDateFormatted,
+            'closingDate' => $closingDateFormatted,
+            'trainingsAttendedPercentage' => $validated['trainingsAttendedPercentage'] ?? null,
             'organizationID' => $user->organizationID ?? $user->id,
         ]);
 
@@ -116,8 +125,8 @@ public function countsPartial()
 {
     $now = now(); // current date & time
 
-    $ongoing = \App\Models\Career::where('deadlineOfSubmission', '>', $now)->count();
-    $filled = \App\Models\Career::where('deadlineOfSubmission', '<=', $now)->count();
+    $ongoing = \App\Models\Career::where('closingDate', '>', $now)->count();
+    $filled = \App\Models\Career::where('closingDate', '<=', $now)->count();
 
     return response()->json([
         'ongoing' => $ongoing,
@@ -131,16 +140,16 @@ public function countsPartial()
 
         return response()->json([
             'careerID' => $career->careerID,
-            'title' => $career->position,
-            'detailsAndInstructions' => $career->detailsAndInstructions,
-            'qualifications' => $career->qualifications,
-            'requirements' => $career->requirements,
-            'applicationLetterAddress' => $career->applicationLetterAddress,
-            'deadlineOfSubmission' => $career->deadlineOfSubmission,
+            'position' => $career->position,
+            'placeOfAssignment' => $career->placeOfAssignment,
+            'details' => $career->details,
+            'qualificationStandard' => $career->qualificationStandard,
+            'pdf_directory' => $career->pdf_directory,
+            'postingDate' => $career->postingDate,
+            'closingDate' => $career->closingDate,
+            'trainingsAttendedPercentage' => $career->trainingsAttendedPercentage,
+            'organizationID' => $career->organizationID,
             'organization' => $career->organization->name ?? 'Unknown',
-            'link' => $career->link ?? null,
-            'mode' => $career->mode ?? null,
-            'location' => $career->location ?? null,
         ]);
 }
  public function update(Request $request, $id)
@@ -156,35 +165,30 @@ public function countsPartial()
             return response()->json(['message' => 'Unauthorized - Organization access required'], 401);
         }
 
-        // Map legacy field names to the validated keys
-        if (!$request->has('detailsAndInstructions') && $request->has('details')) {
-            $request->merge(['detailsAndInstructions' => $request->input('details')]);
-        }
-        if (!$request->has('applicationLetterAddress') && $request->has('letterAddress')) {
-            $request->merge(['applicationLetterAddress' => $request->input('letterAddress')]);
-        }
-        if (!$request->has('deadlineOfSubmission') && $request->has('deadline')) {
-            $request->merge(['deadlineOfSubmission' => $request->input('deadline')]);
-        }
-
-        // Validate request (optional but recommended)
+        // Validate request - using actual database column name
         $validated = $request->validate([
             'position' => 'required|string|max:255',
-            'detailsAndInstructions' => 'required|string',
-            'qualifications' => 'required|string',
-            'requirements' => 'required|string',
-            'applicationLetterAddress' => 'required|string',
-            'deadlineOfSubmission' => 'required|date',
+            'placeOfAssignment' => 'required|string|max:255',
+            'details' => 'required|string',
+            'qualificationStandard' => 'nullable|string',
+            'pdf_directory' => 'nullable|string|max:255',
+            'postingDate' => 'required|date',
+            'closingDate' => 'required|date',
+            'trainingsAttendedPercentage' => 'nullable|integer|min:0|max:100',
             'Tags' => 'sometimes|array',
             'Tags.*' => 'integer|exists:tag,TagID',
         ]);
 
+        $qualificationStandard = $validated['qualificationStandard'] ?? null;
+
         $career->position = $validated['position'];
-        $career->detailsAndInstructions = $validated['detailsAndInstructions'];
-        $career->qualifications = $validated['qualifications'];
-        $career->requirements = $validated['requirements'];
-        $career->applicationLetterAddress = $validated['applicationLetterAddress'];
-        $career->deadlineOfSubmission = $validated['deadlineOfSubmission'];
+        $career->placeOfAssignment = $validated['placeOfAssignment'];
+        $career->details = $validated['details'];
+        $career->qualificationStandard = $qualificationStandard;
+        $career->pdf_directory = $validated['pdf_directory'] ?? null;
+        $career->postingDate = Carbon::parse($validated['postingDate'])->format('Y-m-d');
+        $career->closingDate = Carbon::parse($validated['closingDate'])->format('Y-m-d');
+        $career->trainingsAttendedPercentage = $validated['trainingsAttendedPercentage'] ?? null;
 
         $career->save();
 

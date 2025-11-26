@@ -100,11 +100,12 @@ export default {
       showCareerPopup: false,
       newCareer: {
         position: "",
+        placeOfAssignment: "",
         details: "",
-        qualifications: "",
-        requirements: "",
-        letterAddress: "",
-        deadline: "",
+        qualificationStandard: "",
+        postingDate: "",
+        closingDate: "",
+        trainingsAttendedPercentage: null,
         Tags: [],
         pdfPath: "",
       },
@@ -123,9 +124,9 @@ export default {
       }
 
       const pdfPath =
+        career.pdf_directory ??
         career.orgPdfPath ??
         career.org_pdf_directory ??
-        career.pdf_directory ??
         career.pdfPath ??
         career.pdf_path ??
         career.pdf ??
@@ -134,6 +135,14 @@ export default {
       return {
         ...career,
         pdfPath: pdfPath || "",
+        // Map to match actual database schema (camelCase)
+        position: career.position ?? career.positionTitle ?? career.PositionTitle ?? "",
+        placeOfAssignment: career.placeOfAssignment ?? career.PlaceOfAssignment ?? career.applicationLetterAddress ?? "",
+        details: career.details ?? career.Details ?? career.detailsAndInstructions ?? "",
+        qualificationStandard: career.qualificationStandard ?? career.qualificationStandards ?? career.QualificationStandards ?? career.qualifications ?? "",
+        postingDate: career.postingDate ?? career.PostingDate ?? "",
+        closingDate: career.closingDate ?? career.ClosingDate ?? career.deadlineOfSubmission ?? "",
+        trainingsAttendedPercentage: career.trainingsAttendedPercentage ?? career.TrainingsAttendedPercentage ?? null,
       };
     },
 
@@ -1270,7 +1279,7 @@ export default {
       }
 
       const confirmDelete = await this.showConfirmToast(
-        `Are you sure you want to delete "${career.position}"?`
+        `Are you sure you want to delete "${career.position || 'this career'}"?`
       );
       if (!confirmDelete) return;
 
@@ -1310,12 +1319,13 @@ export default {
 
       // Prefill career data
       this.newCareer = {
-        position: normalizedCareer.position,
-        details: normalizedCareer.detailsAndInstructions,
-        qualifications: normalizedCareer.qualifications,
-        requirements: normalizedCareer.requirements,
-        letterAddress: normalizedCareer.applicationLetterAddress,
-        deadline: normalizedCareer.deadlineOfSubmission,
+        position: normalizedCareer.position || "",
+        placeOfAssignment: normalizedCareer.placeOfAssignment || "",
+        details: normalizedCareer.details || "",
+        qualificationStandard: normalizedCareer.qualificationStandard || "",
+        postingDate: normalizedCareer.postingDate || "",
+        closingDate: normalizedCareer.closingDate || "",
+        trainingsAttendedPercentage: normalizedCareer.trainingsAttendedPercentage ?? null,
         pdfPath: normalizedCareer.pdfPath || "",
 
         // Same fix used in training tab
@@ -1335,122 +1345,18 @@ export default {
       console.log("Prefilled career:", this.newCareer);
     },
 
-    // Save career (create or update)
-    async saveCareer() {
-      try {
-        const {
-          position,
-          details,
-          qualifications,
-          requirements,
-          letterAddress,
-          deadline,
-        } = this.newCareer;
-        const pdfPath = this.newCareer.pdfPath || "";
-
-        if (this.careerPdfUploading) {
-          alert("Please wait for the PDF upload to finish before saving.");
-          return;
-        }
-
-        if (
-          !position ||
-          !details ||
-          !qualifications ||
-          !requirements ||
-          !letterAddress ||
-          !deadline
-        ) {
-          showToast("⚠️ Please fill out all fields.");
-          return;
-        }
-
-        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-        const organizationID = storedUser?.organizationID;
-
-        if (!organizationID) {
-          showToast("⚠️ Could not determine your organization ID.");
-          return;
-        }
-
-        const token = localStorage.getItem("token");
-
-        if (this.isEditMode && this.careerToEditId) {
-          // ✅ FIXED PAYLOAD FOR UPDATE
-          const payload = {
-            position,
-            detailsAndInstructions: details,
-            qualifications,
-            requirements,
-            applicationLetterAddress: letterAddress,
-            deadlineOfSubmission: deadline,
-            organizationID,
-            orgPdfPath: pdfPath || null,
-            org_pdf_directory: pdfPath || null,
-          };
-
-          const response = await axios.put(
-            import.meta.env.VITE_API_BASE_URL +
-              `/careers/${this.careerToEditId}`,
-            payload,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-
-          const index = this.upcomingCareers.findIndex(
-            (c) => (c.careerID || c.id) === this.careerToEditId
-          );
-          if (index !== -1) {
-            const updatedCareer = this.normalizeCareer(
-              response.data.data || response.data
-            );
-            this.upcomingCareers[index] = updatedCareer;
-          }
-
-          showToast("✅ Career updated successfully!");
-        } else {
-          // ✅ FIXED PAYLOAD FOR CREATE
-          const payload = {
-            position,
-            detailsAndInstructions: details,
-            qualifications,
-            requirements,
-            applicationLetterAddress: letterAddress,
-            deadlineOfSubmission: deadline,
-            organizationID,
-            orgPdfPath: pdfPath || null,
-            org_pdf_directory: pdfPath || null,
-          };
-
-          await axios.post(
-            import.meta.env.VITE_API_BASE_URL + `/careers`,
-            payload,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-
-          await this.fetchCareers(); // refresh list
-          showToast("✅ Career posted successfully!");
-        }
-
-        this.closeCareerPopup();
-        this.resetNewCareer();
-      } catch (error) {
-        console.error("ERROR SAVING CAREER:", error.response?.data || error);
-        console.error("Validation errors:", error.response?.data?.errors); // 👈 Add this for debugging
-        showToast("❌ Something went wrong while saving the career.");
-      } finally {
-        this.isEditMode = false;
-        this.careerToEditId = null;
-      }
-    },
+    // Save career (create or update) - DUPLICATE METHOD - DEPRECATED, keeping for backward compatibility
+    // This method appears to be unused in favor of the one below
 
     resetNewCareer() {
       this.newCareer = {
         position: "",
+        placeOfAssignment: "",
         details: "",
-        qualifications: "",
-        requirements: "",
-        letterAddress: "",
-        deadline: "",
+        qualificationStandard: "",
+        postingDate: "",
+        closingDate: "",
+        trainingsAttendedPercentage: null,
         Tags: [],
         pdfPath: "",
       };
@@ -1569,11 +1475,12 @@ export default {
         // Editing existing career
         this.newCareer = {
           position: normalizedCareer.position || "",
-          details: normalizedCareer.detailsAndInstructions || "",
-          qualifications: normalizedCareer.qualifications || "",
-          requirements: normalizedCareer.requirements || "",
-          letterAddress: normalizedCareer.applicationLetterAddress || "",
-          deadline: normalizedCareer.deadlineOfSubmission || "",
+          placeOfAssignment: normalizedCareer.placeOfAssignment || "",
+          details: normalizedCareer.details || "",
+          qualificationStandard: normalizedCareer.qualificationStandard || "",
+          postingDate: normalizedCareer.postingDate || "",
+          closingDate: normalizedCareer.closingDate || "",
+          trainingsAttendedPercentage: normalizedCareer.trainingsAttendedPercentage ?? null,
           Tags: Array.isArray(normalizedCareer.Tags)
             ? normalizedCareer.Tags.map(
               (tag) => tag.TagID ?? tag.tagID ?? tag.id
@@ -1635,11 +1542,11 @@ export default {
         // 🔹 1. Validate required fields
         const requiredFields = [
           "position",
+          "placeOfAssignment",
           "details",
-          "qualifications",
-          "requirements",
-          "letterAddress",
-          "deadline",
+          "qualificationStandard",
+          "postingDate",
+          "closingDate",
         ];
 
         for (const field of requiredFields) {
@@ -1662,21 +1569,17 @@ export default {
 
         const pdfPath = this.newCareer.pdfPath || "";
 
-        // 🔹 3. Prepare payload
+        // 🔹 3. Prepare payload (matches actual database schema - camelCase)
         const payload = {
           position: this.newCareer.position,
-          // include both legacy and new field names to satisfy either endpoint
+          placeOfAssignment: this.newCareer.placeOfAssignment,
           details: this.newCareer.details,
-          detailsAndInstructions: this.newCareer.details,
-          qualifications: this.newCareer.qualifications,
-          requirements: this.newCareer.requirements,
-          letterAddress: this.newCareer.letterAddress,
-          applicationLetterAddress: this.newCareer.letterAddress,
-          deadline: this.newCareer.deadline,
-          deadlineOfSubmission: this.newCareer.deadline,
+          qualificationStandard: this.newCareer.qualificationStandard,
+          pdf_directory: pdfPath || null,
+          postingDate: this.newCareer.postingDate,
+          closingDate: this.newCareer.closingDate,
+          trainingsAttendedPercentage: this.newCareer.trainingsAttendedPercentage ?? null,
           Tags: this.newCareer.Tags || [],
-          orgPdfPath: pdfPath || null,
-          org_pdf_directory: pdfPath || null,
         };
         console.log("🔹 Payload:", payload);
 
@@ -1746,11 +1649,12 @@ export default {
     resetNewCareer() {
       this.newCareer = {
         position: "",
+        placeOfAssignment: "",
         details: "",
-        qualifications: "",
-        requirements: "",
-        letterAddress: "",
-        deadline: "",
+        qualificationStandard: "",
+        postingDate: "",
+        closingDate: "",
+        trainingsAttendedPercentage: null,
         Tags: [],
         pdfPath: "",
       };
@@ -1768,6 +1672,19 @@ export default {
         });
       } catch (error) {
         return deadline;
+      }
+    },
+    formatDate(date) {
+      if (!date) return "Not set";
+      try {
+        const dateObj = new Date(date);
+        return dateObj.toLocaleString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+      } catch (error) {
+        return date;
       }
     },
   },
@@ -1795,13 +1712,18 @@ export default {
         : [];
       return list
         .filter((c) => {
-          if (!c.deadlineOfSubmission) return true;
-          const d = new Date(c.deadlineOfSubmission);
-          return d >= now; // only future deadlines
+          const closingDate = c.closingDate || c.deadlineOfSubmission;
+          if (!closingDate) return true;
+          const d = new Date(closingDate);
+          return d >= now; // only future closing dates
         })
         .sort(
-          (a, b) =>
-            new Date(a.deadlineOfSubmission) - new Date(b.deadlineOfSubmission)
+          (a, b) => {
+            const aDate = a.closingDate || a.deadlineOfSubmission;
+            const bDate = b.closingDate || b.deadlineOfSubmission;
+            if (!aDate || !bDate) return 0;
+            return new Date(aDate) - new Date(bDate);
+          }
         );
     },
 
@@ -1812,19 +1734,24 @@ export default {
         : [];
       return list
         .filter((c) => {
-          if (!c.deadlineOfSubmission) return false;
-          const d = new Date(c.deadlineOfSubmission);
-          return d < now; // only past deadlines
+          const closingDate = c.closingDate || c.deadlineOfSubmission;
+          if (!closingDate) return false;
+          const d = new Date(closingDate);
+          return d < now; // only past closing dates
         })
         .sort(
-          (a, b) =>
-            new Date(b.deadlineOfSubmission) - new Date(a.deadlineOfSubmission)
+          (a, b) => {
+            const aDate = a.closingDate || a.deadlineOfSubmission;
+            const bDate = b.closingDate || b.deadlineOfSubmission;
+            if (!aDate || !bDate) return 0;
+            return new Date(bDate) - new Date(aDate);
+          }
         );
     },
     filteredUpcomingCareers() {
       const query = this.globalSearchQuery.toLowerCase();
       return this.sortedUpcomingCareers.filter((career) =>
-        career.position.toLowerCase().includes(query)
+        (career.position || "").toLowerCase().includes(query)
       );
     },
     // 🔹 Filter upcoming careers (real-time, from start of string)
@@ -1832,7 +1759,7 @@ export default {
       const query = this.globalSearchQuery.toLowerCase();
       if (!query) return this.sortedUpcomingCareers;
       return this.sortedUpcomingCareers.filter((career) =>
-        career.position.toLowerCase().startsWith(query)
+        (career.position || "").toLowerCase().startsWith(query)
       );
     },
 
@@ -2175,7 +2102,7 @@ async function viewRequirement(id) {
             <div class="career-right">
               <h3 class="career-title">{{ career.position }}</h3>
               <p class="career-deadline">
-                Deadline: {{ formatdeadline(career.deadlineOfSubmission) }}
+                Closing: {{ formatdeadline(career.closingDate || career.deadlineOfSubmission) }}
               </p>
             </div>
 
@@ -2230,7 +2157,7 @@ async function viewRequirement(id) {
                 {{ career.title || career.position }}
               </h3>
               <p class="career-deadline">
-                Closed: {{ formatdeadline(career.deadlineOfSubmission) }}
+                Closed: {{ formatdeadline(career.closingDate || career.deadlineOfSubmission) }}
               </p>
             </div>
 
@@ -2458,10 +2385,10 @@ async function viewRequirement(id) {
 
           <form @submit.prevent="saveCareer" class="Career-popup-form">
             <!-- Inputs -->
-            <input v-model="newCareer.position" type="text" placeholder="Position" class="career-input" />
-            <input v-model="newCareer.details" type="text" placeholder="Details and Instruction" class="career-input" />
-            <textarea v-model="newCareer.qualifications" placeholder="Qualifications" class="career-input"></textarea>
-            <textarea v-model="newCareer.requirements" placeholder="Requirements" class="career-input"></textarea>
+            <input v-model="newCareer.position" type="text" placeholder="Position" class="career-input" required />
+            <input v-model="newCareer.placeOfAssignment" type="text" placeholder="Place of Assignment" class="career-input" required />
+            <textarea v-model="newCareer.details" placeholder="Details" class="career-input" required></textarea>
+            <textarea v-model="newCareer.qualificationStandard" placeholder="Qualification Standard" class="career-input" required></textarea>
             <div class="career-upload-wrapper">
               <label class="career-upload-label">Attach PDF (optional)</label>
               <input ref="careerPdfInput" type="file" accept="application/pdf" class="career-input"
@@ -2477,21 +2404,31 @@ async function viewRequirement(id) {
                 </div>
               </div>
             </div>
-            <input v-model="newCareer.letterAddress" type="text" placeholder="Application Letter Address"
-              class="career-input" />
 
-            <!-- Deadline -->
+            <!-- Posting Date -->
             <div class="deadline-input-wrapper">
+              <label class="career-upload-label">Posting Date</label>
               <input
                 type="date"
-                v-model="newCareer.deadline"
+                v-model="newCareer.postingDate"
                 :min="todayDate"
-                placeholder="Deadline of Submission"
+                placeholder="Posting Date"
                 class="career-input"
+                required
               />
-              <span class="calendar-icon">
-                <!-- SVG omitted for brevity -->
-              </span>
+            </div>
+
+            <!-- Closing Date -->
+            <div class="deadline-input-wrapper">
+              <label class="career-upload-label">Closing Date</label>
+              <input
+                type="date"
+                v-model="newCareer.closingDate"
+                :min="newCareer.postingDate || todayDate"
+                placeholder="Closing Date"
+                class="career-input"
+                required
+              />
             </div>
 
             <!-- Tags -->
@@ -2557,35 +2494,41 @@ async function viewRequirement(id) {
       >
         <div class="career-details-modal">
           <button class="modal-close-btn" @click="closeCareerDetails">✕</button>
-          <h3 class="modal-title">{{ selectedCareer.title }}</h3>
+          <h3 class="modal-title">{{ selectedCareer.position }}</h3>
           <p class="career-info">
             <span class="career-group">
               <strong>Position:</strong>
               <span>{{ selectedCareer.position }}</span>
             </span>
             <span class="career-group">
-              <strong>Requirements:</strong>
-              <span>{{ selectedCareer.requirements }}</span>
+              <strong>Place of Assignment:</strong>
+              <span>{{ selectedCareer.placeOfAssignment || selectedCareer.applicationLetterAddress }}</span>
             </span>
           </p>
           <p class="career-info">
             <span class="career-group">
               <strong>Details:</strong>
-              <span>{{ selectedCareer.detailsAndInstructions }}</span>
+              <span>{{ selectedCareer.details || selectedCareer.detailsAndInstructions }}</span>
             </span>
             <span class="career-group">
-              <strong>Letter Address:</strong>
-              <span>{{ selectedCareer.applicationLetterAddress }}</span>
+              <strong>Qualification Standard:</strong>
+              <span>{{ selectedCareer.qualificationStandard || selectedCareer.qualifications }}</span>
             </span>
           </p>
           <p class="career-info">
             <span class="career-group">
-              <strong>Qualifications:</strong>
-              <span>{{ selectedCareer.qualifications }}</span>
+              <strong>Posting Date:</strong>
+              <span>{{ formatDate(selectedCareer.postingDate) }}</span>
             </span>
             <span class="career-group">
-              <strong>Deadline:</strong>
-              <span>{{ formatdeadline(selectedCareer.deadlineOfSubmission) }}</span>
+              <strong>Closing Date:</strong>
+              <span>{{ formatdeadline(selectedCareer.closingDate || selectedCareer.deadlineOfSubmission) }}</span>
+            </span>
+          </p>
+          <p class="career-info" v-if="selectedCareer.trainingsAttendedPercentage !== null && selectedCareer.trainingsAttendedPercentage !== undefined">
+            <span class="career-group">
+              <strong>Trainings Attended Percentage:</strong>
+              <span>{{ selectedCareer.trainingsAttendedPercentage }}%</span>
             </span>
           </p>
           <p

@@ -13,10 +13,11 @@ use Illuminate\Database\Eloquent\Model;
  * Class Registration
  * 
  * @property int $registrationID
- * @property Carbon $registrationDate
- * @property Carbon $registrationStatus
- * @property string|null $certTrackingID
- * @property Carbon|null $certGivenDate
+ * @property Carbon $RegistrationDate
+ * @property string $RegistrationStatus (Registered/Cancelled/Did not Attend/Attended)
+ * @property string|null $CertTrackingID
+ * @property Carbon|null $CertGivenDate
+ * @property string|null $Certificate (png)
  * @property int|null $trainingID
  * @property int|null $applicantID
  * 
@@ -40,13 +41,19 @@ class Registration extends Model
 	];
 
 	protected $fillable = [
-		'registrationDate',
-		'registrationStatus',
-		'certTrackingID',
-		'certGivenDate',
+		'RegistrationDate',
+		'registrationDate', // backward compatibility
+		'RegistrationStatus',
+		'registrationStatus', // backward compatibility
+		'CertTrackingID',
+		'certTrackingID', // backward compatibility
+		'CertGivenDate',
+		'certGivenDate', // backward compatibility
+		'Certificate',
+		'certificate', // backward compatibility
+		'certificatePath', // backward compatibility
 		'trainingID',
 		'applicantID',
-		'certificatePath'
 	];
 
 	public function training()
