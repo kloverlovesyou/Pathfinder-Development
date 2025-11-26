@@ -17,7 +17,13 @@
           </div>
           <!-- Avatar always visible -->
           <div class="avatar">
-            <img :src="dictLogo" alt="DICT Logo" class="avatar-img" />
+            <img v-if="logoUrl" :src="logoUrl" alt="Organization Logo" class="avatar-img" />
+            <div v-else class="avatar-placeholder">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M20.59 22C20.59 18.13 16.74 15 12 15C7.26 15 3.41 18.13 3.41 22" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
           </div>
 
           <!-- Profile Section (only when sidebar is open) -->
@@ -179,14 +185,20 @@
                   <h4 class="group-title">🟦 Trainings</h4>
                   <div v-for="(event, i) in selectedEvents.trainings" :key="'t-' + i" class="event-details-card">
                     <h5>{{ event.title }}</h5>
-                    <p class="event-info" v-if="event.startTime"><strong>Start Time:</strong> {{
-                      formatTime12Hour(event.startTime) }}</p>
-                    <p class="event-info" v-if="event.endTime"><strong>End Time:</strong> {{
-                      formatTime12Hour(event.endTime) }}</p>
-                    <p class="event-info" v-if="event.mode"><strong>Mode:</strong> {{ event.mode }}</p>
-                    <p class="event-info" v-if="event.location"><strong>Location:</strong> {{ event.location }}</p>
                     <p class="event-info" v-if="event.description"><strong>Description:</strong></p>
                     <p class="event-info" v-if="event.description">{{ event.description }}</p>
+                    <p class="event-info" v-if="event.startTime || event.endTime">
+                      <strong>Date and Time:</strong> 
+                      <span v-if="event.startTime">{{ formatTime12Hour(event.startTime) }}</span>
+                      <span v-if="event.startTime && event.endTime"> - </span>
+                      <span v-if="event.endTime">{{ formatTime12Hour(event.endTime) }}</span>
+                    </p>
+                    <p class="event-info" v-if="event.mode"><strong>Mode:</strong> {{ event.mode }}</p>
+                    <p class="event-info" v-if="event.location"><strong>Location:</strong> {{ event.location }}</p>
+                    <p class="event-info" v-if="event.link">
+                      <strong>Link:</strong> 
+                      <a :href="event.link" target="_blank" rel="noopener noreferrer" class="event-link">{{ event.link }}</a>
+                    </p>
                   </div>
                 </div>
 
@@ -195,12 +207,14 @@
                   <h4 class="group-title">🟨 Careers</h4>
                   <div v-for="(event, i) in selectedEvents.careers" :key="'c-' + i" class="event-details-card">
                     <h5>{{ event.title }}</h5>
-                    <p class="event-info" v-if="event.qualifications"><strong>Qualifications:</strong></p>
-                    <p class="event-info" v-if="event.qualifications">{{ event.qualifications }}</p>
+                    <p class="event-info" v-if="event.qualificationStandard"><strong>Qualification Standard:</strong></p>
+                    <p class="event-info" v-if="event.qualificationStandard">{{ event.qualificationStandard }}</p>
                     <p class="event-info" v-if="event.requirements"><strong>Requirements:</strong></p>
                     <p class="event-info" v-if="event.requirements">{{ event.requirements }}</p>
                     <p class="event-info" v-if="event.details"><strong>Details:</strong></p>
                     <p class="event-info" v-if="event.details">{{ event.details }}</p>
+                    <p class="event-info" v-if="event.postingDate"><strong>Posting Date:</strong> {{ event.postingDate }}</p>
+                    <p class="event-info" v-if="event.closingDate"><strong>Closing Date:</strong> {{ event.closingDate }}</p>
                   </div>
                 </div>
 
@@ -210,8 +224,13 @@
                   <div v-for="(event, i) in selectedEvents.interviews" :key="'i-' + i" class="event-details-card">
                     <h5>{{ event.title }}</h5>
                     <p class="event-info"><strong>Applicant:</strong> {{ event.applicantName || event.applicantID || 'N/A' }}</p>
-                    <p class="event-info"><strong>Time:</strong> {{ formatTime12Hour(event.interviewSchedule) || 'TBD'
-                    }}</p>
+                    <p class="event-info" v-if="event.interviewTime">
+                      <strong>Time:</strong> {{ formatTime12Hour(event.interviewTime) }}
+                    </p>
+                    <p class="event-info" v-else-if="event.interviewSchedule">
+                      <strong>Time:</strong> {{ formatTime12Hour(event.interviewSchedule) || 'TBD' }}
+                    </p>
+                    <p class="event-info" v-else><strong>Time:</strong> TBD</p>
                     <p class="event-info" v-if="event.mode"><strong>Mode:</strong> {{ event.interviewMode }}</p>
                     <p class="event-info" v-if="event.location"><strong>Location:</strong> {{ event.interviewLocation }}
                     </p>
@@ -238,15 +257,15 @@
   </template>
 
 <script>
-import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
 import axios from "axios";
 import api from "@/composables/api";
+import { getImageUrl } from "@/lib/supabase.js";
 
 export default {
   name: "OrganizationCalendar",
   data() {
     return {
-      dictLogo,
+      organizationLogo: null,
       currentDate: new Date(),
       selectedEvents: { trainings: [], careers: [], scheduledInterviews: [] },
       isSidebarOpen: true,
@@ -268,6 +287,18 @@ export default {
     return { events };
   },
   computed: {
+    logoUrl() {
+      if (this.organizationLogo) {
+        const logoPath = this.organizationLogo.logo_directory || 
+                        this.organizationLogo.Logo_directory || 
+                        this.organizationLogo.logoPath;
+        if (logoPath) {
+          const url = getImageUrl(logoPath, "Requirements");
+          return url || null;
+        }
+      }
+      return null;
+    },
     monthYear() {
       return this.currentDate.toLocaleString("default", {
         month: "long",
@@ -304,12 +335,30 @@ export default {
     formatTime12Hour(time) {
       if (!time) return "";
 
-      // Remove seconds if present
-      const [hourStr, minuteStr] = time.split(":");
+      // Handle both "HH:mm" format and datetime strings
+      let hourStr, minuteStr;
+      
+      if (typeof time === 'string') {
+        // Extract time from "HH:mm" or "YYYY-MM-DD HH:mm" or "YYYY-MM-DDTHH:mm:ss"
+        const timeMatch = time.match(/(\d{1,2}):(\d{2})/);
+        if (timeMatch) {
+          hourStr = timeMatch[1];
+          minuteStr = timeMatch[2];
+        } else {
+          return ""; // Invalid format
+        }
+      } else {
+        return ""; // Not a string
+      }
 
       // Parse hours and minutes
       const hours = parseInt(hourStr, 10);
       const minutes = parseInt(minuteStr, 10);
+
+      // Validate parsed values
+      if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+        return "";
+      }
 
       // Determine AM/PM
       const ampm = hours >= 12 ? "PM" : "AM";
@@ -317,7 +366,7 @@ export default {
       // Convert to 12-hour format
       const displayHour = hours % 12 === 0 ? 12 : hours % 12;
 
-      // Return formatted time
+      // Return formatted time (exact time from database, just converted to 12-hour format)
       return `${displayHour}:${minutes.toString().padStart(2, "0")} ${ampm}`;
     },
 
@@ -373,15 +422,35 @@ export default {
 
         const interviews = res.data.map((interview) => {
           const schedule = interview.interviewSchedule || interview.schedule || null;
-          const scheduleDate = schedule ? new Date(schedule) : null;
+          
+          // Parse date string directly to avoid timezone issues
+          let date = "";
+          let interviewTime = "";
+          
+          if (schedule) {
+            // Handle format "2025-12-03 14:30" or "2025-12-03T14:30:00" or ISO string
+            const dateTimeMatch = String(schedule).match(/(\d{4}-\d{2}-\d{2})[T\s](\d{2}):(\d{2})/);
+            if (dateTimeMatch) {
+              date = dateTimeMatch[1]; // "2025-12-03"
+              interviewTime = `${dateTimeMatch[2]}:${dateTimeMatch[3]}`; // "14:30"
+            } else {
+              // Fallback to Date object if format doesn't match
+              const scheduleDate = new Date(schedule);
+              if (!isNaN(scheduleDate.getTime())) {
+                date = scheduleDate.toISOString().split("T")[0];
+                interviewTime = scheduleDate.toTimeString().slice(0, 5);
+              }
+            }
+          }
 
           return {
             id: interview.id || interview.applicationID || interview.interviewID,
             applicantID: interview.applicantID || interview.applicant_id || null,
             applicantName: interview.applicantName || null,
             title: interview.title || interview.interwiewStatus || "For Interview",
-            date: scheduleDate ? scheduleDate.toISOString().split("T")[0] : "",
+            date: date,
             interviewSchedule: schedule,
+            interviewTime: interviewTime, // Store exact time for display
             interviewMode: interview.interviewMode || interview.mode || null,
             interviewLink: interview.interviewLink || interview.link || null,
             interviewLocation: interview.interviewLocation || interview.location || null,
@@ -415,24 +484,95 @@ export default {
         });
       }
 
-      this.trainings = res.data.map(t => {
-        const start = t.schedule ? new Date(t.schedule + " UTC") : null;
-        const end = t.end_time ? new Date(t.end_time + " UTC") : null;
+      // Handle multiple schedules per training
+      const trainingEvents = [];
+      res.data.forEach(t => {
+        // If training has schedules array, create one event per schedule
+        if (t.schedules && Array.isArray(t.schedules) && t.schedules.length > 0) {
+          t.schedules.forEach((schedule, index) => {
+            // Parse date string directly to avoid timezone issues
+            // Format from backend: "2025-12-03 14:30" (Y-m-d H:i)
+            const scheduleStr = schedule.schedule || "";
+            const endTimeStr = schedule.end_time || "";
+            
+            // Extract date and time components directly from string
+            let date = "";
+            let startTime = "";
+            let endTime = "";
+            
+            if (scheduleStr) {
+              // Handle format "2025-12-03 14:30" or "2025-12-03T14:30:00"
+              const dateTimeMatch = scheduleStr.match(/(\d{4}-\d{2}-\d{2})[T\s](\d{2}):(\d{2})/);
+              if (dateTimeMatch) {
+                date = dateTimeMatch[1]; // "2025-12-03"
+                startTime = `${dateTimeMatch[2]}:${dateTimeMatch[3]}`; // "14:30"
+              }
+            }
+            
+            if (endTimeStr) {
+              // Handle format "2025-12-03 14:30" or "2025-12-03T14:30:00"
+              const endTimeMatch = endTimeStr.match(/(\d{4}-\d{2}-\d{2})[T\s](\d{2}):(\d{2})/);
+              if (endTimeMatch) {
+                endTime = `${endTimeMatch[2]}:${endTimeMatch[3]}`; // "16:00"
+              }
+            }
 
-        return {
-          id: t.trainingID,
-          title: t.title,
-          description: t.description,
-          date: start ? start.toISOString().split("T")[0] : "", // "2025-12-03"
-          startTime: start ? start.toTimeString().slice(0, 5) : "", // "07:30"
-          endTime: end ? end.toTimeString().slice(0, 5) : "",       // "12:00"
-          mode: t.mode,
-          location: t.location,
-          link: t.trainingLink,
-          organizationID: t.organization.organizationID,
-        };
+            trainingEvents.push({
+              id: `${t.trainingID}-${schedule.trainingScheduleID || index}`,
+              trainingID: t.trainingID,
+              title: t.title,
+              description: t.description,
+              date: date, // "2025-12-03"
+              startTime: startTime, // "14:30" (exact from database)
+              endTime: endTime, // "16:00" (exact from database)
+              mode: schedule.mode || null,
+              location: schedule.location || null,
+              link: schedule.trainingLink || schedule.training_link || null,
+              organizationID: t.organization?.organizationID || t.organizationID,
+            });
+          });
+        } else if (t.schedule) {
+          // Backward compatibility: single schedule
+          const scheduleStr = t.schedule || "";
+          const endTimeStr = t.end_time || "";
+          
+          // Extract date and time components directly from string
+          let date = "";
+          let startTime = "";
+          let endTime = "";
+          
+          if (scheduleStr) {
+            const dateTimeMatch = scheduleStr.match(/(\d{4}-\d{2}-\d{2})[T\s](\d{2}):(\d{2})/);
+            if (dateTimeMatch) {
+              date = dateTimeMatch[1];
+              startTime = `${dateTimeMatch[2]}:${dateTimeMatch[3]}`;
+            }
+          }
+          
+          if (endTimeStr) {
+            const endTimeMatch = endTimeStr.match(/(\d{4}-\d{2}-\d{2})[T\s](\d{2}):(\d{2})/);
+            if (endTimeMatch) {
+              endTime = `${endTimeMatch[2]}:${endTimeMatch[3]}`;
+            }
+          }
+
+          trainingEvents.push({
+            id: t.trainingID,
+            trainingID: t.trainingID,
+            title: t.title,
+            description: t.description,
+            date: date,
+            startTime: startTime,
+            endTime: endTime,
+            mode: t.mode || null,
+            location: t.location || null,
+            link: t.trainingLink || null,
+            organizationID: t.organization?.organizationID || t.organizationID,
+          });
+        }
       });
 
+      this.trainings = trainingEvents;
     },
 
     async fetchCareers() {
@@ -441,10 +581,12 @@ export default {
       this.careers = res.data.map(c => ({
         id: c.careerID,
         title: c.position,
-        details: c.detailsAndInstructions,
-        qualifications: c.qualifications,
+        details: c.detailsAndInstructions || c.details,
+        qualificationStandard: c.qualificationStandard,
         requirements: c.requirements,
         letterAddress: c.applicationLetterAddress,
+        postingDate: c.postingDate ? c.postingDate.split("T")[0] : null,
+        closingDate: c.closingDate ? c.closingDate.split("T")[0] : null,
         // 👇 Fix the date formatting here
         date: c.deadlineOfSubmission ? c.deadlineOfSubmission.split("T")[0] : null,
         // 👇 Also fix organization mapping if your backend nests it
@@ -590,6 +732,21 @@ export default {
     }
   },
   mounted() {
+    // Get organization logo from localStorage
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        if (user.organization) {
+          this.organizationLogo = user.organization;
+        } else if (user.logo_directory || user.Logo_directory || user.logoPath) {
+          this.organizationLogo = user;
+        }
+      } catch (error) {
+        console.error("Error parsing user from localStorage:", error);
+      }
+    }
+    
     this.fetchTrainings();
     this.fetchCareers();
     this.fetchApplications();
@@ -873,13 +1030,32 @@ const isToday = (date) => {
   /* placeholder for logo/avatar */
 }
 
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
 .avatar {
   width: 70px;
   height: 70px;
   border-radius: 50%;
   background-color: #ccc;
-  /* Placeholder, replace with image if needed */
   margin: 20px auto 10px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .org-name {
@@ -1201,6 +1377,16 @@ const isToday = (date) => {
 .event-info {
   margin: 0.4rem 0;
   color: #333;
+}
+
+.event-link {
+  color: #2563eb;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.event-link:hover {
+  text-decoration: underline;
 }
 
 .show-more {

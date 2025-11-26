@@ -1,5 +1,4 @@
 <script>
-import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
 import { ref, onMounted } from "vue";
 import axios from "axios";
 import api from "@/api/axios";
@@ -67,7 +66,7 @@ export default {
       requirementsUrl: null,
       selectedCareer: { title: "", careerID: null, position: "" },
       newTagName: "",
-      dictLogo,
+      organizationLogo: null,
       globalSearchQuery: "",
       openUpcomingMenu: null,
       openCompletedMenu: null,
@@ -105,7 +104,6 @@ export default {
         qualificationStandard: "",
         postingDate: "",
         closingDate: "",
-        trainingsAttendedPercentage: null,
         Tags: [],
         pdfPath: "",
       },
@@ -1307,42 +1305,8 @@ export default {
 
     // Open career in edit mode
     async updateCareer(career) {
-      // Load tag options first (same as trainings)
-      await this.fetchTags();
-
-      const normalizedCareer = this.normalizeCareer(career);
-
-      this.showCareerPopup = true;
-      this.isEditMode = true;
-      this.careerToEditId =
-        normalizedCareer.careerID || normalizedCareer.id || this.careerToEditId;
-
-      // Prefill career data
-      this.newCareer = {
-        position: normalizedCareer.position || "",
-        placeOfAssignment: normalizedCareer.placeOfAssignment || "",
-        details: normalizedCareer.details || "",
-        qualificationStandard: normalizedCareer.qualificationStandard || "",
-        postingDate: normalizedCareer.postingDate || "",
-        closingDate: normalizedCareer.closingDate || "",
-        trainingsAttendedPercentage: normalizedCareer.trainingsAttendedPercentage ?? null,
-        pdfPath: normalizedCareer.pdfPath || "",
-
-        // Same fix used in training tab
-        Tags: Array.isArray(normalizedCareer.Tags)
-          ? normalizedCareer.Tags.map((tag) =>
-            Number(tag.TagID ?? tag.tagID ?? tag.id)
-          )
-          : [],
-      };
-
-      if (!Array.isArray(this.newCareer.Tags)) {
-        this.newCareer.Tags = [];
-      }
-
-      this.updateCareerPdfPreview(this.newCareer.pdfPath);
-
-      console.log("Prefilled career:", this.newCareer);
+      // Use openCareerPopup to ensure consistency
+      await this.openCareerPopup(career);
     },
 
     // Save career (create or update) - DUPLICATE METHOD - DEPRECATED, keeping for backward compatibility
@@ -1356,7 +1320,6 @@ export default {
         qualificationStandard: "",
         postingDate: "",
         closingDate: "",
-        trainingsAttendedPercentage: null,
         Tags: [],
         pdfPath: "",
       };
@@ -1469,21 +1432,59 @@ export default {
         console.error("ERROR FETCHING CAREERS:", error);
       }
     },
-    openCareerPopup(career = null) {
+    formatDateForInput(dateString) {
+      if (!dateString) return "";
+      
+      try {
+        // Handle different date formats from API
+        let date;
+        if (typeof dateString === 'string') {
+          // If it's already in YYYY-MM-DD format, return as is
+          if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+            return dateString;
+          }
+          // If it includes time, extract just the date part
+          if (dateString.includes('T') || dateString.includes(' ')) {
+            date = new Date(dateString);
+          } else {
+            date = new Date(dateString);
+          }
+        } else {
+          date = new Date(dateString);
+        }
+        
+        // Check if date is valid
+        if (isNaN(date.getTime())) {
+          return "";
+        }
+        
+        // Format as YYYY-MM-DD for date input
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}`;
+      } catch (error) {
+        console.error("Error formatting date:", error);
+        return "";
+      }
+    },
+    async openCareerPopup(career = null) {
+      await this.fetchTags(); // Load tags first
+      
       if (career) {
         const normalizedCareer = this.normalizeCareer(career);
-        // Editing existing career
+        // Editing existing career - populate ALL fields
         this.newCareer = {
           position: normalizedCareer.position || "",
           placeOfAssignment: normalizedCareer.placeOfAssignment || "",
           details: normalizedCareer.details || "",
           qualificationStandard: normalizedCareer.qualificationStandard || "",
-          postingDate: normalizedCareer.postingDate || "",
-          closingDate: normalizedCareer.closingDate || "",
-          trainingsAttendedPercentage: normalizedCareer.trainingsAttendedPercentage ?? null,
+          postingDate: this.formatDateForInput(normalizedCareer.postingDate) || "",
+          closingDate: this.formatDateForInput(normalizedCareer.closingDate) || "",
           Tags: Array.isArray(normalizedCareer.Tags)
             ? normalizedCareer.Tags.map(
-              (tag) => tag.TagID ?? tag.tagID ?? tag.id
+              (tag) => Number(tag.TagID ?? tag.tagID ?? tag.id)
             )
             : [],
           pdfPath: normalizedCareer.pdfPath || "",
@@ -1501,7 +1502,6 @@ export default {
         this.newCareer.Tags = [];
       }
       this.showCareerPopup = true;
-      this.fetchTags();
     },
     closeCareerPopup() {
       this.showCareerPopup = false;
@@ -1578,7 +1578,6 @@ export default {
           pdf_directory: pdfPath || null,
           postingDate: this.newCareer.postingDate,
           closingDate: this.newCareer.closingDate,
-          trainingsAttendedPercentage: this.newCareer.trainingsAttendedPercentage ?? null,
           Tags: this.newCareer.Tags || [],
         };
         console.log("🔹 Payload:", payload);
@@ -1690,6 +1689,18 @@ export default {
   },
 
   computed: {
+    logoUrl() {
+      if (this.organizationLogo) {
+        const logoPath = this.organizationLogo.logo_directory || 
+                        this.organizationLogo.Logo_directory || 
+                        this.organizationLogo.logoPath;
+        if (logoPath) {
+          const url = getImageUrl(logoPath, "Requirements");
+          return url || null;
+        }
+      }
+      return null;
+    },
     todayDate() {
       const today = new Date();
       const year = today.getFullYear();
@@ -1821,6 +1832,21 @@ export default {
   },
 
   mounted() {
+    // Get organization logo from localStorage
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        if (user.organization) {
+          this.organizationLogo = user.organization;
+        } else if (user.logo_directory || user.Logo_directory || user.logoPath) {
+          this.organizationLogo = user;
+        }
+      } catch (error) {
+        console.error("Error parsing user from localStorage:", error);
+      }
+    }
+    
     this.fetchCareers();
     this.fetchTags();
     document.addEventListener("click", this.handleClickOutside);
@@ -1835,10 +1861,14 @@ export default {
 <script setup>
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { useOrganizationLogo } from "@/composables/useOrganizationLogo.js";
 
 const router = useRouter();
 const isSidebarOpen = ref(true);
 const organizationName = ref("");
+
+// Get organization logo
+const { logoUrl } = useOrganizationLogo();
 
 // Toggle sidebar
 const toggleSidebar = () => {
@@ -1903,7 +1933,13 @@ async function viewRequirement(id) {
         <div class="space"></div>
         <!-- Avatar always visible -->
         <div class="avatar">
-          <img :src="dictLogo" alt="DICT Logo" class="avatar-img" />
+          <img v-if="logoUrl" :src="logoUrl" alt="Organization Logo" class="avatar-img" />
+          <div v-else class="avatar-placeholder">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M20.59 22C20.59 18.13 16.74 15 12 15C7.26 15 3.41 18.13 3.41 22" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
         </div>
 
         <!-- Profile Section (only when sidebar is open) -->
@@ -3037,13 +3073,32 @@ async function viewRequirement(id) {
   /* placeholder for logo/avatar */
 }
 
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
 .avatar {
   width: 70px;
   height: 70px;
   border-radius: 50%;
   background-color: #ccc;
-  /* Placeholder, replace with image if needed */
   margin: 20px auto 10px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .org-name {
@@ -3453,8 +3508,10 @@ async function viewRequirement(id) {
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   width: 600px;
+  max-height: 90vh;
   padding: 24px;
   position: relative;
+  overflow-y: auto;
 }
 
 .career-popup-close {
@@ -3479,6 +3536,25 @@ async function viewRequirement(id) {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+/* Custom scrollbar for career popup */
+.career-popup::-webkit-scrollbar {
+  width: 8px;
+}
+
+.career-popup::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.career-popup::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.career-popup::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
 .career-input {

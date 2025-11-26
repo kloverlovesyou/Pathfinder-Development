@@ -13,7 +13,16 @@ class Tag extends Model
     protected $primaryKey = 'TagID';
     public $timestamps = false;
 
-    protected $fillable = ['TagName'];
+    protected $fillable = ['tagName', 'TagName']; // Support both camelCase (database) and PascalCase (backward compatibility)
+
+    /**
+     * Accessor to get TagName (PascalCase) from tagName (camelCase) for backward compatibility
+     */
+    public function getTagNameAttribute($value)
+    {
+        // If accessing as TagName, return tagName value
+        return $this->attributes['tagName'] ?? $value;
+    }
 
     /**
      * A tag can be associated with many careers.

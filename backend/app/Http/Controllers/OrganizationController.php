@@ -120,6 +120,8 @@ class OrganizationController extends Controller
             ],
             'phoneNumber' => 'nullable|string|max:20',
             'password'    => 'required|string|min:8',
+            'logoPath'    => 'nullable|string|max:500',
+            'logo_directory' => 'nullable|string|max:500', // backward compatibility
         ]);
 
         if ($validator->fails()) {
@@ -143,6 +145,7 @@ class OrganizationController extends Controller
             'emailAddress'=> $request->input('emailAddress'),
             'phoneNumber' => $request->input('phoneNumber'),
             'password'    => Hash::make($request->input('password')),
+            'logo_directory' => $request->input('logoPath') ?? $request->input('logo_directory') ?? $request->input('Logo_directory') ?? null,
             'adminID'     => $request->input('adminID'),
             'status'      => 'pending',
             'email_verification_token' => $verificationToken,

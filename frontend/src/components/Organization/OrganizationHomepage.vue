@@ -17,7 +17,13 @@
         </div>
         <!-- Avatar always visible -->
         <div class="avatar">
-          <img :src="dictLogo" alt="DICT Logo" class="avatar-img" />
+          <img v-if="logoUrl" :src="logoUrl" alt="Organization Logo" class="avatar-img" />
+          <div v-else class="avatar-placeholder">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M20.59 22C20.59 18.13 16.74 15 12 15C7.26 15 3.41 18.13 3.41 22" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
         </div>
 
         <!-- Profile Section (only when sidebar is open) -->
@@ -165,15 +171,14 @@
 </template>
 
 <script>
-import { ref, onMounted } from "vue";
-import dictLogo from "@/assets/images/DICT-Logo-icon_only (1).png";
+import { ref, onMounted, computed } from "vue";
+import { getImageUrl } from "@/lib/supabase.js";
 
 export default {
   name: "OrganizationHomePage",
 
   data() {
     return {
-      dictLogo,
     };
   },
 
@@ -181,15 +186,44 @@ export default {
     const isSidebarOpen = ref(true);
 
     const organizationName = ref("Loading...");
+    const organizationLogo = ref(null);
+
+    // Computed property for logo URL - use organization logo if available
+    const logoUrl = computed(() => {
+      if (organizationLogo.value) {
+        const logoPath = organizationLogo.value.logo_directory || organizationLogo.value.Logo_directory || organizationLogo.value.logoPath;
+        if (logoPath) {
+          const url = getImageUrl(logoPath, "Requirements");
+          return url || null;
+        }
+      }
+      return null;
+    });
 
     onMounted(() => {
       const storedName = localStorage.getItem("organizationName");
       organizationName.value = storedName || "My Organization";
+      
+      // Get organization logo from localStorage
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        if (user.organization) {
+          organizationLogo.value = user.organization;
+        } else if (user.logo_directory || user.Logo_directory || user.logoPath) {
+          organizationLogo.value = user;
+        }
+      }
     });
 
     // Functions
     const toggleSidebar = () => {
       isSidebarOpen.value = !isSidebarOpen.value;
+    };
+
+    return {
+      logoUrl,
+      organizationLogo,
     };
   },
 };
@@ -197,10 +231,11 @@ export default {
 
 
 <script setup>
-import { ref, nextTick, onMounted } from 'vue';
+import { ref, nextTick, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import Chart from 'chart.js/auto';
 import api from '@/composables/api';
+import { getImageUrl } from "@/lib/supabase.js";
 
 // ----------------------
 // Router & Sidebar
@@ -213,11 +248,32 @@ const toggleSidebar = () => isSidebarOpen.value = !isSidebarOpen.value;
 // Organization & User Info
 // ----------------------
 const organizationName = ref('Loading...');
+const organizationLogo = ref(null);
+
+// Computed property for logo URL - use organization logo if available
+const logoUrl = computed(() => {
+  if (organizationLogo.value) {
+    const logoPath = organizationLogo.value.logo_directory || organizationLogo.value.Logo_directory || organizationLogo.value.logoPath;
+    if (logoPath) {
+      const url = getImageUrl(logoPath, "Requirements");
+      return url || null;
+    }
+  }
+  return null;
+});
+
 onMounted(() => {
   const storedUser = localStorage.getItem("user");
   if (storedUser) {
     const user = JSON.parse(storedUser);
     organizationName.value = user.organizationName || user.displayName || user.name || "Unknown Org";
+    
+    // Get organization logo
+    if (user.organization) {
+      organizationLogo.value = user.organization;
+    } else if (user.logo_directory || user.Logo_directory || user.logoPath) {
+      organizationLogo.value = user;
+    }
   }
 });
 
@@ -849,13 +905,32 @@ const logout = () => {
   /* placeholder for logo/avatar */
 }
 
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
 .avatar {
   width: 70px;
   height: 70px;
   border-radius: 50%;
   background-color: #ccc;
-  /* Placeholder, replace with image if needed */
   margin: 20px auto 10px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .org-name {

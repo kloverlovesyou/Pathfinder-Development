@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Model;
  * Class Organization
  * 
  * @property int $organizationID
- * @property string|null $Logo_directory
+ * @property string|null $logo_directory
  * @property string $name (database column: name or Name)
  * @property string $Name (database column: Name or name)
  * @property string $Location
@@ -51,8 +51,8 @@ class Organization extends Model
 	];
 
 	protected $fillable = [
-		'Logo_directory',
-		'logo_directory', // backward compatibility
+		'logo_directory',
+		'Logo_directory', // backward compatibility
 		'Name',
 		'name', // backward compatibility
 		'Location',

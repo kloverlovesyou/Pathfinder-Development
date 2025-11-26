@@ -159,6 +159,8 @@ class AuthController extends Controller
             'emailAddress' => 'required|email|unique:organization,emailAddress',
             'phoneNumber'  => 'required|string|max:20',
             'password'     => 'required|string|min:8',
+            'logoPath'     => 'nullable|string|max:500',
+            'logo_directory' => 'nullable|string|max:500', // backward compatibility
         ]);
 
         // Generate verification token
@@ -171,6 +173,7 @@ class AuthController extends Controller
             'emailAddress' => $validated['emailAddress'],
             'phoneNumber'  => $validated['phoneNumber'],
             'password'     => Hash::make($validated['password']),
+            'logo_directory' => $validated['logoPath'] ?? $validated['logo_directory'] ?? $validated['Logo_directory'] ?? null,
             'email_verification_token' => $verificationToken,
             'email_verified_at' => null,
         ]);

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Training;
+use App\Models\TrainingSchedule;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -28,36 +29,46 @@ class TrainingController extends Controller
         return $key;
     }
 
-    public function autoGenerateQR(Training $training)
+    /**
+     * Auto-generate QR for a training schedule
+     */
+    public function autoGenerateQRForSchedule(TrainingSchedule $schedule)
     {
         $now = now();
 
-        // Clear QR if training ended
-        if ($training->attendance_key && $now->greaterThanOrEqualTo($training->end_time)) {
-            $training->attendance_key = null;
-            $training->qr_generated_at = null;
-            $training->attendance_expires_at = null;
-            $training->save();
+        // Clear QR if schedule ended
+        if ($schedule->attendance_key && $now->greaterThanOrEqualTo($schedule->end_time)) {
+            $schedule->attendance_key = null;
+            $schedule->qr_generated_at = null;
+            $schedule->attendance_expires_at = null;
+            $schedule->save();
             return null;
         }
 
         // Generate QR key if schedule started
-        if ($now->greaterThanOrEqualTo($training->schedule)
-            && !$training->attendance_key
-            && $now->lessThan($training->end_time)) 
+        if ($now->greaterThanOrEqualTo($schedule->schedule)
+            && !$schedule->attendance_key
+            && $now->lessThan($schedule->end_time)) 
         {
-            $training->attendance_key = $this->generateSafeKey(16);
-            $training->qr_generated_at = $now;
-            $training->attendance_expires_at = $training->end_time;
-            $training->save();
+            $schedule->attendance_key = $this->generateSafeKey(16);
+            $schedule->qr_generated_at = $now;
+            $schedule->attendance_expires_at = $schedule->end_time;
+            $schedule->save();
         }
 
-        if ($training->attendance_key) {
-            // ✅ Return a full link for QR scanning
-            return env('FRONTEND_URL') . '/attendance/checkin?trainingID='
-                . $training->trainingID . '&key=' . $training->attendance_key;
-        }
+        return $schedule->attendance_key;
+    }
 
+    /**
+     * @deprecated Use autoGenerateQRForSchedule instead
+     */
+    public function autoGenerateQR(Training $training)
+    {
+        // For backward compatibility, use first schedule
+        $firstSchedule = $training->schedules->first();
+        if ($firstSchedule) {
+            return $this->autoGenerateQRForSchedule($firstSchedule);
+        }
         return null;
     }
     /**
@@ -85,7 +96,13 @@ class TrainingController extends Controller
             return response()->json(['message' => 'Invalid or fake QR code'], 400);
         }
 
-        if (now()->greaterThanOrEqualTo($training->end_time)) {
+        // Check if QR is valid by finding the schedule with this key
+        $schedule = $training->schedules()->where('attendance_key', $request->key)->first();
+        if (!$schedule) {
+            return response()->json(['message' => 'Invalid or fake QR code'], 400);
+        }
+
+        if (now()->greaterThanOrEqualTo($schedule->end_time)) {
             return response()->json(['message' => 'QR Code Expired'], 400);
         }
 
@@ -127,26 +144,30 @@ class TrainingController extends Controller
      */
     public function generateQRCode(Request $request)
     {
-        $training = Training::find($request->trainingID);
+        $training = Training::with('schedules')->find($request->trainingID);
 
         if (!$training) {
             return response()->json(['message' => 'Training not found'], 404);
         }
 
-        if (now()->lessThan($training->end_time)) {
-            $training->attendance_key = $this->generateSafeKey(16);
-            $training->qr_generated_at = now();
-            $training->attendance_expires_at = $training->end_time;
-            $training->save();
+        // Get the first schedule (or specify which schedule to generate QR for)
+        $schedule = $training->schedules->first();
+        if (!$schedule) {
+            return response()->json(['message' => 'Training has no schedules'], 400);
+        }
+
+        if (now()->lessThan($schedule->end_time)) {
+            $this->autoGenerateQRForSchedule($schedule);
+            $schedule->refresh();
 
             // ✅ Create full attendance URL
             $attendanceUrl = env('FRONTEND_URL') . '/attendance/checkin?trainingID='
-                            . $training->trainingID . '&key=' . $training->attendance_key;
+                            . $training->trainingID . '&key=' . $schedule->attendance_key;
 
             return response()->json([
-                'key' => $training->attendance_key,
+                'key' => $schedule->attendance_key,
                 'attendance_link' => $attendanceUrl,
-                'expires_at' => $training->end_time,
+                'expires_at' => $schedule->end_time,
             ]);
         }
 
@@ -167,10 +188,13 @@ class TrainingController extends Controller
             $query->where('organizationID', $request->organizationID);
         }
 
-        $trainings = $query->get();
+        $trainings = $query->with('schedules')->get();
 
+        // Auto-generate QR for each schedule
         foreach ($trainings as $training) {
-            $this->autoGenerateQR($training);
+            foreach ($training->schedules as $schedule) {
+                $this->autoGenerateQRForSchedule($schedule);
+            }
         }
 
         return response()->json($trainings->map(fn ($training) => $this->formatTraining($training)));
@@ -186,12 +210,15 @@ class TrainingController extends Controller
             return response()->json(['message' => 'Unauthorized - Organization access required'], 401);
         }
 
-        $trainings = Training::with(['organization', 'tags'])
+        $trainings = Training::with(['organization', 'tags', 'schedules'])
             ->where('organizationID', $user->organizationID)
             ->get();
 
+        // Auto-generate QR for each schedule
         foreach ($trainings as $training) {
-            $this->autoGenerateQR($training);
+            foreach ($training->schedules as $schedule) {
+                $this->autoGenerateQRForSchedule($schedule);
+            }
         }
 
         return response()->json($trainings->map(fn ($training) => $this->formatTraining($training)));
@@ -199,27 +226,46 @@ class TrainingController extends Controller
 
     protected function formatTraining(Training $training)
     {
-        $attendanceLink = $training->attendance_key
-            ? env('FRONTEND_URL') . '/attendance/checkin?trainingID='
-            . $training->trainingID . '&key=' . $training->attendance_key
-            : null;
+        // Get the first schedule (for backward compatibility) or all schedules
+        $firstSchedule = $training->schedules->first();
+        
+        // Generate attendance link from first schedule if available
+        $attendanceLink = null;
+        if ($firstSchedule && $firstSchedule->attendance_key) {
+            $attendanceLink = env('FRONTEND_URL') . '/attendance/checkin?trainingID='
+                . $training->trainingID . '&key=' . $firstSchedule->attendance_key;
+        }
 
         return [
             'trainingID' => $training->trainingID,
-            'title' => $training->title,
-            'description' => $training->description,
-            'schedule' => $training->schedule?->format('Y-m-d H:i'),
-            'end_time' => $training->end_time?->format('Y-m-d H:i'),
-            'mode' => $training->mode,
-            'location' => $training->location,
-            'trainingLink' => $training->trainingLink,
-            'attendance_key' => $training->attendance_key,
+            'title' => $training->title ?? $training->Title,
+            'description' => $training->description ?? $training->Description,
+            // First schedule data (for backward compatibility)
+            'schedule' => $firstSchedule?->schedule?->format('Y-m-d H:i'),
+            'end_time' => $firstSchedule?->end_time?->format('Y-m-d H:i'),
+            'mode' => $firstSchedule?->mode,
+            'location' => $firstSchedule?->location,
+            'trainingLink' => $firstSchedule?->trainingLink,
+            'attendance_key' => $firstSchedule?->attendance_key,
             'attendance_link' => $attendanceLink,
-            'attendance_expires_at' => $training->attendance_expires_at,
+            'attendance_expires_at' => $firstSchedule?->attendance_expires_at?->format('Y-m-d H:i:s'),
             'organizationID' => $training->organizationID,
             'organization' => [
                 'name' => optional($training->organization)->name ?? 'Unknown',
             ],
+            // All schedules for the training
+            'schedules' => $training->schedules->map(function ($schedule) {
+                return [
+                    'trainingScheduleID' => $schedule->trainingScheduleID,
+                    'schedule' => $schedule->schedule?->format('Y-m-d H:i'),
+                    'end_time' => $schedule->end_time?->format('Y-m-d H:i'),
+                    'mode' => $schedule->mode,
+                    'location' => $schedule->location,
+                    'trainingLink' => $schedule->trainingLink,
+                    'attendance_key' => $schedule->attendance_key,
+                    'attendance_expires_at' => $schedule->attendance_expires_at?->format('Y-m-d H:i:s'),
+                ];
+            }),
             'Tags' => $training->tags->map(function ($tag) {
                 return [
                     'TagID' => $tag->TagID,
@@ -229,7 +275,7 @@ class TrainingController extends Controller
         ];
     }
     /**
-     * Store new training
+     * Store new training with multiple schedules
      */
     public function store(Request $request)
     {
@@ -243,68 +289,79 @@ class TrainingController extends Controller
             return response()->json(['message' => 'Only organizations can create trainings'], 403);
         }
 
+        // Support both old format (single schedule) and new format (schedules array)
         $validated = $request->validate([
-        'title' => 'required|string|max:255',
-        'description' => 'required|string|max:255',
-        'schedule' => 'required|date_format:Y-m-d H:i',
-        'end_time' => 'required|date_format:Y-m-d H:i|after:schedule',
-        'mode' => 'required|string|in:On-Site,Online',
-        'location' => 'nullable|string|max:255',
-        'training_link' => 'nullable|url',
-        'Tags' => 'nullable|array',
-        'Tags.*' => 'integer|exists:tag,TagID',
-    ]);
+            'title' => 'required|string|max:255',
+            'description' => 'required|string|max:255',
+            // New format: array of schedules (preferred)
+            'schedules' => 'sometimes|array|min:1',
+            'schedules.*.schedule' => 'required_with:schedules|date_format:Y-m-d H:i',
+            'schedules.*.end_time' => 'required_with:schedules|date_format:Y-m-d H:i',
+            'schedules.*.mode' => 'required_with:schedules|string|in:On-Site,Online',
+            'schedules.*.location' => 'nullable|string|max:255',
+            'schedules.*.training_link' => 'nullable|url',
+            // Backward compatibility: single schedule fields
+            'schedule' => 'required_without:schedules|date_format:Y-m-d H:i',
+            'end_time' => 'required_without:schedules|date_format:Y-m-d H:i',
+            'mode' => 'required_without:schedules|string|in:On-Site,Online',
+            'location' => 'nullable|string|max:255',
+            'training_link' => 'nullable|url',
+            'Tags' => 'nullable|array',
+            'Tags.*' => 'integer|exists:tag,TagID',
+        ]);
 
-            $training = Training::create([
+        // Create one Training record
+        $training = Training::create([
             'title' => $validated['title'],
             'description' => $validated['description'],
-            'schedule' => $validated['schedule'],
-            'end_time' => $validated['end_time'],
-            'mode' => $validated['mode'],
-            'location' => $validated['location'] ?? null,
-            'trainingLink' => $validated['training_link'] ?? null,
             'organizationID' => $user->organizationID,
         ]);
+
+        // Create multiple TrainingSchedule records
+        $schedules = $validated['schedules'] ?? [];
+        
+        // Backward compatibility: if no schedules array, use single schedule fields
+        if (empty($schedules) && isset($validated['schedule'])) {
+            $schedules = [[
+                'schedule' => $validated['schedule'],
+                'end_time' => $validated['end_time'],
+                'mode' => $validated['mode'],
+                'location' => $validated['location'] ?? null,
+                'training_link' => $validated['training_link'] ?? null,
+            ]];
+        }
+
+        foreach ($schedules as $scheduleData) {
+            TrainingSchedule::create([
+                'trainingID' => $training->trainingID,
+                'schedule' => $scheduleData['schedule'],
+                'end_time' => $scheduleData['end_time'],
+                'mode' => $scheduleData['mode'],
+                'location' => $scheduleData['mode'] === 'On-Site' ? ($scheduleData['location'] ?? null) : null,
+                'trainingLink' => $scheduleData['mode'] === 'Online' ? ($scheduleData['training_link'] ?? null) : null,
+            ]);
+        }
+
+        // Attach tags if provided
         if (!empty($validated['Tags'])) {
             $training->tags()->attach($validated['Tags']);
         }
 
         return response()->json([
             'message' => 'TRAINING CREATED SUCCESSFULLY!',
-            'data' => $training->load('organization')
+            'data' => $training->load(['organization', 'schedules', 'tags'])
         ], 201);
     }
 
     public function show($id)
     {
-        $training = Training::with('organization')->find($id);
+        $training = Training::with(['organization', 'schedules', 'tags'])->find($id);
 
         if (!$training) {
             return response()->json(['message' => 'Training not found'], 404);
         }
 
-        // Optional: generate attendance link if key exists
-        $attendanceLink = $training->attendance_key
-            ? env('FRONTEND_URL') . '/attendance/checkin?trainingID='
-            . $training->trainingID . '&key=' . $training->attendance_key
-            : null;
-
-        return response()->json([
-            'trainingID' => $training->trainingID,
-            'title' => $training->title,
-            'description' => $training->description,
-            'schedule' => $training->schedule?->format('Y-m-d H:i'),
-            'end_time' => $training->end_time?->format('Y-m-d H:i'),
-            'mode' => $training->mode,
-            'location' => $training->location,
-            'trainingLink' => $training->trainingLink,
-            'attendance_key' => $training->attendance_key,
-            'attendance_link' => $attendanceLink,
-            'organizationID' => $training->organizationID,
-            'organization' => [
-                'name' => optional($training->organization)->name ?? 'Unknown',
-            ],
-        ]);
+        return response()->json($this->formatTraining($training));
     }
 //This is for Total numbers of trainings
 public function total() {
@@ -318,8 +375,9 @@ public function total() {
         // Ensure timezone matches your data
         $now = now('Asia/Manila'); // Philippine Standard Time
 
-        $upcoming = \App\Models\Training::where('schedule', '>', $now)->count();
-        $completed = \App\Models\Training::where('schedule', '<=', $now)->count();
+        // Count based on schedules, not training directly
+        $upcoming = \App\Models\TrainingSchedule::where('schedule', '>', $now)->count();
+        $completed = \App\Models\TrainingSchedule::where('schedule', '<=', $now)->count();
 
         return response()->json([
             'upcoming' => $upcoming,
@@ -342,36 +400,75 @@ public function total() {
             return response()->json(['message' => 'Unauthorized to update this training'], 403);
         }
 
-        // Validate incoming data
+        // Validate incoming data - support both single schedule and schedules array
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string|max:255',
-            'schedule' => 'required|date_format:Y-m-d H:i',
-            'end_time' => 'required|date_format:Y-m-d H:i|after:schedule',
-            'mode' => 'required|string|in:On-Site,Online',
+            // New format: array of schedules
+            'schedules' => 'sometimes|array|min:1',
+            'schedules.*.schedule' => 'required_with:schedules|date_format:Y-m-d H:i',
+            'schedules.*.end_time' => 'required_with:schedules|date_format:Y-m-d H:i',
+            'schedules.*.mode' => 'required_with:schedules|string|in:On-Site,Online',
+            'schedules.*.location' => 'nullable|string|max:255',
+            'schedules.*.training_link' => 'nullable|url',
+            // Backward compatibility: single schedule fields
+            'schedule' => 'required_without:schedules|date_format:Y-m-d H:i',
+            'end_time' => 'required_without:schedules|date_format:Y-m-d H:i',
+            'mode' => 'required_without:schedules|string|in:On-Site,Online',
             'location' => 'nullable|string|max:255',
             'training_link' => 'nullable|url',
             'Tags' => 'nullable|array',
             'Tags.*' => 'integer|exists:tag,TagID',
         ]);
 
-        // Update core fields
+        // Update Training core fields
         $training->title = $validated['title'];
         $training->description = $validated['description'];
-        $training->schedule = $validated['schedule'];
-        $training->end_time = $validated['end_time'];
-        $training->mode = $validated['mode'];
-
-        // Update mode-specific fields
-        if ($validated['mode'] === 'Online') {
-            $training->location = null;
-            $training->trainingLink = $validated['training_link'] ?? null;
-        } else { // On-Site
-            $training->trainingLink = null;
-            $training->location = $validated['location'] ?? null;
-        }
-
         $training->save();
+
+        // Update schedules
+        if (isset($validated['schedules'])) {
+            // Delete existing schedules
+            $training->schedules()->delete();
+            
+            // Create new schedules
+            foreach ($validated['schedules'] as $scheduleData) {
+                TrainingSchedule::create([
+                    'trainingID' => $training->trainingID,
+                    'schedule' => $scheduleData['schedule'],
+                    'end_time' => $scheduleData['end_time'],
+                    'mode' => $scheduleData['mode'],
+                    'location' => $scheduleData['mode'] === 'On-Site' ? ($scheduleData['location'] ?? null) : null,
+                    'trainingLink' => $scheduleData['mode'] === 'Online' ? ($scheduleData['training_link'] ?? null) : null,
+                ]);
+            }
+        } else {
+            // Backward compatibility: update first schedule or create one
+            $firstSchedule = $training->schedules->first();
+            if ($firstSchedule) {
+                $firstSchedule->schedule = $validated['schedule'];
+                $firstSchedule->end_time = $validated['end_time'];
+                $firstSchedule->mode = $validated['mode'];
+                if ($validated['mode'] === 'Online') {
+                    $firstSchedule->location = null;
+                    $firstSchedule->trainingLink = $validated['training_link'] ?? null;
+                } else {
+                    $firstSchedule->trainingLink = null;
+                    $firstSchedule->location = $validated['location'] ?? null;
+                }
+                $firstSchedule->save();
+            } else {
+                // Create schedule if none exists
+                TrainingSchedule::create([
+                    'trainingID' => $training->trainingID,
+                    'schedule' => $validated['schedule'],
+                    'end_time' => $validated['end_time'],
+                    'mode' => $validated['mode'],
+                    'location' => $validated['mode'] === 'On-Site' ? ($validated['location'] ?? null) : null,
+                    'trainingLink' => $validated['mode'] === 'Online' ? ($validated['training_link'] ?? null) : null,
+                ]);
+            }
+        }
 
         // Update tags if provided
         if (isset($validated['Tags'])) {
@@ -380,7 +477,7 @@ public function total() {
 
         return response()->json([
             'message' => 'Training updated successfully',
-            'data' => $training->load('tags', 'organization'),
+            'data' => $this->formatTraining($training->load(['schedules', 'tags', 'organization'])),
         ]);
     }
 

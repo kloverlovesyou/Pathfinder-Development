@@ -12,21 +12,32 @@ class TagController extends Controller
      //fetch all tags
      public function index()
      {
-         $tags = Tag::orderBy('TagName', 'asc')->get();
+         // Use tagName (camelCase) to match database column, but return TagName (PascalCase) for frontend
+         $tags = Tag::orderBy('tagName', 'asc')->get()->map(function ($tag) {
+             return [
+                 'TagID' => $tag->TagID,
+                 'TagName' => $tag->tagName ?? $tag->TagName,
+            ];
+         });
          return response()->json($tags);
      }
  
-     //add a new tag
-     public function store(Request $request)
-     {
-         $request->validate([
-             'TagName' => 'required|string|max:255|unique:tag,TagName'
-         ]);
- 
-         $tag = Tag::create([
-             'TagName' => $request->TagName
-         ]);
- 
-         return response()->json($tag, 201);
-     }
+    //add a new tag
+    public function store(Request $request)
+    {
+        $request->validate([
+            'TagName' => 'required|string|max:255|unique:tag,tagName' // Database column is tagName (camelCase)
+        ]);
+
+        // Use tagName (camelCase) to match database column
+        $tag = Tag::create([
+            'tagName' => $request->TagName
+        ]);
+
+        // Return with TagName (PascalCase) for frontend compatibility
+        return response()->json([
+            'TagID' => $tag->TagID,
+            'TagName' => $tag->tagName ?? $tag->TagName,
+        ], 201);
+    }
 }

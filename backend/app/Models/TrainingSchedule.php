@@ -27,6 +27,7 @@ class TrainingSchedule extends Model
 
     protected $table = 'trainingschedule';
     protected $primaryKey = 'trainingScheduleID';
+    public $incrementing = true; // Ensure primary key is auto-incrementing
     public $timestamps = false; // because your table does NOT have created_at / updated_at
 
     protected $casts = [
@@ -47,7 +48,11 @@ class TrainingSchedule extends Model
         'attendance_expires_at', // Actual database column (timestamp)
         'attendance_key', // Actual database column (varchar)
         'trainingID', // Actual database column (int)
+        // Note: trainingScheduleID is NOT in fillable - it's auto-increment primary key
     ];
+
+    // Explicitly exclude primary key from mass assignment
+    protected $guarded = [];
 
     // Relationship: a schedule belongs to a training
     public function training()
