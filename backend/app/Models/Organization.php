@@ -43,6 +43,7 @@ class Organization extends Model
 	];
 
 	protected $fillable = [
+		'logo_directory',
 		'name',
 		'location',
 		'websiteURL',

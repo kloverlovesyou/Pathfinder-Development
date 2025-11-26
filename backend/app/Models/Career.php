@@ -1,9 +1,5 @@
 <?php
 
-/**
- * Created by Reliese Model.
- */
-
 namespace App\Models;
 
 use Carbon\Carbon;
@@ -12,53 +8,57 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Career
- * 
+ *
  * @property int $careerID
  * @property string $position
- * @property string $detailsAndInstructions
- * @property string $qualifications
- * @property string $requirements
- * @property string $applicationLetterAddress
- * @property Carbon $deadlineOfSubmission
+ * @property string $placeOfAssignment
+ * @property string $details
+ * @property string $qualificationStandard
+ * @property string|null $pdf_directory
+ * @property Carbon|null $postingDate
+ * @property Carbon|null $closingDate
+ * @property int|null $trainingsAttendedPercentage
  * @property int|null $organizationID
- * 
+ *
  * @property Organization|null $organization
  * @property Collection|Application[] $applications
- *
- * @package App\Models
  */
 class Career extends Model
 {
-	protected $table = 'career';
-	protected $primaryKey = 'careerID';
-	public $timestamps = false;
+    protected $table = 'career';
+    protected $primaryKey = 'careerID';
+    public $timestamps = false;
 
-	protected $casts = [
-		'deadlineOfSubmission' => 'datetime',
-		'organizationID' => 'int'
-	];
+    protected $casts = [
+        'postingDate' => 'date',
+        'closingDate' => 'date',
+        'trainingsAttendedPercentage' => 'int',
+        'organizationID' => 'int',
+    ];
 
-	protected $fillable = [
-		'position',
-		'detailsAndInstructions',
-		'qualifications',
-		'requirements',
-		'applicationLetterAddress',
-		'deadlineOfSubmission',
-		'organizationID'
-	];
+    protected $fillable = [
+        'position',
+        'placeOfAssignment',
+        'details',
+        'qualificationStandard',
+        'pdf_directory',
+        'postingDate',
+        'closingDate',
+        'trainingsAttendedPercentage',
+        'organizationID',
+    ];
 
-	public function organization()
-	{
-		return $this->belongsTo(Organization::class, 'organizationID');
-	}
+    public function organization()
+    {
+        return $this->belongsTo(Organization::class, 'organizationID');
+    }
 
-	public function applications()
-	{
-		return $this->hasMany(Application::class, 'careerID');
-	}
+    public function applications()
+    {
+        return $this->hasMany(Application::class, 'careerID');
+    }
 
-	public function tags()
+    public function tags()
     {
         return $this->belongsToMany(Tag::class, 'career_tag', 'careerID', 'TagID');
     }

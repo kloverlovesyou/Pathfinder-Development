@@ -41,6 +41,7 @@ class Applicant extends Model
 	];
 
 	protected $fillable = [
+		'displayPicture_directory',
 		'firstName',
 		'middleName',
 		'lastName',
