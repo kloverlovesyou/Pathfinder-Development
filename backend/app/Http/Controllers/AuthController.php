@@ -408,13 +408,13 @@ class AuthController extends Controller
             ]);
             
             $troubleshooting = [
-                'check_brevo_api_key' => 'Set BREVO_API_KEY in Railway environment variables (not just .env file)',
+                'check_brevo_api_key' => 'Set BREVO_API_KEY in Render environment variables (not just .env file)',
                 'check_smtp_config' => 'Verify SMTP settings if using SMTP',
-                'check_connection' => 'Railway blocks SMTP - Brevo API fallback should work if BREVO_API_KEY is set',
+                'check_connection' => 'Render may block SMTP - Brevo API fallback should work if BREVO_API_KEY is set',
             ];
             
             if (!$mailConfig['brevo_api_key_set']) {
-                $troubleshooting['action'] = 'BREVO_API_KEY is NOT set in Railway. Add it in Railway Dashboard → Variables';
+                $troubleshooting['action'] = 'BREVO_API_KEY is NOT set in Render. Add it in Render Dashboard → Environment → Environment Variables';
             }
             
             return response()->json([
