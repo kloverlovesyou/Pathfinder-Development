@@ -17,7 +17,7 @@ class AdminSearchController extends Controller
 
         try {
             // Call stored procedure
-            $results = DB::select('CALL AdminSearch(?)', [$query]);
+            $results = DB::select('SELECT * FROM adminsearch(?)', [$query]);
             return response()->json($results);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);

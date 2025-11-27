@@ -21,7 +21,7 @@ class SearchController extends Controller
 
         try {
             // ✅ Call stored procedure
-            $results = DB::select('CALL SearchContent(?, ?, ?)', [
+            $results = DB::select('SELECT * FROM searchcontent(?, ?, ?)', [
                 $searchTerm,
                 $filterType,
                 $subFilter
