@@ -3,12 +3,13 @@ FROM php:8.2-apache
 
 # Install system dependencies and PHP extensions
 RUN apt-get update && apt-get install -y \
+    libpq-dev \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
     libpng-dev \
     zip unzip git curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo_mysql
+    && docker-php-ext-install gd pdo_mysql pdo_pgsql pgsql
 
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
@@ -19,7 +20,7 @@ WORKDIR /var/www/html
 # Copy Laravel app from /backend to container working directory
 COPY backend/ /var/www/html/
 
-# ✅ Set Apache DocumentRoot to Laravel public folder
+# Set Apache DocumentRoot to Laravel public folder
 RUN sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
 
 # Install Composer
