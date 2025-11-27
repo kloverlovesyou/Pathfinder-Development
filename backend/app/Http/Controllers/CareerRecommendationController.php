@@ -17,12 +17,16 @@ class CareerRecommendationController extends Controller
             ->select(
                 'c.careerID',
                 'c.position',
-                'o.name as organization',
-                'c.detailsAndInstructions',
+                'c.placeOfAssignment',
+                'c.details',
                 'c.qualificationStandard',
-                'c.requirements',
-                'c.applicationLetterAddress',
-                'c.deadlineOfSubmission'
+                'c.pdf_directory',
+                'c.postingDate',
+                'c.closingDate',
+                'c.trainingsAttendedPercentage',
+                'c.organizationID',
+                'o.name as organization',
+                'o.name as organizationName'
             );
 
         if ($request->has('organizationID')) {
@@ -111,21 +115,25 @@ class CareerRecommendationController extends Controller
          // Ensure that careerID is an integer
          $careerID = (int)$careerID;
  
-         // Fetch career details
-         $career = DB::table('career as c')
-             ->join('organization as o', 'c.organizationID', '=', 'o.organizationID')
-             ->select(
-                 'c.careerID',
-                 'c.position',
-                 'o.name as organizationName',
-                 'c.detailsAndInstructions',
-                 'c.qualificationStandard',
-                 'c.requirements',
-                 'c.applicationLetterAddress',
-                 'c.deadlineOfSubmission'
-             )
-             ->where('c.careerID', $careerID)
-             ->first();
+        // Fetch career details
+        $career = DB::table('career as c')
+            ->join('organization as o', 'c.organizationID', '=', 'o.organizationID')
+            ->select(
+                'c.careerID',
+                'c.position',
+                'c.placeOfAssignment',
+                'c.details',
+                'c.qualificationStandard',
+                'c.pdf_directory',
+                'c.postingDate',
+                'c.closingDate',
+                'c.trainingsAttendedPercentage',
+                'c.organizationID',
+                'o.name as organization',
+                'o.name as organizationName'
+            )
+            ->where('c.careerID', $careerID)
+            ->first();
  
          // Fetch recommended trainings (includes trainings for target career)
          $recommended_trainings = DB::select("CALL sp_GetRecommendedTrainings_ByCareer(?)", [$careerID]);

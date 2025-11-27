@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
 import axios from "axios";
+import { getPDFUrl } from "@/lib/supabase";
 
 // Props from parent
 const props = defineProps({
@@ -125,6 +126,70 @@ function formatDateTime(dateStr) {
     hour12: true,
   });
 }
+
+// --- Download PDF ---
+async function downloadPDF(event) {
+  event.preventDefault();
+  if (!props.career?.pdf_directory) {
+    addToast("PDF not available", "accent");
+    return;
+  }
+
+  try {
+    const filePath = props.career.pdf_directory;
+    
+    // Try Supabase first
+    const pdfUrl = getPDFUrl(filePath, "Requirements");
+    
+    if (pdfUrl) {
+      const response = await fetch(pdfUrl);
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        
+        // Extract filename from path or use default
+        const fileName = filePath.split("/").pop() || `career_${props.career.careerID || props.career.id}_${props.career.position || 'document'}.pdf`;
+        
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        addToast("PDF downloaded successfully", "success");
+        return;
+      }
+    }
+    
+    // Fallback: try direct download if pdf_directory is a full URL
+    if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+      const response = await fetch(filePath);
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const fileName = filePath.split("/").pop() || `career_${props.career.careerID || props.career.id}.pdf`;
+        
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        addToast("PDF downloaded successfully", "success");
+        return;
+      }
+    }
+    
+    addToast("Failed to download PDF", "accent");
+  } catch (error) {
+    console.error("Error downloading PDF:", error);
+    addToast("Failed to download PDF", "accent");
+  }
+}
 </script>
 
 <template>
@@ -139,7 +204,7 @@ function formatDateTime(dateStr) {
 
         <h2 class="text-xl font-bold mb-2">{{ career.position }}</h2>
         <p class="text-sm text-gray-600 mb-2">
-          Organization: {{ career.organization }}
+          Organization: {{ career.organizationName || career.organization || 'Unknown' }}
         </p>
 
         <div class="my-4 flex justify-end gap-2">
@@ -157,16 +222,26 @@ function formatDateTime(dateStr) {
         </div>
 
         <!-- Career Details -->
-        <p><strong>Details:</strong> {{ career.detailsAndInstructions }}</p>
-        <p><strong>Qualifications:</strong> {{ career.qualifications }}</p>
-        <p><strong>Requirements:</strong> {{ career.requirements }}</p>
+        <p v-if="career.placeOfAssignment"><strong>Place of Assignment:</strong> {{ career.placeOfAssignment }}</p>
+        <p><strong>Details:</strong> {{ career.details || career.detailsAndInstructions || 'N/A' }}</p>
+        <p v-if="career.qualificationStandard"><strong>Qualification Standard:</strong> {{ career.qualificationStandard }}</p>
+        <p v-if="career.postingDate"><strong>Posting Date:</strong> {{ formatDateTime(career.postingDate) }}</p>
         <p>
-          <strong>Application Address:</strong>
-          {{ career.applicationLetterAddress }}
+          <strong>Closing Date:</strong>
+          {{ formatDateTime(career.closingDate || career.deadlineOfSubmission) }}
         </p>
-        <p>
-          <strong>Deadline:</strong>
-          {{ formatDateTime(career.deadlineOfSubmission) }}
+        <p v-if="career.trainingsAttendedPercentage !== null && career.trainingsAttendedPercentage !== undefined">
+          <strong>Trainings Attended Percentage:</strong> {{ career.trainingsAttendedPercentage }}%
+        </p>
+        <p v-if="career.pdf_directory">
+        
+          <a 
+            href="#" 
+            @click="downloadPDF" 
+            class="text-blue-600 hover:underline cursor-pointer"
+          >
+            View Details
+          </a>
         </p>
       </div>
     </dialog>

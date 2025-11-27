@@ -50,12 +50,12 @@ const calendarRef = ref(null);
 
 function buildEvents() {
   events.value = {};
-  posts.value.forEach((post) => {
-    const date = post.trainingID
-      ? post.schedule.split("T")[0]
-      : post.deadlineOfSubmission;
-    if (!events.value[date]) events.value[date] = [];
-    events.value[date].push(post);
+  careers.value.forEach((career) => {
+    const date = career.closingDate ? career.closingDate.split("T")[0] : null;
+    if (date) {
+      if (!events.value[date]) events.value[date] = [];
+      events.value[date].push(career);
+    }
   });
 }
 
@@ -119,7 +119,8 @@ const upcomingCareers = computed(() => {
   const today = new Date().setHours(0, 0, 0, 0);
 
   return careers.value.filter((career) => {
-    const deadline = new Date(career.deadlineOfSubmission).setHours(0, 0, 0, 0);
+    if (!career.closingDate) return false;
+    const deadline = new Date(career.closingDate).setHours(0, 0, 0, 0);
     return deadline >= today; // Not past
   });
 });
@@ -172,7 +173,7 @@ async function fetchMyApplications() {
             @click="openModal(career)"
           >
             <h3 class="font-semibold">{{ career.position }}</h3>
-            <p class="text-gray-700">{{ career.organization }}</p>
+            <p class="text-gray-700">{{ career.organizationName || career.organization || 'Unknown' }}</p>
           </div>
         </div>
 

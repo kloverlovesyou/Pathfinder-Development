@@ -214,46 +214,98 @@ class ApplicationController extends Controller
      */
     protected function uploadRequirementToSupabase(UploadedFile $file): string
     {
-        $supabaseUrl = env('SUPABASE_URL', env('SUPABASE_ENDPOINT', 'https://hmevengvfponcwslnyye.supabase.co'));
-        $supabaseUrl = preg_replace('#/storage/v1/?$#', '', $supabaseUrl);
+        $supabaseUrl = env('SUPABASE_URL', 'https://hmevengvfponcwslnyye.supabase.co');
+        $supabaseUrl = preg_replace('#/storage/v1/object/public/?$#', '', $supabaseUrl);
         $supabaseUrl = rtrim($supabaseUrl, '/');
-
-        $bucket = env('SUPABASE_BUCKET');
+        
+        $bucket = env('SUPABASE_BUCKET', 'Requirements');
         $supabaseKey = env('SUPABASE_SECRET') ?: env('SUPABASE_KEY');
 
         if (!$bucket || !$supabaseKey) {
-            throw new \RuntimeException('Supabase Storage not configured');
+            Log::error('Supabase Storage not configured', [
+                'has_bucket' => !empty($bucket),
+                'has_key' => !empty($supabaseKey),
+            ]);
+            throw new \RuntimeException('Supabase Storage not configured. Please check SUPABASE_BUCKET and SUPABASE_SECRET in .env');
         }
 
         $sanitizedName = preg_replace('/[^A-Za-z0-9._-]/', '_', $file->getClientOriginalName());
         $storagePath = 'requirement_directory/' . time() . '_' . $sanitizedName;
         $uploadUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}/{$storagePath}";
+        
+        $fileContents = file_get_contents($file->getRealPath());
+        $contentType = $file->getMimeType() ?: 'application/pdf';
 
-        $response = Http::withHeaders([
-            'Authorization' => "Bearer {$supabaseKey}",
-            'apikey' => $supabaseKey,
-            'Content-Type' => $file->getMimeType() ?: 'application/octet-stream',
-            'x-upsert' => 'true',
-        ])->withBody(
-            file_get_contents($file->getRealPath()),
-            $file->getMimeType() ?: 'application/octet-stream'
-        )->post($uploadUrl);
-
-        if (!$response->successful()) {
-            Log::error('Supabase upload error', [
-                'status' => $response->status(),
-                'body' => $response->body(),
-                'path' => $storagePath,
-            ]);
-            throw new \RuntimeException('Supabase upload failed: ' . $response->body());
-        }
-
-        Log::info('Requirements file stored in Supabase', [
+        Log::info('Attempting Supabase upload', [
+            'url' => $uploadUrl,
+            'bucket' => $bucket,
             'path' => $storagePath,
-            'status' => $response->status(),
+            'size' => strlen($fileContents),
+            'content_type' => $contentType,
         ]);
 
-        return $storagePath;
+        try {
+            $client = new \GuzzleHttp\Client();
+            $response = $client->request('POST', $uploadUrl, [
+                'headers' => [
+                    'Authorization' => "Bearer {$supabaseKey}",
+                    'Content-Type' => $contentType,
+                    'x-upsert' => 'true',
+                ],
+                'body' => $fileContents,
+            ]);
+            
+            $statusCode = $response->getStatusCode();
+            
+            if ($statusCode !== 200 && $statusCode !== 201) {
+                $responseBody = $response->getBody()->getContents();
+                Log::error('Supabase upload failed', [
+                    'status' => $statusCode,
+                    'body' => $responseBody,
+                    'path' => $storagePath,
+                ]);
+                throw new \RuntimeException('Supabase upload failed: ' . $responseBody);
+            }
+
+            Log::info('Requirements file stored in Supabase', [
+                'path' => $storagePath,
+                'status' => $statusCode,
+            ]);
+
+            return $storagePath;
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            $errorMessage = $e->getMessage();
+            $statusCode = null;
+            $responseBody = null;
+            
+            if ($e->hasResponse()) {
+                $response = $e->getResponse();
+                $statusCode = $response->getStatusCode();
+                $responseBody = $response->getBody()->getContents();
+                $errorMessage = $responseBody ?: $errorMessage;
+            }
+            
+            Log::error('Supabase upload exception', [
+                'message' => $e->getMessage(),
+                'status_code' => $statusCode,
+                'response_body' => $responseBody,
+                'upload_url' => $uploadUrl,
+                'bucket' => $bucket,
+                'path' => $storagePath,
+                'has_key' => !empty($supabaseKey),
+                'key_length' => $supabaseKey ? strlen($supabaseKey) : 0,
+            ]);
+            throw new \RuntimeException('Supabase upload failed: ' . $errorMessage);
+        } catch (\Exception $e) {
+            Log::error('Supabase upload general exception', [
+                'message' => $e->getMessage(),
+                'upload_url' => $uploadUrl,
+                'bucket' => $bucket,
+                'path' => $storagePath,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw new \RuntimeException('Supabase upload failed: ' . $e->getMessage());
+        }
     }
 
 
