@@ -8,75 +8,10 @@ use App\Models\Training;
 use App\Models\Organization;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
-use App\Mail\EmailVerification;
-use App\Services\BrevoEmailService;
-use Illuminate\Support\Facades\View;
+use App\Jobs\SendVerificationEmailJob;
 
 class OrganizationController extends Controller
 {
-    /**
-     * Send verification email with automatic fallback to Brevo API
-     * Optimized to skip SMTP on Railway (known to be blocked) and go straight to Brevo API
-     */
-    private function sendVerificationEmail($email, $verificationUrl, $userName, $type)
-    {
-        $emailSent = false;
-        $emailError = null;
-        $emailException = null;
-        $usedBrevoApi = false;
-        
-        // Skip SMTP on Railway (it's blocked) and go straight to Brevo API for speed
-        $brevoApiKey = config('services.brevo.api_key', env('BREVO_API_KEY'));
-        
-        if (!empty($brevoApiKey)) {
-            // Use Brevo API directly (faster, no SMTP timeout)
-            try {
-                $brevoService = new BrevoEmailService();
-                $htmlContent = View::make('emails.verification', [
-                    'verificationUrl' => $verificationUrl,
-                    'userName' => $userName,
-                    'userType' => $type
-                ])->render();
-                
-                $brevoService->send(
-                    $email,
-                    'Verify Your Email Address - Pathfinder',
-                    $htmlContent
-                );
-                
-                $emailSent = true;
-                $usedBrevoApi = true;
-                \Log::info('Verification email sent via Brevo API', ['email' => $email]);
-            } catch (\Exception $brevoError) {
-                $emailError = 'Brevo API failed: ' . $brevoError->getMessage();
-                \Log::error('Brevo API failed', [
-                    'email' => $email,
-                    'error' => $brevoError->getMessage()
-                ]);
-            }
-        } else {
-            // Fallback to SMTP only if Brevo API key is not set
-            try {
-                Mail::to($email)->send(new EmailVerification($verificationUrl, $userName, $type));
-                $emailSent = true;
-                \Log::info('Verification email sent via SMTP', ['email' => $email]);
-            } catch (\Exception $e) {
-                $emailError = $e->getMessage();
-                \Log::error('SMTP failed', [
-                    'email' => $email,
-                    'error' => $e->getMessage()
-                ]);
-            }
-        }
-        
-        return [
-            'email_sent' => $emailSent,
-            'email_error' => $emailError,
-            'email_exception' => $emailException,
-            'used_brevo_api' => $usedBrevoApi,
-        ];
-    }
 
     // ----------------------
     // List approved organizations with careers & trainings
@@ -174,20 +109,20 @@ class OrganizationController extends Controller
         
         // Send email in background (won't block response)
         try {
-            \Log::info('Sending verification email asynchronously (Organization)', [
-                'email' => $userEmail
+            \Log::info('Queueing verification email (Organization)', [
+                'email' => $userEmail,
             ]);
-            
-            $this->sendVerificationEmail(
+
+            SendVerificationEmailJob::dispatch(
                 $userEmail,
                 $verificationUrl,
                 $userName,
                 'organization'
-            );
-        } catch (\Exception $e) {
-            \Log::error('Failed to send verification email asynchronously', [
+            )->afterResponse();
+        } catch (\Throwable $e) {
+            \Log::error('Failed to dispatch verification email job', [
                 'email' => $userEmail,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
         
