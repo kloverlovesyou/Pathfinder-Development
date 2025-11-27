@@ -45,7 +45,7 @@ class CareerRecommendationController extends Controller
             $careerID = (int)$careerID;
 
             // Call the stored procedure
-            $careers = DB::select("CALL sp_GetRecommendedCareers_ByTags(?)", [$careerID]);
+            $careers = DB::select('SELECT * FROM sp_getrecommendedcareers_bytags(?)', [$careerID]);
 
             // Map organization names if missing
             $careers = collect($careers)->map(function ($career) {
@@ -79,7 +79,7 @@ class CareerRecommendationController extends Controller
          $careerID = (int)$careerID;
  
          // Use Laravel's DB facade to call the stored procedure with parameter binding
-         $trainings = DB::select("CALL sp_GetRecommendedTrainings_ByCareer(?)", [$careerID]);
+         $trainings = DB::select('SELECT * FROM sp_getrecommendedtrainings_bycareer(?)', [$careerID]);
  
          // ✅ Map organization name from stored procedure result
          $trainingsWithOrg = collect($trainings)->map(function ($training) {
@@ -136,7 +136,7 @@ class CareerRecommendationController extends Controller
             ->first();
  
          // Fetch recommended trainings (includes trainings for target career)
-         $recommended_trainings = DB::select("CALL sp_GetRecommendedTrainings_ByCareer(?)", [$careerID]);
+         $recommended_trainings = DB::select('SELECT * FROM sp_getrecommendedtrainings_bycareer(?)', [$careerID]);
          
          // ✅ Map organization name from stored procedure result
          $trainingsWithOrg = collect($recommended_trainings)->map(function ($training) {
@@ -176,7 +176,7 @@ class CareerRecommendationController extends Controller
     // Log the careerID to verify its value
     Log::info('Career ID: ' . $careerID);
             // Call the stored procedure with the careerID
-            $results = DB::select('CALL sp_GetRecommendedCareers_ByTags(?)', [$careerID]);
+            $results = DB::select('SELECT * FROM sp_getrecommendedcareers_bytags(?)', [$careerID]);
             
             // Check if results are returned
             if (empty($results)) {
