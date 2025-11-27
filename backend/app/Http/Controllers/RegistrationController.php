@@ -21,9 +21,54 @@ class RegistrationController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $registrations = Registration::with('training')
+        $registrations = Registration::with([
+                'training.organization',
+                'training.schedules' => function ($query) {
+                    $query->orderBy('schedule');
+                },
+            ])
             ->where('applicantID', $user->applicantID)
-            ->get();
+            ->get()
+            ->map(function ($registration) {
+                $training = $registration->training;
+
+                return [
+                    'registrationID' => $registration->registrationID,
+                    'registrationDate' => $registration->registrationDate,
+                    'registrationStatus' => $registration->registrationStatus,
+                    'checked_in_at' => $registration->checked_in_at,
+                    'registeredDate' => $registration->registeredDate,
+                    'ongoingDate' => $registration->ongoingDate,
+                    'completedDate' => $registration->completedDate,
+                    'certifiedDate' => $registration->certifiedDate,
+                    'certTrackingID' => $registration->certTrackingID,
+                    'certGivenDate' => $registration->certGivenDate,
+                    'certificatePath' => $registration->certificatePath,
+                    'trainingID' => $registration->trainingID,
+                    'applicantID' => $registration->applicantID,
+                    'training' => $training ? [
+                        'trainingID' => $training->trainingID,
+                        'title' => $training->title,
+                        'description' => $training->description,
+                        'organizationID' => $training->organizationID,
+                        'organization' => $training->organization ? [
+                            'organizationID' => $training->organization->organizationID,
+                            'name' => $training->organization->name,
+                        ] : null,
+                        'schedules' => $training->schedules->map(function ($schedule) {
+                            return [
+                                'trainingScheduleID' => $schedule->trainingScheduleID,
+                                'schedule' => $schedule->schedule,
+                                'start_time' => $schedule->start_time,
+                                'end_time' => $schedule->end_time,
+                                'mode' => $schedule->mode,
+                                'location' => $schedule->location,
+                                'trainingLink' => $schedule->trainingLink,
+                            ];
+                        }),
+                    ] : null,
+                ];
+            });
 
         return response()->json($registrations);
     }
@@ -63,6 +108,9 @@ class RegistrationController extends Controller
             'trainingID' => $trainingID,
             'applicantID' => $user->applicantID,
         ]);
+
+        $registration->recordStage('registered', Carbon::now(), true);
+        $registration->save();
 
         return response()->json([
             'message' => 'REGISTRATION SUCCESSFUL!!!',
@@ -180,6 +228,9 @@ class RegistrationController extends Controller
             'certGivenDate' => $validated['certGivenDate'],
             'certificatePath' => $filePath, // Supabase path
         ]);
+
+            $registration->recordStage('certified', Carbon::parse($validated['certGivenDate']), true);
+            $registration->save();
         
         // Automatically create a Certification entry for each applicant
         $existingCertification = Certification::where('applicantID', $registration->applicantID)
@@ -325,6 +376,9 @@ class RegistrationController extends Controller
             'certGivenDate' => $validated['certificateGivenDate'],
             'certificatePath' => $certificatePath,
         ]);
+
+        $registration->recordStage('certified', Carbon::parse($validated['certificateGivenDate']), true);
+        $registration->save();
         
         // Automatically create a Certification entry for the applicant
         // This ensures organization-issued certificates appear in the Certificates page
@@ -392,6 +446,58 @@ class RegistrationController extends Controller
         
         return response()->json([
             'message' => 'Certificate issued successfully',
+            'data' => $registration,
+        ]);
+    }
+
+    public function updateStatus(Request $request, $registrationID)
+    {
+        $user = $request->user();
+
+        if (!$user || !isset($user->organizationID)) {
+            return response()->json(['message' => 'Unauthorized - Organization access required'], 401);
+        }
+
+        $registration = Registration::with('training')->find($registrationID);
+        if (!$registration) {
+            return response()->json(['message' => 'Registration not found'], 404);
+        }
+
+        if (
+            !$registration->training ||
+            $registration->training->organizationID !== $user->organizationID
+        ) {
+            return response()->json(['message' => 'Access denied'], 403);
+        }
+
+        $validated = $request->validate([
+            'status' => 'required|string|in:Registered,Ongoing,Completed,Certified,Attended,Cancelled',
+            'date' => 'nullable|date',
+            'overwrite' => 'nullable|boolean',
+        ]);
+
+        $timestamp = isset($validated['date'])
+            ? Carbon::parse($validated['date'])
+            : Carbon::now();
+
+        $registration->registrationStatus = $validated['status'];
+        $registration->recordStage(
+            $validated['status'],
+            $timestamp,
+            $request->boolean('overwrite', false)
+        );
+
+        if (
+            strtolower($validated['status']) === 'certified' &&
+            !$registration->certGivenDate
+        ) {
+            $registration->certGivenDate = $timestamp;
+        }
+
+        $registration->save();
+
+        return response()->json([
+            'message' => 'Registration status updated successfully',
             'data' => $registration,
         ]);
     }

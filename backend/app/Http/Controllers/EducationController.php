@@ -17,9 +17,6 @@ class EducationController extends Controller
             if (!empty($edu->graduationYear)) {
                 $edu->graduationYear = (int) $edu->graduationYear;
             }
-            if (!is_null($edu->GWA)) {
-                $edu->GWA = (float) $edu->GWA;
-            }
             return $edu;
         });
 
@@ -33,21 +30,19 @@ class EducationController extends Controller
             'educationLevel' => 'required|string|max:255',
             'program' => 'nullable|string|max:255',
             'major' => 'nullable|string|max:255',
-            'minor' => 'nullable|string|max:255',
             'strand' => 'nullable|string|max:255',
-            'GWA' => 'nullable|numeric|min:1|max:5',
             'institutionName' => 'required|string|max:255',
-            'institutionAddress' => 'nullable|string|max:255',
+            'institutionAddress' => 'nullable|string|max:1000',
             'graduationYear' => 'nullable|digits:4',
             'resumeID' => 'required|exists:resume,resumeID',
         ]);
 
+        // Remove GWA and minor if they exist in the request (backward compatibility)
+        unset($validated['GWA'], $validated['minor']);
+
         // Save year as integer
         if (!empty($validated['graduationYear'])) {
             $validated['graduationYear'] = (int) $validated['graduationYear'];
-        }
-        if (array_key_exists('GWA', $validated) && $validated['GWA'] !== null && $validated['GWA'] !== '') {
-            $validated['GWA'] = (float) $validated['GWA'];
         }
 
         $education = Education::create($validated);
@@ -64,19 +59,17 @@ class EducationController extends Controller
             'educationLevel' => 'nullable|string|max:255',
             'program' => 'nullable|string|max:255',
             'major' => 'nullable|string|max:255',
-            'minor' => 'nullable|string|max:255',
             'strand' => 'nullable|string|max:255',
-            'GWA' => 'nullable|numeric|min:1|max:5',
             'institutionName' => 'nullable|string|max:255',
-            'institutionAddress' => 'nullable|string|max:255',
+            'institutionAddress' => 'nullable|string|max:1000',
             'graduationYear' => 'nullable|digits:4',
         ]);
 
+        // Remove GWA and minor if they exist in the request (backward compatibility)
+        unset($validated['GWA'], $validated['minor']);
+
         if (!empty($validated['graduationYear'])) {
             $validated['graduationYear'] = (int) $validated['graduationYear'];
-        }
-        if (array_key_exists('GWA', $validated)) {
-            $validated['GWA'] = $validated['GWA'] !== null && $validated['GWA'] !== '' ? (float) $validated['GWA'] : null;
         }
 
         $education->update($validated);

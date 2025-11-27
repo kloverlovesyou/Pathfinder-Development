@@ -28,9 +28,7 @@ const newEducation = reactive({
   educationLevel: "",
   program: "",
   major: "",
-  minor: "",
   strand: "",
-  GWA: null,
   institutionName: "",
   institutionAddress: "",
   graduationYear: null,
@@ -145,12 +143,10 @@ async function addEducation() {
       resumeID: resume.resumeID,
     };
 
-    if (payload.GWA === "" || payload.GWA === null) {
-      delete payload.GWA;
-    } else {
-      payload.GWA = Number(payload.GWA);
-    }
-
+    // Remove empty fields
+    if (payload.program === "") delete payload.program;
+    if (payload.major === "") delete payload.major;
+    if (payload.strand === "") delete payload.strand;
     if (payload.graduationYear === "" || payload.graduationYear === null) {
       delete payload.graduationYear;
     }
@@ -177,7 +173,7 @@ async function addEducation() {
 
     resume.education.push(data);
     Object.keys(newEducation).forEach((key) => {
-      if (key === "graduationYear" || key === "GWA") {
+      if (key === "graduationYear") {
         newEducation[key] = null; // keep as number
       } else {
         newEducation[key] = ""; // string fields
@@ -228,6 +224,14 @@ async function removeEducation(index) {
 }
 
 // --- Experience ---
+function toDateFromYear(yearInput) {
+  const numericYear = Number(yearInput);
+  if (!Number.isFinite(numericYear)) {
+    return null;
+  }
+  return `${numericYear}-01-01`;
+}
+
 async function addExperience() {
   if (
     !newExperience.jobTitle.trim() ||
@@ -235,6 +239,14 @@ async function addExperience() {
     !newExperience.companyAddress.trim()
   ) {
     showToast("Please fill out all fields before adding experience.");
+    return;
+  }
+
+  const startDate = toDateFromYear(newExperience.startYear);
+  const endDate = toDateFromYear(newExperience.endYear);
+
+  if (!startDate || !endDate) {
+    showToast("Please provide valid start and end years.");
     return;
   }
 
@@ -257,8 +269,8 @@ async function addExperience() {
       import.meta.env.VITE_API_BASE_URL + "/experiences",
       {
         ...newExperience,
-        startYear: `${newExperience.startYear}`,
-        endYear: `${newExperience.endYear}`,
+        startYear: startDate,
+        endYear: endDate,
         resumeID: resume.resumeID,
       },
       { headers: { Authorization: `Bearer ${token}` } }
@@ -377,7 +389,21 @@ async function generatePdf() {
   let y = 20;
 
   function getYearOnly(value) {
-    return value ? String(value) : "";
+    if (!value) return "";
+
+    // Try parsing as date string first
+    const parsedDate = new Date(value);
+    if (!isNaN(parsedDate.getTime())) {
+      return String(parsedDate.getFullYear());
+    }
+
+    // Fallback: handle year numbers or numeric strings
+    const numericYear = Number(value);
+    if (Number.isFinite(numericYear)) {
+      return String(Math.trunc(numericYear));
+    }
+
+    return String(value);
   }
 
   function addWrappedText(text, x, y, maxWidth, lineHeight = 6) {
@@ -460,11 +486,7 @@ async function generatePdf() {
       if (edu.educationLevel) detailParts.push(edu.educationLevel);
       if (edu.program) detailParts.push(`Program: ${edu.program}`);
       if (edu.major) detailParts.push(`Major: ${edu.major}`);
-      if (edu.minor) detailParts.push(`Minor: ${edu.minor}`);
       if (edu.strand) detailParts.push(`Strand: ${edu.strand}`);
-      if (edu.GWA !== null && edu.GWA !== undefined && edu.GWA !== "") {
-        detailParts.push(`GWA: ${edu.GWA}`);
-      }
 
       doc.setFont("times", "bold");
       doc.text(`${edu.institutionName || ""}`, margin, y);
@@ -821,26 +843,11 @@ onActivated(async () => {
               </div>
               <!-- Major -->
               <div>
-                <label class="block font-medium mb-1">Major</label>
+                <label class="block font-medium mb-1">Major (Optional)</label>
                 <input
                   v-model="newEducation.major"
                   type="text"
                   placeholder="Enter major"
-                  class="input-field border rounded w-full p-2 disabled:bg-gray-200"
-                  :disabled="
-                    newEducation.educationLevel === 'Elementary' ||
-                    newEducation.educationLevel === 'High School' ||
-                    newEducation.educationLevel === 'Senior High School'
-                  "
-                />
-              </div>
-              <!-- Major -->
-              <div>
-                <label class="block font-medium mb-1">Minor</label>
-                <input
-                  v-model="newEducation.minor"
-                  type="text"
-                  placeholder="Enter minor"
                   class="input-field border rounded w-full p-2 disabled:bg-gray-200"
                   :disabled="
                     newEducation.educationLevel === 'Elementary' ||
@@ -862,19 +869,6 @@ onActivated(async () => {
                     newEducation.educationLevel === 'Bachelors Degree' ||
                     newEducation.educationLevel === 'Masters Degree' ||
                     newEducation.educationLevel === 'Doctorate'
-                  "
-                />
-              </div>
-              <div>
-                <label class="block font-medium mb-1">GWA</label>
-                <input
-                  v-model="newEducation.GWA"
-                  type="number"
-                  placeholder="Enter GWA"
-                  class="input-field border rounded w-full p-2 disabled:bg-gray-200"
-                  :disabled="
-                    newEducation.educationLevel === 'Elementary' ||
-                    newEducation.educationLevel === 'High School'
                   "
                 />
               </div>
@@ -945,11 +939,7 @@ onActivated(async () => {
               </p>
               <p v-if="edu.program">Program: {{ edu.program }}</p>
               <p v-if="edu.major">Major: {{ edu.major }}</p>
-              <p v-if="edu.minor">Minor: {{ edu.minor }}</p>
               <p v-if="edu.strand">Strand: {{ edu.strand }}</p>
-              <p v-if="edu.GWA !== null && edu.GWA !== undefined && edu.GWA !== ''">
-                GWA: {{ edu.GWA }}
-              </p>
               <p class="font-semibold">{{ edu.institutionName }}</p>
               <p v-if="edu.institutionAddress">{{ edu.institutionAddress }}</p>
               <p v-if="edu.graduationYear">Graduated {{ edu.graduationYear }}</p>

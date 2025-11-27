@@ -44,64 +44,65 @@ class EventController extends Controller
 
         return $schedule->attendance_key;
     }
-  public function getUserEvents($applicantID)
-{
-$trainings = DB::table('registration')
-    ->join('training', 'registration.trainingID', '=', 'training.trainingID')
-    ->join('trainingschedule', 'training.trainingID', '=', 'trainingschedule.trainingID')
-    ->join('organization', 'training.organizationID', '=', 'organization.organizationID')
-    ->where('registration.ApplicantID', $applicantID)
-    ->where('registration.registrationStatus', 'Registered')
-    ->select(
-        'training.trainingID as trainingID',
-        'training.title as title',
-        'training.description as description',
-        DB::raw('DATE(trainingschedule.schedule) as date'),   // Extract date from schedule
-        DB::raw('TIME(trainingschedule.schedule) as time'),   // Extract time from schedule
-        'trainingschedule.mode as mode',
-        'trainingschedule.location as location',
-        'trainingschedule.trainingLink as trainingLink',
-        'organization.name as organization',
+    public function getUserEvents($applicantID)
+    {
+        $applicantID = (int) $applicantID;
 
-        'trainingschedule.attendance_key as attendance_key',
-        'trainingschedule.end_time as end_time',
-        'trainingschedule.qr_generated_at as qr_generated_at',
-        'trainingschedule.attendance_expires_at as attendance_expires_at',
+        $connection = DB::connection('pgsql');
 
-        DB::raw("'training' as type")
-    )
-    ->get();
+        $trainings = $connection->table('registration')
+            ->join('training', 'registration.trainingID', '=', 'training.trainingID')
+            ->join('trainingschedule', 'training.trainingID', '=', 'trainingschedule.trainingID')
+            ->leftJoin('organization', 'training.organizationID', '=', 'organization.organizationID')
+            ->where('registration.applicantID', $applicantID)
+            ->whereRaw("LOWER(COALESCE(registration.\"registrationStatus\", registration.registrationStatus, 'registered')) <> 'cancelled'")
+            ->select(
+                'training.trainingID as trainingID',
+                'training.title as title',
+                'training.description as description',
+                DB::raw("TO_CHAR(trainingschedule.schedule, 'YYYY-MM-DD') as date"),
+                DB::raw("TO_CHAR(trainingschedule.schedule, 'HH24:MI:SS') as time"),
+                'trainingschedule.mode as mode',
+                'trainingschedule.location as location',
+                'trainingschedule.trainingLink as trainingLink',
+                DB::raw("COALESCE(organization.name, 'Unknown') as organization"),
+                'trainingschedule.attendance_key as attendance_key',
+                DB::raw("TO_CHAR(trainingschedule.end_time, 'YYYY-MM-DD HH24:MI:SS') as end_time"),
+                DB::raw("TO_CHAR(trainingschedule.qr_generated_at, 'YYYY-MM-DD HH24:MI:SS') as qr_generated_at"),
+                DB::raw("TO_CHAR(trainingschedule.attendance_expires_at, 'YYYY-MM-DD HH24:MI:SS') as attendance_expires_at"),
+                'trainingschedule.trainingScheduleID as trainingScheduleID',
+                'registration.registrationID as registrationID',
+                DB::raw("'training' as type")
+            )
+            ->get();
 
+        $careers = $connection->table('application')
+            ->join('career', 'application.careerID', '=', 'career.careerID')
+            ->leftJoin('organization', 'career.organizationID', '=', 'organization.organizationID')
+            ->where('application.applicantID', $applicantID)
+            ->whereRaw("LOWER(COALESCE(application.\"applicationStatus\", application.applicationStatus, '')) = 'scheduled for interview'")
+            ->whereNotNull('application.interviewSchedule')
+            ->select(
+                'career.careerID as careerID',
+                'career.position as title',
+                'career.details as details',
+                'career.qualificationStandard as qualificationStandard',
+                'career.placeOfAssignment as placeOfAssignment',
+                DB::raw("TO_CHAR(application.interviewSchedule, 'YYYY-MM-DD') as date"),
+                DB::raw("TO_CHAR(application.interviewSchedule, 'HH24:MI:SS') as time"),
+                'application.interviewMode as mode',
+                'application.interviewLocation as interviewLocation',
+                'application.interviewLink as interviewLink',
+                DB::raw("TO_CHAR(career.\"closingDate\", 'YYYY-MM-DD') as deadlineOfSubmission"),
+                DB::raw("COALESCE(organization.name, 'Unknown') as organization"),
+                DB::raw("'career' as type")
+            )
+            ->get();
 
+        $events = $careers->merge($trainings)->sortBy('date')->values();
 
-
-    $careers = DB::table('application')
-    ->join('career', 'application.careerID', '=', 'career.careerID')
-    ->join('organization', 'career.organizationID', '=', 'organization.organizationID')
-    ->where('application.applicantID', $applicantID)
-    ->where('application.applicationStatus', 'Scheduled for Interview')
-    ->select(
-        'career.careerID as careerID',
-        'career.position as title',
-        'career.detailsAndInstructions as detailsAndInstructions',
-        'career.qualificationStandard as qualificationStandard',
-        'career.requirements as requirements',
-        'career.applicationLetterAddress as applicationLetterAddress',
-        DB::raw('DATE(application.interviewSchedule) as date'),
-        DB::raw('TIME(application.interviewSchedule) as time'),
-        'application.interviewMode as mode',
-        'application.interviewLocation as interviewLocation',
-        'application.interviewLink as interviewLink',
-        'career.deadlineOfSubmission as deadlineOfSubmission',
-        'organization.name as organization',
-        DB::raw("'career' as type")
-    )
-    ->get();
-
-    $events = $careers->merge($trainings)->sortBy('date')->values();
-
-    return response()->json(['events' => $events]);
-}
+        return response()->json(['events' => $events]);
+    }
 
 public function index(Request $request)
 {

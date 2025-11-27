@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Training;
 use App\Models\TrainingSchedule;
+use App\Models\Registration;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -129,13 +130,14 @@ class TrainingController extends Controller
         }
 
         // ✅ Step 4: update attendance
-        DB::table('registration')
-            ->where('registrationID', $applicant->registrationID)
-            ->update([
-                'checked_in_at' => now(),
-                'registrationStatus' => 'Attended',
-                'certTrackingID' => $request->key
-            ]);
+        $registration = Registration::find($applicant->registrationID);
+        if ($registration) {
+            $registration->checked_in_at = now();
+            $registration->registrationStatus = 'Attended';
+            $registration->certTrackingID = $request->key;
+            $registration->recordStage('attended', now());
+            $registration->save();
+        }
 
         return response()->json(['message' => '✅ Attendance Recorded Successfully']);
     }

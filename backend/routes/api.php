@@ -132,6 +132,7 @@ Route::middleware('auth.custom')->group(function () {
 Route::middleware('auth.custom')->group(function () {
 // Certificate issuance
     Route::put('/registrations/{registrationID}/certificate', [RegistrationController::class, 'updateCertificate']);
+    Route::put('/registrations/{registrationID}/status', [RegistrationController::class, 'updateStatus']);
     Route::post('/trainings/{trainingID}/certificates/bulk', [RegistrationController::class, 'issueBulkCertificates']);
 
 
@@ -155,6 +156,7 @@ Route::middleware('auth.custom')->group(function () {
 
     // Certificate issuance
     Route::put('/registrations/{registrationID}/certificate', [RegistrationController::class, 'updateCertificate']);
+    Route::put('/registrations/{registrationID}/status', [RegistrationController::class, 'updateStatus']);
     Route::post('/trainings/{trainingID}/certificates/bulk', [RegistrationController::class, 'issueBulkCertificates']);
 
     // Applicant monitoring
@@ -177,6 +179,7 @@ Route::middleware('auth.custom')->group(function () {
     Route::get('/applications', [ApplicationController::class, 'index']);
     Route::post('/applications', [ApplicationController::class, 'store']);
     Route::delete('/applications/{id}', [ApplicationController::class, 'destroy']);
+    Route::delete('/applications/career/{careerID}', [ApplicationController::class, 'destroyByCareer']);
     Route::get('/applications/{id}/requirement', [ApplicationController::class, 'viewRequirement']);
     Route::get('/interviews', [InterviewController::class, 'index']);
 

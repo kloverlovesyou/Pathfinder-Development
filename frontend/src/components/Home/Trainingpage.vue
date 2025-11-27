@@ -14,11 +14,38 @@ const toasts = ref([]);
 
 // ✅ Only include trainings whose schedule is not past
 const upcomingTrainings = computed(() => {
-  const today = new Date().setHours(0, 0, 0, 0);
+  const now = new Date();
 
   return trainingStore.trainings.filter((t) => {
-    const end = new Date(t.endDate || t.date).setHours(0, 0, 0, 0);
-    return end >= today;
+    // Check if any schedule is upcoming
+    if (t.schedules && t.schedules.length > 0) {
+      // Check the latest schedule's end_time
+      const latestSchedule = t.schedules[t.schedules.length - 1];
+      if (latestSchedule && latestSchedule.end_time) {
+        try {
+          const end = new Date(latestSchedule.end_time);
+          return end >= now;
+        } catch (e) {
+          console.warn('Invalid end_time format:', latestSchedule.end_time);
+          return true; // Show training if date parsing fails
+        }
+      }
+      // If schedules exist but no end_time, show the training
+      return true;
+    }
+    // Fallback to first schedule or end_time for backward compatibility
+    const endTime = t.end_time || t.endDate || t.date;
+    if (endTime) {
+      try {
+        const end = new Date(endTime);
+        return end >= now;
+      } catch (e) {
+        console.warn('Invalid end_time format:', endTime);
+        return true; // Show training if date parsing fails
+      }
+    }
+    // If no schedule info, show the training (might be newly created)
+    return true;
   });
 });
 
@@ -27,12 +54,14 @@ const trainingsToShow = upcomingTrainings;
 
 const trainingsWithOrg = computed(() =>
   trainingStore.trainings.map((t) => {
-    const org = organizations.value.find(
-      (o) => o.organizationID === t.organizationID
-    );
+    // Get organization name from the training object or organizations array
+    const orgName = t.organization?.name || 
+      organizations.value.find((o) => o.organizationID === t.organizationID)?.name ||
+      "Unknown";
     return {
       ...t,
-      organizationName: org ? org.name : "Unknown",
+      organizationName: orgName,
+      organization: t.organization || { name: orgName },
     };
   })
 );
@@ -104,6 +133,8 @@ const trainings = computed(() => trainingStore.trainings);
 // ---------------------------
 onMounted(async () => {
   await trainingStore.fetchTrainings();
+  console.log("Trainings loaded:", trainingStore.trainings);
+  console.log("Upcoming trainings:", upcomingTrainings.value);
   await fetchOrganizations();
   await regStore.fetchMyRegistrations();
 });
@@ -140,7 +171,7 @@ const showModal = ref(false);
             <div>
               <h3 class="font-semibold">{{ training.title }}</h3>
               <p class="text-gray-700">
-                {{ training.organization.name }}
+                {{ training.organization?.name || training.organizationName || 'Unknown' }}
               </p>
             </div>
           </div>

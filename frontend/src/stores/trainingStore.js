@@ -16,12 +16,15 @@ export const useTrainingStore = defineStore("trainingStore", {
           import.meta.env.VITE_API_BASE_URL + "/trainings"
         );
 
-        this.trainings = response.data;
+        console.log("Trainings API response:", response.data);
+        this.trainings = Array.isArray(response.data) ? response.data : [];
 
         // Auto generate QR for ongoing trainings
         this.autoGenerateQRs();
       } catch (error) {
         console.error("Error fetching trainings:", error);
+        console.error("Error details:", error.response?.data || error.message);
+        this.trainings = []; // Set to empty array on error
       }
     },
 
@@ -52,16 +55,33 @@ export const useTrainingStore = defineStore("trainingStore", {
       const now = new Date();
 
       this.trainings.forEach((training) => {
-        const startTime = new Date(training.schedule);
-        const endTime = new Date(training.end_time);
-        const now = new Date();
-
-        if (now >= startTime && now < endTime) {
-          if (
-            !this.qrCodes[training.trainingID] ||
-            new Date(this.qrCodes[training.trainingID].expires_at) < now
-          ) {
-            this.generateQR(training); // no need for isPublic flag
+        // Check all schedules for the training
+        if (training.schedules && training.schedules.length > 0) {
+          training.schedules.forEach((schedule) => {
+            const startTime = new Date(schedule.schedule);
+            const endTime = new Date(schedule.end_time);
+            
+            if (now >= startTime && now < endTime) {
+              if (
+                !this.qrCodes[training.trainingID] ||
+                new Date(this.qrCodes[training.trainingID].expires_at) < now
+              ) {
+                this.generateQR(training);
+              }
+            }
+          });
+        } else {
+          // Fallback to first schedule fields for backward compatibility
+          const startTime = training.schedule ? new Date(training.schedule) : null;
+          const endTime = training.end_time ? new Date(training.end_time) : null;
+          
+          if (startTime && endTime && now >= startTime && now < endTime) {
+            if (
+              !this.qrCodes[training.trainingID] ||
+              new Date(this.qrCodes[training.trainingID].expires_at) < now
+            ) {
+              this.generateQR(training);
+            }
           }
         }
       });

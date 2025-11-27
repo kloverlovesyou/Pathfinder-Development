@@ -16,6 +16,7 @@ const showUploadModal = ref(false);
 const uploadedFile = ref(null);
 const toasts = ref([]);
 const bookmarkLoading = ref(false);
+const unapplyLoading = ref(false);
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const modalRef = ref(null);
@@ -38,9 +39,31 @@ function addToast(message, type = "info") {
   }, 3000);
 }
 
-const isApplied = computed(() =>
-  props.myApplications.has(props.career?.careerID ?? props.career?.id)
-);
+function getCareerId() {
+  return props.career?.careerID ?? props.career?.id ?? null;
+}
+
+const isApplied = computed(() => {
+  const careerId = getCareerId();
+  if (!careerId || !props.myApplications) return false;
+
+  if (typeof props.myApplications.has === "function") {
+    return props.myApplications.has(careerId);
+  }
+
+  if (Array.isArray(props.myApplications)) {
+    return props.myApplications.includes(careerId);
+  }
+
+  if (
+    typeof props.myApplications === "object" &&
+    props.myApplications !== null
+  ) {
+    return !!props.myApplications[careerId];
+  }
+
+  return false;
+});
 
 // --- Upload Modal Handlers ---
 function openUploadModal() {
@@ -86,9 +109,12 @@ async function submitApplication() {
 
     addToast("APPLICATION SUBMITTED SUCCESSFULLY", "success");
 
-    const id = props.career.careerID ?? props.career.id;
-    props.myApplications.add(id);
-    emits("update-applications", new Set(props.myApplications));
+    const id = getCareerId();
+    const updatedSet = new Set(props.myApplications ?? []);
+    if (id !== null) {
+      updatedSet.add(id);
+    }
+    emits("update-applications", updatedSet);
 
     closeUploadModal();
     emits("close");
@@ -114,6 +140,46 @@ async function submitApplication() {
   }
 }
 
+async function unapplyApplication() {
+  if (!props.career) return;
+  const token = localStorage.getItem("token");
+  if (!token) {
+    addToast("PLEASE LOG IN FIRST", "accent");
+    return;
+  }
+
+  const careerId = getCareerId();
+  if (!careerId) {
+    addToast("INVALID CAREER DATA", "accent");
+    return;
+  }
+
+  if (unapplyLoading.value) return;
+  unapplyLoading.value = true;
+
+  try {
+    await axios.delete(
+      `${API_BASE_URL}/applications/career/${careerId}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    addToast("APPLICATION WITHDRAWN", "success");
+    const updatedSet = new Set(props.myApplications ?? []);
+    updatedSet.delete(careerId);
+    emits("update-applications", updatedSet);
+    emits("close");
+  } catch (error) {
+    const errorMsg =
+      error.response?.data?.message || "FAILED TO WITHDRAW APPLICATION";
+    addToast(errorMsg, "accent");
+    console.error("Application withdrawal error:", error.response?.data || error);
+  } finally {
+    unapplyLoading.value = false;
+  }
+}
+
 function formatDateTime(dateStr) {
   if (!dateStr) return "N/A";
   const date = new Date(dateStr);
@@ -127,8 +193,8 @@ function formatDateTime(dateStr) {
   });
 }
 
-// --- Download PDF ---
-async function downloadPDF(event) {
+// --- View PDF in new tab ---
+function viewPDF(event) {
   event.preventDefault();
   if (!props.career?.pdf_directory) {
     addToast("PDF not available", "accent");
@@ -142,52 +208,21 @@ async function downloadPDF(event) {
     const pdfUrl = getPDFUrl(filePath, "Requirements");
     
     if (pdfUrl) {
-      const response = await fetch(pdfUrl);
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        
-        // Extract filename from path or use default
-        const fileName = filePath.split("/").pop() || `career_${props.career.careerID || props.career.id}_${props.career.position || 'document'}.pdf`;
-        
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        
-        addToast("PDF downloaded successfully", "success");
-        return;
-      }
+      // Open PDF in new tab
+      window.open(pdfUrl, '_blank');
+      return;
     }
     
-    // Fallback: try direct download if pdf_directory is a full URL
+    // Fallback: if pdf_directory is already a full URL
     if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
-      const response = await fetch(filePath);
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const fileName = filePath.split("/").pop() || `career_${props.career.careerID || props.career.id}.pdf`;
-        
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        
-        addToast("PDF downloaded successfully", "success");
-        return;
-      }
+      window.open(filePath, '_blank');
+      return;
     }
     
-    addToast("Failed to download PDF", "accent");
+    addToast("Failed to open PDF", "accent");
   } catch (error) {
-    console.error("Error downloading PDF:", error);
-    addToast("Failed to download PDF", "accent");
+    console.error("Error opening PDF:", error);
+    addToast("Failed to open PDF", "accent");
   }
 }
 </script>
@@ -216,8 +251,34 @@ async function downloadPDF(event) {
             Apply
           </button>
 
-          <button v-else class="btn btn-sm bg-gray-500 text-white" disabled>
-            Applied
+          <button
+            v-else
+            class="btn btn-sm bg-gray-500 hover:bg-red-700 text-white flex items-center gap-2"
+            :disabled="unapplyLoading"
+            @click="unapplyApplication"
+          >
+            <svg
+              v-if="unapplyLoading"
+              class="animate-spin h-4 w-4 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
+              ></path>
+            </svg>
+            <span>{{ unapplyLoading ? "Processing" : "Unapply" }}</span>
           </button>
         </div>
 
@@ -234,13 +295,11 @@ async function downloadPDF(event) {
           <strong>Trainings Attended Percentage:</strong> {{ career.trainingsAttendedPercentage }}%
         </p>
         <p v-if="career.pdf_directory">
-        
           <a 
             href="#" 
-            @click="downloadPDF" 
-            class="text-blue-600 hover:underline cursor-pointer"
-          >
-            View Details
+            @click="viewPDF" 
+            class="text-blue-600 hover:underline cursor-pointer ml-2"
+          >View Details
           </a>
         </p>
       </div>

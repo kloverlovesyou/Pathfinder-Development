@@ -42,14 +42,24 @@ class ApplicationController extends Controller
             'applicationLetterAddress' => $app->career->applicationLetterAddress ?? null,
             'deadlineOfSubmission' => $app->career->deadlineOfSubmission ?? null,
             'status' => $app->applicationStatus,
+            'dateSubmitted' => $app->dateSubmitted,
+            'appliedDate' => $app->appliedDate,
+            'screenDate' => $app->screenDate,
+            'pendingDate' => $app->pendingDate,
+            'hiredDate' => $app->hiredDate,
+            'declinedDate' => $app->declinedDate,
 
             // Career table
             'title' => $career->position ?? null,
-            'detailsAndInstructions' => $career->detailsAndInstructions ?? null,
+            'details' => $career->details ?? null,
+            'detailsAndInstructions' => $career->details ?? null, // Backward compatibility
+            'placeOfAssignment' => $career->placeOfAssignment ?? null,
             'qualificationStandard' => $career->qualificationStandard ?? null,
-            'requirements' => $career->requirements ?? null,
-            'applicationLetterAddress' => $career->applicationLetterAddress ?? null,
-            'deadlineOfSubmission' => $career->deadlineOfSubmission ?? null,
+            'pdf_directory' => $career->pdf_directory ?? null,
+            'postingDate' => $career->postingDate ?? null,
+            'closingDate' => $career->closingDate ?? null,
+            'deadlineOfSubmission' => $career->closingDate ?? null, // Backward compatibility
+            'trainingsAttendedPercentage' => $career->trainingsAttendedPercentage ?? null,
 
             // Organization table
             'organizationName' => $career->organization->name ?? null,
@@ -153,6 +163,7 @@ class ApplicationController extends Controller
             $app = Application::create([
                 'requirement_directory' => $requirementsPath,
                 'dateSubmitted' => Carbon::now(),
+                'appliedDate' => Carbon::now(),
                 'applicationStatus' => 'Submitted',
 
                 'interviewSchedule' => null,
@@ -163,6 +174,7 @@ class ApplicationController extends Controller
                 'careerID' => $careerID,
                 'applicantID' => $user->applicantID,
             ]);
+            $this->recordApplicationStage($app, 'submitted');
 
             Log::info('✅ Application created successfully', [
                 'applicationID' => $app->applicationID,
@@ -308,21 +320,128 @@ class ApplicationController extends Controller
         }
     }
 
+    protected function deleteApplicationRecord(Application $application): void
+    {
+        $requirementsPath = $application->requirement_directory;
+        $application->delete();
+        $this->deleteRequirementAsset($requirementsPath);
+    }
+
+    protected function deleteRequirementAsset(?string $path): void
+    {
+        if (!$path) {
+            return;
+        }
+
+        $normalizedPath = ltrim($path, '/');
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            $urlPath = parse_url($path, PHP_URL_PATH) ?: '';
+            $marker = '/storage/v1/object/public/';
+            if ($urlPath && str_contains($urlPath, $marker)) {
+                $normalizedPath = ltrim(
+                    substr($urlPath, strpos($urlPath, $marker) + strlen($marker)),
+                    '/'
+                );
+            } else {
+                $normalizedPath = ltrim($urlPath, '/');
+            }
+        }
+
+        if (!$normalizedPath) {
+            return;
+        }
+
+        try {
+            if (Storage::disk('public')->exists($normalizedPath)) {
+                Storage::disk('public')->delete($normalizedPath);
+                return;
+            }
+
+            $absolutePath = public_path($normalizedPath);
+            if (file_exists($absolutePath)) {
+                @unlink($absolutePath);
+                return;
+            }
+
+            $bucket = env('SUPABASE_BUCKET', 'Requirements');
+            $supabaseUrl = env('SUPABASE_URL');
+            $supabaseKey = env('SUPABASE_SECRET') ?: env('SUPABASE_KEY');
+
+            if ($supabaseUrl && $bucket && $supabaseKey) {
+                $supabaseUrl = preg_replace('#/storage/v1/object/public/?$#', '', $supabaseUrl);
+                $supabaseUrl = rtrim($supabaseUrl, '/');
+                $deleteUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}/{$normalizedPath}";
+
+                $client = new \GuzzleHttp\Client();
+                $client->delete($deleteUrl, [
+                    'headers' => [
+                        'Authorization' => "Bearer {$supabaseKey}",
+                        'Content-Type' => 'application/json',
+                    ],
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::warning('Failed to delete requirement asset', [
+                'path' => $path,
+                'normalized' => $normalizedPath,
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    protected function resolveApplicantFromRequest(Request $request)
+    {
+        $user = $request->user();
+        if ($user && isset($user->applicantID)) {
+            return $user;
+        }
+
+        $authUser = $request->authUser ?? null;
+        if ($authUser && isset($authUser->applicantID)) {
+            return $authUser;
+        }
+
+        return null;
+    }
+
 
     //withdraw application
     public function destroy(Request $request, int $id)
     {
-        $user = $request->authUser;
+        $user = $this->resolveApplicantFromRequest($request);
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
 
-        $app = Application::where('applicationID', $id)
+        $application = Application::where('applicationID', $id)
             ->where('applicantID', $user->applicantID)
             ->first();
 
-        if(!$app){
+        if (!$application) {
             return response()->json(['message' => 'APPLICATION NOT FOUND'], 404);
         }
 
-        $app->delete();
+        $this->deleteApplicationRecord($application);
+
+        return response()->json(['message' => 'APPLICATION WITHDRAWN'], 200);
+    }
+
+    public function destroyByCareer(Request $request, int $careerID)
+    {
+        $user = $this->resolveApplicantFromRequest($request);
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $application = Application::where('careerID', $careerID)
+            ->where('applicantID', $user->applicantID)
+            ->first();
+
+        if (!$application) {
+            return response()->json(['message' => 'APPLICATION NOT FOUND'], 404);
+        }
+
+        $this->deleteApplicationRecord($application);
 
         return response()->json(['message' => 'APPLICATION WITHDRAWN'], 200);
     }
@@ -448,12 +567,23 @@ public function viewRequirement(Request $request, $id)
         }
         
         $validated = $request->validate([
-            'status' => 'required|in:submitted,in review,for interview,accepted,rejected',
+            'status' => 'required|in:submitted,in review,for interview,pending,accepted,rejected,hired,declined',
+            'date' => 'nullable|date',
+            'overwrite' => 'nullable|boolean',
         ]);
-        
-        $application->update([
-            'applicationStatus' => $validated['status'],
-        ]);
+
+        $timestamp = isset($validated['date'])
+            ? Carbon::parse($validated['date'])
+            : null;
+
+        $application->applicationStatus = $validated['status'];
+        $this->recordApplicationStage(
+            $application,
+            $validated['status'],
+            $timestamp,
+            $request->boolean('overwrite', false)
+        );
+        $application->save();
         
         return response()->json([
             'message' => 'Status updated successfully',
@@ -499,6 +629,7 @@ public function viewRequirement(Request $request, $id)
                 'interviewLink' => $validated['interviewLink'] ?? null,
                 'applicationStatus' => 'for interview',
             ]);
+            $this->recordApplicationStage($application, 'for interview');
             
             // Refresh the model to get updated data
             $application->refresh();
@@ -587,4 +718,30 @@ public function viewRequirement(Request $request, $id)
 
 
 
+    private function recordApplicationStage(Application $application, string $status, ?Carbon $timestamp = null, bool $force = false): void
+    {
+        $map = [
+            'submitted' => 'appliedDate',
+            'in review' => 'appliedDate',
+            'for interview' => 'screenDate',
+            'pending' => 'pendingDate',
+            'accepted' => 'hiredDate',
+            'hired' => 'hiredDate',
+            'declined' => 'declinedDate',
+            'rejected' => 'declinedDate',
+        ];
+
+        $key = strtolower(trim($status));
+        if (!isset($map[$key])) {
+            return;
+        }
+
+        $column = $map[$key];
+        if (!$force && !empty($application->$column)) {
+            return;
+        }
+
+        $application->$column = $timestamp ?? Carbon::now();
+        $application->save();
+    }
 }

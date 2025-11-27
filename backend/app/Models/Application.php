@@ -22,15 +22,32 @@ class Application extends Model
     public $timestamps = false;
 
     protected $casts = [
-        'careerID'   => 'int',
-        'applicantID'=> 'int'
+        'careerID'          => 'int',
+        'applicantID'       => 'int',
+        'appliedDate'       => 'datetime',
+        'screenDate'        => 'datetime',
+        'pendingDate'       => 'datetime',
+        'hiredDate'         => 'datetime',
+        'declinedDate'      => 'datetime',
+        'interviewSchedule' => 'datetime',
     ];
 
     protected $fillable = [
         'Requirements',
         'requirement_directory', // backward compatibility
         'careerID',
-        'applicantID'
+        'applicantID',
+        'dateSubmitted',
+        'applicationStatus',
+        'interviewSchedule',
+        'interviewMode',
+        'interviewLocation',
+        'interviewLink',
+        'appliedDate',
+        'screenDate',
+        'pendingDate',
+        'hiredDate',
+        'declinedDate',
     ];
 
     /* -----------------------------------------------------------

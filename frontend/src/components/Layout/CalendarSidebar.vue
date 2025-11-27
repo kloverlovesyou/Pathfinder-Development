@@ -1,120 +1,52 @@
 <script setup>
-import { ref, reactive, computed, onMounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted, watch, nextTick } from "vue";
 import axios from "axios";
-import QrcodeVue from "qrcode.vue"; // make sure to import this if using QR
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const registeredPosts = reactive({}); // stores registered trainings
 
-async function fetchMyRegistrations() {
-  const token = localStorage.getItem("token");
-  if (!token) return;
-
-  try {
-    const res = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + "/registrations",
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-
-    // Fill registeredPosts (for quick lookup)
-    res.data.forEach((r) => {
-      registeredPosts[r.trainingID] = {
-        registrationID: r.registrationID,
-      };
-    });
-
-    console.log("✅ Registered trainings loaded:", registeredPosts);
-  } catch (err) {
-    console.error("❌ Failed to fetch registrations:", err);
-  }
-}
-const applications = ref([]);
-const posts = ref([]); // never undefined
-const organizations = ref({}); // never undefined
-
-const fetchApplications = async (applicantID) => {
-  const token = localStorage.getItem("token");
-  if (!token) return;
-
-  try {
-    const response = await axios.get(`${API_BASE_URL}/applications`, {
-      params: { applicantID },
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    applications.value = response.data;
-  } catch (error) {
-    console.error("Failed to fetch applications:", error);
-  }
-};
-onMounted(fetchMyRegistrations);
 // --- Career events for applications the user applied for ---
 
-async function fetchCareerEvents() {
-  try {
-    const user = JSON.parse(localStorage.getItem("user"));
-    const token = localStorage.getItem("token");
-    if (!user || !token) return;
+async function loadApplicationEvents(applicantID, token) {
+  const { data: apps } = await axios.get(`${API_BASE_URL}/applications`, {
+    params: { applicantID },
+    headers: { Authorization: `Bearer ${token}` },
+  });
 
-    // Call the API that returns applications with interview schedule
-    const { data: apps } = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + "/applications",
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+  const interviewEvents = (apps || [])
+    .filter(
+      (app) =>
+        Number(app.applicantID) === Number(applicantID) &&
+        app.interviewSchedule
+    )
+    .map((app) => {
+      const isoDate = toISODate(app.interviewSchedule);
+      if (!isoDate) return null;
 
-    console.log("📋 Applications API response:", apps);
-    console.log("📋 First application sample:", apps[0]);
+      return {
+        type: "career",
+        date: isoDate,
+        applicationID: app.applicationID,
+        careerID: app.careerID,
+        title: app.title || app.career?.position || "Career Interview",
+        organization:
+          app.organizationName ||
+          app.career?.organization?.name ||
+          app.career?.organization ||
+          "Unknown Organization",
+        interviewSchedule: app.interviewSchedule,
+        interviewMode: app.interviewMode,
+        interviewLink: app.interviewLink,
+        interviewLocation: app.interviewLocation,
+      };
+    })
+    .filter(Boolean);
 
-    // Filter only applications that have an interview schedule
-    const careerEvents = apps
-      .filter((app) => app.interviewSchedule) // skip applications without interviews
-      .map((app) => {
-        // Debug: Log what fields are available
-        console.log("📋 Processing application:", {
-          applicationID: app.applicationID,
-          title: app.title,
-          careerPosition: app.career?.position,
-          hasCareer: !!app.career,
-          allKeys: Object.keys(app),
-        });
-
-        return {
-          id: app.applicationID,
-          careerID: app.careerID,
-          title: app.title || app.career?.position || "Career Interview", // Use title from API response first
-          date: new Date(app.interviewSchedule).toISOString().split("T")[0],
-          type: "career",
-          interviewSchedule: app.interviewSchedule,
-          interviewMode: app.interviewMode,
-          interviewLink: app.interviewLink,
-          interviewLocation: app.interviewLocation,
-          organization:
-            app.organizationName ||
-            app.career?.organization?.name ||
-            app.career?.organization ||
-            "Unknown Organization",
-        };
-      });
-
-    // Merge career events into your existing events map
-    careerEvents.forEach((event) => {
-      if (!events.value[event.date]) events.value[event.date] = [];
-      events.value[event.date].push(event);
-    });
-
-    console.log("📅 Career events merged:", careerEvents);
-  } catch (error) {
-    console.error("❌ Failed to fetch career events:", error);
-  }
+  interviewEvents.forEach((event) => {
+    if (!events.value[event.date]) events.value[event.date] = [];
+    events.value[event.date].push(event);
+  });
 }
 
-const qrCodeValue = computed(() => {
-  if (!selectedTraining.value) return "";
-  return `${import.meta.env.VITE_API_BASE_URL}/attendance?trainingID=${
-    selectedTraining.value.trainingID
-  }&key=${selectedTraining.value.attendance_key}`;
-});
 // 🔹 Fetch complete career details for the modal
 async function fetchCareerDetails(careerID) {
   const token = localStorage.getItem("token");
@@ -142,70 +74,42 @@ async function fetchCareerDetails(careerID) {
     return null;
   }
 }
-async function fetchInterviews() {
-  const token = localStorage.getItem("token");
-  if (!token) return;
-
-  try {
-    const res = await axios.get(`${API_BASE_URL}/interviews`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    careerEvents.value = res.data;
-  } catch (err) {
-    console.error("Error fetching interviews:", err);
-  }
-}
-// Toggle registration
-async function toggleRegister(training) {
-  const token = localStorage.getItem("token");
-  if (!token) return alert("Please log in first.");
-
-  // If already registered -> unregister
-  if (registeredPosts[training.trainingID]) {
-    try {
-      const registrationID =
-        registeredPosts[training.trainingID].registrationID;
-      await axios.delete(
-        import.meta.env.VITE_API_BASE_URL + `/registrations/${registrationID}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      delete registeredPosts[training.trainingID];
-      console.log(`🗑 Unregistered from ${training.title}`);
-    } catch (err) {
-      console.error("❌ Failed to unregister:", err);
-    }
-  }
-  // Else register
-  else {
-    try {
-      const res = await axios.post(
-        import.meta.env.VITE_API_BASE_URL + "/registrations",
-        { trainingID: training.trainingID },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      registeredPosts[training.trainingID] = {
-        registrationID: res.data.registrationID,
-      };
-
-      console.log(`✅ Registered for ${training.title}`);
-    } catch (err) {
-      console.error("❌ Failed to register:", err);
-    }
-  }
-}
-
 const props = defineProps({
   isOpen: { type: Boolean, required: true },
 });
 const emit = defineEmits(["open", "close", "eventClick"]);
 
-const trainings = ref([]);
-const myRegistrations = ref(new Set());
-
 const selectedTraining = ref(null);
 const selectedPost = ref(null);
+
+const activeSchedules = computed(() => {
+  const training = selectedTraining.value;
+  if (!training) return [];
+
+  const schedulesArray =
+    Array.isArray(training.schedules) && training.schedules.length
+      ? training.schedules
+      : [];
+
+  if (schedulesArray.length) return schedulesArray;
+
+  const fallbackSchedule =
+    training.schedule || training.start_time || training.scheduleDate;
+
+  if (fallbackSchedule) {
+    return [
+      {
+        schedule: fallbackSchedule,
+        end_time: training.end_time,
+        mode: training.mode,
+        location: training.location,
+        trainingLink: training.trainingLink,
+      },
+    ];
+  }
+
+  return [];
+});
 
 async function openModal(post) {
   console.log("Opening modal for:", post); // ✅ debug line
@@ -246,109 +150,195 @@ function formatDate(d) {
   });
 }
 
-const uploadedFile = ref(null);
-const applyModalOpen = ref(false);
-function openApplyModal(post) {
-  selectedPost.value = post;
-  applyModalOpen.value = true;
-}
+function formatScheduleFull(datetime) {
+  if (!datetime) return "No schedule set";
 
-function closeApplyModal() {
-  applyModalOpen.value = false;
-  uploadedFile.value = null;
-}
+  try {
+    const [datePart, timePart] = datetime.split(/[ T]/);
+    const [year, month, day] = datePart.split("-");
+    const [hour = "00", minute = "00"] = (timePart || "00:00:00").split(":");
 
-function handleFileUpload(e) {
-  uploadedFile.value = e.target.files[0];
-}
+    const parsed = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute)
+    );
 
-function submitApplication() {
-  if (!uploadedFile.value) {
-    alert("Please upload a PDF file first.");
-    return;
+    return parsed.toLocaleString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch (error) {
+    return datetime;
   }
-
-  // ✅ Safety check: make sure a post is selected
-  if (!selectedPost.value) return;
-
-  // Log info (for debugging)
-  console.log("Submitting application for:", selectedPost.value);
-  console.log("Uploaded file:", uploadedFile.value);
-
-  const id = selectedPost.value.careerID;
-  appliedPosts.value[id] = true;
-
-  alert("Application submitted successfully!");
-  closeApplyModal();
 }
+
+function formatScheduleTime(datetime) {
+  if (!datetime) return "";
+
+  try {
+    const [datePart, timePart] = datetime.split(/[ T]/);
+    const [year, month, day] = datePart.split("-");
+    const [hour = "00", minute = "00"] = (timePart || "00:00:00").split(":");
+
+    const parsed = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute)
+    );
+
+    return parsed.toLocaleString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch (error) {
+    return "";
+  }
+}
+
 // --- CALENDAR LOGIC ---
-const calendarRef = ref(null);
 const selectedDate = ref("");
+const displayDate = computed(() => {
+  if (!selectedDate.value) return "";
+  const [year, month, day] = selectedDate.value.split("-").map(Number);
+  if ([year, month, day].some((n) => Number.isNaN(n))) return selectedDate.value;
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+});
 const events = ref({}); // Map of date → [events]
 const dayEvents = ref([]);
 
-// --- Handle day click ---
-function onDayClick(date) {
-  selectedDate.value = toISODate(date);
-  showEvents(selectedDate.value);
-}
-
 // --- Initialize calendar: fetch events & select today ---
 onMounted(async () => {
-  await fetchEvents();
-  await fetchCareerEvents(); // add career events
-  onDayClick(new Date()); // select today automatically
+  await loadUserEvents();
 });
-// --- Check if a date is today ---
-function isToday(date) {
-  const d = new Date(date);
-  const now = new Date();
-  return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
-  );
-}
 // --- EVENTS LOGIC ---
+async function loadRegistrationEvents(applicantID, token) {
+  const response = await axios.get(`${API_BASE_URL}/registrations`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 
-async function fetchEvents() {
-  try {
-    const user = JSON.parse(localStorage.getItem("user"));
-    const token = localStorage.getItem("token");
+  const registrations = (response.data || []).filter(
+    (reg) => Number(reg.applicantID) === Number(applicantID)
+  );
 
-    if (!user || !token) {
-      console.warn("⚠️ No user or token found in localStorage");
-      return;
-    }
-
-    const response = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + `/calendar/${user.applicantID}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
+  registrations.forEach((reg) => {
+    const training = reg.training || {};
+    const normalizedTrainingID = Number(
+      reg.trainingID ??
+        reg.training_id ??
+        training.trainingID ??
+        training.training_id ??
+        reg.TrainingID ??
+        0
     );
+    const schedules =
+      Array.isArray(training.schedules) && training.schedules.length
+        ? training.schedules
+        : [
+            {
+              schedule:
+                reg.schedule ||
+                reg.start_time ||
+                training.schedule ||
+                training.start_time,
+              end_time: reg.end_time || training.end_time,
+              mode: reg.mode || training.mode,
+              location: reg.location || training.location,
+              trainingLink: reg.trainingLink || training.trainingLink,
+            },
+          ];
 
-    const eventList = response.data.events || [];
-    console.log("✅ API Events Fetched:", eventList);
+    const schedulesByDate = schedules.reduce((acc, schedule) => {
+      const isoDate = toISODate(schedule.schedule || schedule.start_time);
+      if (!isoDate) return acc;
+      if (!acc[isoDate]) acc[isoDate] = [];
+      acc[isoDate].push(schedule);
+      return acc;
+    }, {});
 
-    // Normalize all dates (ensure YYYY-MM-DD)
-    eventList.forEach((e) => {
-      e.date = new Date(e.date).toISOString().split("T")[0];
+    Object.entries(schedulesByDate).forEach(([isoDate, groupedSchedules]) => {
+      if (!events.value[isoDate]) events.value[isoDate] = [];
+
+      const alreadyListed = events.value[isoDate].some(
+        (existing) =>
+          existing.type === "training" &&
+          existing.registrationID === reg.registrationID
+      );
+
+      if (alreadyListed) return;
+
+      const primarySchedule = groupedSchedules[0] || {};
+
+      events.value[isoDate].push({
+        type: "training",
+        date: isoDate,
+        trainingID: normalizedTrainingID,
+        registrationID: reg.registrationID,
+        title: training.title || "Training",
+        organization:
+          training.organization?.name ||
+          reg.organizationName ||
+          "Unknown Organization",
+        description: training.description || reg.description || "",
+        mode: primarySchedule.mode || training.mode || reg.mode,
+        location:
+          primarySchedule.location || training.location || reg.location,
+        trainingLink:
+          primarySchedule.trainingLink ||
+          training.trainingLink ||
+          reg.trainingLink,
+        schedule: primarySchedule.schedule || primarySchedule.start_time,
+        start_time: primarySchedule.schedule || primarySchedule.start_time,
+        end_time: primarySchedule.end_time,
+        schedules,
+      });
     });
+  });
+}
 
-    // Build events map
-    events.value = {};
-    eventList.forEach((event) => {
-      if (!events.value[event.date]) events.value[event.date] = [];
-      events.value[event.date].push(event);
-    });
+async function loadUserEvents() {
+  const token = localStorage.getItem("token");
+  const savedUser = localStorage.getItem("user");
 
-    console.log("📅 Events Map:", events.value);
-  } catch (error) {
-    console.error("❌ Error fetching events:", error);
+  if (!token || !savedUser) {
+    console.warn("⚠️ Missing user or token in localStorage");
+    return;
   }
+
+  const user = JSON.parse(savedUser);
+  if (!user.applicantID) {
+    console.warn("⚠️ User has no applicantID");
+    return;
+  }
+
+  events.value = {};
+
+  try {
+    await Promise.all([
+      loadRegistrationEvents(user.applicantID, token),
+      loadApplicationEvents(user.applicantID, token),
+    ]);
+  } catch (error) {
+    console.error("❌ Error loading events:", error);
+  }
+
+  const currentDate = selectedDate.value || toISODate(new Date());
+  showEvents(currentDate);
 }
 
 function showEvents(date) {
@@ -357,59 +347,25 @@ function showEvents(date) {
   console.log("📅 Events for", date, ":", dayEvents.value);
 }
 
+function handleDateChange(event) {
+  const value = event?.target?.value;
+  if (!value) return;
+  showEvents(value);
+}
+
+watch(
+  () => props.isOpen,
+  async (isOpen) => {
+    if (isOpen) {
+      await loadUserEvents();
+    }
+  }
+);
+
 // --- INITIALIZE CALENDAR ---
 onMounted(async () => {
   await nextTick();
-  await fetchEvents();
-  await fetchInterviews();
-  const calendar = calendarRef.value;
-  if (!calendar) return;
-
-  const today = new Date().toISOString().split("T")[0];
-  showEvents(today);
-
-  // Highlight event days and today on render
-  const highlightDays = () => {
-    calendar.querySelectorAll("[data-date]").forEach((el) => {
-      const dateStr = el.getAttribute("data-date");
-      el.classList.remove("event-day", "today");
-
-      if (events.value[dateStr]) {
-        el.classList.add("event-day");
-      }
-
-      if (dateStr === today) {
-        el.classList.add("today"); // <-- Highlight today
-      }
-    });
-  };
-
-  const highlightToday = () => {
-    // Select all day elements
-    const dayEls = calendar.querySelectorAll("[data-date]");
-    if (!dayEls.length) return;
-
-    dayEls.forEach((el) => {
-      const dateStr = el.getAttribute("data-date");
-      el.classList.remove("today");
-
-      if (dateStr === today) {
-        el.classList.add("today"); // Add highlight to today
-      }
-    });
-  };
-
-  // Initial highlight
-  highlightDays();
-
-  // Optional: re-highlight on calendar render if your calendar library triggers it
-  calendar.addEventListener("render", highlightDays);
-
-  // Handle day clicks
-  calendar.addEventListener("change", (e) => {
-    const pickedDate = e.target.value;
-    showEvents(pickedDate);
-  });
+  await loadUserEvents();
 });
 
 // Format for comparisons / mapping
@@ -418,211 +374,6 @@ function toISODate(d) {
   return new Date(d).toISOString().split("T")[0]; // YYYY-MM-DD
 }
 
-const selectedEvent = ref(null);
-
-// Check if QR should be visible
-function isTrainingActive(training) {
-  if (!training.schedule || !training.end_time) return false;
-
-  const now = new Date();
-  const start = new Date(training.schedule);
-  const end = new Date(training.end_time);
-
-  return now >= start && now <= end;
-}
-
-const registeredTrainingsWithQR = computed(() => {
-  return trainingsWithOrg.value
-    .filter((t) => myRegistrations.value.has(t.trainingID))
-    .map((t) => {
-      const isActiveQR = qrActiveTrainingId.value === t.trainingID;
-      return {
-        ...t,
-        qrKey: t.attendance_key,
-        qrExpires: t.end_Time,
-        isActiveQR,
-        qrCountdown: isActiveQR ? qrCountdown.value : null,
-      };
-    });
-});
-
-//QR Countdown
-function startQRCountdown(training) {
-  // Stop any running countdown interval
-  if (qrCountdownInterval) clearInterval(qrCountdownInterval);
-
-  // 📌 Use the training.end_time as expiration reference
-  const endTime = new Date(training.end_time || training.end_Time); // supports both snakeCase or camelCase
-
-  // Generate QR (you can change this to your full URL if needed)
-  qrCodeValue.value =
-    import.meta.env.VITE_API_BASE_URL +
-    `/attendance/submit?trainingID=${training.trainingID}&key=${training.attendance_key}`;
-  qrExpiresAt.value = endTime;
-  qrActiveTrainingId.value = training.trainingID;
-
-  // ⏳ Countdown function
-  const updateCountdown = () => {
-    const now = new Date();
-    const diff = endTime - now;
-
-    if (diff <= 0) {
-      // ⛔ QR expired
-      clearInterval(qrCountdownInterval);
-      qrCountdown.value = "00:00";
-      qrCodeValue.value = "expired";
-      qrActiveTrainingId.value = null;
-      qrExpiresAt.value = null;
-    } else {
-      const minutes = Math.floor(diff / 60000)
-        .toString()
-        .padStart(2, "0");
-      const seconds = Math.floor((diff % 60000) / 1000)
-        .toString()
-        .padStart(2, "0");
-      qrCountdown.value = `${minutes}:${seconds}`;
-    }
-  };
-
-  // Start immediately and every second
-  updateCountdown();
-  qrCountdownInterval = setInterval(updateCountdown, 1000);
-}
-
-// Reactive object to hold countdowns for all trainings
-
-// Start countdowns for all registered trainings with QR
-function startAllQRCountdowns() {
-  Object.values(qrIntervals).forEach(clearInterval);
-  qrIntervals = {};
-
-  //start all countdowns for existing QR codes
-  function startAllQRCountdowns() {
-    // Clear any previous intervals (This assumes qrIntervals is defined, see fix 1)
-    Object.values(qrIntervals).forEach(clearInterval);
-    qrIntervals = {};
-
-    trainingsWithOrg.value.forEach((training) => {
-      if (
-        myRegistrations.value.has(training.trainingID) &&
-        training.attendance_expires_at
-      ) {
-        const trainingId = training.trainingID;
-
-        const updateCountdown = () => {
-          const now = new Date();
-          const expires = new Date(training.end_time);
-          const diff = expires - now;
-
-          if (diff <= 0) {
-            qrCountdowns[trainingId] = "00:00";
-            clearInterval(qrIntervals[trainingId]);
-          } else {
-            const minutes = Math.floor(diff / 60000)
-              .toString()
-              .padStart(2, "0");
-            const seconds = Math.floor((diff % 60000) / 1000)
-              .toString()
-              .padStart(2, "0");
-            qrCountdowns[trainingId] = `${minutes}:${seconds}`;
-          }
-        }; // Initialize the key so template reacts immediately
-
-        qrCountdowns[trainingId] = "loading...";
-
-        updateCountdown(); // initial call
-        qrIntervals[trainingId] = setInterval(updateCountdown, 1000);
-      }
-    });
-  }
-  const modalQR = reactive({
-    value: null,
-    expiresAt: null,
-    countdown: "00:00",
-    interval: null,
-  });
-
-  //ModalQrCountdown
-  // Modal QR Countdown
-  function startModalQRCountdown(training) {
-    if (!training.attendance_key || !training.end_time) return;
-
-    qrCodeValue.value = training.attendance_key;
-    qrCountdown.value = "";
-
-    const expiresAt = new Date(training.end_time);
-
-    if (qrInterval) clearInterval(qrInterval);
-
-    const updateCountdown = () => {
-      const now = new Date();
-      const diff = expiresAt - now;
-
-      if (diff <= 0) {
-        // ⛔ Hide QR and stop countdown
-        qrCountdown.value = "00:00";
-        qrCodeValue.value = null; // hide QR code
-        clearInterval(qrInterval);
-
-        // Optional: if you’re showing a modal or section, hide it too
-        if (isModalOpen.value) isModalOpen.value = false;
-      } else {
-        const minutes = Math.floor(diff / 60000)
-          .toString()
-          .padStart(2, "0");
-        const seconds = Math.floor((diff % 60000) / 1000)
-          .toString()
-          .padStart(2, "0");
-        qrCountdown.value = `${minutes}:${seconds}`;
-      }
-    };
-
-    updateCountdown();
-    qrInterval = setInterval(updateCountdown, 1000);
-  }
-}
-
-// ============================
-// 🚀 Lifecycle Hooks
-// ============================
-onMounted(async () => {
-  await fetchOrganizations();
-  console.log("✅ Organizations loaded:", organizations.value); // <-- here
-
-  const orgID = 1; // replace with dynamic value
-  await fetchTrainings(orgID);
-  console.log("✅ Trainings loaded:", trainings.value); // <-- and here
-
-  await fetchMyRegistrations();
-  startAllQRCountdowns();
-
-  buildEvents();
-  setupCalendarDOM();
-
-  setInterval(() => fetchTrainings(orgID), 30000);
-});
-
-async function fetchTrainings() {
-  try {
-    const response = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + "/trainings"
-    );
-    trainings.value = response.data;
-  } catch (error) {
-    console.error("Error fetching trainings:", error);
-    addToast("FAILED TO LOAD TRAININGS", "error");
-  }
-}
-
-onMounted(() => {
-  fetchTrainings();
-});
-
-watch([trainings, myRegistrations], async () => {
-  buildEvents();
-  await nextTick();
-  setupCalendarDOM();
-});
 </script>
 
 <template>
@@ -651,39 +402,28 @@ watch([trainings, myRegistrations], async () => {
 
       <!-- Sidebar Content -->
       <div class="flex flex-col items-center gap-4 mt-12 overflow-y-auto">
-        <!-- Calendar -->
-        <calendar-date
-          ref="calendarRef"
-          first-day-of-week="0"
-          class="cally bg-base-100 border border-base-300 shadow rounded-box p-3 flex-shrink-0"
-        >
-          <calendar-month>
-            <template #day="{ date }">
-              <div
-                class="w-8 h-8 flex items-center justify-center rounded-full cursor-pointer"
-                :class="{
-                  'border-2 border-blue-500 bg-blue-50':
-                    toISODate(date) === selectedDate,
-                  'bg-blue-100 text-blue-700 font-semibold':
-                    events[toISODate(date)],
-                  'bg-gray-200 text-gray-600': !events[toISODate(date)],
-                }"
-                @click="onDayClick(date)"
-              >
-                {{ formatDate(date) }}
-              </div>
-            </template>
-          </calendar-month>
-        </calendar-date>
+        <!-- Date Picker -->
+        <div class="w-full flex flex-col gap-2">
+          <label class="text-sm font-medium text-gray-600" for="calendar-date-input">
+            Select a date
+          </label>
+          <input
+            id="calendar-date-input"
+            type="date"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            :value="selectedDate || toISODate(new Date())"
+            @change="handleDateChange"
+          />
+        </div>
 
         <!-- Events Panel -->
         <div class="bg-white w-full max-w-[250px] h-72 overflow-y-auto">
           <h1 class="text-lg font-semibold mb-1">Upcoming Events</h1>
           <h2 class="mb-2 text-sm text-gray-600">
             on
-            <span class="font-medium">{{
-              selectedDate || "Select a date"
-            }}</span>
+            <span class="font-medium">
+              {{ displayDate || "Select a date" }}
+            </span>
           </h2>
 
           <div v-if="dayEvents.length === 0" class="text-gray-500 text-sm">
@@ -757,78 +497,170 @@ watch([trainings, myRegistrations], async () => {
     </button>
 
     <!-- 🟦 Training Modal -->
-    <dialog v-if="selectedTraining" open class="modal sm:modal-middle">
-      <div class="modal-box max-w-3xl relative font-poppins">
-        <!-- Close button -->
-        <button
-          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
-          @click="closeModal"
-        >
-          ✕
-        </button>
+    <div
+      v-if="selectedTraining"
+      class="modal-overlay"
+      @click.self="closeModal"
+    >
+      <div class="training-details-modal font-poppins">
+        <button class="modal-close-btn" @click="closeModal">✕</button>
 
-        <!-- Training Details -->
-        <h2 class="text-xl font-bold mb-2">{{ selectedTraining.title }}</h2>
-        <p class="text-sm text-gray-600 mb-2">
-          Organization: {{ selectedTraining.organization }}
-        </p>
+        <template v-if="selectedTraining">
+          <h3 class="modal-title">
+            {{ selectedTraining.title || "Untitled Training" }}
+          </h3>
 
-        <p><strong>Mode:</strong> {{ selectedTraining.mode }}</p>
-        <!-- Description -->
-        <p><strong>Description: </strong>{{ selectedTraining.description }}</p>
-
-        <!-- Conditional display: Online or On-site -->
-        <p v-if="selectedTraining.Mode?.toLowerCase() === 'online'">
-          <strong>Link:</strong>
-          <a
-            :href="selectedTraining.trainingLink"
-            target="_blank"
-            class="text-blue-500 underline"
-          >
-            {{ selectedTraining.trainingLink }}
-          </a>
-        </p>
-        <p v-else-if="selectedTraining.Mode?.toLowerCase() === 'on-site'">
-          <strong>Location:</strong> {{ selectedTraining.location }}
-        </p>
-
-        <p>
-          <strong>Schedule:</strong>
-          {{ formatDate(selectedTraining.date) }} at
-          {{ selectedTraining.time }}
-        </p>
-
-        <!-- QR Code Section -->
-        <div
-          v-if="selectedTraining.attendance_key"
-          class="mt-6 text-center border-t pt-4"
-        >
-          <p class="text-sm font-semibold mb-2">
-            Scan this QR Code for Attendance
+          <p class="training-info">
+            <strong>Organization:</strong>
+            {{
+              selectedTraining.organization?.name ||
+              selectedTraining.organization ||
+              selectedTraining.organizationName ||
+              selectedTraining.training?.organization?.name ||
+              "Unknown"
+            }}
           </p>
 
-          <QrcodeVue
-            :value="qrCodeValue"
-            :size="200"
-            level="H"
-            class="mx-auto"
-          />
-
-          <p class="text-gray-500 text-xs mt-2">
-            Expires at:
-            {{ formatDateTime(selectedTraining.end_time) }}
+          <p v-if="selectedTraining.description" class="training-info">
+            <strong>Description:</strong> {{ selectedTraining.description }}
           </p>
-        </div>
 
-        <!-- No QR yet -->
-        <div v-else>
-          <div class="divider"></div>
-          <p class="text-sm text-gray-500 text-center">
-            QR Code not available yet or has expired.
-          </p>
-        </div>
+          <div class="training-info">
+            <strong>Schedule/s:</strong>
+          </div>
+
+          <div class="schedules-container">
+            <div v-if="activeSchedules.length" class="schedules-grid">
+              <div
+                v-for="(schedule, index) in activeSchedules"
+                :key="schedule.trainingScheduleID || index"
+                class="schedule-card"
+              >
+                <div class="schedule-date-time">
+                  <svg
+                    class="schedule-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <span>
+                    {{
+                      formatScheduleFull(schedule.schedule || schedule.start_time)
+                    }}
+                    <template v-if="schedule.end_time">
+                      - {{ formatScheduleTime(schedule.end_time) }}
+                    </template>
+                  </span>
+                </div>
+
+                <div
+                  class="schedule-mode-badge"
+                  :class="
+                    (schedule.mode || '').toLowerCase() === 'on-site'
+                      ? 'mode-onsite'
+                      : 'mode-online'
+                  "
+                >
+                  <svg
+                    class="mode-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                  <span>{{ schedule.mode || "Mode not set" }}</span>
+                </div>
+
+                <div
+                  v-if="
+                    (schedule.mode || '').toLowerCase() === 'on-site' &&
+                    schedule.location
+                  "
+                  class="schedule-location"
+                >
+                  <svg
+                    class="schedule-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                  <span>{{ schedule.location }}</span>
+                </div>
+
+                <div
+                  v-else-if="
+                    (schedule.mode || '').toLowerCase() === 'online' &&
+                    schedule.trainingLink
+                  "
+                  class="schedule-link"
+                >
+                  <svg
+                    class="schedule-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                    />
+                  </svg>
+                  <a
+                    :href="schedule.trainingLink"
+                    target="_blank"
+                    class="training-link"
+                  >
+                    {{ schedule.trainingLink }}
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div v-else class="schedule-card">
+              <p class="text-gray-500">No schedule set</p>
+            </div>
+          </div>
+        </template>
       </div>
-    </dialog>
+    </div>
 
     <!-- 🟩 Career Modal -->
     <!-- TEST MODAL -->
@@ -915,3 +747,138 @@ watch([trainings, myRegistrations], async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.training-details-modal {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 1rem;
+  width: min(95vw, 900px);
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #4a4a4a;
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 16px;
+}
+
+.training-info {
+  margin: 0.4rem 0;
+  color: #333;
+}
+
+.schedules-container {
+  margin: 0.75rem 0;
+}
+
+.schedules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.schedule-card {
+  background: #f5f5f5;
+  border-radius: 10px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.schedule-card:hover {
+  background: #e8e8e8;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #d1d5db;
+}
+
+.schedule-date-time {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #333;
+  font-size: 0.85rem;
+}
+
+.schedule-icon {
+  width: 16px;
+  height: 16px;
+  color: #60a5fa;
+  flex-shrink: 0;
+}
+
+.schedule-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  border: 2px solid;
+  width: fit-content;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.mode-onsite {
+  background-color: #dbeafe;
+  border-color: #3b82f6;
+  color: #1e40af;
+}
+
+.mode-online {
+  background-color: #fef3c7;
+  border-color: #f59e0b;
+  color: #92400e;
+}
+
+.mode-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.schedule-location,
+.schedule-link {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #333;
+  font-size: 0.85rem;
+}
+
+.training-link {
+  color: #3b82f6;
+  text-decoration: underline;
+  word-break: break-all;
+}
+</style>
