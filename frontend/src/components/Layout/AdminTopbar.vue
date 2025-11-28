@@ -348,6 +348,30 @@ async function deleteOrganization(id) {
           <span class="text-xs whitespace-nowrap">Verification</span>
         </button>
 
+        <!-- Approved Button -->
+        <button
+          @click="$router.push({ name: 'AdminApprovedPage' })"
+          :class="[
+            'flex flex-col items-center justify-center transition-all duration-200',
+            route.name === 'AdminApprovedPage'
+              ? 'text-dark-slate border-b-4 border-dark-slate'
+              : 'text-gray-400 hover:text-dark-slate border-b-4 border-transparent ',
+          ]"
+          title="Approved Accounts"
+        >
+          <svg
+            class="w-8 h-8 mb-1"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-4-4 1.41-1.41L11 13.17l5.59-5.59L18 9l-7 8z"
+            />
+          </svg>
+          <span class="text-xs whitespace-nowrap">Approved</span>
+        </button>
+
         <!-- Account Settings Button -->
         <button
           @click="$router.push({ name: 'AdminUpdateDelete' })"
