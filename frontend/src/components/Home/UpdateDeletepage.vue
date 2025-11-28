@@ -1,8 +1,13 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, reactive } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
 import { useActivityStore } from "@/stores/activityStore";
+import {
+  uploadImage,
+  getImageUrl,
+  deleteStorageFile,
+} from "@/lib/supabase";
 
 const router = useRouter();
 const toasts = ref([]);
@@ -46,6 +51,174 @@ const showPasswordMismatch = computed(
   () => form.value.confirmPassword && !passwordsMatch.value
 );
 
+const showPasswordFields = reactive({
+  new: false,
+  confirm: false,
+  current: false,
+});
+
+const profilePreview = ref("");
+const profileImagePath = ref("");
+const avatarUploading = ref(false);
+
+const AVATAR_BUCKET = "Requirements";
+const AVATAR_FOLDER = "profile_picture_directory";
+
+if (typeof window !== "undefined") {
+  const storedUrl = localStorage.getItem("profileAvatarUrl");
+  if (storedUrl) {
+    profilePreview.value = storedUrl;
+  } else {
+    const legacyAvatar = localStorage.getItem("profileAvatar");
+    if (legacyAvatar) {
+      profilePreview.value = legacyAvatar;
+    }
+  }
+
+  const storedPath = localStorage.getItem("profileAvatarPath");
+  if (storedPath) {
+    profileImagePath.value = storedPath;
+  }
+}
+
+const fallbackAvatar = computed(() => {
+  const fullName = `${form.value.firstName || ""} ${form.value.lastName || ""}`.trim() || "User";
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=0D8ABC&color=fff`;
+});
+
+const displayAvatar = computed(() => profilePreview.value || fallbackAvatar.value);
+
+function resolveAvatarUrl(path) {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  return getImageUrl(path, AVATAR_BUCKET) || "";
+}
+
+function updateLocalAvatarStorage({ url = "", path = "" }) {
+  if (typeof window === "undefined") return;
+  if (url) {
+    localStorage.setItem("profileAvatarUrl", url);
+  }
+  if (path) {
+    localStorage.setItem("profileAvatarPath", path);
+  }
+  localStorage.removeItem("profileAvatar"); // remove legacy base64
+}
+
+function applyUserAvatar(user) {
+  if (!user) return;
+  const path =
+    user.displayPicture_directory ||
+    user.DisplayPicture_directory ||
+    user.displaypicture_directory ||
+    "";
+  const directUrl = user.profilePicture || user.profile_picture || "";
+
+  if (path) {
+    profileImagePath.value = path;
+    const urlFromPath = resolveAvatarUrl(path);
+    if (urlFromPath) {
+      profilePreview.value = urlFromPath;
+      updateLocalAvatarStorage({ url: urlFromPath, path });
+      return;
+    }
+  }
+
+  if (directUrl) {
+    profilePreview.value = directUrl;
+    updateLocalAvatarStorage({ url: directUrl });
+  }
+}
+
+async function handleProfileImageChange(event) {
+  const file = event.target?.files?.[0];
+  if (!file) return;
+
+  const validImageTypes = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+  ];
+  if (!validImageTypes.includes(file.type)) {
+    showToast("Please upload a valid image file (JPEG, PNG, GIF, WebP).", "error");
+    event.target.value = "";
+    return;
+  }
+
+  const MAX_SIZE = 5 * 1024 * 1024;
+  if (file.size > MAX_SIZE) {
+    showToast("Image is too large. Maximum size is 5MB.", "error");
+    event.target.value = "";
+    return;
+  }
+
+  const token = localStorage.getItem("token");
+  if (!token) {
+    showToast("You are not logged in.", "error");
+    event.target.value = "";
+    return;
+  }
+
+  avatarUploading.value = true;
+  const previousPath = profileImagePath.value;
+  let newPath = "";
+
+  try {
+    newPath = await uploadImage(file, AVATAR_BUCKET, AVATAR_FOLDER);
+    if (!newPath) {
+      showToast("Failed to upload image. Please try again.", "error");
+      return;
+    }
+
+    await axios.put(
+      import.meta.env.VITE_API_BASE_URL + "/user",
+      { displayPicture_directory: newPath },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    profileImagePath.value = newPath;
+    const publicUrl = resolveAvatarUrl(newPath) || profilePreview.value;
+    profilePreview.value = publicUrl;
+    updateLocalAvatarStorage({ url: publicUrl, path: newPath });
+
+    const savedUserRaw = localStorage.getItem("user");
+    if (savedUserRaw) {
+      try {
+        const savedUser = JSON.parse(savedUserRaw);
+        savedUser.displayPicture_directory = newPath;
+        savedUser.DisplayPicture_directory = newPath;
+        savedUser.profilePicture = publicUrl;
+        localStorage.setItem("user", JSON.stringify(savedUser));
+      } catch (error) {
+        console.warn("Failed to update local user cache:", error);
+      }
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("profile-avatar-updated", {
+        detail: { url: publicUrl, path: newPath },
+      })
+    );
+
+    showToast("Profile picture updated!", "success");
+
+    if (previousPath && previousPath !== newPath) {
+      await deleteStorageFile(previousPath, AVATAR_BUCKET);
+    }
+  } catch (error) {
+    console.error("Error updating profile picture:", error);
+    if (newPath) {
+      await deleteStorageFile(newPath, AVATAR_BUCKET);
+    }
+    showToast("Failed to update profile picture.", "error");
+  } finally {
+    avatarUploading.value = false;
+    if (event.target) event.target.value = "";
+  }
+}
+
 onMounted(async () => {
   activityStore.fetchCounts();
   try {
@@ -73,6 +246,7 @@ onMounted(async () => {
 
     // Save backup
     localStorage.setItem("user", JSON.stringify(user));
+    applyUserAvatar(user);
   } catch (err) {
     console.error("API failed, fallback to localStorage:", err);
 
@@ -91,35 +265,67 @@ onMounted(async () => {
       };
 
       userName.value = `${form.value.firstName} ${form.value.lastName}`.trim();
+      applyUserAvatar(user);
     }
   }
 });
 
 const handleUpdate = async () => {
-  const token = localStorage.getItem("token");
+  let token = localStorage.getItem("token");
 
   if (!token) {
-    showToast("You are not logged in.");
+    showToast("You are not logged in.", "error");
+    return;
+  }
+
+  if (!form.value.currentPassword?.trim()) {
+    showToast("Please enter your current password.", "error");
+    return;
+  }
+
+  // 🔐 Re-authenticate to verify the current password
+  try {
+    const { data } = await axios.post(import.meta.env.VITE_API_BASE_URL + "/login", {
+      emailAddress: form.value.emailAddress,
+      password: form.value.currentPassword,
+    });
+
+    if (data?.token) {
+      token = data.token;
+      localStorage.setItem("token", token);
+    }
+
+    if (data?.user) {
+      localStorage.setItem("user", JSON.stringify(data.user));
+    }
+  } catch (error) {
+    showToast(
+      error.response?.data?.message || "Current password is incorrect.",
+      "error"
+    );
+    return;
+  }
+
+  if (
+    (form.value.newPassword || form.value.confirmPassword) &&
+    form.value.newPassword !== form.value.confirmPassword
+  ) {
+    showToast("New password and confirmation do not match.", "error");
     return;
   }
 
   try {
     // --- 1️⃣ Update user profile ---
-    await axios.put(import.meta.env.VITE_API_BASE_URL + "/user", form.value, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (form.value.newPassword !== form.value.confirmPassword) {
-      showToast("New password and confirmation do not match.");
-      return;
-    }
+    await axios.put(
+      import.meta.env.VITE_API_BASE_URL + "/user",
+      form.value,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
 
     // --- 2️⃣ Update password only if fields are filled ---
-    if (
-      form.value.currentPassword &&
-      form.value.newPassword &&
-      form.value.confirmPassword
-    ) {
+    if (form.value.newPassword && form.value.confirmPassword) {
       await axios.post(
         import.meta.env.VITE_API_BASE_URL + "/update-password",
         {
@@ -134,7 +340,6 @@ const handleUpdate = async () => {
 
       showToast("Password updated successfully!");
       // ✅ Clear password fields
-      form.value.currentPassword = "";
       form.value.newPassword = "";
       form.value.confirmPassword = "";
     }
@@ -143,7 +348,7 @@ const handleUpdate = async () => {
     form.value.currentPassword = "";
   } catch (error) {
     console.error("Error during update:", error);
-    showToast(error.response?.data?.message || "Update failed.");
+    showToast(error.response?.data?.message || "Update failed.", "error");
   }
 };
 
@@ -311,7 +516,62 @@ const logout = () => {
 
           <!-- FORM -->
           <form @submit.prevent="handleUpdate" class="space-y-4 pt-4">
-            <div class="divider sm:hidden"></div>
+
+            <!-- Profile Avatar -->
+            <div class="flex justify-center mb-6 lg:mb-12">
+              <div class="flex flex-col items-center gap-3">
+                <div class="relative">
+                  <img
+                    :src="displayAvatar"
+                    alt="Profile preview"
+                    class="w-28 h-28 rounded-full object-cover border-4 border-white shadow"
+                  />
+                  <label
+                    :class="[
+                      'absolute bottom-0 right-0 bg-customButton text-white p-2 rounded-full shadow transition',
+                      avatarUploading
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'hover:bg-dark-slate cursor-pointer',
+                    ]"
+                    title="Upload new profile picture"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M3 7h2l2-3h10l2 3h2a2 2 0 012 2v8a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z"
+                      />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M12 15a3 3 0 110-6 3 3 0 010 6z"
+                      />
+                    </svg>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      class="hidden"
+                      :disabled="avatarUploading"
+                      @change="handleProfileImageChange"
+                    />
+                  </label>
+                </div>
+                <p class="text-sm text-gray-500 text-center">
+                  {{
+                    avatarUploading
+                      ? "Uploading..."
+                      : "Upload or change your profile picture"
+                  }}
+                </p>
+              </div>
+            </div>
 
             <!-- First, Middle, Last Name -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -335,9 +595,6 @@ const logout = () => {
               />
             </div>
 
-            <!-- Divider for large screens -->
-            <div class="hidden lg:block h-px bg-gray-300"></div>
-
             <!-- Address -->
             <div>
               <input
@@ -347,9 +604,6 @@ const logout = () => {
                 v-model="form.address"
               />
             </div>
-
-            <!-- Divider for large screens -->
-            <div class="hidden lg:block h-px bg-gray-300"></div>
 
             <!-- Email & Phone -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -371,28 +625,197 @@ const logout = () => {
               />
             </div>
 
-            <!-- Divider for large screens -->
-            <div class="hidden lg:block h-px bg-gray-300"></div>
-
             <!-- New & Confirm Password -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <!-- New Password -->
-              <input
-                type="password"
-                class="border border-gray-300 input w-full"
-                placeholder="New Password (optional)"
-                v-model="form.newPassword"
-              />
+              <div class="relative">
+                <input
+                  :type="showPasswordFields.new ? 'text' : 'password'"
+                  class="border border-gray-300 input w-full pr-10"
+                  placeholder="New Password (optional)"
+                  v-model="form.newPassword"
+                />
+                <button
+                  type="button"
+                  class="absolute right-3 top-3 text-gray-500"
+                  aria-label="Toggle new password visibility"
+                  @click="showPasswordFields.new = !showPasswordFields.new"
+                >
+                  <span v-if="showPasswordFields.new">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M15.5799 11.9999C15.5799 13.9799 13.9799 15.5799 11.9999 15.5799C10.0199 15.5799 8.41992 13.9799 8.41992 11.9999C8.41992 10.0199 10.0199 8.41992 11.9999 8.41992C13.9799 8.41992 15.5799 10.0199 15.5799 11.9999Z"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M12.0001 20.27C15.5301 20.27 18.8201 18.19 21.1101 14.59C22.0101 13.18 22.0101 10.81 21.1101 9.39997C18.8201 5.79997 15.5301 3.71997 12.0001 3.71997C8.47009 3.71997 5.18009 5.79997 2.89009 9.39997C1.99009 10.81 1.99009 13.18 2.89009 14.59C5.18009 18.19 8.47009 20.27 12.0001 20.27Z"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  <span v-else>
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M14.5299 9.46992L9.46992 14.5299C8.81992 13.8799 8.41992 12.9899 8.41992 11.9999C8.41992 10.0199 10.0199 8.41992 11.9999 8.41992C12.9899 8.41992 13.8799 8.81992 14.5299 9.46992Z"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M17.8201 5.76998C16.0701 4.44998 14.0701 3.72998 12.0001 3.72998C8.47009 3.72998 5.18009 5.80998 2.89009 9.40998C1.99009 10.82 1.99009 13.19 2.89009 14.6C3.68009 15.84 4.60009 16.91 5.60009 17.77"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M8.41992 19.5299C9.55992 20.0099 10.7699 20.2699 11.9999 20.2699C15.5299 20.2699 18.8199 18.1899 21.1099 14.5899C22.0099 13.1799 22.0099 10.8099 21.1099 9.39993C20.7799 8.87993 20.4199 8.38993 20.0499 7.92993"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M15.5099 12.7C15.2499 14.11 14.0999 15.26 12.6899 15.52"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M9.47 14.53L2 22"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M22 2L14.53 9.47"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </span>
+                </button>
+              </div>
 
               <!-- Confirm Password -->
               <div class="w-full">
-                <input
-                  type="password"
-                  class="border input w-full"
-                  :class="passwordMatchClass"
-                  placeholder="Confirm New Password"
-                  v-model="form.confirmPassword"
-                />
+                <div class="relative">
+                  <input
+                    :type="showPasswordFields.confirm ? 'text' : 'password'"
+                    class="border input w-full pr-10"
+                    :class="passwordMatchClass"
+                    placeholder="Confirm New Password"
+                    v-model="form.confirmPassword"
+                  />
+                  <button
+                    type="button"
+                    class="absolute right-3 top-3 text-gray-500"
+                    aria-label="Toggle confirm password visibility"
+                    @click="
+                      showPasswordFields.confirm = !showPasswordFields.confirm
+                    "
+                  >
+                    <span v-if="showPasswordFields.confirm">
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M15.5799 11.9999C15.5799 13.9799 13.9799 15.5799 11.9999 15.5799C10.0199 15.5799 8.41992 13.9799 8.41992 11.9999C8.41992 10.0199 10.0199 8.41992 11.9999 8.41992C13.9799 8.41992 15.5799 10.0199 15.5799 11.9999Z"
+                          stroke="#292D32"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <path
+                          d="M12.0001 20.27C15.5301 20.27 18.8201 18.19 21.1101 14.59C22.0101 13.18 22.0101 10.81 21.1101 9.39997C18.8201 5.79997 15.5301 3.71997 12.0001 3.71997C8.47009 3.71997 5.18009 5.79997 2.89009 9.39997C1.99009 10.81 1.99009 13.18 2.89009 14.59C5.18009 18.19 8.47009 20.27 12.0001 20.27Z"
+                          stroke="#292D32"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </span>
+                    <span v-else>
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M14.5299 9.46992L9.46992 14.5299C8.81992 13.8799 8.41992 12.9899 8.41992 11.9999C8.41992 10.0199 10.0199 8.41992 11.9999 8.41992C12.9899 8.41992 13.8799 8.81992 14.5299 9.46992Z"
+                          stroke="#292D32"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <path
+                          d="M17.8201 5.76998C16.0701 4.44998 14.0701 3.72998 12.0001 3.72998C8.47009 3.72998 5.18009 5.80998 2.89009 9.40998C1.99009 10.82 1.99009 13.19 2.89009 14.6C3.68009 15.84 4.60009 16.91 5.60009 17.77"
+                          stroke="#292D32"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <path
+                          d="M8.41992 19.5299C9.55992 20.0099 10.7699 20.2699 11.9999 20.2699C15.5299 20.2699 18.8199 18.1899 21.1099 14.5899C22.0099 13.1799 22.0099 10.8099 21.1099 9.39993C20.7799 8.87993 20.4199 8.38993 20.0499 7.92993"
+                          stroke="#292D32"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <path
+                          d="M15.5099 12.7C15.2499 14.11 14.0999 15.26 12.6899 15.52"
+                          stroke="#292D32"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <path
+                          d="M9.47 14.53L2 22"
+                          stroke="#292D32"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <path
+                          d="M22 2L14.53 9.47"
+                          stroke="#292D32"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                </div>
                 <p
                   v-if="showPasswordMismatch"
                   class="text-red-500 text-sm mt-1"
@@ -402,21 +825,100 @@ const logout = () => {
               </div>
             </div>
 
-            <!-- Divider for large screens -->
-            <div class="hidden lg:block h-px bg-gray-300"></div>
-
             <div>
-              <input
-                type="password"
-                class="border border-gray-300 input w-full"
-                placeholder="Current Password"
-                v-model="form.currentPassword"
-                required
-              />
+              <div class="relative">
+                <input
+                  :type="showPasswordFields.current ? 'text' : 'password'"
+                  class="border border-gray-300 input w-full pr-10"
+                  placeholder="Current Password"
+                  v-model="form.currentPassword"
+                  required
+                />
+                <button
+                  type="button"
+                  class="absolute right-3 top-3 text-gray-500"
+                  aria-label="Toggle current password visibility"
+                  @click="showPasswordFields.current = !showPasswordFields.current"
+                >
+                  <span v-if="showPasswordFields.current">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M15.5799 11.9999C15.5799 13.9799 13.9799 15.5799 11.9999 15.5799C10.0199 15.5799 8.41992 13.9799 8.41992 11.9999C8.41992 10.0199 10.0199 8.41992 11.9999 8.41992C13.9799 8.41992 15.5799 10.0199 15.5799 11.9999Z"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M12.0001 20.27C15.5301 20.27 18.8201 18.19 21.1101 14.59C22.0101 13.18 22.0101 10.81 21.1101 9.39997C18.8201 5.79997 15.5301 3.71997 12.0001 3.71997C8.47009 3.71997 5.18009 5.79997 2.89009 9.39997C1.99009 10.81 1.99009 13.18 2.89009 14.59C5.18009 18.19 8.47009 20.27 12.0001 20.27Z"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  <span v-else>
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M14.5299 9.46992L9.46992 14.5299C8.81992 13.8799 8.41992 12.9899 8.41992 11.9999C8.41992 10.0199 10.0199 8.41992 11.9999 8.41992C12.9899 8.41992 13.8799 8.81992 14.5299 9.46992Z"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M17.8201 5.76998C16.0701 4.44998 14.0701 3.72998 12.0001 3.72998C8.47009 3.72998 5.18009 5.80998 2.89009 9.40998C1.99009 10.82 1.99009 13.19 2.89009 14.6C3.68009 15.84 4.60009 16.91 5.60009 17.77"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M8.41992 19.5299C9.55992 20.0099 10.7699 20.2699 11.9999 20.2699C15.5299 20.2699 18.8199 18.1899 21.1099 14.5899C22.0099 13.1799 22.0099 10.8099 21.1099 9.39993C20.7799 8.87993 20.4199 8.38993 20.0499 7.92993"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M15.5099 12.7C15.2499 14.11 14.0999 15.26 12.6899 15.52"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M9.47 14.53L2 22"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M22 2L14.53 9.47"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </span>
+                </button>
+              </div>
             </div>
-
-            <!-- Divider for large screens -->
-            <div class="hidden lg:block h-px bg-gray-300"></div>
 
             <!-- Buttons -->
             <div class="flex justify-end pt-6">

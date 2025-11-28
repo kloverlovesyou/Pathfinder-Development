@@ -142,6 +142,8 @@ public function login(Request $request)
             'address' => 'nullable|string|max:255',
             'emailAddress' => 'nullable|email|max:255',
             'phoneNumber' => 'nullable|string|max:20',
+            'displayPicture_directory' => 'nullable|string|max:255',
+            'DisplayPicture_directory' => 'nullable|string|max:255',
         ]);
 
         // ✅ Update profile fields
@@ -153,6 +155,15 @@ public function login(Request $request)
             'emailAddress' => $request->emailAddress ?? $applicant->emailAddress,
             'phoneNumber' => $request->phoneNumber ?? $applicant->phoneNumber,
         ]);
+
+        if (
+            $request->has('displayPicture_directory') ||
+            $request->has('DisplayPicture_directory')
+        ) {
+            $applicant->DisplayPicture_directory =
+                $request->input('displayPicture_directory') ??
+                $request->input('DisplayPicture_directory');
+        }
 
         $applicant->save();
 

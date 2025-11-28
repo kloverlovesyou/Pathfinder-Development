@@ -741,7 +741,12 @@ public function viewRequirement(Request $request, $id)
             return;
         }
 
-        $application->$column = $timestamp ?? Carbon::now();
+        $now = $timestamp ?? Carbon::now();
+        $application->$column = $now;
+
+        if ($key === 'submitted' && ($force || empty($application->dateSubmitted))) {
+            $application->dateSubmitted = $now;
+        }
         $application->save();
     }
 }

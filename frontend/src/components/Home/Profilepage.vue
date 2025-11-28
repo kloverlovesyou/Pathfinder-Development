@@ -1,11 +1,14 @@
 <script setup>
-import { ref, onMounted, nextTick, computed } from "vue";
+import { ref, onMounted, onBeforeUnmount, nextTick, computed } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
+import { getImageUrl } from "@/lib/supabase";
 
 const router = useRouter();
 const toasts = ref([]);
 const userName = ref("Guest");
+const userEmail = ref("");
+const profileAvatar = ref("");
 const upcomingCount = ref(0);
 const completedCount = ref(0);
 const careerModal = ref(null);
@@ -29,10 +32,73 @@ const currentSteps = computed(() =>
   activeTab.value === "training" ? TRAINING_STEPS : CAREER_STEPS
 );
 
+const profileFallbackAvatar = computed(() => {
+  const name = userName.value || "User";
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+    name
+  )}&background=0D8ABC&color=fff`;
+});
+
+const displayProfileAvatar = computed(
+  () => profileAvatar.value || profileFallbackAvatar.value
+);
+function resolveAvatarUrl(path) {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  return getImageUrl(path, "Requirements") || "";
+}
+
+function applyUserProfile(user) {
+  if (!user) return;
+  if (user.firstName && user.lastName) {
+    userName.value = `${user.firstName} ${user.lastName}`.trim();
+  }
+  userEmail.value =
+    user.emailAddress ||
+    user.email ||
+    user.email_address ||
+    user.EmailAddress ||
+    "";
+
+  const path =
+    user.displayPicture_directory ||
+    user.DisplayPicture_directory ||
+    user.displaypicture_directory ||
+    "";
+  const directUrl = user.profilePicture || user.profile_picture || "";
+
+  if (path) {
+    const url = resolveAvatarUrl(path);
+    if (url) {
+      profileAvatar.value = url;
+      return;
+    }
+  }
+
+  if (directUrl) {
+    profileAvatar.value = directUrl;
+  }
+}
+
+const handleAvatarEvent = (event) => {
+  const detail = event.detail;
+  if (!detail) return;
+  if (typeof detail === "string") {
+    profileAvatar.value = detail;
+    return;
+  }
+  if (detail.url) profileAvatar.value = detail.url;
+};
+
+
 const CAREER_STEPS = [
-  { key: "applied", label: "In Review", dateField: "appliedDate" },
-  { key: "screen", label: "For Interview", dateField: "screenDate" },
-  { key: "pending", label: "Pending", dateField: "pendingDate" },
+  { key: "applied", label: "For Review", dateField: "appliedDate" },
+  {
+    key: "screen",
+    label: "For Interview",
+    dateField: "interviewSchedule",
+    fallbackDateField: "screenDate",
+  },
   { key: "hired", label: "Hired", dateField: "hiredDate" },
   { key: "declined", label: "Declined", dateField: "declinedDate" },
 ];
@@ -50,16 +116,41 @@ function getStatusSteps(activity) {
 }
 
 function getCurrentStepIndex(activity) {
-  const status = (activity?.status || "").toLowerCase();
+  const statusRaw = activity?.status || "";
+  const status = statusRaw.toLowerCase();
   const steps = getStatusSteps(activity).map((s) => s.key.toLowerCase());
+
+  if (activity?.type === "training") {
+    const normalized = status.replace(/[\s-]+/g, "");
+    const registeredIdx = steps.indexOf("registered");
+    if (!normalized) return registeredIdx;
+
+    if (normalized.includes("cert")) {
+      return steps.indexOf("certified");
+    }
+
+    if (normalized.includes("complete") || normalized.includes("attend")) {
+      return steps.indexOf("completed");
+    }
+
+    if (normalized.includes("ongoing")) {
+      return steps.indexOf("ongoing");
+    }
+
+    if (normalized.includes("registr")) {
+      return steps.indexOf("registered");
+    }
+
+    return registeredIdx;
+  }
+
   const idx = steps.indexOf(status);
   if (idx !== -1) return idx;
 
+  const appliedIdx = steps.indexOf("applied");
+  const screenIdx = steps.indexOf("screen");
   const hiredIdx = steps.indexOf("hired");
   const declinedIdx = steps.indexOf("declined");
-  const pendingIdx = steps.indexOf("pending");
-  const screenIdx = steps.indexOf("screen");
-  const completedIdx = steps.indexOf("completed");
 
   if ((status.includes("accept") || status.includes("hire")) && hiredIdx !== -1) {
     return hiredIdx;
@@ -69,31 +160,67 @@ function getCurrentStepIndex(activity) {
     return declinedIdx;
   }
 
-  if (status.includes("pending") && pendingIdx !== -1) {
-    return pendingIdx;
-  }
-
-  if (status.includes("interview")) {
-    if (pendingIdx !== -1) return pendingIdx;
+  if (
+    status.includes("interview") ||
+    status.includes("screen") ||
+    status.includes("pending")
+  ) {
     if (screenIdx !== -1) return screenIdx;
   }
 
-  if (status.includes("screen") && screenIdx !== -1) {
-    return screenIdx;
+  if (
+    status.includes("review") ||
+    status.includes("submit") ||
+    status.includes("appl")
+  ) {
+    if (appliedIdx !== -1) return appliedIdx;
   }
 
-  if (status.includes("complete") && completedIdx !== -1) {
-    return completedIdx;
-  }
-
-  if (status.includes("attend")) {
-    return steps.length - 1;
-  }
-
-  return 0;
+  return appliedIdx !== -1 ? appliedIdx : 0;
 }
 
-function isStepActive(stepIndex, currentIndex) {
+function getCareerActiveKeys(statusRaw) {
+  const status = (statusRaw || "").toLowerCase();
+  if (!status) return null;
+
+  if (status.includes("declin") || status.includes("reject")) {
+    return new Set(["applied", "screen", "declined"]);
+  }
+
+  if (status.includes("hire") || status.includes("accept")) {
+    return new Set(["applied", "screen", "hired"]);
+  }
+
+  if (
+    status.includes("pending") ||
+    status.includes("interview") ||
+    status.includes("screen")
+  ) {
+    return new Set(["applied", "screen"]);
+  }
+
+  if (
+    status.includes("review") ||
+    status.includes("submit") ||
+    status.includes("appl")
+  ) {
+    return new Set(["applied"]);
+  }
+
+  return null;
+}
+
+function isStepActive(activity, step, stepIndex) {
+  if (!activity) return false;
+
+  if (activity.type === "career") {
+    const activeKeys = getCareerActiveKeys(activity.status);
+    if (activeKeys) {
+      return activeKeys.has(step.key);
+    }
+  }
+
+  const currentIndex = getCurrentStepIndex(activity);
   return stepIndex <= currentIndex;
 }
 
@@ -620,7 +747,11 @@ function normalizeCareer(application) {
 
 function getStepDate(activity, step) {
   if (!activity || !step?.dateField) return null;
-  return activity[step.dateField] || null;
+  return (
+    activity[step.dateField] ||
+    (step.fallbackDateField ? activity[step.fallbackDateField] : null) ||
+    null
+  );
 }
 
 async function fetchActivitiesDirectly() {
@@ -628,11 +759,10 @@ async function fetchActivitiesDirectly() {
   if (!savedUser) return;
 
   const user = JSON.parse(savedUser);
-  userName.value =
-    `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Guest";
+  applyUserProfile(user);
 
   try {
-    console.log("Fetching registrations and applications for applicantID:", user.applicantID);
+  console.log("Fetching registrations and applications for applicantID:", user.applicantID);
 
     const token = localStorage.getItem("token");
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -942,12 +1072,51 @@ const downloadCertificate = async (activity, event) => {
   }
 };
 
-onMounted(fetchActivitiesDirectly);
+onMounted(() => {
+  window.addEventListener("profile-avatar-updated", handleAvatarEvent);
+  fetchActivitiesDirectly();
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("profile-avatar-updated", handleAvatarEvent);
+});
 </script>
 
 <template>
   <div class="bg-gray-100 font-poppins">
-    <div class="lg:hidden block font-poppins">
+    <div class="max-w-6xl mx-auto px-3 pt-4">
+      <div
+        class="bg-white rounded-lg shadow p-6 flex flex-col sm:flex-row items-center gap-4"
+      >
+        <img
+          :src="displayProfileAvatar"
+          alt="Profile avatar"
+          class="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+        />
+        <div class="text-center sm:text-left">
+          <h2 class="text-2xl font-bold text-gray-800">
+            {{ userName || "Guest" }}
+          </h2>
+          <p class="text-sm text-gray-500">
+            {{ userEmail || "No email on file" }}
+          </p>
+          <div
+            class="mt-3 flex flex-wrap justify-center sm:justify-start gap-4 text-sm text-gray-600"
+          >
+            <span>
+              Upcoming Trainings:
+              <strong class="text-dark-slate">{{ upcomingCount }}</strong>
+            </span>
+            <span>
+              Completed Trainings:
+              <strong class="text-dark-slate">{{ completedCount }}</strong>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="lg:hidden block font-poppins max-w-6xl mx-auto px-3 mt-4">
       <div class="bg-white p-4 rounded-lg">
         <h3 class="text-lg font-semibold mb-2">My Activity</h3>
 
@@ -1057,11 +1226,15 @@ onMounted(fetchActivitiesDirectly);
                       <span
                         class="inline-flex w-3 h-3 rounded-full border-2"
                         :class="{
-                          'border-blue-500 bg-blue-500':
-                            isStepActive(index, getCurrentStepIndex(activity)),
+                          'border-blue-500 bg-blue-500': isStepActive(
+                            activity,
+                            step,
+                            index
+                          ),
                           'border-gray-300 bg-white': !isStepActive(
-                            index,
-                            getCurrentStepIndex(activity)
+                            activity,
+                            step,
+                            index
                           ),
                         }"
                       ></span>
@@ -1232,7 +1405,7 @@ onMounted(fetchActivitiesDirectly);
     </div>
 
     <!--Large screen-->
-    <div class="min-h-screen p-3 font-poppins hidden lg:flex flex-col gap-4">
+    <div class="min-h-screen px-3 pb-6 pt-3 font-poppins hidden lg:flex flex-col gap-4 max-w-6xl mx-auto">
       <!-- My Activity Container -->
       <div class="bg-white rounded-lg shadow p-6 flex-1">
         <h3 class="text-2xl font-semibold mb-4">My Activity</h3>
@@ -1344,11 +1517,15 @@ onMounted(fetchActivitiesDirectly);
                       <span
                         class="inline-flex w-4 h-4 rounded-full border-2"
                         :class="{
-                          'border-blue-500 bg-blue-500':
-                            isStepActive(index, getCurrentStepIndex(activity)),
+                          'border-blue-500 bg-blue-500': isStepActive(
+                            activity,
+                            step,
+                            index
+                          ),
                           'border-gray-300 bg-white': !isStepActive(
-                            index,
-                            getCurrentStepIndex(activity)
+                            activity,
+                            step,
+                            index
                           ),
                         }"
                       ></span>
