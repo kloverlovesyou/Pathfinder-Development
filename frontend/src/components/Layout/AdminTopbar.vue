@@ -372,6 +372,30 @@ async function deleteOrganization(id) {
           <span class="text-xs whitespace-nowrap">Approved</span>
         </button>
 
+        <!-- Rejected Button -->
+        <button
+          @click="$router.push({ name: 'AdminRejectedPage' })"
+          :class="[
+            'flex flex-col items-center justify-center transition-all duration-200',
+            route.name === 'AdminRejectedPage'
+              ? 'text-dark-slate border-b-4 border-dark-slate'
+              : 'text-gray-400 hover:text-dark-slate border-b-4 border-transparent ',
+          ]"
+          title="Rejected Accounts"
+        >
+          <svg
+            class="w-8 h-8 mb-1"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"
+            />
+          </svg>
+          <span class="text-xs whitespace-nowrap">Rejected</span>
+        </button>
+
         <!-- Account Settings Button -->
         <button
           @click="$router.push({ name: 'AdminUpdateDelete' })"
