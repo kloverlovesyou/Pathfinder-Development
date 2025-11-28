@@ -44,20 +44,25 @@ class OrganizationController extends Controller
     public function o_register(Request $request)
     {
         $validator = \Validator::make($request->all(), [
-            'name'        => 'required|string|max:255',
-            'location'    => 'nullable|string|max:255',
-            'websiteURL'  => 'nullable|string|max:255',
-            'emailAddress'=> [
-                'required',
-                'email',
-                'max:255',
-                \Illuminate\Validation\Rule::unique('organization', 'emailAddress')
-            ],
-            'phoneNumber' => 'nullable|string|max:20',
-            'password'    => 'required|string|min:8',
-            'logoPath'    => 'nullable|string|max:500',
-            'logo_directory' => 'nullable|string|max:500', // backward compatibility
-        ]);
+        'name'        => 'required|string|max:255',
+        'location'    => 'nullable|string|max:255',
+        'websiteURL'  => 'nullable|string|max:255',
+        'emailAddress'=> [
+            'required',
+            'email',
+            'max:255',
+            \Illuminate\Validation\Rule::unique('organization', 'emailAddress'),
+            function ($attribute, $value, $fail) {
+                if (\App\Models\Applicant::where('emailAddress', $value)->exists()) {
+                    $fail('The email has already been taken by an applicant.');
+                }
+            },
+        ],
+        'phoneNumber' => 'nullable|string|max:20',
+        'password'    => 'required|string|min:8',
+        'logoPath'    => 'nullable|string|max:500',
+        'logo_directory' => 'nullable|string|max:500',
+    ]);
 
         if ($validator->fails()) {
             \Log::error('Organization registration validation failed', [

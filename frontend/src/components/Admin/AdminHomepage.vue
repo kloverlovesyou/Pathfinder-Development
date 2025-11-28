@@ -7,7 +7,8 @@ const selectedOrg = ref(null);
 const approvedOrganizations = ref([]);
 const activeTab = ref("approved"); // "approved" or "rejected"
 const rejectedOrganizations = ref([]); // to store rejected organizations
-
+const loadingApproved = ref(true);
+const loadingRejected = ref(true);
 // Reject modal state
 const rejectModal = ref(false);
 const rejectReason = ref("");
@@ -189,7 +190,33 @@ onMounted(() => {
 
         <!-- Tab content -->
         <div v-if="activeTab === 'approved'">
-          <div v-if="approvedOrganizations.length" class="space-y-3">
+          <!-- Loading State -->
+          <div v-if="loadingApproved" class="flex flex-col items-center justify-center space-y-2 py-10">
+            <svg
+              class="animate-spin h-10 w-10 text-green-600"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v8H4z"
+              ></path>
+            </svg>
+            <p class="text-gray-500">Loading approved organizations...</p>
+          </div>
+
+          <!-- Approved Organizations List -->
+          <div v-else-if="approvedOrganizations.length" class="space-y-3">
             <div
               v-for="org in approvedOrganizations"
               :key="org.organizationID"
@@ -206,29 +233,57 @@ onMounted(() => {
             </div>
           </div>
 
+          <!-- No organizations -->
           <p v-else class="text-gray-500 italic">No approved organizations found.</p>
         </div>
 
         <div v-else-if="activeTab === 'rejected'">
-          <div v-if="rejectedOrganizations.length" class="space-y-3">
-            <div
-              v-for="org in rejectedOrganizations"
-              :key="org.organizationID"
-              class="p-3 border rounded-lg bg-red-50 flex justify-between"
-            >
-              <div>
-                <h3 class="font-semibold">{{ org.name }}</h3>
-                <p class="text-sm text-gray-600">{{ org.emailAddress }}</p>
-              </div>
+  <!-- Loading State -->
+  <div v-if="loadingRejected" class="flex flex-col items-center justify-center space-y-2 py-10">
+    <svg
+      class="animate-spin h-10 w-10 text-red-600"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <circle
+        class="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        stroke-width="4"
+      ></circle>
+      <path
+        class="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8v8H4z"
+      ></path>
+    </svg>
+    <p class="text-gray-500">Loading rejected organizations...</p>
+  </div>
 
-              <span class="px-3 py-1 bg-red-600 text-white rounded-lg text-sm">
-                Rejected
-              </span>
-            </div>
-          </div>
-
-          <p v-else class="text-gray-500 italic">No rejected organizations found.</p>
+    <!-- Rejected Organizations List -->
+    <div v-else-if="rejectedOrganizations.length" class="space-y-3">
+      <div
+        v-for="org in rejectedOrganizations"
+        :key="org.organizationID"
+        class="p-3 border rounded-lg bg-red-50 flex justify-between"
+      >
+        <div>
+          <h3 class="font-semibold">{{ org.name }}</h3>
+          <p class="text-sm text-gray-600">{{ org.emailAddress }}</p>
         </div>
+
+        <span class="px-3 py-1 bg-red-600 text-white rounded-lg text-sm">
+          Rejected
+        </span>
+      </div>
+    </div>
+
+    <!-- No rejected organizations -->
+    <p v-else class="text-gray-500 italic">No rejected organizations found.</p>
+  </div>
       </section>
     </div>
 

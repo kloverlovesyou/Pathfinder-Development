@@ -14,20 +14,22 @@ class ApplicantController extends Controller
     public function a_register(Request $request)
     {
         $validator = \Validator::make($request->all(), [
-            'firstName'    => 'required|string|max:255',
-            'lastName'     => 'required|string|max:255',
-            'address'      => 'required|string|max:255',
-            'emailAddress' => 'required|email|unique:applicant,emailAddress',
-            'phoneNumber'  => 'required|string|max:11',
-            'password'     => 'required|string|min:8',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
+        'firstName'    => 'required|string|max:255',
+        'lastName'     => 'required|string|max:255',
+        'address'      => 'required|string|max:255',
+        'emailAddress' => [
+            'required',
+            'email',
+            'unique:applicant,emailAddress', // existing in applicant table
+            function ($attribute, $value, $fail) {
+                if (\App\Models\Organization::where('emailAddress', $value)->exists()) {
+                    $fail('The email has already been taken by an organization.');
+                }
+            },
+        ],
+        'phoneNumber'  => 'required|string|max:11',
+        'password'     => 'required|string|min:8',
+    ]);
 
         // Generate verification token
         $verificationToken = Str::random(64);
