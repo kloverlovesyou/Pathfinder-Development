@@ -118,7 +118,7 @@ onMounted(() => {
       <header class="sticky top-0 z-10 h-16 text-black flex items-center px-4">
         <h1>
           <span class="block text-sm">Organization Account</span>
-          <span class="block font-bold text-3xl">Verification</span>
+          <span class="block font-bold text-3xl">For Verification</span>
         </h1>
       </header>
 
