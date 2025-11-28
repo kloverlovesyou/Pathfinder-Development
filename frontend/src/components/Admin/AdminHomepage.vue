@@ -60,11 +60,16 @@ async function submitRejection() {
 
 // Load rejected organizations
 async function loadRejectedOrganizations() {
+  loadingRejected.value = true; // start loading
   try {
     const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/admin/rejected-organizations");
+
+    // Assign the data; adjust if your API returns { data: [...] }
     rejectedOrganizations.value = res.data;
   } catch (err) {
     console.error("Error loading rejected organizations:", err);
+  } finally {
+    loadingRejected.value = false; // stop loading
   }
 }
 
@@ -96,13 +101,17 @@ async function acceptOrg(id) {
 }
 
 async function loadApprovedOrganizations() {
+  loadingApproved.value = true; // start loading
   try {
-    const res = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + "/admin/approved-organizations"
-    );
-    approvedOrganizations.value = res.data;
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/admin/approved-organizations");
+    // Check if API returns an array directly
+    approvedOrganizations.value = res.data; 
+    // Or if API wraps it in 'data'
+    // approvedOrganizations.value = res.data.data;
   } catch (err) {
     console.error("Error loading approved organizations:", err);
+  } finally {
+    loadingApproved.value = false; // stop loading
   }
 }
 onMounted(() => {
