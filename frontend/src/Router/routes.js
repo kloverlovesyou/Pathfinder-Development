@@ -165,14 +165,14 @@ const router = createRouter({
 
         {
           path: "adminapproved",
-          name: "AdminApproved  ",
+          name: "AdminApprovedPage",
           component: AdminApproved,
           meta: { requiresAuth: false },
         },
 
         {
           path: "adminrejected",
-          name: "AdminRejected",
+          name: "AdminRejectedPage",
           component: AdminRejected,
           meta: { requiresAuth: false },
         },
