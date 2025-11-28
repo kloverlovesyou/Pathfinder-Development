@@ -25,9 +25,18 @@ function addCertificate() {
   });
 }
 
+function ensureCertificateSlot() {
+  if (certificates.value.length === 0) {
+    addCertificate();
+  }
+}
+
+ensureCertificateSlot();
+
 // ➤ Remove an upload entry
 function removeCertificate(index) {
   certificates.value.splice(index, 1);
+  ensureCertificateSlot();
 }
 
 // Start certificate refresh interval
@@ -246,51 +255,50 @@ async function fetchCertificates(applicantID) {
 // ➤ Upload a new certificate
 async function uploadCertificate(cert, index) {
   const token = localStorage.getItem("token");
-  const user = JSON.parse(localStorage.getItem("user"));
+  const savedUser = localStorage.getItem("user");
+  const user = savedUser ? JSON.parse(savedUser) : null;
 
-  if (!token || !user) {
-    console.error("No token or user found");
+  if (!token || !user?.applicantID) {
+    showToast("Please log in again.", "error");
+    setTimeout(() => router.push({ name: "Login" }), 1500);
     return;
   }
 
-  if (!(cert.file instanceof File)) {
-    console.error("❌ cert.file is not a valid File object:", cert.file);
+  if (!cert.file) {
+    showToast("Please select an image before uploading.", "error");
+    return;
+  }
+
+  const trimmedTitle = cert.title?.trim();
+  if (!trimmedTitle) {
+    showToast("Please enter a certificate title.", "error");
     return;
   }
 
   const formData = new FormData();
-  formData.append("certificationName", cert.title || "Untitled");
-  formData.append("certificate", cert.file);
+  formData.append("certificationName", trimmedTitle);
   formData.append("applicantID", user.applicantID);
+  formData.append("IsSelected", 1);
+  formData.append("certificate", cert.file);
 
   try {
-    const response = await axios.post(
+    await axios.post(
       import.meta.env.VITE_API_BASE_URL + "/certificates",
       formData,
       {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
 
-    console.log("✅ Upload success:", response.data);
-
-    // Remove the uploaded item from pending list
     certificates.value.splice(index, 1);
-
-    // Refresh uploaded certificates
+    ensureCertificateSlot();
     await fetchCertificates(user.applicantID);
-
-    // ✅ Show success toast
-    showToast(
-      `Certificate "${cert.title || "Untitled"}" uploaded successfully!`,
-      "success"
-    );
+    showToast(`Certificate "${trimmedTitle}" uploaded successfully!`, "success");
   } catch (error) {
     console.error("❌ Upload error:", error.response?.data || error);
-    showToast("Failed to upload certificate", "error");
+    const message =
+      error.response?.data?.message || "Failed to upload certificate";
+    showToast(message, "error");
   }
 }
 

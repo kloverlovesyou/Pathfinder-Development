@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Certification;
 use App\Models\Registration;
+use App\Models\Training;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Supabase\Storage\StorageClient;
@@ -24,15 +25,18 @@ class CertificateController extends Controller
   
 public function index($applicantID)
 {
-    Log::info('🔍 Fetching certificates for applicant', ['applicantID' => $applicantID]);
-    
-    $allCertificates = [];
-    
-    // Step 1: Fetch manually uploaded certificates from certifications table (binary data)
-    $manualCertifications = Certification::where('applicantID', $applicantID)
-        ->whereNull('certificate_path')
-        ->whereNotNull('certificate')
-        ->get();
+    try {
+        $applicantID = (int) $applicantID; // Ensure integer type
+        
+        Log::info('🔍 Fetching certificates for applicant', ['applicantID' => $applicantID]);
+        
+        $allCertificates = [];
+        
+        // Step 1: Fetch manually uploaded certificates from certifications table (binary data)
+        $manualCertifications = Certification::where('applicantID', $applicantID)
+            ->whereNull('certificate_path')
+            ->whereNotNull('certificate')
+            ->get();
     
     foreach ($manualCertifications as $cert) {
         if (empty($cert->certificate) || strlen($cert->certificate) < 10) {
@@ -62,23 +66,23 @@ public function index($applicantID)
         ];
     }
     
-    // Step 2: Fetch organization-issued certificates from registrations (Supabase)
-    // Get all registrations with certificatePath for this applicant
-    $registrations = Registration::with('training')
-        ->where('applicantID', $applicantID)
-        ->whereNotNull('certificatePath')
-        ->where('certificatePath', '!=', '')
-        ->get();
-    
-    Log::info('📋 Found registrations with certificates', [
-        'applicantID' => $applicantID,
-        'count' => $registrations->count(),
-    ]);
-    
-    // Step 3: Create certificates from registrations - fetch from Supabase using certificate_path
-    foreach ($registrations as $registration) {
-        $certificatePath = $registration->certificatePath;
-        $training = $registration->training;
+        // Step 2: Fetch organization-issued certificates from registrations (Supabase)
+        // Get all registrations with certificatePath for this applicant
+        $registrations = Registration::where('applicantID', $applicantID)
+            ->whereNotNull('certificatePath')
+            ->where('certificatePath', '!=', '')
+            ->get();
+        
+        Log::info('📋 Found registrations with certificates', [
+            'applicantID' => $applicantID,
+            'count' => $registrations->count(),
+        ]);
+        
+        // Step 3: Create certificates from registrations - fetch from Supabase using certificate_path
+        foreach ($registrations as $registration) {
+            $certificatePath = $registration->certificatePath;
+            // Load training relationship separately to avoid issues
+            $training = $registration->trainingID ? Training::find($registration->trainingID) : null;
         
         if (empty($certificatePath)) {
             continue;
@@ -156,38 +160,75 @@ public function index($applicantID)
                 'certificate_path' => $cert->certificate_path,
             ];
         }
-    }
-    
-    Log::info('🎯 Returning certificates', [
-        'applicantID' => $applicantID,
-        'totalCount' => count($allCertificates),
-        'organizationCount' => count(array_filter($allCertificates, fn($c) => ($c['source'] ?? '') === 'organization')),
-        'manualCount' => count(array_filter($allCertificates, fn($c) => ($c['source'] ?? '') === 'manual')),
-    ]);
+        }
+        
+        Log::info('🎯 Returning certificates', [
+            'applicantID' => $applicantID,
+            'totalCount' => count($allCertificates),
+            'organizationCount' => count(array_filter($allCertificates, fn($c) => ($c['source'] ?? '') === 'organization')),
+            'manualCount' => count(array_filter($allCertificates, fn($c) => ($c['source'] ?? '') === 'manual')),
+        ]);
 
-    return response()->json($allCertificates, 200, [], JSON_UNESCAPED_SLASHES);
+        return $this->safeJsonResponse($allCertificates);
+    } catch (\Exception $e) {
+        Log::error('Error fetching certificates: ' . $e->getMessage(), [
+            'applicantID' => $applicantID ?? null,
+            'trace' => $e->getTraceAsString()
+        ]);
+        return $this->safeJsonResponse([
+            'error' => 'Failed to fetch certificates',
+            'message' => $e->getMessage()
+        ], 500);
+    }
 }
 
     // Upload a new certificate
     public function store(Request $request)
     {
         // Log request details for debugging
+        $base64Input = $request->input('certificate_base64');
+        $base64Length = $base64Input ? strlen($base64Input) : 0;
         Log::info('📝 Certificate store request', [
             'hasFile' => $request->hasFile('certificate'),
             'hasPath' => $request->has('certificate_path'),
             'certificate_path' => $request->input('certificate_path'),
-            'all_input' => $request->except(['certificate']), // Don't log binary data
+            'has_certificate_base64' => $request->has('certificate_base64'),
+            'certificate_base64_length' => $base64Length,
+            'certificate_base64_preview' => $base64Input ? substr($base64Input, 0, 50) . '...' : null,
+            'all_input_keys' => array_keys($request->except(['certificate', 'certificate_base64'])), // Don't log binary data
         ]);
         
-        // Validate based on whether we have a file or certificate_path
+        // Validate based on whether we have a file, base64 data, or certificate_path
         $hasFile = $request->hasFile('certificate');
         $hasPath = $request->has('certificate_path') && !empty($request->certificate_path);
+
+        // Accept base64 payloads via multiple keys to be robust against frontend variations
+        // Check all() first to ensure we get JSON body data
+        $allInput = $request->all();
+        $base64Input = $request->input('certificate_base64')
+            ?? $request->input('certificateData')
+            ?? $request->input('certificate')
+            ?? ($allInput['certificate_base64'] ?? null)
+            ?? ($allInput['certificateData'] ?? null)
+            ?? ($allInput['certificate'] ?? null);
+
+        $hasBase64 = !empty($base64Input) && is_string($base64Input);
+        
+        // Log what we found
+        Log::info('🔍 Certificate detection', [
+            'hasFile' => $hasFile,
+            'hasPath' => $hasPath,
+            'hasBase64' => $hasBase64,
+            'base64Input_type' => gettype($base64Input),
+            'base64Input_length' => $hasBase64 ? strlen($base64Input) : 0,
+            'all_input_keys' => array_keys($allInput),
+        ]);
         
         // If neither file nor path is provided, that's an error
-        if (!$hasFile && !$hasPath) {
-            return response()->json([
+        if (!$hasFile && !$hasPath && !$hasBase64) {
+            return $this->safeJsonResponse([
                 'message' => 'Either certificate file or certificate_path must be provided',
-                'errors' => ['certificate' => ['Either certificate file or certificate_path must be provided']]
+                'errors' => ['certificate' => ['Either certificate file, certificate_base64, or certificate_path must be provided']]
             ], 422);
         }
         
@@ -205,6 +246,11 @@ public function index($applicantID)
             $validationRules['certificate'] = 'required|file|mimes:jpeg,png,jpg|max:4096';
         }
         
+        // Validate base64 payload if present
+        if ($hasBase64) {
+            $validationRules['certificate_base64'] = 'required|string';
+        }
+
         // Validate certificate_path if provided
         if ($hasPath) {
             $validationRules['certificate_path'] = 'required|string';
@@ -238,6 +284,38 @@ public function index($applicantID)
             $binaryData = file_get_contents($file->getRealPath());
             $data['certificate'] = $binaryData;
         }
+        // Handle base64 input (manual certificates fallback)
+        elseif ($hasBase64) {
+            $base64Data = $base64Input;
+            
+            // Strip data URL prefix if present (e.g., "data:image/png;base64,")
+            if (str_starts_with($base64Data, 'data:')) {
+                $commaPos = strpos($base64Data, ',');
+                if ($commaPos !== false) {
+                    $base64Data = substr($base64Data, $commaPos + 1);
+                }
+            }
+            
+            // Decode base64 to binary
+            $decoded = base64_decode($base64Data, true); // strict mode
+
+            if ($decoded === false) {
+                Log::error('❌ Failed to decode base64', [
+                    'base64_length' => strlen($base64Data),
+                    'base64_preview' => substr($base64Data, 0, 50),
+                ]);
+                return $this->safeJsonResponse([
+                    'message' => 'Invalid base64 certificate data provided.',
+                    'errors' => ['certificate_base64' => ['Unable to decode certificate_base64 payload']]
+                ], 422);
+            }
+
+            $data['certificate'] = $decoded;
+            Log::info('✅ Decoded base64 certificate', [
+                'original_length' => strlen($base64Input),
+                'decoded_length' => strlen($decoded),
+            ]);
+        }
         // For organization certificates without file, don't include certificate field at all
         // This matches RegistrationController which creates certificates without certificate field
         // (see RegistrationController line 193-198)
@@ -259,12 +337,18 @@ public function index($applicantID)
                 $existing->IsSelected = $updateIsSelected ? 1 : 0;
                 $existing->save();
                 
-                $safeCert = $existing->toArray();
-                unset($safeCert['certificate']);
+                // Build safe response without binary data
+                $safeCert = [
+                    'certificationID' => $existing->certificationID,
+                    'certificationName' => $existing->certificationName,
+                    'applicantID' => $existing->applicantID,
+                    'resumeID' => $existing->resumeID,
+                    'IsSelected' => (int) $existing->IsSelected,
+                    'certificate_path' => $existing->certificate_path,
+                ];
                 
-                return response()->json([
+                return $this->safeJsonResponse([
                     'message' => 'Certificate updated successfully!',
-                    'data' => $safeCert,
                     'certificationID' => $existing->certificationID,
                 ]);
             }
@@ -296,21 +380,28 @@ public function index($applicantID)
                 'data_keys' => array_keys($data),
             ]);
             
-            return response()->json([
+            return $this->safeJsonResponse([
                 'message' => 'Failed to create certificate: ' . $e->getMessage(),
                 'error' => $e->getMessage(),
             ], 500);
         }
 
-        $safeCert = $cert->toArray();
-        unset($safeCert['certificate']);
+        // Build safe response without binary data
+        $safeCert = [
+            'certificationID' => $cert->certificationID,
+            'certificationName' => $cert->certificationName,
+            'applicantID' => $cert->applicantID,
+            'resumeID' => $cert->resumeID,
+            'IsSelected' => (int) $cert->IsSelected,
+            'certificate_path' => $cert->certificate_path,
+        ];
 
-        return response()->json([
+        return $this->safeJsonResponse([
             'message' => 'Certificate uploaded successfully!',
-            'data' => $safeCert,
             'certificationID' => $cert->certificationID,
         ]);
     }
+
 
     // ✅ Delete a certificate
        // Delete a certificate
@@ -319,27 +410,27 @@ public function index($applicantID)
             $cert = Certification::find($id);
 
             if (!$cert) {
-                return response()->json(['message' => 'Certificate not found'], 404);
+                return $this->safeJsonResponse(['message' => 'Certificate not found'], 404);
             }
 
             $cert->delete();
 
-            return response()->json(['message' => 'Certificate deleted successfully']);
+            return $this->safeJsonResponse(['message' => 'Certificate deleted successfully']);
         }
 
-public function toggleSelection($id)
+    public function toggleSelection($id)
 {
     $cert = Certification::find($id);
 
     if (!$cert) {
-        return response()->json(['message' => 'Certificate not found'], 404);
+        return $this->safeJsonResponse(['message' => 'Certificate not found'], 404);
     }
 
     // ✅ Flip the IsSelected value properly (handle null or string values)
     $cert->IsSelected = $cert->IsSelected ? 0 : 1;
     $cert->save();
 
-    return response()->json([
+    return $this->safeJsonResponse([
         'message' => $cert->IsSelected
             ? 'Certificate added to resume'
             : 'Certificate removed from resume',
@@ -383,7 +474,7 @@ public function selectedCertificates($applicantID)
         $formattedCertificates[] = $certData;
     }
 
-    return response()->json($formattedCertificates);
+    return $this->safeJsonResponse($formattedCertificates);
 }
 
 public function issueCertificate(Request $request, $certificationID)
@@ -410,7 +501,7 @@ public function issueCertificate(Request $request, $certificationID)
     $result = $storage->from($bucket)->upload($fileName, $fileBytes);
 
     if (!empty($result['error'])) {
-        return response()->json([
+        return $this->safeJsonResponse([
             'message' => 'Failed to upload issued certificate',
             'error' => $result['error']
         ], 500);
@@ -423,12 +514,39 @@ public function issueCertificate(Request $request, $certificationID)
     // Get a public URL
     $publicUrl = $storage->from($bucket)->getPublicUrl($fileName);
 
-    return response()->json([
+    return $this->safeJsonResponse([
         'message' => 'Certificate issued successfully',
         'path' => $fileName,
         'public_url' => $publicUrl
     ]);
 }
+
+    protected function safeJsonResponse($data, int $status = 200)
+    {
+        $options = JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE;
+        try {
+            return response()->json($data, $status, [], $options);
+        } catch (\JsonException $e) {
+            $sanitized = $this->sanitizeUtf8($data);
+            return response()->json($sanitized, $status, [], $options);
+        }
+    }
+
+    protected function sanitizeUtf8($value)
+    {
+        if (is_array($value)) {
+            foreach ($value as $key => $item) {
+                $value[$key] = $this->sanitizeUtf8($item);
+            }
+            return $value;
+        }
+
+        if (is_string($value)) {
+            return mb_convert_encoding($value, 'UTF-8', 'UTF-8');
+        }
+
+        return $value;
+    }
 
 
 

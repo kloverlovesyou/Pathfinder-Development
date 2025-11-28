@@ -20,8 +20,8 @@ class SearchController extends Controller
         }
 
         try {
-            // ✅ Call stored procedure
-            $results = DB::select('SELECT * FROM searchcontent(?, ?, ?)', [
+            // ✅ Call stored procedure aligned with new schema
+            $results = DB::select('SELECT * FROM sp_search_content(?, ?, ?)', [
                 $searchTerm,
                 $filterType,
                 $subFilter

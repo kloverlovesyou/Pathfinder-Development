@@ -18,31 +18,53 @@ export const useActivityStore = defineStore("activityStore", () => {
     }
 
     const user = JSON.parse(savedUser);
-    if (!user?.applicantID) return;
+    if (!user?.applicantID) {
+      upcomingCount.value = 0;
+      completedCount.value = 0;
+      return;
+    }
 
     try {
       loading.value = true;
-      const { data } = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/my-activities/${user.applicantID}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const headers = { Authorization: `Bearer ${token}` };
+      const baseUrl = import.meta.env.VITE_API_BASE_URL;
 
-      const activities = data?.activities || [];
-      const upcoming = activities.filter((a) =>
-        ["upcoming", "registered"].includes(a.status?.toLowerCase())
-      ).length;
+      const [registrationsResult, applicationsResult] = await Promise.allSettled([
+        axios.get(`${baseUrl}/registrations`, { headers }),
+        axios.get(`${baseUrl}/applications`, { headers }),
+      ]);
 
-      const completed = activities.filter(
-        (a) => a.status?.toLowerCase() === "completed"
-      ).length;
+      if (registrationsResult.status === "fulfilled") {
+        const registrations = Array.isArray(registrationsResult.value?.data)
+          ? registrationsResult.value.data
+          : [];
+        upcomingCount.value = registrations.length;
+      } else {
+        console.error(
+          "Failed to fetch registrations for activity counts:",
+          registrationsResult.reason
+        );
+        upcomingCount.value = 0;
+      }
 
-      upcomingCount.value = upcoming;
-      completedCount.value = completed;
+      if (applicationsResult.status === "fulfilled") {
+        const applications = Array.isArray(applicationsResult.value?.data)
+          ? applicationsResult.value.data
+          : [];
+        completedCount.value = applications.length;
+      } else {
+        console.error(
+          "Failed to fetch applications for activity counts:",
+          applicationsResult.reason
+        );
+        completedCount.value = 0;
+      }
+
       lastFetchedAt.value = new Date();
     } catch (error) {
       console.error("Failed to fetch activity counts:", error);
+      upcomingCount.value = 0;
+      completedCount.value = 0;
     } finally {
       loading.value = false;
     }

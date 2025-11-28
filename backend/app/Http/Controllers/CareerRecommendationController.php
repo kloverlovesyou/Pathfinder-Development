@@ -64,11 +64,52 @@ class CareerRecommendationController extends Controller
             return response()->json($careers);
 
         } catch (\Exception $e) {
-            // Return error message if procedure fails
-            return response()->json([
-                'message' => 'Error fetching recommended careers',
-                'error' => $e->getMessage()
-            ], 500);
+            Log::error('sp_GetRecommendedCareers_ByTags failed', [
+                'careerID' => $careerID ?? null,
+                'error' => $e->getMessage(),
+            ]);
+
+            $fallbackCareers = DB::table('career as c')
+                ->leftJoin('career_tag as ct', 'c.careerID', '=', 'ct.careerID')
+                ->leftJoin('career_tag as selected_ct', function ($join) use ($careerID) {
+                    $join->on(DB::raw('"selected_ct"."TagID"'), '=', DB::raw('"ct"."TagID"'))
+                        ->where('selected_ct.careerID', '=', $careerID);
+                })
+                ->leftJoin('organization as o', 'c.organizationID', '=', 'o.organizationID')
+                ->where('c.careerID', '!=', $careerID)
+                ->select(
+                    'c.careerID',
+                    'c.position',
+                    'c.placeOfAssignment',
+                    'c.details',
+                    'c.qualificationStandard',
+                    'c.pdf_directory',
+                    'c.postingDate',
+                    'c.closingDate',
+                    'c.trainingsAttendedPercentage',
+                    'c.organizationID',
+                    DB::raw('COALESCE(o.name, \'Unknown\') as organization'),
+                    DB::raw('COUNT("selected_ct"."TagID") as "sharedTags"')
+                )
+                ->groupBy(
+                    'c.careerID',
+                    'c.position',
+                    'c.placeOfAssignment',
+                    'c.details',
+                    'c.qualificationStandard',
+                    'c.pdf_directory',
+                    'c.postingDate',
+                    'c.closingDate',
+                    'c.trainingsAttendedPercentage',
+                    'c.organizationID',
+                    'o.name'
+                )
+                ->orderByDesc('sharedTags')
+                ->orderByDesc('c.postingDate')
+                ->limit(10)
+                ->get();
+
+            return response()->json($fallbackCareers);
         }
     }
 

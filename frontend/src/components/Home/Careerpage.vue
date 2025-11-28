@@ -68,6 +68,12 @@ onMounted(async () => {
   await nextTick();
   buildEvents();
   const calendar = calendarRef.value;
+  
+  if (!calendar) {
+    console.warn('Calendar ref is null, skipping calendar setup');
+    return;
+  }
+  
   const today = new Date().toISOString().split("T")[0];
 
   calendar.addEventListener("render", () => {

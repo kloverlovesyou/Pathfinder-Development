@@ -254,7 +254,6 @@
 import { ref, onMounted, onBeforeUnmount, computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useActivityStore } from "@/stores/activityStore";
-import { useRoute } from "vue-router";
 import { useRouter } from "vue-router";
 
 const props = defineProps({
@@ -266,7 +265,6 @@ const props = defineProps({
 
 const emit = defineEmits(["update:expanded"]);
 
-const route = useRoute();
 const router = useRouter();
 const userName = ref("");
 const auth = useAuthStore();

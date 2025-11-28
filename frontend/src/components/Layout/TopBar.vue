@@ -1,10 +1,10 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch, computed } from "vue";
 import axios from "axios";
 import { useRoute } from "vue-router";
 import { useRegistrationStore } from "@/stores/registrationStore";
-
-const qrCodeUrl = ref(null);
+import TrainingModal from "@/components/Layout/TrainingModal.vue";
+import CareerModal from "@/components/Layout/careermodal.vue";
 
 const route = useRoute();
 const toasts = ref([]);
@@ -17,20 +17,19 @@ async function toggleRegisterWithLoading(post) {
   isRegisterLoading.value = true;
   try {
     await regStore.toggleRegister(post);
+    const trainingID = resolveTrainingId(post);
+    const isRegistered = trainingID
+      ? !!regStore.registeredPosts[trainingID]
+      : false;
+    showToast(
+      isRegistered ? "Registered successfully!" : "Unregistered successfully!",
+      isRegistered ? "success" : "info"
+    );
+  } catch (error) {
+    showToast("Action failed.", "error");
+    console.error("Failed to toggle registration:", error);
   } finally {
     isRegisterLoading.value = false;
-  }
-}
-
-async function fetchQRCode(trainingID) {
-  try {
-    const res = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + `/training/${trainingID}/qrcode`
-    );
-    qrCodeUrl.value = res.data.qr_url || null;
-  } catch (err) {
-    console.error("Failed to fetch QR code:", err);
-    qrCodeUrl.value = null;
   }
 }
 
@@ -45,37 +44,8 @@ function showToast(message, type = "info") {
 // ✅ Use store instead of local registeredPosts
 onMounted(() => {
   regStore.fetchMyRegistrations();
+  fetchMyApplications();
 });
-
-// ✅ Toggle using store
-async function toggleRegister(training) {
-  const token = localStorage.getItem("token");
-  if (!token) return showToast("Please log in first.", "error");
-
-  const trainingID =
-    training.trainingID ?? training.TrainingID ?? training.ID ?? training.id;
-
-  try {
-    await regStore.toggleRegister(training);
-
-    const isRegistered = !!regStore.registeredPosts[trainingID];
-
-    showToast(
-      isRegistered ? "Registered successfully!" : "Unregistered successfully!",
-      "success"
-    );
-
-    // ✅ Fetch QR if registered
-    if (isRegistered) {
-      await fetchQRCode(trainingID);
-    } else {
-      qrCodeUrl.value = null;
-    }
-  } catch (err) {
-    showToast("Action failed.", "error");
-    console.error(err);
-  }
-}
 
 // ✅ Everything else below remains **untouched**
 const showDropdown = ref(false);
@@ -86,12 +56,32 @@ const mainFilters = ["Training", "Career", "Organization"];
 const searchInput = ref("");
 const results = ref([]);
 
-const applyModalOpen = ref(false);
-const isModalOpen = ref(false);
+const selectedTrainingModalData = ref(null);
+const selectedCareerModalData = ref(null);
+const myApplications = ref(new Set());
 
-const appliedPosts = ref({});
-const organizations = ref({});
-const posts = ref([]);
+async function fetchMyApplications() {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+  try {
+    const response = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/applications",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    const ids = (response.data || [])
+      .map(
+        (app) =>
+          app.careerID ?? app.career?.careerID ?? app?.CareerID ?? app?.career?.id
+      )
+      .filter((id) => id !== null && id !== undefined);
+    myApplications.value = new Set(ids);
+  } catch (error) {
+    console.error("Failed to fetch applications:", error);
+  }
+}
 
 function toggleMainFilter(main) {
   if (activeMains.value.includes(main)) {
@@ -131,7 +121,8 @@ onBeforeUnmount(() =>
 );
 
 async function performSearch() {
-  if (!searchInput.value.trim()) {
+  const query = searchInput.value.trim();
+  if (!query) {
     results.value = [];
     return;
   }
@@ -141,20 +132,28 @@ async function performSearch() {
       import.meta.env.VITE_API_BASE_URL + "/search",
       {
         params: {
-          search: searchInput.value,
-          filterType: activeMains.value[0]?.toLowerCase() || "",
+          search: query,
+          filterType: activeMains.value[0]?.toLowerCase() || "all",
           subFilter: activeSubs.value[0] || "",
         },
       }
     );
 
-    results.value = response.data.results || [];
+    const candidateResults = response.data?.results ?? response.data ?? [];
+    const data = Array.isArray(candidateResults) ? candidateResults : [];
+    results.value = mergeTrainingResults(data);
   } catch (error) {
     console.error("Search failed:", error);
     results.value = [];
   }
 }
-watch([searchInput, activeMains, activeSubs], performSearch);
+watch(
+  [searchInput, activeMains, activeSubs],
+  () => {
+    performSearch();
+  },
+  { immediate: true }
+);
 
 function isTraining(post) {
   return post.Type?.toLowerCase().includes("training");
@@ -166,98 +165,223 @@ function isOrganization(post) {
   return post.Type?.toLowerCase().includes("organization");
 }
 
-async function openOrganizationModal(orgItem) {
-  resetModals();
-  try {
-    isModalOpen.value = true;
-    selectedOrg.value = {
-      name: orgItem.Name || orgItem.OrganizationName,
-      location: orgItem.Location || "",
-      website: orgItem.Website || "",
-      logo: orgItem.Logo || "",
-      careers: [],
-      trainings: [],
-    };
-
-    const response = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + `/organization/${orgItem.ID}/posts`
-    );
-    selectedOrg.value.careers = response.data.careers || [];
-    selectedOrg.value.trainings = response.data.trainings || [];
-  } catch (error) {
-    console.error("Failed to fetch organization details:", error);
-  }
-}
-
 function resetModals() {
-  selectedPost.value = null;
-  isModalOpen.value = false;
+  selectedTrainingModalData.value = null;
+  selectedCareerModalData.value = null;
   selectedOrg.value = null;
-  applyModalOpen.value = false;
+  isTrainingModalOpen.value = false;
+  isCareerModalOpen.value = false;
+  isOrgModalOpen.value = false;
 }
 
 const isTrainingModalOpen = ref(false);
 const isCareerModalOpen = ref(false);
 const isOrgModalOpen = ref(false);
 
-const selectedPost = ref({});
 const selectedOrg = ref({});
 
-async function openTrainingModal(post) {
-  selectedPost.value = post;
-  isTrainingModalOpen.value = true;
-
-  const trainingID = post.trainingID ?? post.TrainingID ?? post.ID ?? post.id;
-
-  // Ensure latest registrations
-  await regStore.fetchMyRegistrations();
-
-  // If already registered, fetch QR
-  if (regStore.registeredPosts[trainingID]) {
-    await fetchQRCode(trainingID);
-  } else {
-    qrCodeUrl.value = null;
-  }
-}
-
 function closeTrainingModal() {
-  selectedPost.value = {};
   isTrainingModalOpen.value = false;
+  selectedTrainingModalData.value = null;
 }
-function openCareerModal(post) {
-  selectedPost.value = post;
-  isCareerModalOpen.value = true;
-}
+
 function closeCareerModal() {
-  selectedPost.value = {};
   isCareerModalOpen.value = false;
+  selectedCareerModalData.value = null;
 }
-function openApplyModal(post) {
-  selectedPost.value = post;
-  applyModalOpen.value = true;
-}
-function closeApplyModal() {
-  applyModalOpen.value = false;
-}
-function openOrgModal(org) {
-  selectedOrg.value = org;
-  isOrgModalOpen.value = true;
-}
+
 function closeOrgModal() {
   isOrgModalOpen.value = false;
   selectedOrg.value = {};
 }
 
+function buildScheduleEntry(item) {
+  return {
+    trainingScheduleID:
+      item.trainingScheduleID || item.TrainingScheduleID || null,
+    schedule: item.Schedule || item.schedule || null,
+    end_time: item.end_time || item.End_time || item.EndTime || item.endTime || null,
+    mode: item.Mode || item.mode || null,
+    location: item.Location || item.location || null,
+    trainingLink: item.TrainingLink || item.trainingLink || null,
+  };
+}
+
+function mapTrainingResult(item) {
+  if (!item) return null;
+  const trainingID =
+    item.trainingID ?? item.TrainingID ?? item.ID ?? item.id ?? null;
+  const organizationName =
+    item.OrganizationName ||
+    item.organizationName ||
+    item.organization ||
+    item.Name ||
+    "Unknown";
+
+  const schedules =
+    Array.isArray(item.schedules) && item.schedules.length
+      ? item.schedules
+      : (item.Schedule ||
+          item.schedule ||
+          item.Mode ||
+          item.mode ||
+          item.Location ||
+          item.location)
+        ? [buildScheduleEntry(item)]
+        : [];
+
+  return {
+    trainingID,
+    title: item.Title || item.title || "Untitled Training",
+    description: item.Description || item.description || "No description provided.",
+    organizationName,
+    organization: { name: organizationName },
+    schedules,
+    Mode: item.Mode || item.mode || schedules[0]?.mode || null,
+  };
+}
+
+function mapCareerResult(item) {
+  if (!item) return null;
+  const careerID =
+    item.careerID ?? item.CareerID ?? item.ID ?? item.id ?? null;
+  const organizationName =
+    item.OrganizationName ||
+    item.organizationName ||
+    item.organization ||
+    "Unknown";
+
+  return {
+    careerID,
+    position:
+      item.Title || item.Position || item.position || "Career Opportunity",
+    details:
+      item.Description ||
+      item.details ||
+      item.Details ||
+      item.detailsAndInstructions ||
+      "Not specified",
+    placeOfAssignment:
+      item.placeOfAssignment ||
+      item.PlaceOfAssignment ||
+      item.Location ||
+      item.location ||
+      "",
+    qualificationStandard:
+      item.Qualifications ||
+      item.qualificationStandard ||
+      item.qualificationstandard ||
+      "",
+    postingDate: item.postingDate || item.PostingDate || null,
+    closingDate:
+      item.closingDate ||
+      item.ClosingDate ||
+      item.DeadlineofSubmission ||
+      null,
+    pdf_directory: item.pdf_directory || item.pdfDirectory || item.PDF || null,
+    organizationName,
+  };
+}
+
+function hasScheduleData(entry) {
+  if (!entry) return false;
+  return !!(
+    entry.schedule ||
+    entry.end_time ||
+    entry.mode ||
+    entry.location ||
+    entry.trainingLink
+  );
+}
+
+function extractScheduleEntries(item) {
+  if (!item) return [];
+  if (Array.isArray(item.schedules) && item.schedules.length) {
+    return item.schedules.filter((sched) => hasScheduleData(sched));
+  }
+  const entry = buildScheduleEntry(item);
+  return hasScheduleData(entry) ? [entry] : [];
+}
+
+function mergeTrainingResults(data = []) {
+  const trainingMap = new Map();
+  const finalResults = [];
+
+  data.forEach((item) => {
+    const type = (item?.Type || "").toLowerCase();
+    if (type.includes("training")) {
+      const trainingID = resolveTrainingId(item) ?? Symbol("training");
+      const scheduleEntries = extractScheduleEntries(item);
+
+      if (!trainingMap.has(trainingID)) {
+        const baseItem = {
+          ...item,
+          schedules: [...scheduleEntries],
+        };
+        trainingMap.set(trainingID, baseItem);
+        finalResults.push(baseItem);
+      } else {
+        const existing = trainingMap.get(trainingID);
+        existing.schedules = existing.schedules || [];
+        scheduleEntries.forEach((entry) => {
+          const isDuplicate = existing.schedules.some(
+            (sched) =>
+              sched.schedule === entry.schedule &&
+              sched.mode === entry.mode &&
+              sched.location === entry.location
+          );
+          if (!isDuplicate) {
+            existing.schedules.push(entry);
+          }
+        });
+      }
+    } else {
+      finalResults.push(item);
+    }
+  });
+
+  return finalResults;
+}
+
+function resolveTrainingId(training) {
+  if (!training) return null;
+  return (
+    training.trainingID ??
+    training.TrainingID ??
+    training.ID ??
+    training.id ??
+    null
+  );
+}
+
+const selectedTrainingRegistered = computed(() => {
+  const trainingID = resolveTrainingId(selectedTrainingModalData.value);
+  if (!trainingID) return false;
+  return !!regStore.registeredPosts[trainingID];
+});
+
+function handleApplicationsUpdate(updatedSet) {
+  myApplications.value = new Set(updatedSet ?? []);
+}
+
 async function handleResultClick(item) {
-  console.log("👉 Item clicked:", item);
-  console.log("📌 Detected Type:", item.Type);
-  if (item.Type === "Training" || item.Type.includes("Training")) {
-    selectedPost.value = item;
+  if (!item) return;
+  resetModals();
+  const type = (item.Type || "").toLowerCase();
+
+  if (type.includes("training")) {
+    selectedTrainingModalData.value = mapTrainingResult(item);
     isTrainingModalOpen.value = true;
-  } else if (item.Type === "Career" || item.Type.includes("Career")) {
-    selectedPost.value = item;
+    return;
+  }
+
+  if (type.includes("career")) {
+    selectedCareerModalData.value = mapCareerResult(item);
     isCareerModalOpen.value = true;
-  } else if (item.Type === "Organization") {
+    return;
+  }
+
+  if (type.includes("organization")) {
     selectedOrg.value = {
       ...item,
       careers: [],
@@ -534,207 +658,22 @@ async function handleResultClick(item) {
       </div>
     </div>
 
-    <!-- TRAINING MODAL -->
-    <dialog v-if="isTrainingModalOpen" open class="modal sm:modal-middle">
-      <div class="modal-box max-w-3xl relative font-poppins">
-        <button
-          class="btn btn-sm btn-circle absolute right-2 top-2"
-          @click="closeTrainingModal"
-        >
-          ✕
-        </button>
+    <TrainingModal
+      :isOpen="isTrainingModalOpen"
+      :training="selectedTrainingModalData"
+      :isRegistered="selectedTrainingRegistered"
+      :registerLoading="isRegisterLoading"
+      @close="closeTrainingModal"
+      @toggle-register="toggleRegisterWithLoading"
+    />
 
-        <h2 class="text-xl font-bold mb-2">{{ selectedPost.Title }}</h2>
-        <p class="text-sm text-gray-600 mb-2">
-          Organization: {{ selectedPost.OrganizationName }}
-        </p>
-
-        <!-- Buttons -->
-        <div class="my-4 flex justify-end gap-2">
-          <!-- Register -->
-          <button
-            v-if="isTraining(selectedPost)"
-            class="btn btn-sm text-white flex items-center justify-center"
-            :class="
-              regStore.registeredPosts[
-                selectedPost.trainingID ??
-                  selectedPost.TrainingID ??
-                  selectedPost.id ??
-                  selectedPost.ID
-              ]
-                ? 'bg-gray-500'
-                : 'bg-customButton'
-            "
-            :disabled="isRegisterLoading"
-            @click="toggleRegisterWithLoading(selectedPost)"
-          >
-            <!-- Loading Spinner Only -->
-            <span
-              v-if="isRegisterLoading"
-              class="flex items-center justify-center"
-            >
-              <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                  fill="none"
-                />
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v8z"
-                />
-              </svg>
-            </span>
-
-            <!-- Text -->
-            <span v-else>
-              {{
-                regStore.registeredPosts[
-                  selectedPost.trainingID ??
-                    selectedPost.TrainingID ??
-                    selectedPost.id ??
-                    selectedPost.ID
-                ]
-                  ? "Unregister"
-                  : "Register"
-              }}
-            </span>
-          </button>
-        </div>
-
-        <!-- ✅ ✅ QR CODE SECTION -->
-        <div class="flex justify-center my-4">
-          <template v-if="qrCodeUrl">
-            <img
-              :src="qrCodeUrl"
-              alt="Training QR"
-              class="w-40 h-40 border rounded shadow-md"
-            />
-          </template>
-
-          <template v-else>
-            <p class="text-center text-gray-500 text-sm">
-              QR code will appear once registered.
-            </p>
-          </template>
-        </div>
-        <!-- ✅ ✅ END QR SECTION -->
-
-        <!-- Training Info -->
-        <p><strong>Mode:</strong> {{ selectedPost.Mode || "Not specified" }}</p>
-        <p><strong>Description:</strong> {{ selectedPost.Description }}</p>
-        <p><strong>Schedule:</strong> {{ selectedPost.Schedule }}</p>
-        <p><strong>Location:</strong> {{ selectedPost.Location }}</p>
-      </div>
-    </dialog>
-
-    <!-- CAREER MODAL -->
-    <dialog v-if="isCareerModalOpen" open class="modal sm:modal-middle">
-      <div class="modal-box max-w-3xl relative font-poppins">
-        <button
-          class="btn btn-sm btn-circle absolute right-2 top-2"
-          @click="closeCareerModal"
-        >
-          ✕
-        </button>
-        <h2 class="text-xl font-bold mb-2">
-          {{ selectedPost.Title || selectedPost.Position }}
-        </h2>
-
-        <p class="text-sm text-gray-600 mb-2">
-          Organization: {{ selectedPost.OrganizationName }}
-        </p>
-
-        <!-- Buttons -->
-        <div class="my-4 flex justify-end gap-2">
-          <!-- Apply / Cancel -->
-          <button
-            v-if="!appliedPosts[selectedPost.ID]"
-            class="btn btn-sm bg-customButton text-white"
-            @click="openApplyModal(selectedPost)"
-          >
-            Apply
-          </button>
-
-          <button
-            v-else
-            class="btn btn-sm bg-gray-500 text-white"
-            @click="cancelApplication(selectedPost)"
-          >
-            Cancel Application
-          </button>
-        </div>
-
-        <!-- Career Info -->
-        <p>
-          <strong>Details:</strong>
-          {{ selectedPost.Description || selectedPost.DetailsandInstructions }}
-        </p>
-        <p>
-          <strong>Qualifications:</strong> {{ selectedPost.Qualifications }}
-        </p>
-        <p><strong>Requirements:</strong> {{ selectedPost.Requirements }}</p>
-        <p>
-          <strong>Application Address:</strong>
-          {{ selectedPost.ApplicationLetterAddress }}
-        </p>
-        <p>
-          <strong>Deadline:</strong> {{ selectedPost.DeadlineofSubmission }}
-        </p>
-      </div>
-    </dialog>
-
-    <!-- APPLY MODAL -->
-    <dialog v-if="applyModalOpen" open class="modal sm:modal-middle">
-      <div class="modal-box max-w-lg relative font-poppins">
-        <button
-          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
-          @click="closeApplyModal"
-        >
-          ✕
-        </button>
-
-        <h2 class="text-xl font-bold mb-4">
-          Apply for {{ selectedPost?.Position || selectedPost?.Title }}
-        </h2>
-
-        <form @submit.prevent="submitApplication">
-          <div class="mb-4">
-            <label class="block text-sm font-medium mb-1">
-              Upload PDF Requirements
-            </label>
-            <input
-              type="file"
-              accept="application/pdf"
-              @change="handleFileUpload"
-              required
-              class="file-input file-input-bordered w-full"
-            />
-          </div>
-
-          <div class="flex justify-end gap-2">
-            <button
-              type="button"
-              class="btn btn-outline btn-sm"
-              @click="closeApplyModal"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              class="btn bg-customButton hover:bg-dark-slate text-white btn-sm"
-            >
-              Submit
-            </button>
-          </div>
-        </form>
-      </div>
-    </dialog>
+    <CareerModal
+      :show="isCareerModalOpen"
+      :career="selectedCareerModalData"
+      :myApplications="myApplications"
+      @close="closeCareerModal"
+      @update-applications="handleApplicationsUpdate"
+    />
 
     <div class="fixed top-4 right-4 space-y-2 z-50">
       <div

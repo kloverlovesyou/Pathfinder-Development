@@ -62,8 +62,6 @@ const displayStatus = (status) => {
 export default {
   data() {
     return {
-      showRequirementsModal: false,
-      requirementsUrl: null,
       selectedCareer: { title: "", careerID: null, position: "" },
       newTagName: "",
       organizationLogo: null,
@@ -87,7 +85,13 @@ export default {
         date: "",
         mode: "",
         detail: "",
+        cc: "",
+        body: "",
       },
+      showConflictModal: false,
+      conflictInfo: null,
+      pendingSchedulePayload: null,
+      pendingFormattedDate: "",
 
       applicantsList: [],
       applicantsLoading: false,
@@ -422,6 +426,16 @@ export default {
       );
       console.log("Token exists:", !!token);
 
+      const selectedForInterview =
+        typeof person.status === "string" &&
+        person.status.toLowerCase() === "for interview";
+
+      if (selectedForInterview) {
+        this.$nextTick(() => {
+          this.openScheduleModal(person);
+        });
+      }
+
       try {
         const response = await axios.put(
           import.meta.env.VITE_API_BASE_URL +
@@ -439,13 +453,33 @@ export default {
         // Update local state with response data
         const index = this.applicantsList.findIndex((a) => a.id === person.id);
         if (index !== -1) {
-          const updatedData = response.data.data || response.data;
-          this.applicantsList[index] = {
-            ...this.applicantsList[index],
-            status: updatedData.applicationStatus
-              ? updatedData.applicationStatus.toLowerCase()
-              : person.status,
-          };
+          const updatedData = response.data?.data || response.data || {};
+          const normalizedStatus = updatedData.applicationStatus
+            ? String(updatedData.applicationStatus).toLowerCase()
+            : String(person.status).toLowerCase();
+
+          Object.assign(this.applicantsList[index], {
+            status: normalizedStatus,
+          });
+
+          if (Object.prototype.hasOwnProperty.call(updatedData, "interviewSchedule")) {
+            this.applicantsList[index].interviewSchedule = updatedData.interviewSchedule;
+          }
+          if (Object.prototype.hasOwnProperty.call(updatedData, "interviewMode")) {
+            this.applicantsList[index].interviewMode = updatedData.interviewMode;
+          }
+          if (Object.prototype.hasOwnProperty.call(updatedData, "interviewLocation")) {
+            this.applicantsList[index].interviewLocation = updatedData.interviewLocation;
+          }
+          if (Object.prototype.hasOwnProperty.call(updatedData, "interviewLink")) {
+            this.applicantsList[index].interviewLink = updatedData.interviewLink;
+          }
+
+          if (normalizedStatus === "for interview" && !this.showScheduleModal) {
+            this.$nextTick(() => {
+              this.openScheduleModal(this.applicantsList[index]);
+            });
+          }
         }
       } catch (error) {
         console.error("Error updating status:", error);
@@ -468,12 +502,6 @@ export default {
           );
         }
       }
-    },
-
-    closeRequirementsModal() {
-      this.showRequirementsModal = false;
-      this.requirementsUrl = null; // just clear the URL
-      this.selectedPerson = null; // optional: clear the selected applicant
     },
 
     async viewRequirements(applicationID, rawFilePath) {
@@ -570,6 +598,13 @@ export default {
         }
       }
 
+      const openRequirementUrl = (url) => {
+        const win = window.open(url, "_blank", "noopener,noreferrer");
+        if (!win) {
+          showToast("Please allow pop-ups to view the requirements.");
+        }
+      };
+
       // If we have a file path, try to get PDF URL from Supabase
       if (filePath && typeof filePath === "string" && filePath.trim().length > 0) {
         console.log("👁️ Attempting to get PDF URL for path:", filePath.trim());
@@ -577,12 +612,8 @@ export default {
         console.log("👁️ Generated PDF URL:", pdfUrl);
 
         if (pdfUrl) {
-          this.requirementsUrl = pdfUrl;
-          this.selectedPerson = this.applicantsList.find(app =>
-            String(app.id ?? app.applicationID ?? app._id) === normalizedAppID
-          ) || { id: applicationID, name: "Applicant" };
-          this.showRequirementsModal = true;
-          console.log("✅ Opening requirements modal with Supabase URL:", pdfUrl);
+          openRequirementUrl(pdfUrl);
+          console.log("✅ Opening requirements in new tab:", pdfUrl);
           return;
         } else {
           console.warn("⚠️ Could not generate PDF URL from file path");
@@ -595,21 +626,6 @@ export default {
       console.error("❌ Please check that the /careers/{careerID}/applicants endpoint includes requirement_directory in its response");
 
       alert("Unable to view requirements. The requirement file path is not available in the API response. Please contact support or check if the file was uploaded correctly.");
-    },
-
-    printRequirements() {
-      if (this.requirementsUrl) {
-        const printWindow = window.open(this.requirementsUrl, "_blank");
-        if (printWindow) {
-          printWindow.onload = () => {
-            printWindow.print();
-          };
-        } else {
-          showToast("Please allow pop-ups to print the requirements.");
-        }
-      } else {
-        showToast("No requirements to print.");
-      }
     },
 
     async downloadRequirements(applicationID, rawFilePath) {
@@ -955,14 +971,12 @@ export default {
       }
 
       try {
-        // Format date for backend - Laravel accepts ISO 8601 format or Y-m-d H:i:s
         const dateObj = new Date(this.scheduleData.date);
         if (isNaN(dateObj.getTime())) {
           showToast("Invalid date selected. Please try again.");
           return;
         }
 
-        // Format as Y-m-d H:i:s for MySQL datetime
         const year = dateObj.getFullYear();
         const month = String(dateObj.getMonth() + 1).padStart(2, "0");
         const day = String(dateObj.getDate()).padStart(2, "0");
@@ -971,13 +985,12 @@ export default {
         const seconds = String(dateObj.getSeconds()).padStart(2, "0");
         const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 
-        // Map mode values correctly
         const interviewMode =
           this.scheduleData.mode === "onSite" ? "On-Site" : "Online";
 
         const payload = {
           interviewSchedule: formattedDate,
-          interviewMode: interviewMode,
+          interviewMode,
           interviewLocation:
             this.scheduleData.mode === "onSite"
               ? this.scheduleData.detail
@@ -986,98 +999,163 @@ export default {
             this.scheduleData.mode === "online"
               ? this.scheduleData.detail
               : null,
+          cc: this.scheduleData.cc || null,
+          body: this.scheduleData.body || null,
         };
 
-        console.log("Sending interview schedule payload:", payload);
-
-        const response = await axios.put(
-          import.meta.env.VITE_API_BASE_URL +
-            `/applications/${this.selectedPerson.id}/interview`,
-          payload,
-          {
-            headers: {
-              Authorization: `Bearer ${token.trim()}`,
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-          }
-        );
-
-        console.log("Full response:", response);
-        console.log("Response data:", response.data);
-
-        // Check if the request was successful
-        if (response.data.success || response.data.message) {
-          // Update local state with response data
-          const index = this.applicantsList.findIndex(
-            (a) => a.id === this.selectedPerson.id
-          );
-          if (index !== -1) {
-            const updatedData = response.data.data || response.data;
-            console.log("Received response data:", updatedData);
-
-            // Update the applicant in the list to ensure reactivity
-            const updatedApplicant = {
-              ...this.applicantsList[index],
-              status: "for interview",
-              interviewSchedule: updatedData.interviewSchedule || formattedDate,
-              interviewMode: updatedData.interviewMode || interviewMode,
-              interviewLocation:
-                updatedData.interviewLocation ||
-                (this.scheduleData.mode === "onSite"
-                  ? this.scheduleData.detail
-                  : null),
-              interviewLink:
-                updatedData.interviewLink ||
-                (this.scheduleData.mode === "online"
-                  ? this.scheduleData.detail
-                  : null),
-            };
-
-            console.log("Updated applicant data:", updatedApplicant);
-
-            // Use Vue.set for Vue 2 compatibility, or direct assignment for Vue 3
-            if (this.$set) {
-              this.$set(this.applicantsList, index, updatedApplicant);
-            } else {
-              this.applicantsList[index] = updatedApplicant;
-              // Force reactivity update for Vue 3
-              this.applicantsList = [...this.applicantsList];
-            }
-          }
-
-          this.closeScheduleModal();
-          showToast(
-            "✅ Interview scheduled successfully! The schedule has been saved."
-          );
-        } else {
-          throw new Error("Unexpected response format");
+        const conflict = this.findScheduleConflict(formattedDate);
+        if (conflict) {
+          this.pendingSchedulePayload = payload;
+          this.pendingFormattedDate = formattedDate;
+          this.conflictInfo = conflict;
+          this.showConflictModal = true;
+          return;
         }
+
+        await this.submitInterviewSchedule(payload, formattedDate);
       } catch (error) {
-        console.error("Error scheduling interview:", error);
-        console.error("Error response:", error.response);
-        if (error.response?.status === 401) {
-          showToast(
-            "Unauthorized. Please log in again. Error: " +
-              (error.response.data?.message || "Token invalid or expired")
-          );
-        } else if (error.response?.status === 403) {
-          showToast(
-            "Access denied. You don't have permission to schedule interviews for this application."
-          );
-        } else if (error.response?.status === 422) {
-          showToast(
-            "Validation error: " +
-              (error.response.data?.message ||
-                "Please check your input and try again.")
-          );
+        this.handleScheduleError(error);
+      }
+    },
+
+    toTimestamp(dateString) {
+      if (!dateString) return null;
+      const normalized = dateString.includes("T")
+        ? dateString
+        : dateString.replace(" ", "T");
+      const date = new Date(normalized);
+      return Number.isNaN(date.getTime()) ? null : date.getTime();
+    },
+
+    findScheduleConflict(formattedDate) {
+      const targetTs = this.toTimestamp(formattedDate);
+      if (!targetTs) return null;
+
+      const conflict = this.applicantsList.find((app) => {
+        if (
+          !app.interviewSchedule ||
+          app.id === this.selectedPerson?.id ||
+          !app.interviewSchedule.trim()
+        ) {
+          return false;
+        }
+        const existingTs = this.toTimestamp(app.interviewSchedule);
+        if (!existingTs) return false;
+        return Math.abs(existingTs - targetTs) < 60 * 1000;
+      });
+
+      if (!conflict) return null;
+
+      return {
+        name: conflict.name || "another applicant",
+        interviewSchedule: conflict.interviewSchedule,
+      };
+    },
+
+    async submitInterviewSchedule(payload, formattedDate) {
+      const token = localStorage.getItem("token");
+      const response = await axios.put(
+        import.meta.env.VITE_API_BASE_URL +
+          `/applications/${this.selectedPerson.id}/interview`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token.trim()}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+        }
+      );
+
+      if (!(response.data.success || response.data.message)) {
+        throw new Error("Unexpected response format");
+      }
+
+      const index = this.applicantsList.findIndex(
+        (a) => a.id === this.selectedPerson.id
+      );
+      if (index !== -1) {
+        const updatedData = response.data.data || response.data;
+        const updatedApplicant = {
+          ...this.applicantsList[index],
+          status: "for interview",
+          interviewSchedule: updatedData.interviewSchedule || formattedDate,
+          interviewMode:
+            updatedData.interviewMode ||
+            (this.scheduleData.mode === "onSite" ? "On-Site" : "Online"),
+          interviewLocation:
+            updatedData.interviewLocation ||
+            (this.scheduleData.mode === "onSite"
+              ? this.scheduleData.detail
+              : null),
+          interviewLink:
+            updatedData.interviewLink ||
+            (this.scheduleData.mode === "online"
+              ? this.scheduleData.detail
+              : null),
+        };
+
+        if (this.$set) {
+          this.$set(this.applicantsList, index, updatedApplicant);
         } else {
-          showToast(
-            error.response?.data?.message ||
-              "Failed to schedule interview. Please try again."
-          );
+          this.applicantsList[index] = updatedApplicant;
+          this.applicantsList = [...this.applicantsList];
         }
       }
+
+      this.closeScheduleModal();
+      showToast(
+        "✅ Interview scheduled successfully! The schedule has been saved."
+      );
+    },
+
+    handleScheduleError(error) {
+      console.error("Error scheduling interview:", error);
+      console.error("Error response:", error?.response);
+      const status = error?.response?.status;
+      if (status === 401) {
+        showToast(
+          "Unauthorized. Please log in again. Error: " +
+            (error.response.data?.message || "Token invalid or expired")
+        );
+      } else if (status === 403) {
+        showToast(
+          "Access denied. You don't have permission to schedule interviews for this application."
+        );
+      } else if (status === 422) {
+        showToast(
+          "Validation error: " +
+            (error.response.data?.message ||
+              "Please check your input and try again.")
+        );
+      } else {
+        showToast(
+          error.response?.data?.message ||
+            "Failed to schedule interview. Please try again."
+        );
+      }
+    },
+
+    confirmConflictSchedule() {
+      if (!this.pendingSchedulePayload || !this.pendingFormattedDate) {
+        this.cancelConflictSchedule();
+        return;
+      }
+      this.showConflictModal = false;
+      const payload = this.pendingSchedulePayload;
+      const formattedDate = this.pendingFormattedDate;
+      this.pendingSchedulePayload = null;
+      this.pendingFormattedDate = "";
+      this.submitInterviewSchedule(payload, formattedDate).catch((error) =>
+        this.handleScheduleError(error)
+      );
+    },
+
+    cancelConflictSchedule() {
+      this.showConflictModal = false;
+      this.conflictInfo = null;
+      this.pendingSchedulePayload = null;
+      this.pendingFormattedDate = "";
     },
 
     checkToken() {
@@ -1252,20 +1330,26 @@ export default {
             this.scheduleData.mode = "";
             this.scheduleData.detail = "";
           }
+
+          this.scheduleData.cc = person.emailCc || "";
+          this.scheduleData.body = person.emailBody || "";
         } else {
           // Reset schedule data for new schedule
           this.scheduleData = {
             date: "",
             mode: "",
             detail: "",
+            cc: "",
+            body: "",
           };
         }
       }
     },
     closeScheduleModal() {
       this.showScheduleModal = false;
-      this.scheduleData = { date: "", mode: "", detail: "" };
+      this.scheduleData = { date: "", mode: "", detail: "", cc: "", body: "" };
       this.selectedPerson = null;
+      this.cancelConflictSchedule();
     },
 
     // Delete a career
@@ -2307,6 +2391,7 @@ async function viewRequirement(id) {
                 type="text"
                 v-model="scheduleData.detail"
                 placeholder="Enter interview location"
+                class="schedule-input"
               />
             </div>
 
@@ -2316,7 +2401,28 @@ async function viewRequirement(id) {
                 type="text"
                 v-model="scheduleData.detail"
                 placeholder="https://meet.google.com/..."
+                class="schedule-input"
               />
+            </div>
+
+            <div class="input-group full-width">
+              <label>Email CC:</label>
+              <input
+                type="text"
+                v-model="scheduleData.cc"
+                placeholder="cc@example.com"
+                class="schedule-input"
+              />
+            </div>
+
+            <div class="input-group full-width">
+              <label>Email Body:</label>
+              <textarea
+                v-model="scheduleData.body"
+                rows="4"
+                placeholder="Include message details for the applicant"
+                class="schedule-textarea"
+              ></textarea>
             </div>
 
             <div class="modal-actions">
@@ -2327,6 +2433,40 @@ async function viewRequirement(id) {
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Conflict Warning Modal -->
+      <div
+        v-if="showConflictModal"
+        class="modal-overlay"
+        @click.self="cancelConflictSchedule"
+      >
+        <div class="modal-box">
+          <button class="modal-close-btn" @click="cancelConflictSchedule">
+            ✕
+          </button>
+          <h3>Potential Schedule Conflict</h3>
+          <p class="conflict-message">
+            Another applicant
+            <strong>{{ conflictInfo?.name }}</strong>
+            already has an interview scheduled at
+            <strong>{{
+              conflictInfo?.interviewSchedule
+                ? formatInterviewDateTime(conflictInfo.interviewSchedule)
+                : "the same time"
+            }}</strong
+            >.
+          </p>
+          <p class="conflict-message">Do you still want to continue?</p>
+          <div class="modal-actions">
+            <button class="confirm-btn" @click="confirmConflictSchedule">
+              Continue
+            </button>
+            <button class="cancel-btn" @click="cancelConflictSchedule">
+              Cancel
+            </button>
           </div>
         </div>
       </div>
@@ -2381,27 +2521,6 @@ async function viewRequirement(id) {
             <button class="cancel-btn" @click="closeViewScheduleModal">
               Close
             </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Requirements View Modal -->
-      <div v-if="showRequirementsModal" class="modal-overlay" @click.self="closeRequirementsModal">
-        <div class="modal-box requirements-modal">
-          <button class="modal-close-btn" @click="closeRequirementsModal">✕</button>
-          <h3>Requirements for {{ selectedPerson?.name || 'Applicant' }}</h3>
-
-          <div class="requirements-viewer" v-if="requirementsUrl">
-            <iframe :src="requirementsUrl" class="pdf-viewer" frameborder="0">
-            </iframe>
-            <div class="modal-actions">
-              <button class="confirm-btn" @click="printRequirements">Print</button>
-              <button class="cancel-btn" @click="closeRequirementsModal">Close</button>
-            </div>
-          </div>
-          <div v-else class="requirements-error">
-            <p>Unable to load requirements. Please try again.</p>
-            <button class="cancel-btn" @click="closeRequirementsModal">Close</button>
           </div>
         </div>
       </div>
@@ -2813,41 +2932,6 @@ async function viewRequirement(id) {
 .view-btn:hover {
   background-color: #1e293b;
   transform: scale(1.03);
-}
-
-.requirements-modal {
-  max-width: 900px;
-  width: 95%;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.pdf-viewer {
-  width: 100%;
-  height: 70vh;
-  min-height: 500px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  margin: 15px 0;
-  background: #f5f5f5;
-}
-
-.requirements-viewer {
-  margin: 20px 0;
-}
-
-.requirements-error {
-  padding: 20px;
-  text-align: center;
-}
-
-.requirements-error p {
-  margin-bottom: 15px;
-  color: #666;
-}
-
-.requirements-viewer {
-  margin: 20px 0;
 }
 
 .tag-list-wrapper {
@@ -4371,6 +4455,30 @@ input[type="text"] {
   /* ensures readable text */
 }
 
+.input-group.full-width {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.schedule-input,
+.schedule-textarea {
+  width: 100%;
+  padding: 6px 9px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+  background: #fff;
+  color: #000;
+  box-sizing: border-box;
+}
+
+.schedule-textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
 .mode-selection {
   display: flex;
   gap: 12px;
@@ -4420,6 +4528,12 @@ input[type="text"] {
   /* slightly tighter spacing */
   font-size: 0.95rem;
   color: #333;
+}
+
+.conflict-message {
+  margin: 8px 0;
+  color: #374151;
+  line-height: 1.4;
 }
 
 /* Adjust modal width and spacing */

@@ -72,11 +72,11 @@ class InterviewController extends Controller
                     'interviewMode' => $app->interviewMode,
                     'interviewLink' => $app->interviewLink,
                     'interviewLocation' => $app->interviewLocation,
-                    'detailsAndInstructions' => $app->career->detailsAndInstructions ?? null,
+                    'details' => $app->career->details ?? null,
+                    'detailsAndInstructions' => $app->career->details ?? null, // Backward compatibility
                     'qualificationStandard' => $app->career->qualificationStandard ?? null,
-                    'requirements' => $app->career->requirements ?? null,
-                    'applicationLetterAddress' => $app->career->applicationLetterAddress ?? null,
-                    'deadlineOfSubmission' => $app->career->deadlineOfSubmission ?? null,
+                    'closingDate' => $app->career->closingDate ?? null,
+                    'deadlineOfSubmission' => $app->career->closingDate ?? null, // Backward compatibility
                 ];
             }));
         }
@@ -96,11 +96,11 @@ class InterviewController extends Controller
                     'interviewMode' => $app->interviewMode,
                     'interviewLink' => $app->interviewLink,
                     'interviewLocation' => $app->interviewLocation,
-                    'detailsAndInstructions' => $app->career->detailsAndInstructions ?? null,
+                    'details' => $app->career->details ?? null,
+                    'detailsAndInstructions' => $app->career->details ?? null, // Backward compatibility
                     'qualificationStandard' => $app->career->qualificationStandard ?? null,
-                    'requirements' => $app->career->requirements ?? null,
-                    'applicationLetterAddress' => $app->career->applicationLetterAddress ?? null,
-                    'deadlineOfSubmission' => $app->career->deadlineOfSubmission ?? null,
+                    'closingDate' => $app->career->closingDate ?? null,
+                    'deadlineOfSubmission' => $app->career->closingDate ?? null, // Backward compatibility
                 ];
             }));
         }
