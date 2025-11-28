@@ -138,3 +138,6 @@ Check Render logs:
    - ❌ "SMTP failed for verification email" - SMTP blocked (expected, Brevo should handle it)
    - ❌ "Brevo API key is missing" - `BREVO_API_KEY` not set
 
+
+
+

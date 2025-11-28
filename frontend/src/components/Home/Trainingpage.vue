@@ -7,7 +7,6 @@ import CalendarSidebar from "@/components/Layout/CalendarSidebar.vue";
 
 const trainingStore = useTrainingStore();
 const regStore = useRegistrationStore();
-const myRegistrations = computed(() => regStore.myRegistrations);
 const organizations = ref([]);
 const selectedTraining = ref(null);
 const toasts = ref([]);
@@ -121,13 +120,20 @@ async function fetchOrganizations() {
   } catch {}
 }
 
-// ---------------------------
-// Toggle Registration using store
-// ---------------------------
-async function toggleRegister(training) {
-  await regStore.toggleRegister(training.trainingID);
-}
 const trainings = computed(() => trainingStore.trainings);
+function handleTrainingRegisterEvent(payload) {
+  if (payload?.error) {
+    console.error("Registration action failed:", payload.error);
+    addToast("Failed to update registration", "error");
+    return;
+  }
+
+  const registered = payload?.isRegistered;
+  addToast(
+    registered ? "Registered successfully!" : "Unregistered successfully!",
+    registered ? "success" : "info"
+  );
+}
 // ---------------------------
 // Lifecycle
 // ---------------------------
@@ -197,10 +203,8 @@ const showModal = ref(false);
     <TrainingModal
       :isOpen="showModal"
       :training="selectedTraining"
-      :isRegistered="myRegistrations.has(selectedTraining?.trainingID)"
-      :registerLoading="regStore.loading[selectedTraining?.trainingID]"
       @close="showModal = false"
-      @toggle-register="toggleRegister"
+      @toggle-register="handleTrainingRegisterEvent"
     />
     <!-- Toast Notifications -->
     <div class="toast toast-end toast-top z-50">

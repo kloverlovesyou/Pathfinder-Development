@@ -1,12 +1,66 @@
 <script setup>
+import { computed, ref } from "vue";
+import { useRegistrationStore } from "@/stores/registrationStore";
+
 const props = defineProps({
   isOpen: Boolean,
   training: Object,
-  isRegistered: Boolean,
-  registerLoading: Boolean,
 });
 
-defineEmits(["close", "toggle-register"]);
+const emit = defineEmits(["close", "toggle-register"]);
+const regStore = useRegistrationStore();
+const actionError = ref("");
+
+const trainingId = computed(() => resolveTrainingId(props.training));
+const isRegistered = computed(() => {
+  const id = trainingId.value;
+  return id ? !!regStore.registeredPosts[id] : false;
+});
+const isLoading = computed(() => {
+  const id = trainingId.value;
+  return id ? !!regStore.loading[id] : false;
+});
+const canToggleRegistration = computed(() => !!trainingId.value && !isLoading.value);
+
+async function handleRegisterClick() {
+  if (!props.training || isLoading.value) return;
+
+  const id = trainingId.value;
+  if (!id) {
+    actionError.value = "Unable to determine training ID.";
+    emit("toggle-register", {
+      training: props.training,
+      error: new Error(actionError.value),
+    });
+    return;
+  }
+
+  actionError.value = "";
+
+  try {
+    await regStore.toggleRegister(props.training);
+
+    emit("toggle-register", {
+      training: props.training,
+      isRegistered: isRegistered.value,
+    });
+  } catch (error) {
+    console.error("Failed to toggle registration:", error);
+    actionError.value = "Failed to update registration. Please try again.";
+    emit("toggle-register", { training: props.training, error });
+  }
+}
+
+function resolveTrainingId(training) {
+  if (!training) return null;
+  return (
+    training.trainingID ??
+    training.TrainingID ??
+    training.id ??
+    training.ID ??
+    null
+  );
+}
 
 function formatDate(datetime) {
   if (!datetime) return "N/A";
@@ -106,15 +160,15 @@ function formatScheduleTime(schedule) {
           <strong>Description:</strong> {{ training.description }}
         </p>
 
-        <div class="my-4 flex justify-end gap-2">
+        <div class="my-4 flex flex-col items-end gap-2">
           <button
-            v-if="!isRegistered"
-            class="btn btn-sm bg-customButton text-white"
-            @click="$emit('toggle-register', training)"
-            :disabled="registerLoading"
+            class="btn btn-sm text-white"
+            :class="isRegistered ? 'bg-gray-500' : 'bg-customButton'"
+            @click="handleRegisterClick"
+            :disabled="!canToggleRegistration"
           >
             <svg
-              v-if="registerLoading"
+              v-if="isLoading"
               class="animate-spin h-4 w-4 text-white"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -134,38 +188,11 @@ function formatScheduleTime(schedule) {
                 d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
               ></path>
             </svg>
-            <span v-else>Register</span>
+            <span v-else>{{ isRegistered ? "Unregister" : "Register" }}</span>
           </button>
-
-          <button
-            v-else
-            class="btn btn-sm bg-gray-500 text-white"
-            @click="$emit('toggle-register', training)"
-            :disabled="registerLoading"
-          >
-            <svg
-              v-if="registerLoading"
-              class="animate-spin h-4 w-4 text-white"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              ></circle>
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
-              ></path>
-            </svg>
-            <span v-else>Unregister</span>
-          </button>
+          <p v-if="actionError" class="text-xs text-red-500">
+            {{ actionError }}
+          </p>
         </div>
         <!-- Schedule/s Label -->
         <div class="training-info">

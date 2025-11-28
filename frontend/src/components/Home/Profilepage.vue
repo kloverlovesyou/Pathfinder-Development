@@ -31,7 +31,12 @@ const currentSteps = computed(() =>
 
 const CAREER_STEPS = [
   { key: "applied", label: "In Review", dateField: "appliedDate" },
-  { key: "screen", label: "For Interview", dateField: "screenDate" },
+  {
+    key: "screen",
+    label: "For Interview",
+    dateField: "interviewSchedule",
+    fallbackDateField: "screenDate",
+  },
   { key: "pending", label: "Pending", dateField: "pendingDate" },
   { key: "hired", label: "Hired", dateField: "hiredDate" },
   { key: "declined", label: "Declined", dateField: "declinedDate" },
@@ -50,8 +55,34 @@ function getStatusSteps(activity) {
 }
 
 function getCurrentStepIndex(activity) {
-  const status = (activity?.status || "").toLowerCase();
+  const statusRaw = activity?.status || "";
+  const status = statusRaw.toLowerCase();
   const steps = getStatusSteps(activity).map((s) => s.key.toLowerCase());
+
+  if (activity?.type === "training") {
+    const normalized = status.replace(/[\s-]+/g, "");
+    const registeredIdx = steps.indexOf("registered");
+    if (!normalized) return registeredIdx;
+
+    if (normalized.includes("cert")) {
+      return steps.indexOf("certified");
+    }
+
+    if (normalized.includes("complete") || normalized.includes("attend")) {
+      return steps.indexOf("completed");
+    }
+
+    if (normalized.includes("ongoing")) {
+      return steps.indexOf("ongoing");
+    }
+
+    if (normalized.includes("registr")) {
+      return steps.indexOf("registered");
+    }
+
+    return registeredIdx;
+  }
+
   const idx = steps.indexOf(status);
   if (idx !== -1) return idx;
 
@@ -93,7 +124,44 @@ function getCurrentStepIndex(activity) {
   return 0;
 }
 
-function isStepActive(stepIndex, currentIndex) {
+function getCareerActiveKeys(statusRaw) {
+  const status = (statusRaw || "").toLowerCase();
+  if (!status) return null;
+
+  if (status.includes("declin") || status.includes("reject")) {
+    return new Set(["applied", "screen", "pending", "declined"]);
+  }
+
+  if (status.includes("hire") || status.includes("accept")) {
+    return new Set(["applied", "screen", "pending", "hired"]);
+  }
+
+  if (status.includes("pending")) {
+    return new Set(["applied", "screen", "pending"]);
+  }
+
+  if (status.includes("interview") || status.includes("screen")) {
+    return new Set(["applied", "screen"]);
+  }
+
+  if (status.includes("review")) {
+    return new Set(["applied"]);
+  }
+
+  return null;
+}
+
+function isStepActive(activity, step, stepIndex) {
+  if (!activity) return false;
+
+  if (activity.type === "career") {
+    const activeKeys = getCareerActiveKeys(activity.status);
+    if (activeKeys) {
+      return activeKeys.has(step.key);
+    }
+  }
+
+  const currentIndex = getCurrentStepIndex(activity);
   return stepIndex <= currentIndex;
 }
 
@@ -620,7 +688,11 @@ function normalizeCareer(application) {
 
 function getStepDate(activity, step) {
   if (!activity || !step?.dateField) return null;
-  return activity[step.dateField] || null;
+  return (
+    activity[step.dateField] ||
+    (step.fallbackDateField ? activity[step.fallbackDateField] : null) ||
+    null
+  );
 }
 
 async function fetchActivitiesDirectly() {
@@ -1057,11 +1129,15 @@ onMounted(fetchActivitiesDirectly);
                       <span
                         class="inline-flex w-3 h-3 rounded-full border-2"
                         :class="{
-                          'border-blue-500 bg-blue-500':
-                            isStepActive(index, getCurrentStepIndex(activity)),
+                          'border-blue-500 bg-blue-500': isStepActive(
+                            activity,
+                            step,
+                            index
+                          ),
                           'border-gray-300 bg-white': !isStepActive(
-                            index,
-                            getCurrentStepIndex(activity)
+                            activity,
+                            step,
+                            index
                           ),
                         }"
                       ></span>
@@ -1344,11 +1420,15 @@ onMounted(fetchActivitiesDirectly);
                       <span
                         class="inline-flex w-4 h-4 rounded-full border-2"
                         :class="{
-                          'border-blue-500 bg-blue-500':
-                            isStepActive(index, getCurrentStepIndex(activity)),
+                          'border-blue-500 bg-blue-500': isStepActive(
+                            activity,
+                            step,
+                            index
+                          ),
                           'border-gray-300 bg-white': !isStepActive(
-                            index,
-                            getCurrentStepIndex(activity)
+                            activity,
+                            step,
+                            index
                           ),
                         }"
                       ></span>

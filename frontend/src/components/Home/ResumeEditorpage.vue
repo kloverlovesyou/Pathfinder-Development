@@ -482,11 +482,11 @@ async function generatePdf() {
       }
 
       const gradYear = edu.graduationYear?.toString() || "";
-      const detailParts = [];
-      if (edu.educationLevel) detailParts.push(edu.educationLevel);
-      if (edu.program) detailParts.push(`Program: ${edu.program}`);
-      if (edu.major) detailParts.push(`Major: ${edu.major}`);
-      if (edu.strand) detailParts.push(`Strand: ${edu.strand}`);
+      const programLabel =
+        edu.program ||
+        (edu.educationLevel ? `${edu.educationLevel}` : "") ||
+        "";
+      const institutionAddress = edu.institutionAddress || "";
 
       doc.setFont("times", "bold");
       doc.text(`${edu.institutionName || ""}`, margin, y);
@@ -494,18 +494,31 @@ async function generatePdf() {
       y += 6;
 
       doc.setFont("times", "regular");
-      if (detailParts.length) {
-        y = addWrappedText(
-          detailParts.join(" • "),
-          margin,
-          y,
-          pageWidth - 2 * margin
-        );
+      if (programLabel || institutionAddress) {
+        if (programLabel) {
+          doc.text(programLabel, margin, y);
+        }
+        if (institutionAddress) {
+          const addressLines = doc.splitTextToSize(
+            institutionAddress,
+            pageWidth / 2
+          );
+          doc.text(addressLines[0], pageWidth - margin, y, {
+            align: "right",
+          });
+          for (let i = 1; i < addressLines.length; i++) {
+            y += 6;
+            doc.text(addressLines[i], pageWidth - margin, y, {
+              align: "right",
+            });
+          }
+        }
+        y += 6;
       }
 
-      const locationLine = [edu.institutionAddress].filter(Boolean).join("");
-      if (locationLine) {
-        y = addWrappedText(locationLine, margin, y, pageWidth - 2 * margin);
+      if (edu.major) {
+        doc.text(edu.major, margin, y);
+        y += 6;
       }
     });
   }

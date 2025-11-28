@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch, computed } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch } from "vue";
 import axios from "axios";
 import { useRoute } from "vue-router";
 import { useRegistrationStore } from "@/stores/registrationStore";
@@ -9,29 +9,6 @@ import CareerModal from "@/components/Layout/careermodal.vue";
 const route = useRoute();
 const toasts = ref([]);
 const regStore = useRegistrationStore(); // ✅ Pinia store
-const isRegisterLoading = ref(false);
-
-async function toggleRegisterWithLoading(post) {
-  if (isRegisterLoading.value) return; // Prevent double clicks
-
-  isRegisterLoading.value = true;
-  try {
-    await regStore.toggleRegister(post);
-    const trainingID = resolveTrainingId(post);
-    const isRegistered = trainingID
-      ? !!regStore.registeredPosts[trainingID]
-      : false;
-    showToast(
-      isRegistered ? "Registered successfully!" : "Unregistered successfully!",
-      isRegistered ? "success" : "info"
-    );
-  } catch (error) {
-    showToast("Action failed.", "error");
-    console.error("Failed to toggle registration:", error);
-  } finally {
-    isRegisterLoading.value = false;
-  }
-}
 
 function showToast(message, type = "info") {
   toasts.value.push({ message, type });
@@ -354,11 +331,21 @@ function resolveTrainingId(training) {
   );
 }
 
-const selectedTrainingRegistered = computed(() => {
-  const trainingID = resolveTrainingId(selectedTrainingModalData.value);
-  if (!trainingID) return false;
-  return !!regStore.registeredPosts[trainingID];
-});
+function handleTrainingModalRegister(payload) {
+  if (!payload) return;
+
+  if (payload.error) {
+    showToast("Action failed.", "error");
+    console.error("Failed to toggle registration:", payload.error);
+    return;
+  }
+
+  const success = payload.isRegistered;
+  showToast(
+    success ? "Registered successfully!" : "Unregistered successfully!",
+    success ? "success" : "info"
+  );
+}
 
 function handleApplicationsUpdate(updatedSet) {
   myApplications.value = new Set(updatedSet ?? []);
@@ -661,10 +648,8 @@ async function handleResultClick(item) {
     <TrainingModal
       :isOpen="isTrainingModalOpen"
       :training="selectedTrainingModalData"
-      :isRegistered="selectedTrainingRegistered"
-      :registerLoading="isRegisterLoading"
       @close="closeTrainingModal"
-      @toggle-register="toggleRegisterWithLoading"
+      @toggle-register="handleTrainingModalRegister"
     />
 
     <CareerModal
