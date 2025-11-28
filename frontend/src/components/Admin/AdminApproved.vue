@@ -1,40 +1,35 @@
-
-
 <template>
-  <div class="approved-container">
-    <h1 class="title">Approved Organizations</h1>
+  <div class="min-h-screen p-6 bg-gray-50 font-poppins">
+    <!-- Header -->
+    <header class="mb-6">
+      <h1 class="text-3xl font-bold">Approved Organizations</h1>
+    </header>
 
-    <!-- Loading State -->
-    <div v-if="loading">Loading approved organizations...</div>
+    <!-- Approved Organizations List -->
+    <section>
+      <div v-if="loading">Loading approved organizations...</div>
 
-    <!-- No Data -->
-    <div v-else-if="approvedOrganizations.length === 0">
-      <p>No approved organizations found.</p>
-    </div>
+      <div v-else-if="approvedOrganizations.length === 0">
+        <p class="text-gray-500 italic">No approved organizations found.</p>
+      </div>
 
-    <!-- Table -->
-    <table v-else class="table">
-      <thead>
-        <tr>
-          <th>Organization Name</th>
-          <th>Training</th>
-          <th>Career</th>
-          <th>Date Approved</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        <tr
+      <div v-else class="space-y-3">
+        <div
           v-for="org in approvedOrganizations"
-          :key="org.organizationsChoiceID"
+          :key="org.organizationID"
+          class="p-3 border rounded-lg bg-green-50 flex justify-between items-center"
         >
-          <td>{{ org.organization?.organizationName }}</td>
-          <td>{{ org.training?.trainingName }}</td>
-          <td>{{ org.career?.position }}</td>
-          <td>{{ formatDate(org.updated_at) }}</td>
-        </tr>
-      </tbody>
-    </table>
+          <div>
+            <h3 class="font-semibold">{{ org.name }}</h3>
+            <p class="text-sm text-gray-600">{{ org.emailAddress }}</p>
+          </div>
+
+          <span class="px-3 py-1 bg-green-600 text-white rounded-lg text-sm">
+            Approved
+          </span>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -45,7 +40,6 @@ import axios from "axios";
 const approvedOrganizations = ref([]);
 const loading = ref(true);
 
-// Fetch Approved Orgs
 async function loadApprovedOrganizations() {
   try {
     const res = await axios.get(
@@ -59,28 +53,11 @@ async function loadApprovedOrganizations() {
   }
 }
 
-function formatDate(date) {
-  if (!date) return "-";
-  return new Date(date).toLocaleString();
-}
-
 onMounted(() => {
   loadApprovedOrganizations();
 });
 </script>
 
-<style>
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-}
-.table th,
-.table td {
-  border: 1px solid #ddd;
-  padding: 10px;
-}
-.title {
-  margin-bottom: 20px;
-}
+<style scoped>
+/* Optional: spacing, font, and layout */
 </style>

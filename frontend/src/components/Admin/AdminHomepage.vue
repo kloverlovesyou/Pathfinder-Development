@@ -5,6 +5,8 @@ import axios from "axios";
 const organizations = ref([]);
 const selectedOrg = ref(null);
 const approvedOrganizations = ref([]);
+const activeTab = ref("approved"); // "approved" or "rejected"
+const rejectedOrganizations = ref([]); // to store rejected organizations
 
 // Reject modal state
 const rejectModal = ref(false);
@@ -48,6 +50,16 @@ async function submitRejection() {
   }
 }
 
+// Load rejected organizations
+async function loadRejectedOrganizations() {
+  try {
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/admin/rejected-organizations");
+    rejectedOrganizations.value = res.data;
+  } catch (err) {
+    console.error("Error loading rejected organizations:", err);
+  }
+}
+
 
 // Fetch all pending organizations
 async function loadPendingOrganizations() {
@@ -88,6 +100,7 @@ async function loadApprovedOrganizations() {
 onMounted(() => {
   loadPendingOrganizations();
   loadApprovedOrganizations();
+  loadRejectedOrganizations();
 });
 </script>
 
@@ -140,26 +153,68 @@ onMounted(() => {
       </section>
 
       <section class="mt-10">
-        <h2 class="text-xl font-bold mb-3">Approved Organizations</h2>
+        <h2 class="text-xl font-bold mb-3">Organization List</h2>
 
-        <div v-if="approvedOrganizations.length" class="space-y-3">
-          <div
-            v-for="org in approvedOrganizations"
-            :key="org.organizationID"
-            class="p-3 border rounded-lg bg-green-50 flex justify-between"
+        <!-- Tabs -->
+        <div class="flex space-x-4 mb-4 border-b">
+          <button
+            :class="activeTab === 'approved' ? 'border-b-2 border-blue-600 font-semibold' : 'text-gray-500'"
+            @click="activeTab = 'approved'"
+            class="pb-2"
           >
-            <div>
-              <h3 class="font-semibold">{{ org.name }}</h3>
-              <p class="text-sm text-gray-600">{{ org.emailAddress }}</p>
-            </div>
-
-            <span class="px-3 py-1 bg-green-600 text-white rounded-lg text-sm">
-              Approved
-            </span>
-          </div>
+            Approved
+          </button>
+          <button
+            :class="activeTab === 'rejected' ? 'border-b-2 border-red-600 font-semibold' : 'text-gray-500'"
+            @click="activeTab = 'rejected'"
+            class="pb-2"
+          >
+            Rejected
+          </button>
         </div>
 
-        <p v-else class="text-gray-500 italic">No approved organizations found.</p>
+        <!-- Tab content -->
+        <div v-if="activeTab === 'approved'">
+          <div v-if="approvedOrganizations.length" class="space-y-3">
+            <div
+              v-for="org in approvedOrganizations"
+              :key="org.organizationID"
+              class="p-3 border rounded-lg bg-green-50 flex justify-between"
+            >
+              <div>
+                <h3 class="font-semibold">{{ org.name }}</h3>
+                <p class="text-sm text-gray-600">{{ org.emailAddress }}</p>
+              </div>
+
+              <span class="px-3 py-1 bg-green-600 text-white rounded-lg text-sm">
+                Approved
+              </span>
+            </div>
+          </div>
+
+          <p v-else class="text-gray-500 italic">No approved organizations found.</p>
+        </div>
+
+        <div v-else-if="activeTab === 'rejected'">
+          <div v-if="rejectedOrganizations.length" class="space-y-3">
+            <div
+              v-for="org in rejectedOrganizations"
+              :key="org.organizationID"
+              class="p-3 border rounded-lg bg-red-50 flex justify-between"
+            >
+              <div>
+                <h3 class="font-semibold">{{ org.name }}</h3>
+                <p class="text-sm text-gray-600">{{ org.emailAddress }}</p>
+              </div>
+
+              <span class="px-3 py-1 bg-red-600 text-white rounded-lg text-sm">
+                Rejected
+              </span>
+            </div>
+          </div>
+
+          <p v-else class="text-gray-500 italic">No rejected organizations found.</p>
+        </div>
       </section>
     </div>
 
