@@ -104,6 +104,7 @@ Route::get('/organizations', [OrganizationController::class, 'index']);
 Route::get('/admin/approved-organizations', [OrganizationController::class, 'index']);
 Route::get('/organizations/{organizationID}', [OrganizationController::class, 'show']);
 Route::get('/organizations/{organizationID}', [OrganizationController::class, 'getOrgDetails']);
+Route::get('/admin/rejected-organizations', [OrganizationController::class, 'rejected']);
 
 // ----------------------
 // Resume (authenticated)

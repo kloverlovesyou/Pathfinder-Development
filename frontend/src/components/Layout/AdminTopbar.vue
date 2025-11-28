@@ -348,16 +348,16 @@ async function deleteOrganization(id) {
           <span class="text-xs whitespace-nowrap">Verification</span>
         </button>
 
-        <!-- Approved Button -->
+        <!-- Applicant's List Button -->
         <button
-          @click="$router.push({ name: 'AdminApprovedPage' })"
+          @click="$router.push({ name: 'AdminApplicantsPage' })"
           :class="[
             'flex flex-col items-center justify-center transition-all duration-200',
-            route.name === 'AdminApprovedPage'
+            route.name === 'AdminApplicantsPage'
               ? 'text-dark-slate border-b-4 border-dark-slate'
-              : 'text-gray-400 hover:text-dark-slate border-b-4 border-transparent ',
+              : 'text-gray-400 hover:text-dark-slate border-b-4 border-transparent',
           ]"
-          title="Approved Accounts"
+          title="Applicant's List"
         >
           <svg
             class="w-8 h-8 mb-1"
@@ -365,11 +365,12 @@ async function deleteOrganization(id) {
             fill="currentColor"
             xmlns="http://www.w3.org/2000/svg"
           >
+            <!-- User icon -->
             <path
-              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-4-4 1.41-1.41L11 13.17l5.59-5.59L18 9l-7 8z"
+              d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
             />
           </svg>
-          <span class="text-xs whitespace-nowrap">Approved</span>
+          <span class="text-xs whitespace-nowrap">Applicant's List</span>
         </button>
 
         <!-- Rejected Button -->

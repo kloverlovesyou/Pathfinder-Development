@@ -250,6 +250,12 @@ class OrganizationController extends Controller
         return response()->json(['message' => 'Organization and all related data deleted successfully']);
     }
 
+    public function rejected()
+    {
+        $organizationn = Organization::where('status', 'rejected')->get();
+        return response()->json($organization);
+    }
+
     public function getOrgDetails(Request $request)
     {
         // Get the currently authenticated organization

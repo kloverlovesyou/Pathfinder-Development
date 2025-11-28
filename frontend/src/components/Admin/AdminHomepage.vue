@@ -28,15 +28,22 @@ async function submitRejection() {
   }
 
   try {
-    await axios.post(
+    const res = await axios.post(
       import.meta.env.VITE_API_BASE_URL + `/organization/${rejectOrgID.value}/reject`,
       { reason: rejectReason.value }
     );
 
-    // Remove the rejected org from the list
+    // Remove the rejected org from the pending list
+    const rejectedOrg = organizations.value.find(o => o.organizationID === rejectOrgID.value);
     organizations.value = organizations.value.filter(
       (o) => o.organizationID !== rejectOrgID.value
     );
+
+    // Add rejected org to rejectedOrganizations list
+    if (rejectedOrg) {
+      rejectedOrg.rejectionReason = res.data.rejectionReason; // include reason from API
+      rejectedOrganizations.value.push(rejectedOrg);
+    }
 
     // Close modal
     rejectModal.value = false;
@@ -143,6 +150,13 @@ onMounted(() => {
             >
               Reject
             </button>
+
+            <button
+                @click.stop="viewRequirement(org.organizationID)"
+                class="px-4 py-2 text-white bg-customButton hover:bg-dark-slate rounded-lg transition"
+              >
+                View Requirements
+              </button>
             </div>
           </div>
         </div>
