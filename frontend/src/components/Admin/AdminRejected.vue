@@ -1,15 +1,13 @@
-
-
 <template>
-  <div class="approved-container">
-    <h1 class="title">Approved Organizations</h1>
+  <div class="rejected-container">
+    <h1 class="title">Rejected Organizations</h1>
 
-    <!-- Loading State -->
-    <div v-if="loading">Loading approved organizations...</div>
+    <!-- Loading -->
+    <div v-if="loading">Loading rejected organizations...</div>
 
     <!-- No Data -->
-    <div v-else-if="approvedOrganizations.length === 0">
-      <p>No approved organizations found.</p>
+    <div v-else-if="rejectedOrganizations.length === 0">
+      <p>No rejected organizations found.</p>
     </div>
 
     <!-- Table -->
@@ -19,18 +17,20 @@
           <th>Organization Name</th>
           <th>Training</th>
           <th>Career</th>
-          <th>Date Approved</th>
+          <th>Reason</th>
+          <th>Date Rejected</th>
         </tr>
       </thead>
 
       <tbody>
         <tr
-          v-for="org in approvedOrganizations"
+          v-for="org in rejectedOrganizations"
           :key="org.organizationsChoiceID"
         >
           <td>{{ org.organization?.organizationName }}</td>
           <td>{{ org.training?.trainingName }}</td>
           <td>{{ org.career?.position }}</td>
+          <td>{{ org.rejectionReason }}</td>
           <td>{{ formatDate(org.updated_at) }}</td>
         </tr>
       </tbody>
@@ -42,18 +42,18 @@
 import { ref, onMounted } from "vue";
 import axios from "axios";
 
-const approvedOrganizations = ref([]);
+const rejectedOrganizations = ref([]);
 const loading = ref(true);
 
-// Fetch Approved Orgs
-async function loadApprovedOrganizations() {
+// Load rejected organizations
+async function loadRejectedOrganizations() {
   try {
     const res = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + "/admin/approved-organizations"
+      import.meta.env.VITE_API_BASE_URL + "/admin/rejected-organizations"
     );
-    approvedOrganizations.value = res.data;
+    rejectedOrganizations.value = res.data;
   } catch (err) {
-    console.error("Error loading approved organizations:", err);
+    console.error("Error loading rejected organizations:", err);
   } finally {
     loading.value = false;
   }
@@ -65,7 +65,7 @@ function formatDate(date) {
 }
 
 onMounted(() => {
-  loadApprovedOrganizations();
+  loadRejectedOrganizations();
 });
 </script>
 

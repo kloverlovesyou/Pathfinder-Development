@@ -23,6 +23,8 @@ import AdminHomePage from "@/components/Admin/AdminHomePage.vue";
 import AttendanceCheckin from "@/components/Home/AttendanceChecking.vue";
 import AdminUpdateDelete from "@/components/Admin/AdminUpdateDelete.vue";
 import AdminLayout from "@/components/Layout/AdminLayout.vue";
+import AdminApproved from "@/components/Admin/AdminApproved.vue";
+import AdminRejected from "@/components/Admin/AdminRejected.vue";
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 
@@ -158,6 +160,20 @@ const router = createRouter({
           path: "adminupdatedelete",
           name: "AdminUpdateDelete",
           component: AdminUpdateDelete,
+          meta: { requiresAuth: false },
+        },
+
+        {
+          path: "adminapproved",
+          name: "AdminApproved  ",
+          component: AdminApproved,
+          meta: { requiresAuth: false },
+        },
+
+        {
+          path: "adminrejected",
+          name: "AdminRejected",
+          component: AdminRejected,
           meta: { requiresAuth: false },
         },
       ],
