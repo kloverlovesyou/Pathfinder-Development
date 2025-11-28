@@ -165,7 +165,7 @@ const router = createRouter({
 
         {
           path: "applicantslist",
-          name: "AdminApprovedPage",
+          name: "AdminApplicantsPage",
           component: AdminApplicantsPage,
           meta: { requiresAuth: false },
         },
