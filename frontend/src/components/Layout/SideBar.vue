@@ -47,12 +47,11 @@
                       'rounded-full',
                       'transition-all',
                       'duration-300',
+                      'shadow-lg',
+                      'overflow-hidden',
                     ]"
                   >
-                    <img
-                      src="https://img.daisyui.com/images/profile/demo/yellingcat@192.webp"
-                      alt="User Avatar"
-                    />
+                    <img :src="displayAvatar" alt="User Avatar" class="object-cover" />
                   </div>
                 </div>
                 <span
@@ -97,7 +96,30 @@
 
           <li>
             <button
-              class="text-white mt-4 gap-3 p-3 py-2 hover:bg-slate-700 rounded-lg w-full flex items-center justify-start"
+             class="text-white mt-8 gap-3 p-3 py-2 hover:bg-slate-700 rounded-lg w-full flex items-center justify-start"
+              @click="$router.push({ name: 'Homepage' })"
+            >
+              <svg
+                class="size-6 flex-shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke="white"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1V9.5z"
+                />
+              </svg>
+              <span v-if="isExpanded">Home</span>
+            </button>
+          </li>
+
+          <li>
+            <button
+               class="text-white gap-3 p-3 py-2 hover:bg-slate-700 rounded-lg w-full flex items-center justify-start"
               @click="$router.push({ name: 'Trainingpage' })"
             >
               <svg
@@ -252,9 +274,9 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from "vue";
-import { useAuthStore } from "@/stores/auth";
 import { useActivityStore } from "@/stores/activityStore";
 import { useRouter } from "vue-router";
+import { getImageUrl } from "@/lib/supabase";
 
 const props = defineProps({
   expanded: {
@@ -267,11 +289,19 @@ const emit = defineEmits(["update:expanded"]);
 
 const router = useRouter();
 const userName = ref("");
-const auth = useAuthStore();
 const activityStore = useActivityStore();
 const sidebar = ref(null);
+const profileAvatar = ref("");
 
 const isExpanded = computed(() => props.expanded);
+const fallbackAvatar = computed(() => {
+  const name = userName.value || "User";
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+    name
+  )}&background=0D8ABC&color=fff`;
+});
+
+const displayAvatar = computed(() => profileAvatar.value || fallbackAvatar.value);
 
 const setExpanded = (value) => emit("update:expanded", value);
 
@@ -301,9 +331,94 @@ const resizeSidebar = () => {
   }
 };
 
+const resolveAvatarUrl = (value) => {
+  if (!value) return "";
+  if (value.startsWith("http")) return value;
+  return getImageUrl(value, "Requirements") || "";
+};
+
+const loadProfileAvatar = () => {
+  const storedUrl = localStorage.getItem("profileAvatarUrl");
+  if (storedUrl) {
+    profileAvatar.value = storedUrl;
+    localStorage.removeItem("profileAvatar"); // legacy cleanup
+    return;
+  }
+
+  const storedPath = localStorage.getItem("profileAvatarPath");
+  if (storedPath) {
+    const url = resolveAvatarUrl(storedPath);
+    if (url) {
+      profileAvatar.value = url;
+      localStorage.setItem("profileAvatarUrl", url);
+      localStorage.removeItem("profileAvatar");
+      return;
+    }
+  }
+
+  const savedUser = localStorage.getItem("user");
+  if (savedUser) {
+    try {
+      const user = JSON.parse(savedUser);
+      const path =
+        user.displayPicture_directory ||
+        user.DisplayPicture_directory ||
+        "";
+      if (path) {
+        const url = resolveAvatarUrl(path);
+        if (url) {
+          profileAvatar.value = url;
+          localStorage.setItem("profileAvatarUrl", url);
+          localStorage.setItem("profileAvatarPath", path);
+          localStorage.removeItem("profileAvatar");
+          return;
+        }
+      }
+      if (user.profilePicture) {
+        profileAvatar.value = user.profilePicture;
+        localStorage.setItem("profileAvatarUrl", user.profilePicture);
+        localStorage.removeItem("profileAvatar");
+        return;
+      }
+    } catch {
+      profileAvatar.value = "";
+    }
+  }
+
+  const legacy = localStorage.getItem("profileAvatar");
+  if (legacy) {
+    profileAvatar.value = legacy;
+    return;
+  }
+
+  profileAvatar.value = "";
+};
+
+const handleAvatarEvent = (event) => {
+  const detail = event.detail;
+  if (!detail) return;
+
+  if (typeof detail === "string") {
+    profileAvatar.value = detail;
+    localStorage.setItem("profileAvatarUrl", detail);
+    localStorage.removeItem("profileAvatar");
+    return;
+  }
+
+  if (detail.url) {
+    profileAvatar.value = detail.url;
+    localStorage.setItem("profileAvatarUrl", detail.url);
+  }
+  if (detail.path) {
+    localStorage.setItem("profileAvatarPath", detail.path);
+  }
+  localStorage.removeItem("profileAvatar");
+};
+
 onMounted(() => {
   window.addEventListener("resize", resizeSidebar);
   document.addEventListener("click", handleClickOutside);
+  window.addEventListener("profile-avatar-updated", handleAvatarEvent);
   resizeSidebar();
 
   activityStore.fetchCounts();
@@ -319,10 +434,13 @@ onMounted(() => {
   } else {
     userName.value = "Guest";
   }
+
+  loadProfileAvatar();
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener("resize", resizeSidebar);
   document.removeEventListener("click", handleClickOutside);
+  window.removeEventListener("profile-avatar-updated", handleAvatarEvent);
 });
 </script>

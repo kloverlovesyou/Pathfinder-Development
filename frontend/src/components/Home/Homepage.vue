@@ -1,8 +1,9 @@
 <script setup>
-import { ref, reactive, onMounted, nextTick } from "vue";
+import { ref, reactive, onMounted, computed } from "vue";
 import "cally"; // Calendar library
 import axios from "axios";
 import CalendarSidebar from "@/components/Layout/CalendarSidebar.vue";
+import { getPDFUrl } from "../../lib/supabase.js";
 
 // ------------------ STATES ------------------
 const calendarOpen = ref(false);
@@ -17,6 +18,8 @@ const selectedCareerId = ref(null);
 const showCareerPopup = ref(false);
 const showTrainingModal = ref(false);
 const selectedTraining = ref(null);
+const trainingActionLoading = ref(false);
+const trainingActionError = ref("");
 const selectedPost = ref(null);
 const posts = ref([]);
 const myApplications = ref(new Set());
@@ -31,6 +34,22 @@ const uploadedFilde = ref(null);
 const uploadedFile = ref(null);
 const applyModalOpen = ref(false);
 const organizations = ref({});
+const careerSearch = ref("");
+const careerDropdownOpen = ref(false);
+
+const filteredCareers = computed(() => {
+  const query = careerSearch.value.trim().toLowerCase();
+  if (!query) {
+    return allCareers.value;
+  }
+  return allCareers.value.filter((career) =>
+    career.position?.toLowerCase().includes(query)
+  );
+});
+
+const selectedTrainingRegistered = computed(() =>
+  isTrainingRegistered(selectedTraining.value)
+);
 
 // Build events only when posts are loaded
 function buildEvents() {
@@ -112,8 +131,13 @@ async function openCareerModal(career) {
     const res = await axios.get(import.meta.env.VITE_API_BASE_URL + `/careers/${careerID}/details`);
 
     //store main career + recommended trainings
-    selectedCareerDetails.value = res.data.career;
-    recommendedTrainings.value = res.data.recommended_trainings || [];
+    selectedCareerDetails.value = normalizeCareerDetails(res.data?.career);
+    const rawTrainings = res.data.recommended_trainings || [];
+    recommendedTrainings.value = aggregateRecommendedTrainings(rawTrainings);
+    if (!selectedCareerDetails.value) {
+      addToast("Career details not found.", "accent");
+      return;
+    }
     showCareerPopup.value = true;
   } catch (error) {
     console.error("Error loading career details:", error);
@@ -129,6 +153,8 @@ function closeCareerModal() {
 // Open training modal
 function openTrainingModal(training) {
   selectedTraining.value = training;
+  trainingActionLoading.value = false;
+  trainingActionError.value = "";
   showTrainingModal.value = true;
 }
 
@@ -136,6 +162,8 @@ function openTrainingModal(training) {
 function closeTrainingModal() {
   showTrainingModal.value = false;
   selectedTraining.value = null;
+  trainingActionLoading.value = false;
+  trainingActionError.value = "";
 }
 
 // Cancel application
@@ -149,56 +177,116 @@ function cancelApplication(career) {
 async function registerForTraining(training) {
   if (!training) return;
 
+  const trainingId = resolveTrainingId(training);
+  if (trainingId === null || trainingId === undefined) {
+    addToast("Invalid training ID", "accent");
+    return;
+  }
+
+  const affectsSelected =
+    selectedTraining.value &&
+    resolveTrainingId(selectedTraining.value) === trainingId;
+
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (!token) {
-      addToast('PLEASE LOG IN FIRST', 'accent');
+      addToast("PLEASE LOG IN FIRST", "accent");
       return;
     }
 
+    if (affectsSelected) {
+      trainingActionLoading.value = true;
+      trainingActionError.value = "";
+    }
+
     await axios.post(
-      import.meta.env.VITE_API_BASE_URL + '/registrations',
-      { trainingID: training.trainingID },
+      import.meta.env.VITE_API_BASE_URL + "/registrations",
+      { trainingID: trainingId },
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    addToast('REGISTRATION SUCCESSFUL!!!', 'success');
-    myRegistrations.value.add(training.trainingID);
-    registeredPosts.value[training.trainingID] = true;
+    addToast("REGISTRATION SUCCESSFUL!!!", "success");
+    myRegistrations.value.add(Number(trainingId));
+    registeredPosts[trainingId] = true;
   } catch (error) {
+    if (affectsSelected) {
+      trainingActionError.value =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Failed to register. Please try again.";
+    }
     if (error.response?.status === 409) {
-      addToast('YOU ALREADY REGISTERED FOR THIS TRAINING', 'accent');
+      addToast("YOU ALREADY REGISTERED FOR THIS TRAINING", "accent");
     } else if (error.response?.status === 401) {
-      addToast('UNAUTHORIZED. PLEASE LOG IN AGAIN', 'accent');
+      addToast("UNAUTHORIZED. PLEASE LOG IN AGAIN", "accent");
     } else {
-      addToast('FAILED TO REGISTER', 'accent');
+      addToast("FAILED TO REGISTER", "accent");
+    }
+  } finally {
+    if (affectsSelected) {
+      trainingActionLoading.value = false;
     }
   }
 }
 
 // Unregister from training
 async function unregisterFromTraining(training) {
+  if (!training) return;
+
+  const trainingId = resolveTrainingId(training);
+  if (trainingId === null || trainingId === undefined) {
+    addToast("Invalid training ID", "accent");
+    return;
+  }
+
+  const affectsSelected =
+    selectedTraining.value &&
+    resolveTrainingId(selectedTraining.value) === trainingId;
+
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (!token) return;
 
-    // Find registration ID
-    const registrationsRes = await axios.get(import.meta.env.VITE_API_BASE_URL + '/registrations', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    if (affectsSelected) {
+      trainingActionLoading.value = true;
+      trainingActionError.value = "";
+    }
 
-    const registration = registrationsRes.data.find(r => r.trainingID === training.trainingID);
-    if (registration) {
-      await axios.delete(import.meta.env.VITE_API_BASE_URL + `/registrations/${registration.id}`, {
+    // Find registration ID
+    const registrationsRes = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/registrations",
+      {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      myRegistrations.value.delete(training.trainingID);
-      registeredPosts.value[training.trainingID] = false;
-      addToast('Unregistered successfully', 'info');
+      }
+    );
+
+    const registration = registrationsRes.data.find(
+      (r) => Number(r.trainingID) === Number(trainingId)
+    );
+    if (registration) {
+      await axios.delete(
+        import.meta.env.VITE_API_BASE_URL + `/registrations/${registration.id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      myRegistrations.value.delete(Number(trainingId));
+      registeredPosts[trainingId] = false;
+      addToast("Unregistered successfully", "info");
     }
   } catch (error) {
+    if (affectsSelected) {
+      trainingActionError.value =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Failed to unregister. Please try again.";
+    }
     console.error("Error unregistering:", error);
-    addToast('Failed to unregister', 'error');
+    addToast("Failed to unregister", "error");
+  } finally {
+    if (affectsSelected) {
+      trainingActionLoading.value = false;
+    }
   }
 }
 
@@ -257,6 +345,273 @@ async function fetchRecommendedCareers() {
     addToast("Failed to load recommended careers", "error");
   }
 }
+
+function openCareerDropdown() {
+  careerDropdownOpen.value = true;
+}
+
+function closeCareerDropdown() {
+  setTimeout(() => {
+    careerDropdownOpen.value = false;
+  }, 150);
+}
+
+function handleCareerInput() {
+  openCareerDropdown();
+}
+
+function selectCareer(career) {
+  selectedCareerId.value = career.careerID;
+  careerSearch.value = career.position;
+  careerDropdownOpen.value = false;
+  fetchRecommendedCareers();
+}
+
+function normalizeCareerDetails(career) {
+  if (!career) return null;
+  return {
+    ...career,
+    organization:
+      career.organization ||
+      career.organizationName ||
+      career.organization_name ||
+      "Unknown Organization",
+    details:
+      career.details ||
+      career.detailsAndInstructions ||
+      career.description ||
+      "",
+    qualificationStandard:
+      career.qualificationStandard ||
+      career.qualifications ||
+      career.qualification ||
+      "",
+    placeOfAssignment:
+      career.placeOfAssignment ||
+      career.location ||
+      career.place ||
+      "",
+    closingDate:
+      career.closingDate || career.deadlineOfSubmission || career.dueDate || "",
+    postingDate: career.postingDate || career.openingDate || "",
+  };
+}
+
+function viewCareerPDF() {
+  const filePath = selectedCareerDetails.value?.pdf_directory;
+  if (!filePath) {
+    addToast("PDF not available", "accent");
+    return;
+  }
+
+  try {
+    const pdfUrl = getPDFUrl(filePath, "Requirements");
+    if (pdfUrl) {
+      window.open(pdfUrl, "_blank");
+      return;
+    }
+
+    if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+      window.open(filePath, "_blank");
+      return;
+    }
+
+    addToast("Failed to open PDF", "accent");
+  } catch (error) {
+    console.error("Error opening PDF:", error);
+    addToast("Failed to open PDF", "accent");
+  }
+}
+
+function resolveTrainingId(training) {
+  if (!training) return null;
+  const id =
+    training.trainingID ??
+    training.TrainingID ??
+    training.id ??
+    training.ID ??
+    null;
+  if (id === null || id === undefined) return null;
+  return typeof id === "string" ? Number(id) || id : id;
+}
+
+function isTrainingRegistered(training) {
+  const id = resolveTrainingId(training);
+  if (id === null || id === undefined) return false;
+  return (
+    myRegistrations.value.has(Number(id)) ||
+    myRegistrations.value.has(id)
+  );
+}
+
+function formatScheduleFull(schedule) {
+  if (!schedule) return "No schedule set";
+  try {
+    const [datePart, timePart] = schedule.split(/[ T]/);
+    const [year, month, day] = datePart.split("-");
+    const [hour = "00", minute = "00"] = (timePart || "").split(":");
+    const date = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute)
+    );
+    return date.toLocaleString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch (error) {
+    return schedule || "Invalid date";
+  }
+}
+
+function formatScheduleTime(schedule) {
+  if (!schedule) return "";
+  try {
+    const [datePart, timePart] = schedule.split(/[ T]/);
+    const [year, month, day] = datePart.split("-");
+    const [hour = "00", minute = "00"] = (timePart || "").split(":");
+    const date = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute)
+    );
+
+    return date.toLocaleString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch (error) {
+    return "";
+  }
+}
+
+function getScheduleMode(schedule) {
+  return (schedule?.mode || schedule?.Mode || "Not specified").toString().trim();
+}
+
+function isOnsiteMode(mode) {
+  const value = (mode || "").toString().toLowerCase();
+  return value === "on-site" || value === "onsite";
+}
+
+function isOnlineMode(mode) {
+  const value = (mode || "").toString().toLowerCase();
+  return value === "online";
+}
+
+function aggregateRecommendedTrainings(trainings) {
+  if (!Array.isArray(trainings)) return [];
+
+  const map = new Map();
+
+  trainings.forEach((item) => {
+    if (!item) return;
+
+    const id =
+      resolveTrainingId(item) ??
+      item.trainingTitle ??
+      item.title ??
+      item.name ??
+      `temp-${map.size}`;
+
+    let entry = map.get(id);
+    if (!entry) {
+      entry = {
+        ...item,
+        trainingID: resolveTrainingId(item) ?? id,
+        title: item.title || item.trainingTitle || item.name || "Untitled Training",
+        description: item.description || "",
+        organizationName:
+          item.organizationName ||
+          item.organization ||
+          item.provider ||
+          "",
+        provider: item.provider || item.organizationName || item.organization || "",
+        schedules: Array.isArray(item.schedules) ? [...item.schedules] : [],
+      };
+      map.set(id, entry);
+    } else {
+      entry.description = entry.description || item.description || "";
+      entry.organizationName =
+        entry.organizationName ||
+        item.organizationName ||
+        item.organization ||
+        item.provider ||
+        "";
+      entry.provider = entry.provider || item.provider;
+      if (Array.isArray(item.schedules)) {
+        item.schedules.forEach((sched) => {
+          if (!entry.schedules.some((existing) => existing.trainingScheduleID === sched.trainingScheduleID)) {
+            entry.schedules.push(sched);
+          }
+        });
+      }
+    }
+
+    const schedule = extractScheduleFromTraining(item);
+    if (schedule) {
+      const duplicate = entry.schedules.some((existing) => {
+        if (schedule.trainingScheduleID && existing.trainingScheduleID) {
+          return existing.trainingScheduleID === schedule.trainingScheduleID;
+        }
+        return (
+          existing.schedule === schedule.schedule &&
+          existing.mode === schedule.mode &&
+          existing.location === schedule.location
+        );
+      });
+      if (!duplicate) {
+        entry.schedules.push(schedule);
+      }
+    }
+  });
+
+  return Array.from(map.values());
+}
+
+function extractScheduleFromTraining(training) {
+  const schedule =
+    training.schedule ||
+    training.Schedule ||
+    training.start_time ||
+    training.startTime ||
+    null;
+
+  const hasDetails =
+    schedule ||
+    training.end_time ||
+    training.endTime ||
+    training.mode ||
+    training.Mode ||
+    training.location ||
+    training.trainingLink;
+
+  if (!hasDetails) {
+    return null;
+  }
+
+  return {
+    trainingScheduleID:
+      training.trainingScheduleID ||
+      training.scheduleID ||
+      training.TrainingScheduleID ||
+      null,
+    schedule,
+    end_time: training.end_time || training.endTime || null,
+    mode: training.mode || training.Mode || "",
+    location: training.location || training.place || training.venue || "",
+    trainingLink: training.trainingLink || training.link || "",
+  };
+}
 // ------------------ ACTIONS ------------------
 
 
@@ -305,13 +660,42 @@ onMounted(async () => {
             <label for="career-select" class="block text-sm font-medium text-gray-700 mb-2">
               Select Your Target Career
             </label>
-            <select id="career-select" v-model="selectedCareerId" @change="fetchRecommendedCareers"
-              class="block w-full px-4 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-gray-300">
-              <option :value="null" disabled>Select a target career</option>
-              <option v-for="career in allCareers" :key="career.careerID" :value="career.careerID">
-                {{ career.position }}
-              </option>
-            </select>
+            <div class="relative">
+              <input
+                id="career-select"
+                type="text"
+                v-model="careerSearch"
+                @focus="openCareerDropdown"
+                @input="handleCareerInput"
+                @blur="closeCareerDropdown"
+                placeholder="Type to search careers"
+                class="block w-full px-4 py-2 text-base border border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-gray-300"
+                autocomplete="off"
+              />
+              <div
+                v-if="careerDropdownOpen"
+                class="absolute mt-1 w-full max-h-60 overflow-auto bg-white border border-gray-200 rounded-md shadow-lg z-20"
+              >
+                <button
+                  v-for="career in filteredCareers"
+                  :key="career.careerID"
+                  type="button"
+                  class="w-full text-left px-4 py-2 text-sm hover:bg-indigo-50"
+                  @mousedown.prevent="selectCareer(career)"
+                >
+                  <span class="font-medium">{{ career.position }}</span>
+                  <p class="text-xs text-gray-500">
+                    {{ career.organization || "Unknown Organization" }}
+                  </p>
+                </button>
+                <p
+                  v-if="filteredCareers.length === 0"
+                  class="px-4 py-2 text-sm text-gray-500"
+                >
+                  No careers found.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -349,78 +733,319 @@ onMounted(async () => {
       @eventClick="openModalCalendar" />
 
     <!-- 🟦 Training Modal -->
-    <dialog v-if="selectedTraining" open class="modal sm:modal-middle">
-      <div class="modal-box max-w-3xl relative font-poppins">
-        <!-- Close button -->
-        <button class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
-          @click="closeTrainingModal">
-          ✕
-        </button>
+    <div v-if="showTrainingModal && selectedTraining" class="training-modal-overlay" @click.self="closeTrainingModal">
+      <div class="training-modal-box">
+        <button class="training-modal-close" @click="closeTrainingModal">✕</button>
 
-        <!-- Training Details -->
-        <h2 class="text-xl font-bold mb-2">{{ selectedTraining.title }}</h2>
-        <p class="text-sm text-gray-600 mb-2">
-          Organization: {{ selectedTraining.organization }}
+        <h2 class="training-modal-title">
+          {{ selectedTraining.title || "Untitled Training" }}
+        </h2>
+        <p class="training-modal-info">
+          <strong>Organization:</strong>
+          {{
+            selectedTraining.organization?.name ||
+            selectedTraining.organizationName ||
+            selectedTraining.provider ||
+            selectedTraining.organization ||
+            "Unknown"
+          }}
+        </p>
+        <p class="training-modal-info">
+          <strong>Description:</strong>
+          {{ selectedTraining.description || "No description provided." }}
         </p>
 
-        <div class="my-4">
-          <!-- Events -->
-          <div class="bg-white w-full max-w-[250px] h-72 overflow-y-auto">
-            <h1 class="text-lg font-semibold">Upcoming Events</h1>
-            <h2 class="mb-2">
-              on <span>{{ selectedDate || "Select a date" }}</span>
-            </h2>
+        <div class="training-modal-actions">
+          <button
+            class="btn btn-sm text-white flex items-center gap-2"
+            :class="
+              selectedTrainingRegistered
+                ? 'bg-gray-500 hover:bg-gray-600'
+                : 'bg-customButton hover:bg-dark-slate'
+            "
+            @click="
+              selectedTrainingRegistered
+                ? unregisterFromTraining(selectedTraining)
+                : registerForTraining(selectedTraining)
+            "
+            :disabled="trainingActionLoading"
+          >
+            <svg
+              v-if="trainingActionLoading"
+              class="animate-spin h-4 w-4 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
+              ></path>
+            </svg>
+            <span>
+              {{ selectedTrainingRegistered ? "Unregister" : "Register" }}
+            </span>
+          </button>
+          <p v-if="trainingActionError" class="training-modal-error">
+            {{ trainingActionError }}
+          </p>
+        </div>
 
-            <div v-if="dayEvents.length === 0" class="text-gray-700">
-              No events scheduled
-            </div>
+        <div class="training-modal-section-title">Schedule/s</div>
 
-            <div v-else class="flex flex-col gap-2">
-              <div v-for="(event, i) in dayEvents" :key="i" @click="openModal(event)"
-                class="bg-gray-100 p-2 rounded-lg shadow-sm cursor-pointer hover:bg-gray-200 break-words flex justify-between items-center">
-                <div>
-                  <h3 class="font-semibold text-sm">
-                    {{ isTraining(event) ? event.title : event.position }}
-                  </h3>
-                  <p class="text-xs text-gray-600">
-                    {{ event.organization || "Unknown" }}
-                  </p>
+        <div class="training-schedules-container">
+          <template v-if="selectedTraining?.schedules?.length">
+            <div class="training-schedules-grid">
+              <div
+                v-for="(schedule, index) in selectedTraining.schedules"
+                :key="schedule.trainingScheduleID || index"
+                class="training-schedule-card"
+              >
+                <div class="training-schedule-date">
+                  <svg
+                    class="training-schedule-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <span>
+                    {{ formatScheduleFull(schedule.schedule) }}
+                    <template v-if="schedule.end_time">
+                      - {{ formatScheduleTime(schedule.end_time) }}
+                    </template>
+                  </span>
                 </div>
 
-                <!-- Badge -->
-                <span v-if="isRegisteredOrApplied(event)" class="text-[10px] text-white px-2 py-1 rounded-full"
-                  :class="isTraining(event) ? 'bg-blue-500' : 'bg-green-500'">
-                  {{ isTraining(event) ? "Registered" : "Applied" }}
-                </span>
+                <div
+                  class="training-schedule-mode"
+                  :class="
+                    isOnsiteMode(getScheduleMode(schedule))
+                      ? 'mode-onsite'
+                      : 'mode-online'
+                  "
+                >
+                  <svg
+                    class="training-mode-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                  <span>{{ getScheduleMode(schedule) }}</span>
+                </div>
+
+                <div
+                  v-if="isOnsiteMode(getScheduleMode(schedule)) && schedule.location"
+                  class="training-schedule-extra"
+                >
+                  <svg
+                    class="training-schedule-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                  <span>{{ schedule.location }}</span>
+                </div>
+
+                <div
+                  v-if="isOnlineMode(getScheduleMode(schedule)) && schedule.trainingLink"
+                  class="training-schedule-extra"
+                >
+                  <svg
+                    class="training-schedule-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                    />
+                  </svg>
+                  <a
+                    :href="schedule.trainingLink"
+                    target="_blank"
+                    class="training-schedule-link"
+                  >
+                    {{ schedule.trainingLink }}
+                  </a>
+                </div>
               </div>
             </div>
+          </template>
+
+          <template v-else-if="selectedTraining.schedule">
+            <div class="training-schedule-card">
+              <div class="training-schedule-date">
+                <svg
+                  class="training-schedule-icon"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                <span>
+                  {{ formatScheduleFull(selectedTraining.schedule) }}
+                  <template v-if="selectedTraining.end_time">
+                    - {{ formatScheduleTime(selectedTraining.end_time) }}
+                  </template>
+                </span>
+              </div>
+
+              <div
+                class="training-schedule-mode"
+                :class="
+                  isOnsiteMode(getScheduleMode(selectedTraining))
+                    ? 'mode-onsite'
+                    : 'mode-online'
+                "
+              >
+                <svg
+                  class="training-mode-icon"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+                <span>{{ getScheduleMode(selectedTraining) }}</span>
+              </div>
+
+              <div
+                v-if="isOnsiteMode(getScheduleMode(selectedTraining)) && selectedTraining.location"
+                class="training-schedule-extra"
+              >
+                <svg
+                  class="training-schedule-icon"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+                <span>{{ selectedTraining.location }}</span>
+              </div>
+
+              <div
+                v-if="isOnlineMode(getScheduleMode(selectedTraining)) && selectedTraining.trainingLink"
+                class="training-schedule-extra"
+              >
+                <svg
+                  class="training-schedule-icon"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                  />
+                </svg>
+                <a
+                  :href="selectedTraining.trainingLink"
+                  target="_blank"
+                  class="training-schedule-link"
+                >
+                  {{ selectedTraining.trainingLink }}
+                </a>
+              </div>
+            </div>
+          </template>
+
+          <div v-else class="training-schedule-card training-schedule-empty">
+            No schedule set.
           </div>
         </div>
-        <p><strong>Mode:</strong> {{ selectedTraining.Mode }}</p>
-        <!-- Description -->
-        <p><strong>Description: </strong>{{ selectedTraining.description }}</p>
-
-        <button v-if="!isSidebarOpen"
-          class="fixed bottom-6 right-6 bg-dark-slate text-white p-3 rounded-full shadow-lg z-50"
-          @click="isSidebarOpen = true">
-          <!-- Calendar SVG -->
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M16.75 3.56V2C16.75 1.59 16.41 1.25 16 1.25C15.59 1.25 15.25 1.59 15.25 2V3.5H8.74999V2C8.74999 1.59 8.40999 1.25 7.99999 1.25C7.58999 1.25 7.24999 1.59 7.24999 2V3.56C4.54999 3.81 3.23999 5.42 3.03999 7.81C3.01999 8.1 3.25999 8.34 3.53999 8.34H20.46C20.75 8.34 20.99 8.09 20.96 7.81C20.76 5.42 19.45 3.81 16.75 3.56Z"
-              fill="white" />
-            <path
-              d="M20 9.84003H4C3.45 9.84003 3 10.29 3 10.84V17C3 20 4.5 22 8 22H16C19.5 22 21 20 21 17V10.84C21 10.29 20.55 9.84003 20 9.84003ZM9.21 18.21C9.16 18.25 9.11 18.3 9.06 18.33C9 18.37 8.94 18.4 8.88 18.42C8.82 18.45 8.76 18.47 8.7 18.48C8.63 18.49 8.57 18.5 8.5 18.5C8.37 18.5 8.24 18.47 8.12 18.42C7.99 18.37 7.89 18.3 7.79 18.21C7.61 18.02 7.5 17.76 7.5 17.5C7.5 17.24 7.61 16.98 7.79 16.79C7.89 16.7 7.99 16.63 8.12 16.58C8.3 16.5 8.5 16.48 8.7 16.52C8.76 16.53 8.82 16.55 8.88 16.58C8.94 16.6 9 16.63 9.06 16.67C9.11 16.71 9.16 16.75 9.21 16.79C9.39 16.98 9.5 17.24 9.5 17.5C9.5 17.76 9.39 18.02 9.21 18.21ZM9.21 14.71C9.02 14.89 8.76 15 8.5 15C8.24 15 7.98 14.89 7.79 14.71C7.61 14.52 7.5 14.26 7.5 14C7.5 13.74 7.61 13.48 7.79 13.29C8.07 13.01 8.51 12.92 8.88 13.08C9.01 13.13 9.12 13.2 9.21 13.29C9.39 13.48 9.5 13.74 9.5 14C9.5 14.26 9.39 14.52 9.21 14.71ZM12.71 18.21C12.52 18.39 12.26 18.5 12 18.5C11.74 18.5 11.48 18.39 11.29 18.21C11.11 18.02 11 17.76 11 17.5C11 17.24 11.11 16.98 11.29 16.79C11.66 16.42 12.34 16.42 12.71 16.79C12.89 16.98 13 17.24 13 17.5C13 17.76 12.89 18.02 12.71 18.21ZM12.71 14.71C12.66 14.75 12.61 14.79 12.56 14.83C12.5 14.87 12.44 14.9 12.38 14.92C12.32 14.95 12.26 14.97 12.2 14.98C12.13 14.99 12.07 15 12 15C11.74 15 11.48 14.89 11.29 14.71C11.11 14.52 11 14.26 11 14C11 13.74 11.11 13.48 11.29 13.29C11.38 13.2 11.49 13.13 11.62 13.08C11.99 12.92 12.43 13.01 12.71 13.29C12.89 13.48 13 13.74 13 14C13 14.26 12.89 14.52 12.71 14.71ZM16.21 18.21C16.02 18.39 15.76 18.5 15.5 18.5C15.24 18.5 14.98 18.39 14.79 18.21C14.61 18.02 14.5 17.76 14.5 17.5C14.5 17.24 14.61 16.98 14.79 16.79C15.16 16.42 15.84 16.42 16.21 16.79C16.39 16.98 16.5 17.24 16.5 17.5C16.5 17.76 16.39 18.02 16.21 18.21ZM16.21 14.71C16.16 14.75 16.11 14.79 16.06 14.83C16 14.87 15.94 14.9 15.88 14.92C15.82 14.95 15.76 14.97 15.7 14.98C15.63 14.99 15.56 15 15.5 15C15.24 15 14.98 14.89 14.79 14.71C14.61 14.52 14.5 14.26 14.5 14C14.5 13.74 14.61 13.48 14.79 13.29C14.89 13.2 14.99 13.13 15.12 13.08C15.3 13 15.5 12.98 15.7 13.02C15.76 13.03 15.82 13.05 15.88 13.08C15.94 13.1 16 13.13 16.06 13.17C16.11 13.21 16.16 13.25 16.21 13.29C16.39 13.48 16.5 13.74 16.5 14C16.5 14.26 16.39 14.52 16.21 14.71Z"
-              fill="white" />
-          </svg>
-        </button>
       </div>
-    </dialog>
+    </div>
 
     <!-- Career Details Modal -->
     <dialog v-if="showCareerPopup && selectedCareerDetails" open class="modal sm:modal-middle">
-      <div class="modal-box max-w-3xl relative font-poppins bg-gray-800 text-white">
+      <div class="modal-box max-w-3xl relative font-poppins bg-white text-gray-900">
         <!-- Close button -->
-        <button class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2 text-white"
+        <button
+          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2 text-gray-600 hover:text-gray-800"
           @click="closeCareerModal">
           ✕
         </button>
@@ -448,24 +1073,38 @@ onMounted(async () => {
           <!-- Career Details -->
           <div class="space-y-2 text-sm">
             <p>
+              <strong>Place of Assignment:</strong>
+              {{ selectedCareerDetails.placeOfAssignment || "Not specified" }}
+            </p>
+            <p>
               <strong>Details:</strong>
-              {{ selectedCareerDetails.detailsAndInstructions }}
+              {{ selectedCareerDetails.details || "No details provided." }}
             </p>
             <p>
-              <strong>Qualifications:</strong>
-              {{ selectedCareerDetails.qualifications }}
+              <strong>Qualification Standard:</strong>
+              {{ selectedCareerDetails.qualificationStandard || "Not specified" }}
             </p>
-            <p>
-              <strong>Requirements:</strong>
-              {{ selectedCareerDetails.requirements }}
+            <p v-if="selectedCareerDetails.postingDate">
+              <strong>Posting Date:</strong>
+              {{ formatDate(selectedCareerDetails.postingDate) }}
             </p>
-            <p>
-              <strong>Application Address:</strong>
-              {{ selectedCareerDetails.applicationLetterAddress }}
+            <p v-if="selectedCareerDetails.closingDate">
+              <strong>Closing Date:</strong>
+              {{ formatDate(selectedCareerDetails.closingDate) }}
             </p>
-            <p>
-              <strong>Deadline:</strong>
-              {{ formatDate(selectedCareerDetails.deadlineOfSubmission) }}
+            <p
+              v-if="
+                selectedCareerDetails.trainingsAttendedPercentage !== null &&
+                selectedCareerDetails.trainingsAttendedPercentage !== undefined
+              "
+            >
+              <strong>Training Match:</strong>
+              {{ selectedCareerDetails.trainingsAttendedPercentage }}%
+            </p>
+            <p v-if="selectedCareerDetails.pdf_directory">
+              <button class="text-blue-400 underline hover:text-blue-200" @click.prevent="viewCareerPDF">
+                View PDF
+              </button>
             </p>
           </div>
 
@@ -476,12 +1115,22 @@ onMounted(async () => {
               No recommended trainings available.
             </div>
             <div v-else class="flex overflow-x-auto space-x-3 pb-2 snap-x snap-mandatory" style="scrollbar-width: thin">
-              <div v-for="training in recommendedTrainings" :key="training.trainingID"
-                class="snap-start w-[180px] flex-shrink-0 p-3 bg-white text-gray-800 rounded-lg cursor-pointer hover:bg-gray-200 transition shadow-sm"
-                @click.stop="openTrainingModal(training)">
-                <h4 class="font-semibold text-sm leading-snug mb-1">
-                  {{ training.title }}
-                </h4>
+              <div
+                v-for="training in recommendedTrainings"
+                :key="training.trainingID"
+                class="snap-start w-[200px] flex-shrink-0 p-3 bg-white text-gray-800 rounded-lg cursor-pointer hover:bg-gray-200 transition shadow-sm border border-gray-200"
+                @click.stop="openTrainingModal(training)"
+              >
+                <div class="flex items-start justify-between gap-2 mb-1">
+                  <h4 class="font-semibold text-sm leading-snug">
+                    {{ training.title }}
+                  </h4>
+                  <span
+                    class="text-[10px] text-green-600 font-semibold px-2 py-0.5 bg-green-100 rounded whitespace-nowrap"
+                  >
+                    Org's choice
+                  </span>
+                </div>
                 <p class="text-[11px] text-gray-600 truncate">
                   {{
                     training.organizationName ||
@@ -619,5 +1268,143 @@ onMounted(async () => {
   border: 2px solid #4caf50;
   background-color: #e8f5e9;
   border-radius: 50%;
+}
+
+.training-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.training-modal-box {
+  background: #ffffff;
+  color: #1f2937;
+  width: min(95vw, 900px);
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 1rem;
+  padding: 2rem;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.training-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border: none;
+  background: transparent;
+  font-size: 1.25rem;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.training-modal-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: #111827;
+}
+
+.training-modal-info {
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.training-modal-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.training-modal-error {
+  font-size: 0.8rem;
+  color: #dc2626;
+}
+
+.training-modal-section-title {
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 0.5rem;
+}
+
+.training-schedules-container {
+  margin-bottom: 1rem;
+}
+
+.training-schedules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 0.75rem;
+}
+
+.training-schedule-card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.training-schedule-empty {
+  text-align: center;
+  color: #6b7280;
+}
+
+.training-schedule-date,
+.training-schedule-extra {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.training-schedule-icon {
+  width: 18px;
+  height: 18px;
+  color: #2563eb;
+  flex-shrink: 0;
+}
+
+.training-schedule-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.training-mode-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.mode-onsite {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.mode-online {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.training-schedule-link {
+  color: #2563eb;
+  text-decoration: underline;
+  word-break: break-all;
 }
 </style>

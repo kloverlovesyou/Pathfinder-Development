@@ -139,6 +139,28 @@ export function getImageUrl(filePath, bucketName = DEFAULT_BUCKET) {
 }
 
 /**
+ * Delete a file from Supabase Storage
+ * @param {string} filePath - Path of the file to delete
+ * @param {string} bucketName - Bucket name
+ * @returns {Promise<boolean>} - True if deleted or path missing
+ */
+export async function deleteStorageFile(filePath, bucketName = DEFAULT_BUCKET) {
+  if (!filePath) return true;
+
+  try {
+    const { error } = await supabase.storage.from(bucketName).remove([filePath]);
+    if (error) {
+      console.error(`Supabase delete error (${bucketName}):`, error);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error(`Delete error (${bucketName}):`, error);
+    return false;
+  }
+}
+
+/**
  * Get public URL for a PDF file
  * @param {string} fileName - The file path in Supabase
  * @param {string} bucketName - The bucket name (default: 'Requirements')

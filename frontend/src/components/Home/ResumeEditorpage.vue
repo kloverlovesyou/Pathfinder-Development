@@ -1018,20 +1018,13 @@ onActivated(async () => {
           </div>
 
           <!-- Save Button -->
-          <div class="flex gap-4">
+          <div class="flex gap-4 justify-end">
             <button
               type="button"
               @click="generateAndOpenPdf"
-              class="w-1/2 py-3 bg-customButton text-white rounded-xl hover:bg-dark-slate transition"
+              class="px-6 py-3 bg-customButton text-white rounded-xl hover:bg-dark-slate transition"
             >
-              Preview Resume
-            </button>
-            <button
-              type="button"
-              class="w-1/2 py-3 bg-customButton text-white rounded-xl hover:bg-dark-slate transition"
-              @click="saveResume"
-            >
-              Save
+              Download Resume
             </button>
           </div>
         </form>

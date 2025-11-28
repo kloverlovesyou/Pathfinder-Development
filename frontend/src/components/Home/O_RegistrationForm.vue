@@ -153,8 +153,7 @@
           <input
             type="tel"
             class="input validator tabular-nums w-full bg-gray-100"
-            required
-            placeholder="Phone Number*"
+            placeholder="Phone Number"
             minlength="11"
             maxlength="11"
             pattern="[0-9]*"
