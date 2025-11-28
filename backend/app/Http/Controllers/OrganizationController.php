@@ -257,7 +257,7 @@ class OrganizationController extends Controller
 
     public function rejected()
     {
-        $organizationn = Organization::where('status', 'rejected')->get();
+        $organization = Organization::where('status', 'rejected')->get();
         return response()->json($organization);
     }
 
