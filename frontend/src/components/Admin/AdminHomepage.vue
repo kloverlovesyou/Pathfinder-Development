@@ -241,7 +241,7 @@ onMounted(() => {
             <div
               v-for="org in approvedOrganizations"
               :key="org.organizationID"
-              class="p-3 border rounded-lg bg-green-50 flex justify-between"
+              class="p-3 border rounded-lg bg-green-50 flex justify-between items-center"
             >
               <div>
                 <h3 class="font-semibold">{{ org.name }}</h3>
@@ -249,14 +249,14 @@ onMounted(() => {
                 <p class="text-sm text-gray-600">{{ formatDate(org.statusDate) }}</p>
               </div>
 
-              <span class="px-3 py-1 bg-green-600 text-white rounded-lg text-sm">
+              <span class="flex items-center justify-center w-20 h-8 bg-green-600 text-white rounded-lg text-sm">
                 Approved
               </span>
             </div>
           </div>
 
-          <!-- No organizations -->
-          <p v-else class="text-gray-500 italic">No approved organizations found.</p>
+<!-- No organizations -->
+<p v-else class="text-gray-500 italic">No approved organizations found.</p>
         </div>
 
         <div v-else-if="activeTab === 'rejected'">

@@ -8,6 +8,7 @@ use App\Models\Registration;
 use App\Models\Training;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Supabase\Storage\StorageClient;
 
 class CertificateController extends Controller
@@ -139,6 +140,7 @@ public function index($applicantID)
     }
     
     // Step 4: Also fetch certificates from certifications table that have certificate_path
+    // This includes both manual uploads (new) and organization certificates not in registrations
     $certificationsWithPath = Certification::where('applicantID', $applicantID)
         ->whereNotNull('certificate_path')
         ->get();
@@ -150,13 +152,20 @@ public function index($applicantID)
         if (!empty($cert->certificate_path) && !in_array($cert->certificate_path, $existingPaths)) {
             $publicUrl = $this->generateSupabaseUrl($cert->certificate_path);
             
+            // Determine if this is a manual upload or organization certificate
+            // Manual uploads have certificate_path but aren't from registrations
+            // Check if this path exists in any registration for this applicant
+            $isFromRegistration = Registration::where('applicantID', $applicantID)
+                ->where('certificatePath', $cert->certificate_path)
+                ->exists();
+            
             $allCertificates[] = [
                 'certificationID' => $cert->certificationID,
                 'certificationName' => $cert->certificationName,
                 'certificate' => $publicUrl,
                 'applicantID' => $cert->applicantID,
                 'IsSelected' => (int) $cert->IsSelected,
-                'source' => 'organization',
+                'source' => $isFromRegistration ? 'organization' : 'manual',
                 'certificate_path' => $cert->certificate_path,
             ];
         }
@@ -278,13 +287,47 @@ public function index($applicantID)
             'IsSelected' => $isSelected ? 1 : 0,
         ];
 
-        // Handle file upload (manual certificates)
+        // Handle file upload (manual certificates) - upload to Supabase Storage
         if ($hasFile) {
             $file = $request->file('certificate');
-            $binaryData = file_get_contents($file->getRealPath());
-            $data['certificate'] = $binaryData;
+            
+            // Initialize Supabase client
+            $storage = new StorageClient(
+                env('SUPABASE_URL'),
+                env('SUPABASE_SECRET')
+            );
+
+            $bucket = env('SUPABASE_BUCKET', 'Requirements');
+            
+            // Generate unique filename in certificate_directory
+            $sanitizedName = preg_replace('/[^A-Za-z0-9._-]/', '_', $file->getClientOriginalName());
+            $fileName = 'certificate_directory/' . time() . '_' . $sanitizedName;
+            $fileBytes = file_get_contents($file->getRealPath());
+
+            // Upload to Supabase
+            $result = $storage->from($bucket)->upload($fileName, $fileBytes);
+
+            if (!empty($result['error'])) {
+                Log::error('❌ Failed to upload certificate to Supabase', [
+                    'error' => $result['error'],
+                    'file_name' => $fileName,
+                ]);
+                return $this->safeJsonResponse([
+                    'message' => 'Failed to upload certificate to storage',
+                    'error' => $result['error']
+                ], 500);
+            }
+
+            // Store the path instead of binary data
+            $data['certificate_path'] = $fileName;
+            $data['certificate'] = ''; // Empty string for bytea column (required by schema)
+            
+            Log::info('✅ Certificate uploaded to Supabase', [
+                'file_name' => $fileName,
+                'bucket' => $bucket,
+            ]);
         }
-        // Handle base64 input (manual certificates fallback)
+        // Handle base64 input (manual certificates fallback) - also upload to Supabase
         elseif ($hasBase64) {
             $base64Data = $base64Input;
             
@@ -310,9 +353,38 @@ public function index($applicantID)
                 ], 422);
             }
 
-            $data['certificate'] = $decoded;
-            Log::info('✅ Decoded base64 certificate', [
-                'original_length' => strlen($base64Input),
+            // Initialize Supabase client
+            $storage = new StorageClient(
+                env('SUPABASE_URL'),
+                env('SUPABASE_SECRET')
+            );
+
+            $bucket = env('SUPABASE_BUCKET', 'Requirements');
+            
+            // Generate unique filename in certificate_directory
+            $fileName = 'certificate_directory/' . time() . '_certificate.png'; // Default to PNG for base64 images
+
+            // Upload to Supabase
+            $result = $storage->from($bucket)->upload($fileName, $decoded);
+
+            if (!empty($result['error'])) {
+                Log::error('❌ Failed to upload base64 certificate to Supabase', [
+                    'error' => $result['error'],
+                    'file_name' => $fileName,
+                ]);
+                return $this->safeJsonResponse([
+                    'message' => 'Failed to upload certificate to storage',
+                    'error' => $result['error']
+                ], 500);
+            }
+
+            // Store the path instead of binary data
+            $data['certificate_path'] = $fileName;
+            $data['certificate'] = ''; // Empty string for bytea column (required by schema)
+            
+            Log::info('✅ Base64 certificate uploaded to Supabase', [
+                'file_name' => $fileName,
+                'bucket' => $bucket,
                 'decoded_length' => strlen($decoded),
             ]);
         }
@@ -360,24 +432,50 @@ public function index($applicantID)
         }
 
         // Create the certification
-        // For organization certificates, don't include certificate field (like RegistrationController does)
+        // All certificates now use certificate_path (stored in Supabase) instead of bytea
         try {
             Log::info('📦 Attempting to create certification', [
                 'data_keys' => array_keys($data),
-                'has_certificate' => isset($data['certificate']),
                 'has_certificate_path' => isset($data['certificate_path']),
+                'certificate_value' => isset($data['certificate']) ? (is_string($data['certificate']) ? 'string(' . strlen($data['certificate']) . ')' : gettype($data['certificate'])) : 'not set',
             ]);
             
-            $cert = Certification::create($data);
+            // Ensure certificate field is explicitly set to empty string (not file content)
+            // This prevents any accidental inclusion of binary data from the request
+            // Build a clean data array with only the fields we want
+            $cleanData = [
+                'certificationName' => $data['certificationName'],
+                'applicantID' => $data['applicantID'],
+                'IsSelected' => $data['IsSelected'],
+                'certificate' => '', // Explicitly set to empty string
+            ];
+            
+            // Add certificate_path if it exists
+            if (isset($data['certificate_path'])) {
+                $cleanData['certificate_path'] = $data['certificate_path'];
+            }
+            
+            // For manual uploads, certificate field is empty string (required by schema)
+            // For organization certificates, certificate_path is already set
+            // Both use certificate_path to reference Supabase storage
+            $cert = Certification::create($cleanData);
             
             Log::info('✅ Certification created successfully', [
                 'certificationID' => $cert->certificationID,
             ]);
         } catch (\Exception $e) {
+            // Build cleanData for logging if it wasn't built yet
+            $logData = $data;
+            if (!isset($logData['certificate'])) {
+                $logData['certificate'] = '';
+            }
+            
             Log::error('❌ Failed to create certification', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'data_keys' => array_keys($data),
+                'data_keys' => array_keys($logData),
+                'certificate_value_type' => gettype($logData['certificate'] ?? null),
+                'certificate_value_length' => isset($logData['certificate']) && is_string($logData['certificate']) ? strlen($logData['certificate']) : 'N/A',
             ]);
             
             return $this->safeJsonResponse([
@@ -386,7 +484,12 @@ public function index($applicantID)
             ], 500);
         }
 
-        // Build safe response without binary data
+        // Build safe response with Supabase URL if certificate_path exists
+        $publicUrl = null;
+        if (!empty($cert->certificate_path)) {
+            $publicUrl = $this->generateSupabaseUrl($cert->certificate_path);
+        }
+        
         $safeCert = [
             'certificationID' => $cert->certificationID,
             'certificationName' => $cert->certificationName,
@@ -394,11 +497,14 @@ public function index($applicantID)
             'resumeID' => $cert->resumeID,
             'IsSelected' => (int) $cert->IsSelected,
             'certificate_path' => $cert->certificate_path,
+            'certificate' => $publicUrl, // Supabase public URL for immediate display
         ];
 
         return $this->safeJsonResponse([
             'message' => 'Certificate uploaded successfully!',
             'certificationID' => $cert->certificationID,
+            'certificate_path' => $cert->certificate_path,
+            'certificate' => $publicUrl, // Include URL for frontend
         ]);
     }
 

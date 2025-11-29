@@ -231,7 +231,7 @@ function viewPDF(event) {
   <div>
     <!-- Career Modal -->
     <dialog v-if="show" open class="modal sm:modal-middle">
-      <div class="modal-box max-w-3xl relative font-poppins">
+      <div class="modal-box max-w-3xl relative font-poppins" style="word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; max-width: 900px; width: min(95vw, 900px);">
         <button class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
           @click="$emit('close')">
           ✕
@@ -307,7 +307,7 @@ function viewPDF(event) {
 
     <!-- Upload Modal -->
     <dialog v-if="showUploadModal" open class="modal sm:modal-middle">
-      <div class="modal-box max-w-lg relative font-poppins">
+      <div class="modal-box max-w-lg relative font-poppins" style="word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">
         <button class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
           @click="closeUploadModal">
           ✕
@@ -348,3 +348,38 @@ function viewPDF(event) {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Force word wrapping for all text content in modals */
+.modal-box {
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
+  max-width: 900px !important;
+  width: min(95vw, 900px) !important;
+}
+
+.modal-box * {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+.modal-box p,
+.modal-box span,
+.modal-box div,
+.modal-box h2,
+.modal-box strong,
+.modal-box a {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Ensure links don't overflow */
+.modal-box a {
+  word-break: break-all;
+  display: inline-block;
+  max-width: 100%;
+}
+</style>

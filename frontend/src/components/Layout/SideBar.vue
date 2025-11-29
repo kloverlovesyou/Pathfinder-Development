@@ -277,6 +277,7 @@ import { ref, onMounted, onBeforeUnmount, computed } from "vue";
 import { useActivityStore } from "@/stores/activityStore";
 import { useRouter } from "vue-router";
 import { getImageUrl } from "@/lib/supabase";
+import axios from "axios";
 
 const props = defineProps({
   expanded: {
@@ -337,48 +338,137 @@ const resolveAvatarUrl = (value) => {
   return getImageUrl(value, "Requirements") || "";
 };
 
-const loadProfileAvatar = () => {
-  const storedUrl = localStorage.getItem("profileAvatarUrl");
-  if (storedUrl) {
-    profileAvatar.value = storedUrl;
-    localStorage.removeItem("profileAvatar"); // legacy cleanup
-    return;
+const loadProfileAvatar = async (userData = null) => {
+  const token = localStorage.getItem("token");
+  
+  // First, try to fetch fresh data from API (or use provided userData)
+  let user = userData;
+  
+  if (!user && token) {
+    try {
+      const response = await axios.get(
+        import.meta.env.VITE_API_BASE_URL + "/user",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      
+      user = response.data;
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      // Fall through to localStorage check
+    }
   }
-
-  const storedPath = localStorage.getItem("profileAvatarPath");
-  if (storedPath) {
-    const url = resolveAvatarUrl(storedPath);
-    if (url) {
-      profileAvatar.value = url;
-      localStorage.setItem("profileAvatarUrl", url);
+  
+  // If we have fresh user data from API, use it and clear old localStorage
+  if (user) {
+    // Update localStorage with fresh user data
+    localStorage.setItem("user", JSON.stringify(user));
+    
+    // Clear old avatar data to prevent conflicts
+    const currentApplicantID = user.applicantID || user.id;
+    const storedApplicantID = localStorage.getItem("currentApplicantID");
+    
+    // If this is a different user, clear old avatar data
+    if (storedApplicantID && storedApplicantID !== String(currentApplicantID)) {
+      localStorage.removeItem("profileAvatarUrl");
+      localStorage.removeItem("profileAvatarPath");
+      localStorage.removeItem("profileAvatar");
+    }
+    
+    // Store current user ID
+    if (currentApplicantID) {
+      localStorage.setItem("currentApplicantID", String(currentApplicantID));
+    }
+    
+    // Try to get profile picture from user data
+    const path =
+      user.displayPicture_directory ||
+      user.DisplayPicture_directory ||
+      user.displaypicture_directory ||
+      "";
+    const directUrl = user.profilePicture || user.profile_picture || "";
+    
+    if (path) {
+      const url = resolveAvatarUrl(path);
+      if (url) {
+        profileAvatar.value = url;
+        localStorage.setItem("profileAvatarUrl", url);
+        localStorage.setItem("profileAvatarPath", path);
+        localStorage.removeItem("profileAvatar");
+        return;
+      }
+    }
+    
+    if (directUrl) {
+      profileAvatar.value = directUrl;
+      localStorage.setItem("profileAvatarUrl", directUrl);
       localStorage.removeItem("profileAvatar");
       return;
     }
+    
+    // If user has no profile picture, clear any old avatar
+    profileAvatar.value = "";
+    localStorage.removeItem("profileAvatarUrl");
+    localStorage.removeItem("profileAvatarPath");
+    return;
   }
-
+  
+  // Fallback to localStorage if API fails (only if it matches current user)
+  const currentApplicantID = localStorage.getItem("currentApplicantID");
   const savedUser = localStorage.getItem("user");
+  
   if (savedUser) {
     try {
-      const user = JSON.parse(savedUser);
-      const path =
-        user.displayPicture_directory ||
-        user.DisplayPicture_directory ||
-        "";
-      if (path) {
-        const url = resolveAvatarUrl(path);
-        if (url) {
-          profileAvatar.value = url;
-          localStorage.setItem("profileAvatarUrl", url);
-          localStorage.setItem("profileAvatarPath", path);
+      const parsedUser = JSON.parse(savedUser);
+      const savedApplicantID = parsedUser.applicantID || parsedUser.id;
+      
+      // Only use localStorage data if it matches the current user
+      if (!currentApplicantID || String(savedApplicantID) === currentApplicantID) {
+        const storedUrl = localStorage.getItem("profileAvatarUrl");
+        if (storedUrl) {
+          profileAvatar.value = storedUrl;
+          localStorage.removeItem("profileAvatar"); // legacy cleanup
+          return;
+        }
+
+        const storedPath = localStorage.getItem("profileAvatarPath");
+        if (storedPath) {
+          const url = resolveAvatarUrl(storedPath);
+          if (url) {
+            profileAvatar.value = url;
+            localStorage.setItem("profileAvatarUrl", url);
+            localStorage.removeItem("profileAvatar");
+            return;
+          }
+        }
+        
+        const path =
+          parsedUser.displayPicture_directory ||
+          parsedUser.DisplayPicture_directory ||
+          parsedUser.displaypicture_directory ||
+          "";
+        if (path) {
+          const url = resolveAvatarUrl(path);
+          if (url) {
+            profileAvatar.value = url;
+            localStorage.setItem("profileAvatarUrl", url);
+            localStorage.setItem("profileAvatarPath", path);
+            localStorage.removeItem("profileAvatar");
+            return;
+          }
+        }
+        if (parsedUser.profilePicture || parsedUser.profile_picture) {
+          profileAvatar.value = parsedUser.profilePicture || parsedUser.profile_picture;
+          localStorage.setItem("profileAvatarUrl", profileAvatar.value);
           localStorage.removeItem("profileAvatar");
           return;
         }
-      }
-      if (user.profilePicture) {
-        profileAvatar.value = user.profilePicture;
-        localStorage.setItem("profileAvatarUrl", user.profilePicture);
+      } else {
+        // Different user, clear old data
+        localStorage.removeItem("profileAvatarUrl");
+        localStorage.removeItem("profileAvatarPath");
         localStorage.removeItem("profileAvatar");
-        return;
       }
     } catch {
       profileAvatar.value = "";
@@ -394,28 +484,45 @@ const loadProfileAvatar = () => {
   profileAvatar.value = "";
 };
 
-const handleAvatarEvent = (event) => {
+const handleAvatarEvent = async (event) => {
   const detail = event.detail;
   if (!detail) return;
 
-  if (typeof detail === "string") {
-    profileAvatar.value = detail;
-    localStorage.setItem("profileAvatarUrl", detail);
-    localStorage.removeItem("profileAvatar");
-    return;
-  }
+  // Verify this event is for the current user by checking localStorage user
+  const savedUser = localStorage.getItem("user");
+  if (!savedUser) return;
+  
+  try {
+    const user = JSON.parse(savedUser);
+    const currentApplicantID = user.applicantID || user.id;
+    
+    // Only update if this is for the current user
+    if (currentApplicantID) {
+      if (typeof detail === "string") {
+        profileAvatar.value = detail;
+        localStorage.setItem("profileAvatarUrl", detail);
+        localStorage.removeItem("profileAvatar");
+        return;
+      }
 
-  if (detail.url) {
-    profileAvatar.value = detail.url;
-    localStorage.setItem("profileAvatarUrl", detail.url);
+      if (detail.url) {
+        profileAvatar.value = detail.url;
+        localStorage.setItem("profileAvatarUrl", detail.url);
+      }
+      if (detail.path) {
+        localStorage.setItem("profileAvatarPath", detail.path);
+      }
+      localStorage.removeItem("profileAvatar");
+      
+      // Refresh from API to ensure consistency
+      await loadProfileAvatar();
+    }
+  } catch (error) {
+    console.error("Error handling avatar event:", error);
   }
-  if (detail.path) {
-    localStorage.setItem("profileAvatarPath", detail.path);
-  }
-  localStorage.removeItem("profileAvatar");
 };
 
-onMounted(() => {
+onMounted(async () => {
   window.addEventListener("resize", resizeSidebar);
   document.addEventListener("click", handleClickOutside);
   window.addEventListener("profile-avatar-updated", handleAvatarEvent);
@@ -423,19 +530,68 @@ onMounted(() => {
 
   activityStore.fetchCounts();
 
-  const savedUser = localStorage.getItem("user");
-  if (savedUser) {
-    const user = JSON.parse(savedUser);
-    if (user.firstName && user.lastName) {
-      userName.value = `${user.firstName} ${user.lastName}`;
+  // Fetch user profile from API to get latest data
+  const token = localStorage.getItem("token");
+  let user = null;
+  
+  if (token) {
+    try {
+      const response = await axios.get(
+        import.meta.env.VITE_API_BASE_URL + "/user",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      
+      user = response.data;
+      if (user) {
+        // Update localStorage with fresh user data
+        localStorage.setItem("user", JSON.stringify(user));
+        
+        // Store current user ID to prevent cross-user data mixing
+        if (user.applicantID || user.id) {
+          localStorage.setItem("currentApplicantID", String(user.applicantID || user.id));
+        }
+        
+        // Update userName
+        if (user.firstName && user.lastName) {
+          userName.value = `${user.firstName} ${user.lastName}`;
+        } else {
+          userName.value = "Guest";
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      // Fallback to localStorage
+      const savedUser = localStorage.getItem("user");
+      if (savedUser) {
+        const parsedUser = JSON.parse(savedUser);
+        if (parsedUser.firstName && parsedUser.lastName) {
+          userName.value = `${parsedUser.firstName} ${parsedUser.lastName}`;
+        } else {
+          userName.value = "Guest";
+        }
+      } else {
+        userName.value = "Guest";
+      }
+    }
+  } else {
+    // No token, use localStorage
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      const parsedUser = JSON.parse(savedUser);
+      if (parsedUser.firstName && parsedUser.lastName) {
+        userName.value = `${parsedUser.firstName} ${parsedUser.lastName}`;
+      } else {
+        userName.value = "Guest";
+      }
     } else {
       userName.value = "Guest";
     }
-  } else {
-    userName.value = "Guest";
   }
 
-  loadProfileAvatar();
+  // Load profile avatar with the fetched user data
+  await loadProfileAvatar(user);
 });
 
 onBeforeUnmount(() => {

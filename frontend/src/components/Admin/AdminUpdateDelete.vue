@@ -139,7 +139,7 @@
 import { ref, onMounted } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
-
+import { authState } from "@/stores/authState";
 const router = useRouter();
 const showDeleteModal = ref(false);
 const isDeleting = ref(false);
@@ -147,63 +147,47 @@ const upcomingCount = ref(0);
 const completedCount = ref(0);
 
 const form = ref({
-  firstName: "",
-  middleName: "",
-  lastName: "",
-  address: "",
+  name: "",
+  location: "",
+  websiteURL: "",
   emailAddress: "",
-  phoneNumber: "",
   newPassword: "",
+  confirmPassword: "",
   currentPassword: "",
 });
 
 const userName = ref("");
 
 onMounted(async () => {
-  fetchTrainingCounters();
   try {
-    // --- Fetch user from API ---
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/user", {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
-
-    const user = res.data;
-
-    // Update form (including middle name)
-    form.value = {
-      ...form.value,
-      firstName: user.firstName || user.first_name || "",
-      middleName: user.middleName || user.middle_name || "",
-      lastName: user.lastName || user.last_name || "",
-      emailAddress: user.emailAddress || user.email || "",
-      phoneNumber: user.phoneNumber || user.phone || "",
-      address: user.address || "",
-    };
-
-    // Set userName (display only first + last)
-    userName.value = `${form.value.firstName} ${form.value.lastName}`.trim();
-
-    // Save backup
-    localStorage.setItem("user", JSON.stringify(user));
-  } catch (err) {
-    console.error("API failed, fallback to localStorage:", err);
-
-    const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      const user = JSON.parse(savedUser);
-
-      form.value = {
-        ...form.value,
-        firstName: user.firstName || user.first_name || "",
-        middleName: user.middleName || user.middle_name || "",
-        lastName: user.lastName || user.last_name || "",
-        emailAddress: user.emailAddress || user.email || "",
-        phoneNumber: user.phoneNumber || user.phone || "",
-        address: user.address || "",
-      };
-
-      userName.value = `${form.value.firstName} ${form.value.lastName}`.trim();
+    // Use token from authState or localStorage
+    const token = authState.token || localStorage.getItem("admin_token");
+    if (!token) {
+      console.error("❌ No admin token found, redirecting to login.");
+      router.push("/admin/login");
+      return;
     }
+
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/admin/details",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    const admin = res.data;
+
+    // Update reactive form and store
+    form.value.name = admin.name || "";
+    form.value.location = admin.location || "";
+    form.value.websiteURL = admin.websiteURL || "";
+    form.value.emailAddress = admin.emailAddress || "";
+
+    authState.user = admin;
+    localStorage.setItem("user", JSON.stringify(admin));
+
+  } catch (error) {
+    console.error("❌ Error fetching admin details:", error.response?.data?.message || error);
   }
 });
 

@@ -63,8 +63,19 @@ function handleFileUpload(event, index) {
   const file = event.target.files[0];
   if (!file) return;
 
-  if (!file.type.startsWith('image/')) {
-    showToast('Please upload an image file', 'error');
+  // Validate file type (jpeg, png, jpg)
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+  if (!allowedTypes.includes(file.type)) {
+    showToast('Please upload a JPEG or PNG image file.', 'error');
+    event.target.value = ''; // Clear the input
+    return;
+  }
+
+  // Validate file size (max 4MB)
+  const maxSize = 4 * 1024 * 1024; // 4MB in bytes
+  if (file.size > maxSize) {
+    showToast('File size must be less than 4MB.', 'error');
+    event.target.value = ''; // Clear the input
     return;
   }
 
@@ -73,6 +84,12 @@ function handleFileUpload(event, index) {
   const reader = new FileReader();
   reader.onload = (e) => {
     certificates.value[index].image = e.target.result;
+  };
+  reader.onerror = () => {
+    showToast('Failed to read file. Please try again.', 'error');
+    event.target.value = ''; // Clear the input
+    certificates.value[index].file = null;
+    certificates.value[index].image = null;
   };
   reader.readAsDataURL(file);
 }
@@ -104,10 +121,9 @@ async function fetchCertificates(applicantID) {
       
       // Separate manual and organization certificates
       allCerts.forEach(cert => {
-        // Organization certificates have certificate_path and HTTP URL or are marked as organization
-        const isOrganization = cert.certificate_path || 
-                               (cert.certificate && cert.certificate.startsWith('http')) ||
-                               cert.source === 'organization';
+        // Check source field first (set by backend)
+        const isOrganization = cert.source === 'organization';
+        const isManual = cert.source === 'manual';
         
         if (isOrganization && cert.certificate_path) {
           // Store organization certificate data by certificate_path for matching later
@@ -117,18 +133,26 @@ async function fetchCertificates(applicantID) {
             certificationName: cert.certificationName,
             certificate: cert.certificate,
           };
-        } else {
-          // Manual certificate (binary data or no certificate_path)
-          if (cert.certificate && (!cert.certificate.startsWith('http') || !cert.certificate_path)) {
-            manualCertificates.push({
-              certificationID: cert.certificationID,
-              certificationName: cert.certificationName,
-              image: cert.certificate, // Data URL for manual uploads
-              IsSelected: cert.IsSelected === 1 || cert.IsSelected === true,
-              source: 'manual',
-              certificate_path: cert.certificate_path || null,
-            });
-          }
+        } else if (isManual) {
+          // Manual certificate (can have certificate_path with Supabase URL or old binary data)
+          manualCertificates.push({
+            certificationID: cert.certificationID,
+            certificationName: cert.certificationName,
+            image: cert.certificate, // Supabase URL or data URL for old uploads
+            IsSelected: cert.IsSelected === 1 || cert.IsSelected === true,
+            source: 'manual',
+            certificate_path: cert.certificate_path || null,
+          });
+        } else if (cert.certificate && !cert.certificate.startsWith('http')) {
+          // Legacy manual certificate with binary data (data URL)
+          manualCertificates.push({
+            certificationID: cert.certificationID,
+            certificationName: cert.certificationName,
+            image: cert.certificate, // Data URL for old manual uploads
+            IsSelected: cert.IsSelected === 1 || cert.IsSelected === true,
+            source: 'manual',
+            certificate_path: cert.certificate_path || null,
+          });
         }
       });
       
@@ -269,35 +293,86 @@ async function uploadCertificate(cert, index) {
     return;
   }
 
+  // Validate file type (jpeg, png, jpg)
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+  if (!allowedTypes.includes(cert.file.type)) {
+    showToast("Please upload a JPEG or PNG image file.", "error");
+    return;
+  }
+
+  // Validate file size (max 4MB = 4096 KB)
+  const maxSize = 4 * 1024 * 1024; // 4MB in bytes
+  if (cert.file.size > maxSize) {
+    showToast("File size must be less than 4MB.", "error");
+    return;
+  }
+
   const trimmedTitle = cert.title?.trim();
   if (!trimmedTitle) {
     showToast("Please enter a certificate title.", "error");
     return;
   }
 
+  // Validate title length (max 255 characters as per database schema)
+  if (trimmedTitle.length > 255) {
+    showToast("Certificate title must be 255 characters or less.", "error");
+    return;
+  }
+
   const formData = new FormData();
   formData.append("certificationName", trimmedTitle);
-  formData.append("applicantID", user.applicantID);
-  formData.append("IsSelected", 1);
+  formData.append("applicantID", user.applicantID.toString());
+  formData.append("IsSelected", "1");
   formData.append("certificate", cert.file);
 
   try {
-    await axios.post(
+    const response = await axios.post(
       import.meta.env.VITE_API_BASE_URL + "/certificates",
       formData,
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          // Don't set Content-Type manually - axios will set it with boundary for FormData
+        },
       }
     );
 
+    // Remove the uploaded certificate from pending list
     certificates.value.splice(index, 1);
     ensureCertificateSlot();
+    
+    // Refresh the certificates list
     await fetchCertificates(user.applicantID);
+    
     showToast(`Certificate "${trimmedTitle}" uploaded successfully!`, "success");
   } catch (error) {
     console.error("❌ Upload error:", error.response?.data || error);
-    const message =
-      error.response?.data?.message || "Failed to upload certificate";
+    
+    // Handle specific error cases
+    let message = "Failed to upload certificate";
+    
+    if (error.response?.status === 422) {
+      // Validation errors
+      const errors = error.response.data?.errors;
+      if (errors) {
+        const firstError = Object.values(errors)[0];
+        message = Array.isArray(firstError) ? firstError[0] : firstError;
+      } else {
+        message = error.response.data?.message || message;
+      }
+    } else if (error.response?.status === 401) {
+      message = "Your session has expired. Please log in again.";
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      setTimeout(() => router.push({ name: "Login" }), 2000);
+    } else if (error.response?.status === 413) {
+      message = "File is too large. Maximum size is 4MB.";
+    } else if (error.response?.data?.message) {
+      message = error.response.data.message;
+    } else if (error.message) {
+      message = error.message;
+    }
+    
     showToast(message, "error");
   }
 }
@@ -885,7 +960,7 @@ const deselectAllCertificates = async () => {
               />
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/jpg,image/png"
                 class="file-input"
                 @change="handleFileUpload($event, index)"
               />

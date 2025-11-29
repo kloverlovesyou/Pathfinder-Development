@@ -452,16 +452,20 @@ function formatScheduleTime(schedule) {
 
 /* Training Details Modal */
 .training-details-modal {
-  background: #fff;
+  background: #fff !important;
   padding: 2rem;
   border-radius: 1rem;
   width: min(95vw, 900px);
+  max-width: 900px;
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
   animation: fadeIn 0.25s ease;
   z-index: 2100;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 @keyframes fadeIn {
@@ -496,11 +500,17 @@ function formatScheduleTime(schedule) {
   font-weight: 600;
   color: #374151;
   margin-bottom: 16px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .training-info {
   margin: 0.4rem 0;
   color: #333;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Schedule Cards Container */
@@ -592,6 +602,32 @@ function formatScheduleTime(schedule) {
   color: #3b82f6;
   text-decoration: underline;
   word-break: break-all;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Force word wrapping for all text content */
+.training-details-modal * {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+.training-details-modal p,
+.training-details-modal span,
+.training-details-modal div,
+.training-details-modal h3,
+.training-details-modal strong {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.schedule-date-time span,
+.schedule-location span {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .schedule-link .training-link:hover {

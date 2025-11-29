@@ -9,29 +9,31 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 const route = useRoute();
 const toasts = ref([]);
-
+const loading = ref(false);
 
 async function fetchApplicants() {
+  console.log("📡 Fetching applicants...");
   try {
-    console.log("📡 Fetching applicants...");
-    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/applicants`);
+    const res = await fetch(import.meta.env.VITE_API_BASE_URL + "/admin/applicants");
     if (!res.ok) throw new Error("Failed to fetch applicants");
 
     const data = await res.json();
+
+    // Ensure we always have an array
     const applicants = Array.isArray(data) ? data : [data];
 
+    // ✅ Use .value for refs
     allApplicants.value = applicants.map((a) => ({
       id: a.applicantID || a.id,
-      name: a.firstName && a.lastName ? `${a.firstName} ${a.lastName}` : a.name || "N/A",
-      email: a.emailAddress || a.email || "N/A",
+      name: a.firstName && a.lastName ? `${a.firstName} ${a.lastName}` : a.name,
+      email: a.emailAddress || a.email,
       location: a.address || a.location || "N/A",
-      phone: a.phoneNumber || a.phonenumber || a.phone || "N/A",
+      phone: a.phoneNumber || a.phone || "N/A",
     }));
 
     console.log("✅ Applicants loaded:", allApplicants.value);
   } catch (err) {
     console.error("❌ Error fetching applicants:", err);
-    showToast("Failed to load applicants", "error");
   }
 }
 
@@ -41,14 +43,21 @@ function handleLogout() {
 }
 
 // Open modal and load applicants
-// Open applicant modal (can pass specific applicant or open all)
-function openApplicantModal(applicant = null) {
-  if (applicant) {
+const openApplicantModal = async (applicant = null) => {
+  showApplicantModal.value = true;
+
+  if (!applicant) {
+    // No applicant provided → fetch all
+    await fetchApplicants();
+  } else {
+    // Single applicant provided → just show that one
     allApplicants.value = [applicant];
     selectedApplicant.value = applicant;
   }
-  showApplicantModal.value = true;
-}
+
+  console.log("🟢 openApplicantModal triggered");
+};
+
 
 
 // Delete applicant
@@ -103,38 +112,69 @@ async function handleResultClick(item) {
     selectedOrg.value = item;
   } else if (item.type === "applicant") {
   const applicant = {
-    id: item.id,
-    name: item.name,
-    email: item.email,
-    location: item.location || "N/A",
-    phone: item.phoneNumber || "N/A",
-  };
+  id: item.id,
+  name: item.name,
+  email: item.email,
+  location: item.location || "N/A",
+  phone: item.phone || "N/A",  // ✅ use phone, not phoneNumber
+};
 
   openApplicantModal(applicant); // ✅ Use the centralized function
 }
 }
 
 async function performSearch() {
-  const query = searchInput.value.trim();
-  if (!query) {
+  console.log("Searching for:", searchInput.value);
+
+  if (!searchInput.value) {
     results.value = [];
     return;
   }
 
+  loading.value = true; // ⬅️ START SPINNER
+
   try {
-    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/search?query=${encodeURIComponent(query)}`);
+    const res = await fetch(
+      import.meta.env.VITE_API_BASE_URL +
+        `/admin/search?query=${encodeURIComponent(searchInput.value)}`
+    );
+
+    const contentType = res.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      const text = await res.text();
+      console.error("❌ Expected JSON, got:", text);
+      return;
+    }
+
     const data = await res.json();
 
-    results.value = data.map((item) => ({
-      id: item.ID || item.id || item.applicantID || item.organizationID,
-      name: item.firstName && item.lastName ? `${item.firstName} ${item.lastName}` : item.name || item.Name || "N/A",
-      email: item.emailAddress || item.email || "N/A",
-      location: item.address || item.location || "N/A",
-      type: (item.Type || item.type || "applicant").toLowerCase(),
-    }));
+    results.value = data.map((item) => {
+      if ((item.Type || item.type || "applicant").toLowerCase() === "organization") {
+        return {
+          id: item.ID || item.id || item.organizationID,
+          name: item.Name || item.name,
+          location: item.Location || item.location || "N/A",
+          emailAddress: item.EmailAddress || item.emailAddress || item.email || "N/A",
+          type: "organization",
+          websiteURL: item.websiteURL || "N/A",
+          phone: item.PhoneNumber || item.phoneNumber || item.phone || "N/A",
+        };
+      } else {
+        return {
+          id: item.ID || item.id,
+          name: item.Name || item.name,
+          location: item.Location || item.location || "N/A",
+          email: item.EmailAddress || item.emailAddress || item.email || "N/A",
+          type: "applicant",
+          phone: item.PhoneNumber || item.phoneNumber || item.phone || "N/A",
+        };
+      }
+    });
+
   } catch (err) {
     console.error("Search failed:", err);
-    showToast("Search failed", "error");
+  } finally {
+    loading.value = false; // ⬅️ STOP SPINNER ALWAYS
   }
 }
 
@@ -493,12 +533,39 @@ onMounted(() => {
 
           <!-- 🔽 Dropdown Results -->
           <div
-            v-if="showDropdown && (results.length || searchInput)"
+            v-if="showDropdown && (results.length || searchInput || loading)"
             class="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-md z-50 p-3 flex flex-col gap-3"
           >
+            <!-- 🔄 Spinner Only -->
+            <div
+              v-if="loading"
+              class="flex items-center justify-center py-4"
+            >
+              <svg
+                class="animate-spin h-6 w-6 text-gray-500"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                ></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                ></path>
+              </svg>
+            </div>
+
             <!-- No results -->
             <div
-              v-if="!results.length && searchInput"
+              v-else-if="!results.length && searchInput"
               class="text-center text-gray-500 text-sm mt-2"
             >
               No results found.
@@ -519,9 +586,7 @@ onMounted(() => {
                   {{ item.email || item.location }}
                 </div>
                 <div class="text-xs italic text-gray-400">
-                  {{
-                    item.type === "organization" ? "Organization" : "Applicant"
-                  }}
+                  {{ item.type === 'organization' ? 'Organization' : 'Applicant' }}
                 </div>
               </div>
             </div>
