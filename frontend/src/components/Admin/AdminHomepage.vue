@@ -249,9 +249,9 @@ onMounted(() => {
                 <p class="text-sm text-gray-600">{{ formatDate(org.statusDate) }}</p>
               </div>
 
-              <span class="inline-block px-2 py-0.5 bg-green-600 text-white rounded text-base">
-                Approved
-              </span>
+              <span class="inline-flex items-center justify-center px-3 py-1 bg-green-600 text-white rounded-lg text-sm">
+                  Approved
+                </span>
             </div>
           </div>
 
