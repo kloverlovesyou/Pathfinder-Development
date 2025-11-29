@@ -11,10 +11,10 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     zip unzip git curl \
     && docker-php-ext-configure gd \
-        --with-freetype-dir=/usr/include/freetype2 \
-        --with-jpeg-dir=/usr/include \
-        --with-webp-dir=/usr/include \
-        --with-xpm-dir=/usr/include \
+        --with-freetype \
+        --with-jpeg \
+        --with-webp \
+        --with-xpm \
     && docker-php-ext-install gd pdo_mysql pdo_pgsql bcmath mbstring zip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -42,5 +42,4 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 # Expose port 80
 EXPOSE 80
 
-# Start Apache
 CMD ["apache2-foreground"]
