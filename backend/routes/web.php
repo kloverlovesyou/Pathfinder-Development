@@ -1,10 +1,23 @@
 <?php
-
+use App\Models\Admin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
 use App\Http\Controllers\TrainingController;
 
+// Temporary admin password reset (DELETE AFTER USE)
+Route::get('/admin/reset-password', function () {
+    $admin = Admin::where('emailAddress', 'dictadmin@yahoo.com')->first();
+    if (!$admin) {
+        return "Admin not found!";
+    }
+
+    // Set new password (hashed)
+    $admin->password = Hash::make('Keiromusic1.');
+    $admin->save();
+
+    return "Admin password updated successfully!";
+});
 
 Route::get('/attendance/submit', function (Request $request, TrainingController $controller) {
     // Call the same function your API uses
