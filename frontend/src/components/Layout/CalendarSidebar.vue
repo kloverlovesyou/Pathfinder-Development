@@ -7,44 +7,129 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 // --- Career events for applications the user applied for ---
 
 async function loadApplicationEvents(applicantID, token) {
-  const { data: apps } = await axios.get(`${API_BASE_URL}/applications`, {
-    params: { applicantID },
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  try {
+    const { data: apps } = await axios.get(`${API_BASE_URL}/applications`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-  const interviewEvents = (apps || [])
-    .filter(
-      (app) =>
-        Number(app.applicantID) === Number(applicantID) &&
-        app.interviewSchedule
-    )
-    .map((app) => {
-      const isoDate = toISODate(app.interviewSchedule);
-      if (!isoDate) return null;
+    console.log("📋 Applications fetched:", apps?.length || 0);
+    console.log("📋 Sample application data:", apps?.[0]);
 
-      return {
-        type: "career",
-        date: isoDate,
-        applicationID: app.applicationID,
-        careerID: app.careerID,
-        title: app.title || app.career?.position || "Career Interview",
-        organization:
-          app.organizationName ||
-          app.career?.organization?.name ||
-          app.career?.organization ||
-          "Unknown Organization",
-        interviewSchedule: app.interviewSchedule,
-        interviewMode: app.interviewMode,
-        interviewLink: app.interviewLink,
-        interviewLocation: app.interviewLocation,
-      };
-    })
-    .filter(Boolean);
+    // Filter applications with interviewSchedule
+    const appsWithInterview = (apps || []).filter(
+      (app) => {
+        const hasSchedule = app.interviewSchedule && app.interviewSchedule !== null && app.interviewSchedule !== '';
+        if (hasSchedule) {
+          console.log("✅ Application has interviewSchedule:", {
+            applicationID: app.applicationID,
+            interviewSchedule: app.interviewSchedule,
+            title: app.title,
+            applicantID: app.applicantID,
+            targetApplicantID: applicantID,
+          });
+        }
+        return hasSchedule;
+      }
+    );
 
-  interviewEvents.forEach((event) => {
-    if (!events.value[event.date]) events.value[event.date] = [];
-    events.value[event.date].push(event);
-  });
+    console.log("📅 Applications with interview schedule:", appsWithInterview.length);
+
+    // Backend already filters by applicantID, so all apps returned are for this user
+    // Deduplicate applications by applicationID first
+    const uniqueApps = appsWithInterview.filter((app, index, self) => 
+      index === self.findIndex(a => a.applicationID === app.applicationID)
+    );
+    
+    console.log("🔍 Unique applications (after deduplication):", uniqueApps.length, "out of", appsWithInterview.length);
+    
+    // Process all applications with interviewSchedule
+    const interviewEvents = uniqueApps
+      .map((app) => {
+        console.log("🔍 Processing application:", {
+          applicationID: app.applicationID,
+          interviewSchedule: app.interviewSchedule,
+          title: app.title,
+          organizationName: app.organizationName,
+        });
+
+        const isoDate = toISODate(app.interviewSchedule);
+        console.log("📅 Parsed date:", {
+          original: app.interviewSchedule,
+          parsed: isoDate,
+          applicationID: app.applicationID,
+        });
+        
+        if (!isoDate) {
+          console.warn("⚠️ Could not parse interviewSchedule:", app.interviewSchedule);
+          return null;
+        }
+
+        const event = {
+          type: "career",
+          date: isoDate,
+          applicationID: app.applicationID,
+          careerID: app.careerID,
+          title: app.title || "Career Interview",
+          organization: app.organizationName || "Unknown Organization",
+          interviewSchedule: app.interviewSchedule,
+          interviewMode: app.interviewMode,
+          interviewLink: app.interviewLink,
+          interviewLocation: app.interviewLocation,
+        };
+
+        console.log("✅ Created interview event:", {
+          date: event.date,
+          title: event.title,
+          type: event.type,
+          fullEvent: event,
+        });
+        return event;
+      })
+      .filter(Boolean);
+
+    console.log("📅 Total interview events created:", interviewEvents.length);
+
+    interviewEvents.forEach((event) => {
+      if (!events.value[event.date]) {
+        events.value[event.date] = [];
+        console.log(`📆 Created new date entry: ${event.date}`);
+      }
+      
+      // Check if this event already exists (by applicationID for career events, or by other unique identifier)
+      const existingEvent = events.value[event.date].find((e) => {
+        if (event.type === 'career' && e.type === 'career') {
+          return e.applicationID === event.applicationID;
+        }
+        // For training events, you might want to check by registrationID or trainingID
+        return false;
+      });
+      
+      if (!existingEvent) {
+        events.value[event.date].push(event);
+        console.log(`📌 Added event to date ${event.date}:`, {
+          title: event.title,
+          type: event.type,
+          totalEventsForDate: events.value[event.date].length,
+        });
+      } else {
+        console.log(`⚠️ Event already exists for date ${event.date}:`, {
+          title: event.title,
+          type: event.type,
+          applicationID: event.applicationID,
+        });
+      }
+    });
+
+    console.log("✅ Career interview events loaded:", interviewEvents.length);
+    console.log("📊 All events by date:", Object.keys(events.value).map(date => ({
+      date,
+      events: events.value[date].map(e => ({ type: e.type, title: e.title }))
+    })));
+    console.log("📊 Career events by date:", Object.keys(events.value).filter(date => events.value[date].some(e => e.type === 'career')));
+  } catch (error) {
+    console.error("❌ Error loading career interview events:", error);
+    console.error("❌ Error details:", error.response?.data || error.message);
+  }
 }
 
 // 🔹 Fetch complete career details for the modal
@@ -222,6 +307,84 @@ const displayDate = computed(() => {
 const events = ref({}); // Map of date → [events]
 const dayEvents = ref([]);
 
+// --- BUILT-IN CALENDAR LOGIC ---
+const today = new Date();
+const currentMonth = ref(today.getMonth());
+const currentYear = ref(today.getFullYear());
+
+const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+const currentMonthName = computed(() => {
+  return new Date(currentYear.value, currentMonth.value).toLocaleString("default", {
+    month: "long",
+    year: "numeric",
+  });
+});
+
+const calendarDays = computed(() => {
+  const firstDay = new Date(currentYear.value, currentMonth.value, 1);
+  const lastDay = new Date(currentYear.value, currentMonth.value + 1, 0);
+
+  const days = [];
+
+  // Fill empty slots before first day
+  for (let i = 0; i < firstDay.getDay(); i++) {
+    days.push(null);
+  }
+
+  // Add all days of the month
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    days.push(new Date(currentYear.value, currentMonth.value, d));
+  }
+
+  return days;
+});
+
+const prevMonth = () => {
+  if (currentMonth.value === 0) {
+    currentMonth.value = 11;
+    currentYear.value--;
+  } else {
+    currentMonth.value--;
+  }
+};
+
+const nextMonth = () => {
+  if (currentMonth.value === 11) {
+    currentMonth.value = 0;
+    currentYear.value++;
+  } else {
+    currentMonth.value++;
+  }
+};
+
+const isToday = (date) => {
+  if (!date) return false;
+  return (
+    date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear()
+  );
+};
+
+const isSelected = (date) => {
+  if (!date || !selectedDate.value) return false;
+  const dateStr = toISODate(date);
+  return dateStr === selectedDate.value;
+};
+
+const hasEvents = (date) => {
+  if (!date) return false;
+  const dateStr = toISODate(date);
+  return events.value[dateStr] && events.value[dateStr].length > 0;
+};
+
+const selectDate = (date) => {
+  if (!date) return;
+  const dateStr = toISODate(date);
+  showEvents(dateStr);
+};
+
 // --- Initialize calendar: fetch events & select today ---
 onMounted(async () => {
   await loadUserEvents();
@@ -339,18 +502,35 @@ async function loadUserEvents() {
 
   const currentDate = selectedDate.value || toISODate(new Date());
   showEvents(currentDate);
+  
+  // Update calendar view to show selected date's month
+  if (currentDate) {
+    const [year, month] = currentDate.split("-").map(Number);
+    if (year && month) {
+      currentYear.value = year;
+      currentMonth.value = month - 1;
+    }
+  }
 }
 
 function showEvents(date) {
   selectedDate.value = date;
   dayEvents.value = events.value[date] || [];
-  console.log("📅 Events for", date, ":", dayEvents.value);
+  console.log("📅 Events for", date, ":", {
+    totalEvents: dayEvents.value.length,
+    events: dayEvents.value.map(e => ({ type: e.type, title: e.title })),
+    allEventsForDate: events.value[date],
+  });
 }
 
 function handleDateChange(event) {
   const value = event?.target?.value;
   if (!value) return;
   showEvents(value);
+  // Update calendar view to show selected month
+  const [year, month, day] = value.split("-").map(Number);
+  currentYear.value = year;
+  currentMonth.value = month - 1;
 }
 
 watch(
@@ -371,7 +551,33 @@ onMounted(async () => {
 // Format for comparisons / mapping
 function toISODate(d) {
   if (!d) return "";
-  return new Date(d).toISOString().split("T")[0]; // YYYY-MM-DD
+  
+  // If it's already a string in YYYY-MM-DD format, return it
+  if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+    return d;
+  }
+  
+  // Handle datetime strings (ISO format or Y-m-d H:i:s format)
+  if (typeof d === 'string') {
+    // Extract date part from ISO format (2025-12-01T02:55:00.000000Z) or space-separated (2025-12-01 02:55:00)
+    const dateMatch = d.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (dateMatch) {
+      return dateMatch[1]; // Return YYYY-MM-DD
+    }
+  }
+  
+  // If it's a Date object, format it directly to avoid timezone issues
+  const date = d instanceof Date ? d : new Date(d);
+  if (isNaN(date.getTime())) {
+    console.warn("⚠️ Invalid date value:", d);
+    return "";
+  }
+  
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
 }
 
 </script>
@@ -389,6 +595,7 @@ function toISODate(d) {
     <aside
       :class="[
         'bg-white shadow-lg rounded-l-lg p-4 transition-transform duration-300 fixed top-0 right-0 h-full z-40 w-80 flex flex-col',
+        { '!bg-white': true },
         isOpen ? 'translate-x-0' : 'translate-x-full',
       ]"
     >
@@ -402,22 +609,111 @@ function toISODate(d) {
 
       <!-- Sidebar Content -->
       <div class="flex flex-col items-center gap-4 mt-12 overflow-y-auto">
-        <!-- Date Picker -->
+        <!-- Built-in Calendar -->
         <div class="w-full flex flex-col gap-2">
-          <label class="text-sm font-medium text-gray-600" for="calendar-date-input">
+          <label class="text-sm font-medium text-gray-600 mb-2">
             Select a date
           </label>
-          <input
-            id="calendar-date-input"
-            type="date"
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            :value="selectedDate || toISODate(new Date())"
-            @change="handleDateChange"
-          />
+          
+          <!-- Calendar Header -->
+          <div class="flex items-center justify-between mb-2">
+            <button
+              @click="prevMonth"
+              class="p-1 hover:bg-gray-100 rounded transition-colors"
+              aria-label="Previous month"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-gray-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            </button>
+            <h3 class="text-sm font-semibold text-gray-700">
+              {{ currentMonthName }}
+            </h3>
+            <button
+              @click="nextMonth"
+              class="p-1 hover:bg-gray-100 rounded transition-colors"
+              aria-label="Next month"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-gray-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Calendar Grid -->
+          <div class="bg-white border border-gray-200 rounded-lg p-2" style="background: #fff !important;">
+            <!-- Day Headers -->
+            <div class="grid grid-cols-7 gap-1 mb-1">
+              <div
+                v-for="dayName in dayNames"
+                :key="dayName"
+                class="text-xs font-medium text-gray-500 text-center py-1"
+              >
+                {{ dayName }}
+              </div>
+            </div>
+
+            <!-- Calendar Days -->
+            <div class="grid grid-cols-7 gap-1">
+              <div
+                v-for="(date, index) in calendarDays"
+                :key="index"
+                class="aspect-square flex items-center justify-center"
+              >
+                <button
+                  v-if="date"
+                  @click="selectDate(date)"
+                  :class="[
+                    'w-full h-full rounded-md text-sm font-medium transition-all',
+                    isSelected(date)
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : isToday(date)
+                      ? 'bg-blue-100 text-blue-700 font-bold'
+                      : hasEvents(date)
+                      ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'text-gray-600 hover:bg-gray-50',
+                  ]"
+                >
+                  <div class="flex flex-col items-center justify-center h-full">
+                    <span>{{ date.getDate() }}</span>
+                    <span
+                      v-if="hasEvents(date)"
+                      :class="[
+                        'w-1.5 h-1.5 rounded-full mt-0.5',
+                        isSelected(date) ? 'bg-white' : 'bg-blue-500',
+                      ]"
+                    ></span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Events Panel -->
-        <div class="bg-white w-full max-w-[250px] h-72 overflow-y-auto">
+        <div class="bg-white w-full max-w-[250px] h-72 overflow-y-auto" style="background: #fff !important;">
           <h1 class="text-lg font-semibold mb-1">Upcoming Events</h1>
           <h2 class="mb-2 text-sm text-gray-600">
             on
@@ -442,22 +738,30 @@ function toISODate(d) {
                 }
               "
             >
-              <div>
+              <div class="flex-1">
                 <h3 class="font-semibold text-sm">
                   {{
                     event.title ??
                     (event.type === "career"
-                      ? "Career Event"
+                      ? "Career Interview"
                       : "Training Event")
                   }}
                 </h3>
 
-                <!-- Optional: show interview date/time for career events -->
+                <!-- Show organization for career events -->
                 <p
-                  v-if="event.type === 'career' && event.date"
-                  class="text-xs text-gray-500"
+                  v-if="event.type === 'career' && event.organization"
+                  class="text-xs text-gray-500 mt-0.5"
                 >
-                  {{ event.organization ?? "" }}
+                  {{ event.organization }}
+                </p>
+
+                <!-- Show organization for training events -->
+                <p
+                  v-if="event.type === 'training' && event.organization"
+                  class="text-xs text-gray-500 mt-0.5"
+                >
+                  {{ event.organization }}
                 </p>
               </div>
 
@@ -469,6 +773,7 @@ function toISODate(d) {
               >
                 {{ event.type === "training" ? "Training" : "Career" }}
               </span>
+              
             </div>
           </div>
         </div>
@@ -676,7 +981,7 @@ function toISODate(d) {
         z-index: 9999;
       "
     >
-      <div class="modal-box relative font-poppins">
+      <div class="modal-box relative font-poppins" style="background: #fff !important;">
         <!-- Close button -->
         <button
           class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
@@ -760,7 +1065,7 @@ function toISODate(d) {
 }
 
 .training-details-modal {
-  background: #fff;
+  background: #fff !important;
   padding: 2rem;
   border-radius: 1rem;
   width: min(95vw, 900px);
@@ -880,5 +1185,30 @@ function toISODate(d) {
   color: #3b82f6;
   text-decoration: underline;
   word-break: break-all;
+}
+
+/* Force white backgrounds for modals, inputs, text boxes, and containers regardless of dark mode */
+.modal-box {
+  background: #fff !important;
+}
+
+aside.bg-white {
+  background: #fff !important;
+}
+
+input,
+textarea {
+  background: #fff !important;
+  color: #000 !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important;
+}
+
+/* Ensure all white background containers stay white in dark mode */
+.bg-white {
+  background-color: #fff !important;
 }
 </style>

@@ -35,7 +35,8 @@ class ApplicationController extends Controller
             // Application table
             'applicationID' => $app->applicationID,
             'careerID' => $app->careerID,
-            'interviewSchedule' => $app->interviewSchedule,
+            'applicantID' => $app->applicantID,
+            'interviewSchedule' => $app->interviewSchedule ? $app->interviewSchedule->format('Y-m-d H:i:s') : null,
             'interviewMode' => $app->interviewMode,
             'interviewLink' => $app->interviewLink,
             'interviewLocation' => $app->interviewLocation,

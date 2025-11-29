@@ -440,7 +440,13 @@ async function generatePdf() {
 
   doc.setFont("times", "regular");
   doc.setFontSize(10);
-  const contactLine = `${form.phoneNumber} • ${form.emailAddress} • ${resume.url}`;
+  // Build contact line in order: email, url, phone number, address
+  const contactParts = [];
+  if (form.emailAddress) contactParts.push(form.emailAddress);
+  if (resume.url) contactParts.push(resume.url);
+  if (form.phoneNumber) contactParts.push(form.phoneNumber);
+  if (form.address) contactParts.push(form.address);
+  const contactLine = contactParts.join(" • ");
   doc.text(contactLine, pageWidth / 2, y, { align: "center" });
   y += 12;
 

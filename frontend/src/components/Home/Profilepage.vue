@@ -2,7 +2,7 @@
 import { ref, onMounted, onBeforeUnmount, nextTick, computed } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
-import { getImageUrl } from "@/lib/supabase";
+import { getImageUrl, getPDFUrl } from "@/lib/supabase";
 
 const router = useRouter();
 const toasts = ref([]);
@@ -46,6 +46,14 @@ function resolveAvatarUrl(path) {
   if (!path) return "";
   if (path.startsWith("http")) return path;
   return getImageUrl(path, "Requirements") || "";
+}
+
+function resolvePDFUrl(path) {
+  if (!path) return "";
+  // If it's already a full URL, return it
+  if (path.startsWith("http")) return path;
+  // Otherwise, convert the path to a public URL using getPDFUrl
+  return getPDFUrl(path, "Requirements") || path;
 }
 
 function applyUserProfile(user) {
@@ -829,7 +837,7 @@ const downloadRequirement = async (activity, event) => {
   const token = localStorage.getItem("token");
 
   if (!token) {
-    showToast("Please log in to download requirements.");
+    showToast("Please log in to view requirements.");
     return;
   }
 
@@ -868,23 +876,15 @@ const downloadRequirement = async (activity, event) => {
       if (application) {
         filePath = application.requirement_directory;
         console.log("filePath from API:", filePath);
-
-        // If still no filePath, try using the backend endpoint directly
-        if (!filePath || filePath === null || filePath === "") {
-          console.log("No filePath found, trying backend endpoint directly...");
-          // We'll handle this in the try block below by using the backend endpoint
-        }
       } else {
         console.error(
           "Application not found for applicationID:",
           applicationID
         );
-        // Try backend endpoint anyway - it might have the file
         filePath = null;
       }
     } catch (error) {
       console.error("Error fetching application details:", error);
-      // Don't return here - try the backend endpoint as fallback
       filePath = null;
     }
   }
@@ -897,29 +897,16 @@ const downloadRequirement = async (activity, event) => {
         const { getPDFUrl } = await import("@/lib/supabase");
         const pdfUrl = getPDFUrl(filePath, "Requirements");
 
-        // Fetch the PDF from Supabase
-        const response = await fetch(pdfUrl);
-        if (!response.ok) {
-          throw new Error("Failed to fetch PDF from Supabase");
+        if (pdfUrl) {
+          // Open PDF in new tab for viewing
+          window.open(pdfUrl, "_blank");
+          return; // Success, exit early
+        } else {
+          throw new Error("Failed to generate PDF URL from Supabase");
         }
-
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-
-        // Extract filename from path or use default
-        const fileName = filePath.split("/").pop() || "requirement.pdf";
-
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        return; // Success, exit early
       } catch (supabaseError) {
         console.warn(
-          "Supabase download failed, trying backend endpoint:",
+          "Supabase URL generation failed, trying backend endpoint:",
           supabaseError
         );
         // Fall through to backend endpoint
@@ -937,17 +924,17 @@ const downloadRequirement = async (activity, event) => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const url = window.URL.createObjectURL(
-        new Blob([response.data], { type: "application/pdf" })
-      );
-
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "requirement.pdf";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      // Create blob URL and open in new tab for viewing
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      
+      // Open in new tab
+      window.open(url, "_blank");
+      
+      // Clean up the blob URL after a delay (browser will keep it while tab is open)
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 100);
     } catch (backendError) {
       console.error("Backend endpoint also failed:", backendError);
       if (backendError.response?.status === 404) {
@@ -955,12 +942,12 @@ const downloadRequirement = async (activity, event) => {
           "No requirement file has been uploaded for this application."
         );
       } else {
-        showToast("Failed to download requirements. Please try again.");
+        showToast("Failed to view requirements. Please try again.");
       }
     }
   } catch (error) {
-    console.error("Error downloading requirements:", error);
-    showToast("Failed to download requirements. Please try again.");
+    console.error("Error viewing requirements:", error);
+    showToast("Failed to view requirements. Please try again.");
   }
 };
 
@@ -1100,18 +1087,7 @@ onBeforeUnmount(() => {
           <p class="text-sm text-gray-500">
             {{ userEmail || "No email on file" }}
           </p>
-          <div
-            class="mt-3 flex flex-wrap justify-center sm:justify-start gap-4 text-sm text-gray-600"
-          >
-            <span>
-              Upcoming Trainings:
-              <strong class="text-dark-slate">{{ upcomingCount }}</strong>
-            </span>
-            <span>
-              Completed Trainings:
-              <strong class="text-dark-slate">{{ completedCount }}</strong>
-            </span>
-          </div>
+          
         </div>
       </div>
     </div>
@@ -1280,8 +1256,9 @@ onBeforeUnmount(() => {
                   <p v-if="activity.pdf_directory">
                   
                     <a
-                      :href="activity.pdf_directory"
+                      :href="resolvePDFUrl(activity.pdf_directory)"
                       target="_blank"
+                      rel="noopener noreferrer"
                       class="text-blue-500 underline"
                       @click.stop
                     >
@@ -1308,7 +1285,7 @@ onBeforeUnmount(() => {
                       ]"
                       @click.stop="downloadRequirement(activity, $event)"
                     >
-                      Download Requirement
+                      View Requirement
                     </button>
                   </div>
                 </template>
@@ -1482,10 +1459,7 @@ onBeforeUnmount(() => {
                         <span class="font-semibold">Closing:</span>
                         {{ formatDateOnly(activity.closingDate) }}
                       </p>
-                      <p>
-                        <span class="font-semibold">Applied:</span>
-                        {{ formatDateOnly(getApplicationDate(activity)) }}
-                      </p>
+                     
                     </div>
                     <div
                       v-else
@@ -1591,8 +1565,9 @@ onBeforeUnmount(() => {
                       <p v-if="activity.pdf_directory">
                     
                         <a
-                          :href="activity.pdf_directory"
+                          :href="resolvePDFUrl(activity.pdf_directory)"
                           target="_blank"
+                          rel="noopener noreferrer"
                           class="text-blue-500 underline"
                         >
                           View Details
@@ -1624,7 +1599,7 @@ onBeforeUnmount(() => {
                           ]"
                           @click.stop="downloadRequirement(activity, $event)"
                         >
-                          Download Requirement
+                          View Requirement
                         </button>
                       </div>
 

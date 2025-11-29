@@ -33,60 +33,174 @@
       <!-- FORM -->
       <form @submit.prevent="handleSubmit">
         <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text text-sm font-medium text-gray-700">First Name*</span>
+          </label>
           <input
             class="input w-full bg-gray-100"
             type="text"
             required
-            placeholder="First Name*"
+            placeholder="Enter your first name"
             v-model="form.firstName"
           />
         </div>
 
         <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text text-sm font-medium text-gray-700">Middle Name</span>
+          </label>
           <input
             class="input w-full bg-gray-100"
             type="text"
-            placeholder="Middle Name"
+            placeholder="Enter your middle name (optional)"
             v-model="form.middleName"
           />
         </div>
 
         <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text text-sm font-medium text-gray-700">Last Name*</span>
+          </label>
           <input
             class="input w-full bg-gray-100"
             type="text"
             required
-            placeholder="Last Name*"
+            placeholder="Enter your last name"
             v-model="form.lastName"
           />
         </div>
 
-        <div class="form-control mb-4">
+        <!-- Address Fields - Segmented Dropdowns (shown when API works) -->
+        <template v-if="!apiFailed">
+          <div class="form-control mb-4">
+            <label class="label">
+              <span class="label-text text-sm font-medium text-gray-700">Region*</span>
+            </label>
+            <select
+              class="select w-full bg-gray-100"
+              required
+              v-model="form.region"
+              @change="onRegionChange"
+              :disabled="loadingRegions"
+            >
+              <option value="" disabled>{{ loadingRegions ? 'Loading regions...' : 'Select Region' }}</option>
+              <option v-for="region in regions" :key="region.psgc_code" :value="region.psgc_code">
+                {{ region.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-control mb-4">
+            <label class="label">
+              <span class="label-text text-sm font-medium text-gray-700">Province*</span>
+            </label>
+            <select
+              class="select w-full bg-gray-100"
+              required
+              v-model="form.province"
+              @change="onProvinceChange"
+              :disabled="!form.region || loadingProvinces"
+            >
+              <option value="" disabled>
+                {{ !form.region ? 'Select Region first' : loadingProvinces ? 'Loading provinces...' : 'Select Province' }}
+              </option>
+              <option v-for="province in provinces" :key="province.psgc_code" :value="province.psgc_code">
+                {{ province.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-control mb-4">
+            <label class="label">
+              <span class="label-text text-sm font-medium text-gray-700">City/Municipality*</span>
+            </label>
+            <select
+              class="select w-full bg-gray-100"
+              required
+              v-model="form.city"
+              @change="onCityChange"
+              :disabled="!form.province || loadingCities"
+            >
+              <option value="" disabled>
+                {{ !form.province ? 'Select Province first' : loadingCities ? 'Loading cities...' : 'Select City/Municipality' }}
+              </option>
+              <option v-for="city in cities" :key="city.psgc_code" :value="city.psgc_code">
+                {{ city.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-control mb-4">
+            <label class="label">
+              <span class="label-text text-sm font-medium text-gray-700">Barangay*</span>
+            </label>
+            <select
+              class="select w-full bg-gray-100"
+              required
+              v-model="form.barangay"
+              :disabled="!form.city || loadingBarangays"
+            >
+              <option value="" disabled>
+                {{ !form.city ? 'Select City/Municipality first' : loadingBarangays ? 'Loading barangays...' : 'Select Barangay' }}
+              </option>
+              <option v-for="barangay in barangays" :key="barangay.psgc_code" :value="barangay.psgc_code">
+                {{ barangay.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-control mb-4">
+            <label class="label">
+              <span class="label-text text-sm font-medium text-gray-700">Street Address (Optional)</span>
+            </label>
+            <input
+              class="input w-full bg-gray-100"
+              type="text"
+              placeholder="House/Building Number, Street Name"
+              v-model="form.streetAddress"
+            />
+          </div>
+        </template>
+
+        <!-- Fallback: Manual address input if API fails -->
+        <div v-else class="form-control mb-4">
+          <label class="label">
+            <span class="label-text text-sm font-medium text-gray-700">Full Address*</span>
+          </label>
           <input
             class="input w-full bg-gray-100"
             type="text"
             required
-            placeholder="Address*"
+            placeholder="Enter your complete address"
             v-model="form.address"
           />
+          <p class="text-xs text-gray-500 mt-1">
+            Location API is unavailable. Please enter your full address manually.
+          </p>
         </div>
 
         <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text text-sm font-medium text-gray-700">Email*</span>
+          </label>
           <input
             class="input validator w-full bg-gray-100"
             type="email"
             required
-            placeholder="Email*"
+            placeholder="Enter your email address"
             v-model="form.emailAddress"
           />
           <p class="validator-hint hidden">Invalid Email</p>
         </div>
 
         <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text text-sm font-medium text-gray-700">Phone Number</span>
+          </label>
           <input
             type="tel"
             class="input validator tabular-nums w-full bg-gray-100"
-            placeholder="Phone Number"
+            placeholder="Enter 11-digit phone number"
             minlength="11"
             maxlength="11"
             pattern="[0-9]*"
@@ -97,11 +211,14 @@
         </div>
 
         <div class="form-control mb-4 relative">
+          <label class="label">
+            <span class="label-text text-sm font-medium text-gray-700">Password*</span>
+          </label>
           <input
             :type="showPassword ? 'text' : 'password'"
             class="input validator w-full pr-10 bg-gray-100"
             required
-            placeholder="Password*"
+            placeholder="Enter your password"
             v-model="form.password"
             pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
             title="Must contain at least 8 characters, including a number, a lowercase and an uppercase letter"
@@ -202,13 +319,16 @@
 
         <!-- Confirm Password -->
         <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text text-sm font-medium text-gray-700">Confirm Password*</span>
+          </label>
           <!-- Input + toggle wrapper -->
           <div class="relative">
             <input
               :type="showConfirm ? 'text' : 'password'"
               class="input w-full pr-10 focus:outline-none focus:border-transparent bg-gray-100"
               required
-              placeholder="Confirm Password*"
+              placeholder="Re-enter your password"
               minlength="8"
               v-model="form.confirmPassword"
             />
@@ -503,13 +623,250 @@ const form = ref({
   firstName: "",
   middleName: "",
   lastName: "",
-  address: "",
+  region: "",
+  province: "",
+  city: "",
+  barangay: "",
+  streetAddress: "",
+  address: "", // Will be constructed from the above fields
   emailAddress: "",
   phoneNumber: "",
   password: "",
   confirmPassword: "",
   message: "password does not match",
 });
+
+// Philippines Location API data
+const regions = ref([]);
+const provinces = ref([]);
+const cities = ref([]);
+const barangays = ref([]);
+const loadingRegions = ref(false);
+const loadingProvinces = ref(false);
+const loadingCities = ref(false);
+const loadingBarangays = ref(false);
+const apiFailed = ref(false);
+
+// Philippines Location API - Using multiple reliable sources
+const PH_LOCATION_API_BASE = "https://raw.githubusercontent.com/iamkevinluke/philippines-regions-provinces-cities-municipalities-barangays/master";
+
+// Fetch regions on mount
+async function fetchRegions() {
+  loadingRegions.value = true;
+  try {
+    // Try primary source: iamkevinluke's repository
+    const response = await axios.get(`${PH_LOCATION_API_BASE}/regions.json`);
+    regions.value = (response.data || []).map(region => ({
+      psgc_code: region.code || region.psgc_code || region.id || region.region_code,
+      name: region.name || region.region_name || region.regionName
+    }));
+  } catch (error) {
+    console.error("Error fetching regions:", error);
+    // Fallback 1: Try alternative GitHub repository
+    try {
+      const fallbackResponse = await axios.get("https://raw.githubusercontent.com/simonbengtsson/jsondata/master/philippines/regions.json");
+      regions.value = (fallbackResponse.data || []).map(region => ({
+        psgc_code: region.code || region.id,
+        name: region.name
+      }));
+    } catch (fallbackError1) {
+      console.error("Error fetching regions from fallback 1:", fallbackError1);
+      // Fallback 2: Try PSGC API
+      try {
+        const fallbackResponse2 = await axios.get("https://psgc.gitlab.io/api/regions.json");
+        regions.value = (fallbackResponse2.data || []).map(region => ({
+          psgc_code: region.code || region.psgc_code,
+          name: region.name
+        }));
+      } catch (fallbackError2) {
+        console.error("Error fetching regions from all sources:", fallbackError2);
+        // Last resort: Use a minimal hardcoded list of major regions
+        regions.value = [
+          { psgc_code: "010000000", name: "Ilocos Region (Region I)" },
+          { psgc_code: "020000000", name: "Cagayan Valley (Region II)" },
+          { psgc_code: "030000000", name: "Central Luzon (Region III)" },
+          { psgc_code: "040000000", name: "CALABARZON (Region IV-A)" },
+          { psgc_code: "050000000", name: "MIMAROPA (Region IV-B)" },
+          { psgc_code: "060000000", name: "Bicol Region (Region V)" },
+          { psgc_code: "070000000", name: "Western Visayas (Region VI)" },
+          { psgc_code: "080000000", name: "Central Visayas (Region VII)" },
+          { psgc_code: "090000000", name: "Eastern Visayas (Region VIII)" },
+          { psgc_code: "100000000", name: "Zamboanga Peninsula (Region IX)" },
+          { psgc_code: "110000000", name: "Northern Mindanao (Region X)" },
+          { psgc_code: "120000000", name: "Davao Region (Region XI)" },
+          { psgc_code: "130000000", name: "SOCCSKSARGEN (Region XII)" },
+          { psgc_code: "140000000", name: "Caraga (Region XIII)" },
+          { psgc_code: "150000000", name: "Bangsamoro (BARMM)" },
+          { psgc_code: "160000000", name: "Cordillera Administrative Region (CAR)" },
+          { psgc_code: "170000000", name: "National Capital Region (NCR)" }
+        ];
+        // If even hardcoded list fails to load, show manual input
+        if (regions.value.length === 0) {
+          apiFailed.value = true;
+        }
+      }
+    }
+  } finally {
+    loadingRegions.value = false;
+  }
+}
+
+// Fetch provinces based on selected region
+async function onRegionChange() {
+  if (!form.value.region) return;
+  
+  form.value.province = "";
+  form.value.city = "";
+  form.value.barangay = "";
+  provinces.value = [];
+  cities.value = [];
+  barangays.value = [];
+  
+  loadingProvinces.value = true;
+  try {
+    const response = await axios.get(`${PH_LOCATION_API_BASE}/provinces.json`);
+    const allProvinces = response.data || [];
+    provinces.value = allProvinces
+      .filter(p => {
+        const regionCode = p.region_code || p.regionCode || p.region?.code || p.region?.psgc_code || p.region_id;
+        return regionCode === form.value.region || regionCode?.toString() === form.value.region?.toString();
+      })
+      .map(province => ({
+        psgc_code: province.code || province.psgc_code || province.province_code || province.id,
+        name: province.name || province.province_name,
+        region_code: province.region_code || province.regionCode || province.region_id
+      }));
+  } catch (error) {
+    console.error("Error fetching provinces:", error);
+    // Fallback: Try PSGC API
+    try {
+      const fallbackResponse = await axios.get(`https://psgc.gitlab.io/api/regions/${form.value.region}/provinces.json`);
+      provinces.value = (fallbackResponse.data || []).map(province => ({
+        psgc_code: province.code || province.psgc_code,
+        name: province.name,
+        region_code: province.region_code
+      }));
+    } catch (fallbackError) {
+      console.error("Error fetching provinces from fallback:", fallbackError);
+      provinces.value = [];
+    }
+  } finally {
+    loadingProvinces.value = false;
+  }
+}
+
+// Fetch cities/municipalities based on selected province
+async function onProvinceChange() {
+  if (!form.value.province) return;
+  
+  form.value.city = "";
+  form.value.barangay = "";
+  cities.value = [];
+  barangays.value = [];
+  
+  loadingCities.value = true;
+  try {
+    const response = await axios.get(`${PH_LOCATION_API_BASE}/cities.json`);
+    const allCities = response.data || [];
+    cities.value = allCities
+      .filter(c => {
+        const provinceCode = c.province_code || c.provinceCode || c.province?.code || c.province?.psgc_code || c.province_id;
+        return provinceCode === form.value.province || provinceCode?.toString() === form.value.province?.toString();
+      })
+      .map(city => ({
+        psgc_code: city.code || city.psgc_code || city.city_code || city.id,
+        name: city.name || city.city_name,
+        province_code: city.province_code || city.provinceCode || city.province_id
+      }));
+  } catch (error) {
+    console.error("Error fetching cities:", error);
+    // Fallback: Try PSGC API
+    try {
+      const fallbackResponse = await axios.get(`https://psgc.gitlab.io/api/provinces/${form.value.province}/cities-municipalities.json`);
+      cities.value = (fallbackResponse.data || []).map(city => ({
+        psgc_code: city.code || city.psgc_code,
+        name: city.name,
+        province_code: city.province_code
+      }));
+    } catch (fallbackError) {
+      console.error("Error fetching cities from fallback:", fallbackError);
+      cities.value = [];
+    }
+  } finally {
+    loadingCities.value = false;
+  }
+}
+
+// Fetch barangays based on selected city
+async function onCityChange() {
+  if (!form.value.city) return;
+  
+  form.value.barangay = "";
+  barangays.value = [];
+  
+  loadingBarangays.value = true;
+  try {
+    const response = await axios.get(`${PH_LOCATION_API_BASE}/barangays.json`);
+    const allBarangays = response.data || [];
+    barangays.value = allBarangays
+      .filter(b => {
+        const cityCode = b.city_code || b.cityCode || b.city?.code || b.city?.psgc_code || b.municipality_code || b.municipalityCode || b.city_municipality_code;
+        return cityCode === form.value.city || cityCode?.toString() === form.value.city?.toString();
+      })
+      .map(barangay => ({
+        psgc_code: barangay.code || barangay.psgc_code || barangay.barangay_code || barangay.id,
+        name: barangay.name || barangay.barangay_name,
+        city_code: barangay.city_code || barangay.cityCode || barangay.municipality_code || barangay.city_municipality_code
+      }));
+  } catch (error) {
+    console.error("Error fetching barangays:", error);
+    // Fallback: Try PSGC API
+    try {
+      const fallbackResponse = await axios.get(`https://psgc.gitlab.io/api/cities-municipalities/${form.value.city}/barangays.json`);
+      barangays.value = (fallbackResponse.data || []).map(barangay => ({
+        psgc_code: barangay.code || barangay.psgc_code,
+        name: barangay.name,
+        city_code: barangay.city_municipality_code
+      }));
+    } catch (fallbackError) {
+      console.error("Error fetching barangays from fallback:", fallbackError);
+      barangays.value = [];
+    }
+  } finally {
+    loadingBarangays.value = false;
+  }
+}
+
+// Construct full address string from selected fields
+function constructAddress() {
+  const parts = [];
+  
+  if (form.value.streetAddress) {
+    parts.push(form.value.streetAddress);
+  }
+  
+  const selectedBarangay = barangays.value.find(b => b.psgc_code === form.value.barangay);
+  if (selectedBarangay) {
+    parts.push(selectedBarangay.name);
+  }
+  
+  const selectedCity = cities.value.find(c => c.psgc_code === form.value.city);
+  if (selectedCity) {
+    parts.push(selectedCity.name);
+  }
+  
+  const selectedProvince = provinces.value.find(p => p.psgc_code === form.value.province);
+  if (selectedProvince) {
+    parts.push(selectedProvince.name);
+  }
+  
+  const selectedRegion = regions.value.find(r => r.psgc_code === form.value.region);
+  if (selectedRegion) {
+    parts.push(selectedRegion.name);
+  }
+  
+  return parts.join(", ");
+}
 
 const termsAccepted = ref(false);
 const showTermsModal = ref(false); // terms modal
@@ -527,6 +884,9 @@ onMounted(async () => {
   } catch (error) {
     console.error("Error fetching careers:", error);
   }
+  
+  // Fetch regions on component mount
+  await fetchRegions();
 });
 
 const handleSubmit = async () => {
@@ -538,6 +898,22 @@ const handleSubmit = async () => {
   if (form.value.password !== form.value.confirmPassword) {
     alert("Passwords do not match.");
     return;
+  }
+
+  // Validate address fields
+  if (!apiFailed.value) {
+    if (!form.value.region || !form.value.province || !form.value.city || !form.value.barangay) {
+      alert("Please complete all address fields (Region, Province, City/Municipality, and Barangay).");
+      return;
+    }
+    // Construct full address from selected fields
+    form.value.address = constructAddress();
+  } else {
+    // If API failed, use manual address input
+    if (!form.value.address || form.value.address.trim() === "") {
+      alert("Please enter your complete address.");
+      return;
+    }
   }
 
   try {
