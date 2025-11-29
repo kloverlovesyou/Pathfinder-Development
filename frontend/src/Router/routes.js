@@ -25,6 +25,7 @@ import AdminUpdateDelete from "@/components/Admin/AdminUpdateDelete.vue";
 import AdminLayout from "@/components/Layout/AdminLayout.vue";
 import AdminApplicantsPage from "@/components/Admin/AdminApplicantsPage.vue";
 import AdminRejected from "@/components/Admin/AdminRejected.vue";
+import AdminLogin from "@/components/Admin/AdminLogin.vue";
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 
@@ -151,23 +152,27 @@ const router = createRouter({
       meta: { requiresAuth: false },
       children: [
         {
-          path: "",          // 👈 THIS MAKES /admin LOAD ADMINHOMEPAGE
+          path: "", // /admin
+          name: "AdminLogin",
+          component: AdminLogin, // <-- your admin login component
+        },
+        {
+          path: "dashboard",
           name: "AdminHomePage",
           component: AdminHomePage,
+          meta: { requiresAuth: true, role: "admin" },
         },
-
         {
           path: "adminupdatedelete",
           name: "AdminUpdateDelete",
           component: AdminUpdateDelete,
-          meta: { requiresAuth: false },
+          meta: { requiresAuth: true, role: "admin" },
         },
-
         {
           path: "applicantslist",
           name: "AdminApplicantsPage",
           component: AdminApplicantsPage,
-          meta: { requiresAuth: false },
+          meta: { requiresAuth: true, role: "admin" },
         },
       ],
     },
@@ -194,15 +199,16 @@ router.beforeEach((to, from, next) => {
 
   // 3️⃣ Prevent logged-in users from accessing login/register routes
   if (user && to.path.startsWith("/auth")) {
-    // Optional: redirect based on role
     if (user.role === "organization") {
       return next({ name: "OrgHome" });
+    } else if (user.role === "admin") {
+      return next({ name: "AdminHomepage" });
     } else {
       return next({ name: "Homepage" });
     }
   }
 
-  // 4️⃣ Otherwise, continue
+  // 4️⃣ Allow navigation
   next();
 });
 

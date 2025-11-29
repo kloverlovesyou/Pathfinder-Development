@@ -25,10 +25,13 @@ use App\Http\Controllers\EventController;
 use App\Http\Controllers\InterviewController;
 use App\Http\Controllers\AdminSearchController;
 use App\Http\Controllers\DashboardController;
-
+use App\Http\Controllers\AdminController;
 // ----------------------
 // Public routes (no auth)
 // ----------------------
+
+Route::post('/admin/login', [AdminController::class, 'login']);
+
 Route::get('/dashboard', [DashboardController::class, 'getChartData']);
 
 // Trainings
@@ -125,6 +128,8 @@ Route::middleware('auth.custom')->group(function () {
         ->withoutMiddleware('auth.custom');
     Route::get('/careers/counts-partial', [CareerController::class, 'countsPartial'])
         ->withoutMiddleware('auth.custom');
+
+     Route::post('/admin/logout', [AdminController::class, 'logout']);
 });
 
 // ----------------------
