@@ -5,6 +5,7 @@ import { useRoute } from "vue-router";
 
 const route = useRoute();
 const toasts = ref([]);
+const isLoggedIn = ref(false);
 
 async function fetchApplicants() {
   console.log("📡 Fetching applicants...");
@@ -30,6 +31,29 @@ async function fetchApplicants() {
     console.error("❌ Error fetching applicants:", err);
   }
 }
+
+async function logout() {
+  try {
+    // Call backend logout API (optional if you want to revoke token server-side)
+    await axios.post(import.meta.env.VITE_API_BASE_URL + '/admin/logout', {}, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('admin_token')}`, // adjust if using a different key
+      },
+    });
+
+    // Clear local token/session
+    localStorage.removeItem('admin_token');
+
+    // Redirect to login page
+    $router.push({ name: 'AdminLoginPage' });
+
+    showToast('Logged out successfully', 'success');
+  } catch (err) {
+    console.error('Logout failed:', err);
+    showToast('Failed to logout', 'error');
+  }
+}
+
 
 // Open modal and load applicants
 const openApplicantModal = async () => {
@@ -305,10 +329,15 @@ async function deleteOrganization(id) {
     console.error("Error deleting organization:", err);
   }
 }
+
+onMounted(() => {
+  const token = localStorage.getItem("token"); // match the key you set in login
+  isLoggedIn.value = !!token; // true if token exists
+});
 </script>
 
 <template>
-  <div class="flex-grow flex items-center justify-between p-4 font-poppins">
+  <div v-if="isLoggedIn" class="flex-grow flex items-center justify-between p-4 font-poppins">
     <div class="flex items-center justify-between p-4 w-full">
       <!-- LEFT: Logo -->
       <button
