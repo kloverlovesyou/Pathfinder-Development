@@ -3,8 +3,8 @@ import { ref, onMounted, onBeforeUnmount, watch, reactive } from "vue";
 import { isLoggedIn, currentUser } from "@/stores/store";
 import { authState, logout } from "@/stores/authState";
 import axios from "axios";
-import { useRoute } from "vue-router";
-const route = useRoute();
+import { useRouter } from "vue-router";
+const router = useRouter();
 const toasts = ref([]);
 
 
