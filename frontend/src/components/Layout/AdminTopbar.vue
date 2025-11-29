@@ -112,12 +112,12 @@ async function handleResultClick(item) {
     selectedOrg.value = item;
   } else if (item.type === "applicant") {
   const applicant = {
-    id: item.id,
-    name: item.name,
-    email: item.email,
-    location: item.location || "N/A",
-    phone: item.phoneNumber || "N/A",
-  };
+  id: item.id,
+  name: item.name,
+  email: item.email,
+  location: item.location || "N/A",
+  phone: item.phone || "N/A",  // ✅ use phone, not phoneNumber
+};
 
   openApplicantModal(applicant); // ✅ Use the centralized function
 }
@@ -145,16 +145,28 @@ async function performSearch() {
 
     const data = await res.json();
 
-    // Normalize API keys to lowercase for template
-    results.value = data.map((item) => ({
-    id: item.ID || item.id || item.organizationID,
-    name: item.Name || item.name,
-    location: item.Location || item.location || "N/A",
-    email: item.EmailAddress || item.emailAddress || item.email || "N/A",
-    type: (item.Type || item.type || "applicant").toLowerCase(),
-    websiteURL: item.WebsiteURL || item.websiteURL || item.website || "N/A",
-    phone: item.PhoneNumber || item.phoneNumber || item.phone || "N/A",
-  }));
+    results.value = data.map((item) => {
+    if ((item.Type || item.type || "applicant").toLowerCase() === "organization") {
+      return {
+        id: item.ID || item.id || item.organizationID,
+        name: item.Name || item.name,
+        location: item.Location || item.location || "N/A",
+        emailAddress: item.EmailAddress || item.emailAddress || item.email || "N/A", // map to emailAddress
+        type: "organization",
+        websiteURL: item.WebsiteURL || item.websiteURL || item.website || "N/A",
+        phone: item.PhoneNumber || item.phoneNumber || item.phone || "N/A",
+      };
+    } else {
+      return {
+        id: item.ID || item.id,
+        name: item.Name || item.name,
+        location: item.Location || item.location || "N/A",
+        email: item.EmailAddress || item.emailAddress || item.email || "N/A",
+        type: "applicant",
+        phone: item.PhoneNumber || item.phoneNumber || item.phone || "N/A",
+      };
+    }
+  });
   } catch (err) {
     console.error("Search failed:", err);
   }
