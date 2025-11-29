@@ -2589,6 +2589,18 @@ export default {
   },
 
   computed: {
+    currentOrganizationId() {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          return parsedUser?.organizationID ?? parsedUser?.organization?.organizationID ?? null;
+        } catch (error) {
+          console.error("Error parsing user from localStorage:", error);
+        }
+      }
+      return null;
+    },
     organizationStatusLabel() {
       return this.isOrganizationVerified ? "Verified" : "Unverified";
     },
@@ -2625,7 +2637,15 @@ export default {
     },
 
     sortedOngoingTrainings() {
+      const orgId = this.currentOrganizationId;
       return this.upcomingtrainings
+        .filter(t => {
+          // Filter by organization ID if available
+          if (orgId && t.organization_id !== orgId && t.organizationID !== orgId) {
+            return false;
+          }
+          return true;
+        })
         .filter(t => this.isTrainingOngoing(t))
         .sort((a, b) => {
           // Sort by earliest active schedule
@@ -2640,8 +2660,16 @@ export default {
     },
 
     sortedUpcomingTrainings() {
+      const orgId = this.currentOrganizationId;
       // Exclude ongoing trainings - only show trainings where all schedules are in the future
       return this.upcomingtrainings
+        .filter(t => {
+          // Filter by organization ID if available
+          if (orgId && t.organization_id !== orgId && t.organizationID !== orgId) {
+            return false;
+          }
+          return true;
+        })
         .filter(t => !this.isTrainingOngoing(t))
         .filter(t => {
           const now = new Date();
@@ -2681,29 +2709,56 @@ export default {
 
     sortedCompletedTrainings() {
       const now = new Date();
+      const orgId = this.currentOrganizationId;
       // Exclude ongoing trainings - only show trainings where all schedules have ended
       return this.upcomingtrainings
+        .filter(t => {
+          // Filter by organization ID if available
+          if (orgId && t.organization_id !== orgId && t.organizationID !== orgId) {
+            return false;
+          }
+          return true;
+        })
         .filter(t => !this.isTrainingOngoing(t))
         .filter(t => {
           // For multiple schedules, check if latest schedule has ended
           if (t.schedules && Array.isArray(t.schedules) && t.schedules.length > 0) {
             const latestSchedule = t.schedules.reduce((latest, schedule) => {
-              const endTime = schedule.end_time || schedule.endTime;
+              const endTime = schedule.end_time || schedule.endTime || schedule.endTimeDate;
               if (!endTime) return latest;
               const endTimeDate = this.parseLocalDateTime(endTime);
               if (!endTimeDate) return latest;
-              if (!latest || endTimeDate > this.parseLocalDateTime(latest.end_time || latest.endTime)) {
+              const latestEndTime = latest ? (latest.end_time || latest.endTime || latest.endTimeDate) : null;
+              const latestEndTimeDate = latestEndTime ? this.parseLocalDateTime(latestEndTime) : null;
+              if (!latest || !latestEndTimeDate || endTimeDate > latestEndTimeDate) {
                 return schedule;
               }
               return latest;
             }, null);
             if (!latestSchedule) return false;
-            const endTimeDate = this.parseLocalDateTime(latestSchedule.end_time || latestSchedule.endTime);
-            return endTimeDate && endTimeDate < now;
+            const endTime = latestSchedule.end_time || latestSchedule.endTime || latestSchedule.endTimeDate;
+            if (!endTime) return false;
+            const endTimeDate = this.parseLocalDateTime(endTime);
+            if (!endTimeDate) return false;
+            // Add a small buffer (1 minute) to account for timing issues
+            const bufferTime = new Date(now.getTime() - 60 * 1000);
+            return endTimeDate < bufferTime;
           }
           // Single schedule format
-          const endTime = t.end_time || t.endTime;
-          if (!endTime) return false;
+          const endTime = t.end_time || t.endTime || t.endTimeDate;
+          if (!endTime) {
+            // If no end_time, check if schedule exists and use it as fallback
+            const scheduleTime = t.schedule || t.Schedule;
+            if (scheduleTime) {
+              const scheduleDate = this.parseLocalDateTime(scheduleTime);
+              // If schedule is in the past (more than 1 day ago), consider it completed
+              if (scheduleDate) {
+                const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                return scheduleDate < oneDayAgo;
+              }
+            }
+            return false;
+          }
           const endTimeDate = this.parseLocalDateTime(endTime);
           return endTimeDate && endTimeDate < now;
         })
