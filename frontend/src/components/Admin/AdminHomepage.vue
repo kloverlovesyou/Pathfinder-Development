@@ -313,7 +313,7 @@ onMounted(() => {
     <!-- Modal -->
     <div
       v-if="selectedOrg"
-      class="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-20"
+      class="fixed inset-0 flex items-center justify-center z-50"
     >
       <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
         <button
@@ -339,7 +339,6 @@ onMounted(() => {
             </a>
           </p>
           <p><strong>Email:</strong> {{ selectedOrg.emailAddress }}</p>
-          <p><strong>Verified:</strong> {{ formatDate(selectedOrg.statusDate) }}</p>
         </div>
 
         <div class="mt-6 flex justify-end space-x-2">

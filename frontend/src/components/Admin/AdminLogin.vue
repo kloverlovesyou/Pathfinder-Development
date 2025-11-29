@@ -121,7 +121,12 @@ const handleAdminLogin = async () => {
     // Update reactive store
     login({ ...adminData, role: "admin" }, token);
 
-    router.push("/admin/dashboard"); // redirect to admin dashboard
+    // Clear textboxes
+    email.value = "";
+    password.value = "";
+
+    // Redirect to admin dashboard
+    router.push("/admin/dashboard");
   } catch (err) {
     console.error("Admin login error:", err);
 
@@ -132,6 +137,7 @@ const handleAdminLogin = async () => {
     showToast("Login failed. Try again.");
   }
 };
+
 </script>
 
 <style>
