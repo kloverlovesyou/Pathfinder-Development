@@ -35,7 +35,7 @@ async function fetchApplicants() {
 
 function handleLogout() {
   logout(); // clears user and token, sets isLoggedIn to false
-  router.push({ name: "AdminLogin" }); // redirect to login page
+  router.push("/admin"); // redirect to login page
 }
 
 // Open modal and load applicants
