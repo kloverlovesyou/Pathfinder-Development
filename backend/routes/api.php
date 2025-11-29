@@ -204,7 +204,7 @@ Route::middleware('auth.custom')->group(function () {
         ->withoutMiddleware('auth.custom');
 
      Route::post('/admin/logout', [AdminController::class, 'logout']);
-     Route::get('admin/details'); [AdminController::class, 'getAdminDetails'];
+     Route::get('admin/details'); [AdminController::class, 'AdminInfo'];
 });
 
 // ----------------------
