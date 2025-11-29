@@ -114,7 +114,7 @@ const handleAdminLogin = async () => {
     const token = res.data.token;
 
     // Save admin login
-    localStorage.setItem("token", token);
+    localStorage.setItem("admin_token", token);
     localStorage.setItem(
       "user",
       JSON.stringify({ ...adminData, role: "admin" })

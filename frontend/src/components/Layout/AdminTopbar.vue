@@ -331,7 +331,7 @@ async function deleteOrganization(id) {
 }
 
 onMounted(() => {
-  const token = localStorage.getItem("token"); // match the key you set in login
+  const token = localStorage.getItem("admin_token"); // match the key you set in login
   isLoggedIn.value = !!token; // true if token exists
 });
 </script>
