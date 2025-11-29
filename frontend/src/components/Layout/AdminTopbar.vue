@@ -12,28 +12,26 @@ const toasts = ref([]);
 
 
 async function fetchApplicants() {
-  console.log("📡 Fetching applicants...");
   try {
-    const res = await fetch(import.meta.env.VITE_API_BASE_URL + "/admin/applicants");
+    console.log("📡 Fetching applicants...");
+    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/applicants`);
     if (!res.ok) throw new Error("Failed to fetch applicants");
 
     const data = await res.json();
-
-    // Ensure we always have an array
     const applicants = Array.isArray(data) ? data : [data];
 
-    // ✅ Use .value for refs
     allApplicants.value = applicants.map((a) => ({
       id: a.applicantID || a.id,
-      name: a.firstName && a.lastName ? `${a.firstName} ${a.lastName}` : a.name,
-      email: a.emailAddress || a.email,
+      name: a.firstName && a.lastName ? `${a.firstName} ${a.lastName}` : a.name || "N/A",
+      email: a.emailAddress || a.email || "N/A",
       location: a.address || a.location || "N/A",
-      phone: a.phoneNumber || a.phone || "N/A",
+      phone: a.phoneNumber || a.phonenumber || a.phone || "N/A",
     }));
 
     console.log("✅ Applicants loaded:", allApplicants.value);
   } catch (err) {
     console.error("❌ Error fetching applicants:", err);
+    showToast("Failed to load applicants", "error");
   }
 }
 
@@ -43,21 +41,14 @@ function handleLogout() {
 }
 
 // Open modal and load applicants
-const openApplicantModal = async (applicant = null) => {
-  showApplicantModal.value = true;
-
-  if (!applicant) {
-    // No applicant provided → fetch all
-    await fetchApplicants();
-  } else {
-    // Single applicant provided → just show that one
+// Open applicant modal (can pass specific applicant or open all)
+function openApplicantModal(applicant = null) {
+  if (applicant) {
     allApplicants.value = [applicant];
     selectedApplicant.value = applicant;
   }
-
-  console.log("🟢 openApplicantModal triggered");
-};
-
+  showApplicantModal.value = true;
+}
 
 
 // Delete applicant
@@ -124,38 +115,26 @@ async function handleResultClick(item) {
 }
 
 async function performSearch() {
-  console.log("Searching for:", searchInput.value);
-  if (!searchInput.value) {
+  const query = searchInput.value.trim();
+  if (!query) {
     results.value = [];
     return;
   }
 
   try {
-    const res = await fetch(
-      import.meta.env.VITE_API_BASE_URL + `/admin/search?query=${encodeURIComponent(
-        searchInput.value
-      )}`
-    );
-    const contentType = res.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      const text = await res.text();
-      console.error("❌ Expected JSON, got:", text);
-      return;
-    }
-
+    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/search?query=${encodeURIComponent(query)}`);
     const data = await res.json();
 
-    // Normalize API keys to lowercase for template
     results.value = data.map((item) => ({
-    id: item.ID || item.id || item.organizationID,
-    name: item.Name || item.name,
-    location: item.Location || item.location || "N/A",
-    email: item.EmailAddress || item.emailAddress || item.email || "N/A",
-    type: (item.Type || item.type || "applicant").toLowerCase(),
-    websiteURL: item.WebsiteURL || item.websiteURL || item.website || "N/A",
-  }));
+      id: item.ID || item.id || item.applicantID || item.organizationID,
+      name: item.firstName && item.lastName ? `${item.firstName} ${item.lastName}` : item.name || item.Name || "N/A",
+      email: item.emailAddress || item.email || "N/A",
+      location: item.address || item.location || "N/A",
+      type: (item.Type || item.type || "applicant").toLowerCase(),
+    }));
   } catch (err) {
     console.error("Search failed:", err);
+    showToast("Search failed", "error");
   }
 }
 
