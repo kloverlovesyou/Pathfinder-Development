@@ -4,17 +4,17 @@ FROM php:8.2-apache
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     libfreetype6-dev \
-    libjpeg-dev \
+    libjpeg62-turbo-dev \
     libpng-dev \
     libwebp-dev \
     libxpm-dev \
     libonig-dev \
     zip unzip git curl \
     && docker-php-ext-configure gd \
-        --with-freetype=/usr/include/ \
-        --with-jpeg=/usr/include/ \
-        --with-webp=/usr/include/ \
-        --with-xpm=/usr/include/ \
+        --with-freetype-dir=/usr/include/freetype2 \
+        --with-jpeg-dir=/usr/include \
+        --with-webp-dir=/usr/include \
+        --with-xpm-dir=/usr/include \
     && docker-php-ext-install gd pdo_mysql pdo_pgsql bcmath mbstring zip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
