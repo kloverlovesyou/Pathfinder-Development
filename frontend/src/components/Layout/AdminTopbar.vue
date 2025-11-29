@@ -90,7 +90,6 @@ function clearSearch() {
   showDropdown.value = false;
 }
 
-// 🖱 Handle click on search result
 async function handleResultClick(item) {
   showDropdown.value = false;
   searchInput.value = "";
@@ -99,23 +98,17 @@ async function handleResultClick(item) {
     openOrganizationModal(item);
     selectedOrg.value = item;
   } else if (item.type === "applicant") {
-    selectedApplicant.value = item;
+    // Only show the clicked applicant
+    const applicant = {
+      id: item.id,
+      name: item.name,
+      email: item.email,
+      location: item.location || "N/A",
+      phone: item.phone || "N/A"
+    };
 
-    // Fetch all applicants
-    const res = await fetch(import.meta.env.VITE_API_BASE_URL + "/admin/applicants");
-    const data = await res.json();
-
-    allApplicants.value = data.map((a) => ({
-      id: a.applicantID || a.id,
-      name: a.firstName && a.lastName ? `${a.firstName} ${a.lastName}` : a.name,
-      email: a.emailAddress || a.email,
-      location: a.address || a.location || "N/A",
-      phone: a.phoneNumber || a.phone || "N/A",
-    }));
-
-    // Optional: move searched applicant to top
-    allApplicants.value.sort((a) => (a.id === item.id ? -1 : 0));
-
+    allApplicants.value = [applicant]; // <-- only the selected applicant
+    selectedApplicant.value = applicant;
     showApplicantModal.value = true;
   }
 }
@@ -564,7 +557,7 @@ onMounted(() => {
           </button>
 
           <h2 class="text-2xl font-semibold mb-6 text-gray-800">
-            All Applicants
+            Applicant
           </h2>
 
           <!-- Applicants Table -->
@@ -670,7 +663,7 @@ onMounted(() => {
           </button>
 
           <h2 class="text-2xl font-semibold mb-6 text-gray-800">
-            All Organizations
+            Organization
           </h2>
 
           <!-- Organizations Table -->
