@@ -6,7 +6,8 @@
     <div class="flex flex-col flex-1">
       <!-- Header -->
       <header class="h-16 text-dark-slate flex items-center px-4">
-        <AdminTopBar />
+        <!-- Only show topbar if admin is logged in -->
+        <AdminTopBar v-if="isLoggedIn" />
       </header>
 
       <!-- Page Content -->
@@ -22,9 +23,12 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
-
+import { computed } from "vue";
 import AdminTopBar from "@/components/Layout/AdminTopBar.vue";
 
-const isExpanded = ref(true);
+// Reactive check for admin login
+const isLoggedIn = computed(() => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  return user && user.role === "admin";
+});
 </script>
