@@ -71,6 +71,7 @@ class Organization extends Model
 		'adminID',
 		'email_verification_token',
 		'email_verified_at',
+		'statusDate',
 	];
 
 	public function admin()

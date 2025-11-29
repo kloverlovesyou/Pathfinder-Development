@@ -187,32 +187,40 @@ class OrganizationController extends Controller
     public function approve($id)
     {
         $org = Organization::findOrFail($id);
+
         $org->status = 'approved';
+        $org->statusDate = now(); // <-- ADD THIS LINE
+
         $org->save();
 
-        return response()->json(['message' => 'Organization approved']);
+        return response()->json([
+            'message' => 'Organization approved',
+            'statusDate' => $org->statusDate
+        ]);
     }
 
     // ----------------------
     // Reject organization
     // ----------------------
     public function reject($id, Request $request)
-{
-    $org = Organization::findOrFail($id);
+    {
+        $org = Organization::findOrFail($id);
 
-    $validated = $request->validate([
-        'reason' => 'required|string|max:1000',
-    ]);
+        $validated = $request->validate([
+            'reason' => 'required|string|max:1000',
+        ]);
 
-    $org->status = 'rejected';
-    $org->rejectionReason = $validated['reason'];
-    $org->save();
+        $org->status = 'rejected';
+        $org->rejectionReason = $validated['reason'];
+        $org->statusDate = now(); // <-- add this line
+        $org->save();
 
-    return response()->json([
-        'message' => 'Organization rejected successfully',
-        'rejectionReason' => $org->rejectionReason
-    ]);
-}
+        return response()->json([
+            'message' => 'Organization rejected successfully',
+            'rejectionReason' => $org->rejectionReason,
+            'statusDate' => $org->statusDate // <-- optionally return it
+        ]);
+    }
 
     // ----------------------
     // List pending organizations

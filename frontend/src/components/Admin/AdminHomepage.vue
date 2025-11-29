@@ -234,6 +234,7 @@ onMounted(() => {
               <div>
                 <h3 class="font-semibold">{{ org.name }}</h3>
                 <p class="text-sm text-gray-600">{{ org.emailAddress }}</p>
+                <p class="text-sm text-gray-600">{{ org.statusDate }}</p>
               </div>
 
               <span class="px-3 py-1 bg-green-600 text-white rounded-lg text-sm">
