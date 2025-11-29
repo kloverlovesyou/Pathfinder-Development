@@ -29,7 +29,18 @@
         <!-- Profile Section (only when sidebar is open) -->
         <transition name="fade">
           <div v-if="isSidebarOpen" class="profile-section">
-            <h3 class="org-name">{{ organizationName }}</h3>
+            <h3 class="org-name">
+              {{ organizationName }}
+              <span v-if="organizationStatus !== null" class="org-status-inline" :class="organizationStatusClass">
+                <svg v-if="isOrganizationVerified" class="org-status-icon-inline" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <svg v-else class="org-status-icon-inline" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span>{{ organizationStatusLabel }}</span>
+              </span>
+            </h3>
             <div class="profile-actions">
               <div class="action" @click="navigateTo({ name: 'OrgUpdateProfile' })">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -140,7 +151,7 @@
             <span class="count-badge">{{ sortedUpcomingTrainings.length }}</span>
           </h2>
 
-          <button class="plus-btn-text" @click="openTrainingPopup()">+</button>
+          <button class="plus-btn-text" @click="openTrainingPopup()" :disabled="!isOrganizationVerified" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">+</button>
         </div>
 
         <!-- ✅ Grid Layout -->
@@ -160,8 +171,8 @@
               </div>
               <div v-if="openUpcomingMenu === training.trainingID" class="dropdown-menu" @click.stop>
                 <ul>
-                  <li @click="deleteTraining(training.trainingID)">Delete Training</li>
-                  <li @click="updateTraining(training.trainingID)">Update Training</li>
+                  <li @click="deleteTraining(training.trainingID)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Delete Training</li>
+                  <li @click="updateTraining(training.trainingID)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Update Training</li>
                 </ul>
               </div>
             </div>
@@ -175,11 +186,51 @@
         </button>
       </section>
 
-      <!-- ✅ Completed Trainings Section -->
+      <!-- ✅ On-going Trainings Section -->
+      <section class="ongoing">
+        <div class="flex items-center justify-between">
+          <h2 class="section-title flex items-center gap-1">
+            On-going Trainings
+            <span class="count-badge">{{ sortedOngoingTrainings.length }}</span>
+          </h2>
+        </div>
+
+        <!-- ✅ Grid Layout -->
+        <div class="trainings-grid">
+          <div v-for="training in visibleFilteredOngoing" :key="training.trainingID" class="training-card"
+            @click="openTrainingDetails(training)">
+            <div class="training-right" @click="openTrainingDetails(training)">
+              <h3 class="training-title">{{ training.title }}</h3>
+              <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
+            </div>
+
+            <!-- Menu -->
+            <div class="menu">
+              <div class="menu-icon" @click.stop="toggleOngoingMenu(training.trainingID)">
+                ⋮
+              </div>
+              <div v-if="openOngoingMenu === training.trainingID" class="dropdown-menu" @click.stop>
+                <ul>
+                  <li @click="deleteTraining(training.trainingID)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Delete Training</li>
+                  <li @click="updateTraining(training.trainingID)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Update Training</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Show More Button -->
+        <button v-if="sortedOngoingTrainings.length > 4" class="show-more-btn"
+          @click="showAllOngoing = !showAllOngoing">
+          {{ showAllOngoing ? 'Show Less' : 'Show More' }}
+        </button>
+      </section>
+
+      <!-- ✅ Conducted Trainings Section -->
       <section class="completed">
         <div class="flex items-center justify-between">
           <h2 class="section-title flex items-center gap-1">
-            Completed Trainings
+            Conducted Trainings
             <span class="count-badge">{{ sortedCompletedTrainings.length }}</span>
           </h2>
         </div>
@@ -200,7 +251,7 @@
               </div>
               <div v-if="openCompletedMenu === training.trainingID" class="dropdown-menu" @click.stop>
                 <ul>
-                  <li @click="deleteTraining(training.trainingID)">Delete Training</li>
+                  <li @click="deleteTraining(training.trainingID)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Delete Training</li>
                 </ul>
               </div>
             </div>
@@ -219,114 +270,184 @@
         <div class="training-details-modal">
           <button class="modal-close-btn" @click="closeTrainingDetails">✕</button>
 
-          <!-- Training Name -->
-          <h3 class="modal-title">
-            {{ selectedTraining.title }}
-          </h3>
+          <div class="training-details-body">
+            <!-- Training Name + Org Choice Toggle -->
+            <div class="modal-title-row">
+              <h3 class="modal-title">
+                {{ selectedTraining.title }}
+              </h3>
 
-          <!-- Description -->
-          <p class="training-info">
-            <strong>Description:</strong> {{ selectedTraining.description }}
-          </p>
-
-          <!-- Schedule/s Label -->
-          <div class="training-info">
-            <strong>Schedule/s:</strong>
-          </div>
-
-          <!-- Schedules Display (Card Style) -->
-          <div class="schedules-container">
-            <!-- Multiple Schedules -->
-            <div 
-              v-if="selectedTraining.schedules && selectedTraining.schedules.length > 0"
-              class="schedules-grid"
-            >
-              <div 
-                v-for="(schedule, index) in selectedTraining.schedules" 
-                :key="schedule.trainingScheduleID || index"
-                class="schedule-card"
+              <div
+                v-if="selectedTraining && selectedTraining.trainingID"
+                class="org-choice-toggle"
+                @click.stop
               >
+                <label class="org-choice-switch">
+                  <input
+                    type="checkbox"
+                    :checked="Boolean(selectedTraining.isOrganizationChoice)"
+                    :disabled="isOrgChoiceLoading(selectedTraining.trainingID) || !isOrganizationVerified"
+                    @change="handleOrganizationChoiceToggle(selectedTraining, $event.target.checked)"
+                  />
+                  <span class="org-choice-slider"></span>
+                </label>
+                <span class="org-choice-label">Organization Choice</span>
+              </div>
+            </div>
+
+            <!-- Tags -->
+            <div
+              v-if="selectedTraining?.Tags?.length"
+              class="modal-tag-list"
+            >
+              <span
+                v-for="tag in selectedTraining.Tags"
+                :key="tag.TagID || tag.tagID || tag.id"
+                class="modal-tag-chip"
+              >
+                {{ tag.TagName || tag.tagName || getTagName(tag.TagID || tag.tagID || tag.id) }}
+              </span>
+            </div>
+
+            <!-- Description -->
+            <p class="training-info">
+              <strong>Description:</strong> {{ selectedTraining.description }}
+            </p>
+
+            <!-- Schedule/s Label -->
+            <div class="training-info">
+              <strong>Schedule/s:</strong>
+            </div>
+
+            <!-- Schedules Display (Card Style) -->
+            <div class="schedules-container">
+              <!-- Multiple Schedules -->
+              <div 
+                v-if="selectedTraining.schedules && selectedTraining.schedules.length > 0"
+                class="schedules-grid"
+              >
+                <div 
+                  v-for="(schedule, index) in selectedTraining.schedules" 
+                  :key="schedule.trainingScheduleID || index"
+                  class="schedule-card-wrapper"
+                >
+                  <div
+                    class="schedule-card"
+                    :class="{
+                      'schedule-card-clickable': canGenerateQRForSchedule(schedule),
+                      'schedule-card-active-qr': isScheduleQRActive(schedule),
+                      'schedule-card-disabled': !canGenerateQRForSchedule(schedule)
+                    }"
+                    @click="handleScheduleClick(schedule)"
+                  >
+
+                  <!-- Date and Time -->
+                  <div class="schedule-date-time">
+                    <svg class="schedule-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span>{{ formatScheduleFull(schedule.schedule) }} - {{ formatScheduleTime(schedule.end_time) }}</span>
+                  </div>
+
+                  <!-- Mode Badge -->
+                  <div class="schedule-mode-badge" :class="schedule.mode === 'On-Site' ? 'mode-onsite' : 'mode-online'">
+                    <svg class="mode-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>{{ schedule.mode }}</span>
+                  </div>
+
+                  <!-- Location (for On-Site) -->
+                  <div v-if="schedule.mode === 'On-Site' && schedule.location" class="schedule-location">
+                    <svg class="schedule-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>{{ schedule.location }}</span>
+                  </div>
+
+                  <!-- Training Link (for Online) -->
+                  <div v-if="schedule.mode === 'Online' && schedule.trainingLink" class="schedule-link">
+                    <svg class="schedule-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    <a :href="schedule.trainingLink" target="_blank" class="training-link" @click.stop>
+                      {{ schedule.trainingLink }}
+                    </a>
+                  </div>
+                  </div>
+
+                  <!-- Hover Tooltip Below Card -->
+                  <div class="schedule-hover-tooltip-below" v-if="getScheduleHoverText(schedule)">
+                    {{ getScheduleHoverText(schedule) }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Single Schedule (Backward Compatibility) -->
+              <div 
+                v-else-if="selectedTraining.schedule" 
+                class="schedule-card-wrapper"
+              >
+                <div
+                  class="schedule-card"
+                  :class="{
+                    'schedule-card-clickable': canGenerateQRForSchedule(selectedTraining),
+                    'schedule-card-disabled': !canGenerateQRForSchedule(selectedTraining)
+                  }"
+                  @click="handleScheduleClick(selectedTraining)"
+                >
+
                 <!-- Date and Time -->
                 <div class="schedule-date-time">
                   <svg class="schedule-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <span>{{ formatScheduleFull(schedule.schedule) }} - {{ formatScheduleTime(schedule.end_time) }}</span>
+                  <span>{{ formatScheduleFull(selectedTraining.schedule) }} - {{ formatScheduleTime(selectedTraining.end_time) }}</span>
                 </div>
 
                 <!-- Mode Badge -->
-                <div class="schedule-mode-badge" :class="schedule.mode === 'On-Site' ? 'mode-onsite' : 'mode-online'">
+                <div class="schedule-mode-badge" :class="selectedTraining.mode === 'On-Site' ? 'mode-onsite' : 'mode-online'">
                   <svg class="mode-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  <span>{{ schedule.mode }}</span>
+                  <span>{{ selectedTraining.mode }}</span>
                 </div>
 
                 <!-- Location (for On-Site) -->
-                <div v-if="schedule.mode === 'On-Site' && schedule.location" class="schedule-location">
+                <div v-if="selectedTraining.mode === 'On-Site' && selectedTraining.location" class="schedule-location">
                   <svg class="schedule-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  <span>{{ schedule.location }}</span>
+                  <span>{{ selectedTraining.location }}</span>
                 </div>
 
                 <!-- Training Link (for Online) -->
-                <div v-if="schedule.mode === 'Online' && schedule.trainingLink" class="schedule-link">
+                <div v-if="selectedTraining.mode === 'Online' && selectedTraining.trainingLink" class="schedule-link">
                   <svg class="schedule-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                   </svg>
-                  <a :href="schedule.trainingLink" target="_blank" class="training-link">
-                    {{ schedule.trainingLink }}
+                  <a :href="selectedTraining.trainingLink" target="_blank" class="training-link" @click.stop>
+                    {{ selectedTraining.trainingLink }}
                   </a>
                 </div>
+                </div>
+
+                <!-- Hover Tooltip Below Card -->
+                <div class="schedule-hover-tooltip-below" v-if="getScheduleHoverText(selectedTraining)">
+                  {{ getScheduleHoverText(selectedTraining) }}
+                </div>
+              </div>
+
+              <!-- No Schedule -->
+              <div v-else class="schedule-card">
+                <p class="text-gray-500">No schedule set</p>
               </div>
             </div>
 
-            <!-- Single Schedule (Backward Compatibility) -->
-            <div v-else-if="selectedTraining.schedule" class="schedule-card">
-              <!-- Date and Time -->
-              <div class="schedule-date-time">
-                <svg class="schedule-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <span>{{ formatScheduleFull(selectedTraining.schedule) }} - {{ formatScheduleTime(selectedTraining.end_time) }}</span>
-              </div>
-
-              <!-- Mode Badge -->
-              <div class="schedule-mode-badge" :class="selectedTraining.mode === 'On-Site' ? 'mode-onsite' : 'mode-online'">
-                <svg class="mode-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <span>{{ selectedTraining.mode }}</span>
-              </div>
-
-              <!-- Location (for On-Site) -->
-              <div v-if="selectedTraining.mode === 'On-Site' && selectedTraining.location" class="schedule-location">
-                <svg class="schedule-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <span>{{ selectedTraining.location }}</span>
-              </div>
-
-              <!-- Training Link (for Online) -->
-              <div v-if="selectedTraining.mode === 'Online' && selectedTraining.trainingLink" class="schedule-link">
-                <svg class="schedule-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                </svg>
-                <a :href="selectedTraining.trainingLink" target="_blank" class="training-link">
-                  {{ selectedTraining.trainingLink }}
-                </a>
-              </div>
-            </div>
-
-            <!-- No Schedule -->
-            <div v-else class="schedule-card">
-              <p class="text-gray-500">No schedule set</p>
-            </div>
           </div>
 
           <div class="registrants-section">
@@ -397,10 +518,24 @@
                       {{ person.status }}
                     </td>
                     <td>
-                      <button class="action-btn"
-                        :class="person.hasCertificate ? 'certificate-issued-btn' : 'issue-cert-btn'"
-                        :disabled="person.hasCertificate" @click="issueCertificate(person)">
-                        {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
+                      <div class="button-tooltip-wrapper"
+                        v-if="person.hasCertificate || person.status !== 'Attended'"
+                        :title="person.hasCertificate ? 'Certificate already issued' : 'Registrant status must be Attended'">
+                        <button class="action-btn"
+                          :class="{
+                            'certificate-issued-btn': person.hasCertificate,
+                            'issue-cert-btn': !person.hasCertificate && person.status === 'Attended',
+                            'disabled-action': person.status !== 'Attended' && !person.hasCertificate
+                          }"
+                          :disabled="person.hasCertificate || person.status !== 'Attended'"
+                          @click.stop="handleIssueCertificate(person)">
+                          {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
+                        </button>
+                      </div>
+                      <button v-else
+                        class="action-btn issue-cert-btn"
+                        @click.stop="handleIssueCertificate(person)">
+                        Issue Certificate
                       </button>
                       <button class="action-btn" v-if="person.hasCertificate && person.certificateUrl"
                         @click="viewCertificate(person.certificateUrl)">
@@ -414,17 +549,10 @@
 
             <div class="registrants-footer" v-if="filteredRegistrants.length">
               <button class="bulk-issue-btn" @click="issueCertificatesToSelected"
-                :disabled="!filteredRegistrants.some((p) => p.selected && !p.hasCertificate)">
+                :disabled="!filteredRegistrants.some((p) => p.selected && !p.hasCertificate && p.status === 'Attended')">
                 Issue Certificates to Selected
               </button>
             </div>
-          </div>
-          <!-- ✅ Show QR only if training is live/upcoming within allowed time -->
-          <div
-            v-if="activeTrainingQR && activeTrainingId === selectedTraining.trainingID && isTrainingActive(selectedTraining)"
-            class="qr-container">
-            <h3>QR Code (Expires at: {{ activeTrainingQRExpiresAt }})</h3>
-            <qrcode-vue :value="activeTrainingQR" :size="200" />
           </div>
         </div>
       </div>
@@ -523,6 +651,14 @@
           <form @submit.prevent="saveTraining" class="training-popup-form">
             <input v-model="newTraining.title" type="text" placeholder="Title" class="training-input" />
             <textarea v-model="newTraining.description" placeholder="Description" class="training-input"></textarea>
+
+            <div class="org-choice-toggle popup-toggle" @click.stop>
+              <label class="org-choice-switch">
+                <input type="checkbox" v-model="newTraining.isOrganizationChoice" :disabled="!isOrganizationVerified" />
+                <span class="org-choice-slider"></span>
+              </label>
+              <span class="org-choice-label">Mark as Organization Choice</span>
+            </div>
 
             <!-- Schedule - Multiple Dates -->
             <div class="popup-form-group schedule-group">
@@ -644,8 +780,50 @@
               <button @click.prevent="addTag" class="training-save-btn mt-2">Add Tag</button>
             </div>
             <!-- Save -->
-            <button type="submit" class="training-post-btn">{{ isEditMode ? "Update" : "Post" }}</button>
+            <button type="submit" class="training-post-btn" :disabled="!isOrganizationVerified" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">{{ isEditMode ? "Update" : "Post" }}</button>
           </form>
+        </div>
+      </div>
+
+      <!-- QR Code Display Modal -->
+      <div v-if="showQRModal && activeTrainingQR" class="qr-modal-overlay" @click.self="closeQRModal">
+        <div class="qr-modal">
+          <button class="qr-modal-close" @click="closeQRModal">✕</button>
+          
+          <div class="qr-modal-content">
+            <h2 class="qr-modal-title">
+              {{ selectedTraining.title || 'Training QR Code' }}
+            </h2>
+            
+            <div v-if="activeScheduleForQR" class="qr-modal-schedule-info">
+              <p class="qr-schedule-date">
+                {{ formatScheduleFull(activeScheduleForQR.schedule) }} - 
+                {{ formatScheduleTime(activeScheduleForQR.end_time) }}
+              </p>
+              <p class="qr-schedule-mode" :class="activeScheduleForQR.mode === 'On-Site' ? 'mode-onsite' : 'mode-online'">
+                {{ activeScheduleForQR.mode }}
+              </p>
+            </div>
+            
+            <div class="qr-code-wrapper">
+              <qrcode-vue :value="activeTrainingQR" :size="300" />
+            </div>
+            
+            <div class="qr-modal-info">
+              <p class="qr-expiry-info" v-if="qrExpiresAt">
+                <strong>Expires at:</strong> {{ formatExpiryTime(qrExpiresAt) }}
+              </p>
+              <p class="qr-instructions">
+                Scan this QR code with your device camera to check in for attendance.
+                <br><br>
+                <strong>Note:</strong> Only registered applicants can successfully scan and record attendance.
+              </p>
+            </div>
+            
+            <button class="qr-modal-download-btn" @click="downloadQRCode" v-if="activeTrainingQR">
+              Download QR Code
+            </button>
+          </div>
         </div>
       </div>
     </main>
@@ -656,7 +834,7 @@
 import axios from "axios";
 import QrcodeVue from "qrcode.vue";
 import api from "@/composables/api.js";
-import { activeTrainingQR, activeTrainingId, scheduleQR } from "@/composables/useTrainingQR.js";
+import { activeTrainingQR, activeTrainingId, activeScheduleId, qrExpiresAt, scheduleQR, generateQR } from "@/composables/useTrainingQR.js";
 import { uploadCertificate, getPDFUrl, getImageUrl } from "@/lib/supabase.js";
 import jsPDF from "jspdf";
 import * as pdfjsLib from "pdfjs-dist";
@@ -714,11 +892,16 @@ export default {
   data() {
     return {
       organizationLogo: null,
+      organizationStatus: null,
+      isOrganizationVerified: false,
       globalSearchQuery: '',
       showAllUpcoming: false,
+      showAllOngoing: false,
       showAllCompleted: false,
       activeTrainingQR,  // <-- QR code value (reactive)
       activeTrainingId,  // <-- which training is active
+      activeScheduleId,  // <-- which schedule is active
+      qrExpiresAt,       // <-- QR expiry time
       isEditMode: false,
       trainingToEditId: null,
       qrCodeValue: null,
@@ -745,10 +928,13 @@ export default {
          ✅ Dropdown Menu States
       ========================== */
       openUpcomingMenu: null,
+      openOngoingMenu: null,
       openCompletedMenu: null,
 
       showTrainingDetailsModal: false,
       selectedTraining: {},
+      showQRModal: false,
+      activeScheduleForQR: null, // Store which schedule has active QR
 
       registrantsList: [], // removed hardcoded list, fetch from DB
       registrantsLoading: false,
@@ -775,7 +961,8 @@ export default {
         title: "",
         description: "",
         schedules: [], // Array of { date, startTime, endTime, mode, location, trainingLink }
-        Tags: []
+        Tags: [],
+        isOrganizationChoice: false
       },
       tempDateInput: "", // Temporary date input for adding new dates
 
@@ -783,7 +970,9 @@ export default {
       qrExpiresAt: "",
       activeTrainingId: null, // which training shows the QR
       tagOptions: [],
-      newTagName: ''
+      newTagName: '',
+      originalChoiceValue: false,
+      orgChoiceLoading: {}
     };
   },
 
@@ -799,9 +988,24 @@ export default {
       window.open(publicUrl, "_blank"); // Open in new tab
     },
 
+    handleIssueCertificate(person) {
+      // Early return if disabled conditions are met
+      if (person.hasCertificate) return;
+      if (person.status !== 'Attended') {
+        alert('Certificates can only be issued to registrants with "Attended" status.');
+        return;
+      }
+      // Proceed with issuing certificate
+      this.issueCertificate(person);
+    },
+
     async issueCertificate(person) {
       try {
         if (person.hasCertificate) return;
+        if (person.status !== 'Attended') {
+          alert('Certificates can only be issued to registrants with "Attended" status.');
+          return;
+        }
 
         // Generate PDF Certificate
         const givenDate = new Date().toISOString().split("T")[0];
@@ -933,8 +1137,8 @@ export default {
     },
 
     async issueCertificatesToSelected() {
-      const selectedPeople = this.registrantsList.filter(p => p.selected && !p.hasCertificate);
-      if (!selectedPeople.length) return alert("No selected registrants or all already issued.");
+      const selectedPeople = this.registrantsList.filter(p => p.selected && !p.hasCertificate && p.status === 'Attended');
+      if (!selectedPeople.length) return alert("No selected registrants with 'Attended' status or all already issued.");
 
       try {
         const certGivenDate = new Date().toISOString().split("T")[0];
@@ -1284,15 +1488,23 @@ export default {
     ========================== */
     toggleUpcomingMenu(id) {
       this.openUpcomingMenu = this.openUpcomingMenu === id ? null : id;
+      this.openOngoingMenu = null;
+      this.openCompletedMenu = null;
+    },
+    toggleOngoingMenu(id) {
+      this.openOngoingMenu = this.openOngoingMenu === id ? null : id;
+      this.openUpcomingMenu = null;
       this.openCompletedMenu = null;
     },
     toggleCompletedMenu(id) {
       this.openCompletedMenu = this.openCompletedMenu === id ? null : id;
       this.openUpcomingMenu = null;
+      this.openOngoingMenu = null;
     },
 
     closeAllMenus() {
       this.openUpcomingMenu = null;
+      this.openOngoingMenu = null;
       this.openCompletedMenu = null;
     },
 
@@ -1433,7 +1645,10 @@ export default {
        ✅ Training Details Modal
     ========================== */
     openTrainingDetails(training) {
-      this.selectedTraining = training;
+      this.selectedTraining = {
+        ...training,
+        isOrganizationChoice: Boolean(training.isOrganizationChoice)
+      };
       this.showTrainingDetailsModal = true;
       this.closeAllMenus();
       this.selectAll = false;
@@ -1495,6 +1710,100 @@ export default {
         this.registrantsLoading = false;
       }
     },
+
+    isOrgChoiceLoading(trainingID) {
+      if (!trainingID) return false;
+      return Boolean(this.orgChoiceLoading[trainingID]);
+    },
+
+    setOrgChoiceLoading(trainingID, status) {
+      if (!trainingID) return;
+      this.orgChoiceLoading = { ...this.orgChoiceLoading, [trainingID]: status };
+    },
+
+    setChoiceStateLocally(trainingID, value) {
+      const applyToList = (list) => {
+        const idx = list.findIndex(t => t.trainingID === trainingID);
+        if (idx > -1) {
+          list[idx] = { ...list[idx], isOrganizationChoice: value };
+        }
+      };
+      applyToList(this.upcomingtrainings);
+      applyToList(this.completedtrainings);
+
+      if (this.selectedTraining && this.selectedTraining.trainingID === trainingID) {
+        this.selectedTraining = { ...this.selectedTraining, isOrganizationChoice: value };
+      }
+    },
+
+    async handleOrganizationChoiceToggle(training, shouldEnable) {
+      // Check if organization is verified
+      if (!this.isOrganizationVerified) {
+        alert("Your organization account is not yet verified by the admin. Please wait for admin approval before performing this action.");
+        return;
+      }
+
+      if (!training || !training.trainingID) return;
+      if (this.isOrgChoiceLoading(training.trainingID)) return;
+
+      const previousValue = Boolean(training.isOrganizationChoice);
+      if (previousValue === shouldEnable) return;
+
+      // Optimistic update
+      this.setChoiceStateLocally(training.trainingID, shouldEnable);
+
+      try {
+        await this.persistOrganizationChoice(training.trainingID, shouldEnable);
+        alert(shouldEnable
+          ? "Training marked as an Organization Choice."
+          : "Training removed from Organization Choices.");
+      } catch (error) {
+        console.error("Failed to update organization choice:", error);
+        this.setChoiceStateLocally(training.trainingID, previousValue);
+        alert(error.response?.data?.message || "Failed to update Organization Choice. Please try again.");
+      }
+    },
+
+    async persistOrganizationChoice(trainingID, shouldEnable) {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Please log in to continue.");
+      }
+
+      this.setOrgChoiceLoading(trainingID, true);
+      try {
+        const config = { headers: { Authorization: `Bearer ${token}` } };
+        if (shouldEnable) {
+          await axios.post(
+            `${import.meta.env.VITE_API_BASE_URL}/organization/choices`,
+            { trainingID },
+            config
+          );
+        } else {
+          await axios.delete(
+            `${import.meta.env.VITE_API_BASE_URL}/organization/choices/${trainingID}`,
+            config
+          );
+        }
+      } finally {
+        this.setOrgChoiceLoading(trainingID, false);
+      }
+    },
+
+    async syncOrganizationChoiceAfterSave(trainingID, desiredValue, previousValue = false) {
+      if (!trainingID || desiredValue === previousValue) {
+        return;
+      }
+      try {
+        await this.persistOrganizationChoice(trainingID, desiredValue);
+      } catch (error) {
+        console.error("Failed to apply organization choice preference:", error);
+        alert(
+          error.response?.data?.message ||
+          "Training saved, but updating the Organization Choice flag failed. Please toggle it manually from the training list."
+        );
+      }
+    },
     async fetchTrainings() {
       try {
         const storedUser = localStorage.getItem("user");
@@ -1518,12 +1827,16 @@ export default {
         }
 
         newTrainings.forEach(training => {
+          const normalizedTraining = {
+            ...training,
+            isOrganizationChoice: Boolean(training.isOrganizationChoice)
+          };
           const existingIndex = this.upcomingtrainings.findIndex(t => t.trainingID === training.trainingID);
 
           if (existingIndex > -1) {
-            this.upcomingtrainings[existingIndex] = { ...this.upcomingtrainings[existingIndex], ...training };
+            this.upcomingtrainings[existingIndex] = { ...this.upcomingtrainings[existingIndex], ...normalizedTraining };
           } else {
-            this.upcomingtrainings.push(training);
+            this.upcomingtrainings.push(normalizedTraining);
           }
 
           // ✅ Schedule QR using composable
@@ -1535,6 +1848,11 @@ export default {
     },
 
     openTrainingPopup() {
+      // Check if organization is verified
+      if (!this.isOrganizationVerified) {
+        alert("Your organization account is not yet verified by the admin. Please wait for admin approval before creating or editing trainings.");
+        return;
+      }
       this.showTrainingPopup = true;
       this.fetchTags(); // Load tags into dropdown
     },
@@ -1595,17 +1913,21 @@ export default {
           schedules: schedules,
           Tags: training.Tags
             ? training.Tags.map(tag => Number(tag.TagID ?? tag.tagID ?? tag.id))
-            : []
+            : [],
+          isOrganizationChoice: Boolean(training.isOrganizationChoice)
         };
+        this.originalChoiceValue = Boolean(training.isOrganizationChoice);
       } else {
         this.isEditMode = false;
         this.newTraining = {
           title: "",
           description: "",
           schedules: [],
-          Tags: []
+          Tags: [],
+          isOrganizationChoice: false
         };
         this.tempDateInput = "";
+        this.originalChoiceValue = false;
       }
 
       if (!Array.isArray(this.newTraining.Tags)) {
@@ -1624,10 +1946,12 @@ export default {
         title: "",
         description: "",
         schedules: [],
-        Tags: []
+        Tags: [],
+        isOrganizationChoice: false
       };
       this.tempDateInput = "";
       this.newTagName = ""; // optional: clear the tag input too
+      this.originalChoiceValue = false;
     },
 
     async updateTraining(trainingID) {
@@ -1646,6 +1970,12 @@ export default {
 
     // For saving (create/update) training
     async saveTraining() {
+      // Check if organization is verified
+      if (!this.isOrganizationVerified) {
+        alert("Your organization account is not yet verified by the admin. Please wait for admin approval before performing this action.");
+        return;
+      }
+
       try {
         // Validate schedules
         if (!this.newTraining.schedules || this.newTraining.schedules.length === 0) {
@@ -1671,6 +2001,9 @@ export default {
         }
 
         const token = localStorage.getItem("token");
+
+        const desiredChoice = Boolean(this.newTraining.isOrganizationChoice);
+        const previousChoice = Boolean(this.originalChoiceValue);
 
         if (this.isEditMode && this.trainingToEditId) {
           // For edit mode, update the training with all schedules
@@ -1699,6 +2032,7 @@ export default {
             payload,
             { headers: { Authorization: `Bearer ${token}` } }
           );
+          await this.syncOrganizationChoiceAfterSave(this.trainingToEditId, desiredChoice, previousChoice);
           alert("✅ TRAINING UPDATED SUCCESSFULLY!");
         } else {
           // For create mode, create ONE training with MULTIPLE schedules
@@ -1723,12 +2057,14 @@ export default {
             Tags: this.newTraining.Tags || []
           };
 
-          await axios.post(
+          const response = await axios.post(
             `${import.meta.env.VITE_API_BASE_URL}/trainings`,
             payload,
             { headers: { Authorization: `Bearer ${token}` } }
           );
 
+          const newTrainingId = response?.data?.data?.trainingID;
+          await this.syncOrganizationChoiceAfterSave(newTrainingId, desiredChoice, false);
           alert(`✅ TRAINING WITH ${this.newTraining.schedules.length} SCHEDULE(S) POSTED SUCCESSFULLY!`);
         }
 
@@ -1745,6 +2081,12 @@ export default {
 
     // For deleting training
     async deleteTraining(trainingID) {
+      // Check if organization is verified
+      if (!this.isOrganizationVerified) {
+        alert("Your organization account is not yet verified by the admin. Please wait for admin approval before performing this action.");
+        return;
+      }
+
       try {
         if (!confirm("Are you sure you want to delete this training?")) return;
 
@@ -1853,7 +2195,360 @@ export default {
       }
     },
 
-    /* ✅ ADD THIS FUNCTION HERE */
+    /**
+     * Format expiry time for QR code display
+     * Handles ISO 8601 format with timezone (e.g., "2025-11-29T12:00:00+08:00")
+     */
+    formatExpiryTime(expiresAt) {
+      if (!expiresAt) return "";
+      try {
+        // Parse the date - ISO 8601 format should be parsed correctly by JavaScript
+        const date = new Date(expiresAt);
+        
+        // Format in Asia/Manila timezone
+        return date.toLocaleString('en-US', {
+          timeZone: 'Asia/Manila',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+          timeZoneName: 'short'
+        });
+      } catch (error) {
+        console.error("Error formatting expiry time:", error, expiresAt);
+        // Fallback: try to display as-is
+        return expiresAt.toString();
+      }
+    },
+
+    /* ✅ Schedule QR Code Methods */
+    
+    /**
+     * Parse date string to local Date object (prevents timezone issues)
+     * Supports formats: "2025-12-01 07:00:00" or "2025-12-01T07:00:00"
+     */
+    parseLocalDateTime(dateString) {
+      if (!dateString) return null;
+      
+      try {
+        // Split by space or T to get date and time parts
+        const [datePart, timePart] = dateString.split(/[ T]/);
+        if (!datePart) return null;
+        
+        const [year, month, day] = datePart.split("-");
+        const timeStr = timePart || "00:00:00";
+        const [hour, minute, second] = timeStr.split(":");
+        
+        // Create date in local timezone (not UTC)
+        return new Date(
+          Number(year),
+          Number(month) - 1, // Month is 0-indexed
+          Number(day),
+          Number(hour || 0),
+          Number(minute || 0),
+          Number(second || 0)
+        );
+      } catch (error) {
+        console.error("Error parsing date:", dateString, error);
+        return null;
+      }
+    },
+
+    /**
+     * Check if a schedule is currently active (within its timeframe)
+     */
+    isScheduleActive(schedule) {
+      if (!schedule) {
+        return false;
+      }
+      
+      // Support both multiple schedules format and single schedule format
+      const scheduleTime = schedule.schedule || schedule.Schedule;
+      const endTime = schedule.end_time || schedule.endTime;
+      
+      if (!scheduleTime || !endTime) {
+        return false;
+      }
+      
+      const now = new Date();
+      const startTime = this.parseLocalDateTime(scheduleTime);
+      const endTimeDate = this.parseLocalDateTime(endTime);
+      
+      if (!startTime || !endTimeDate) {
+        return false;
+      }
+      
+      return now >= startTime && now < endTimeDate;
+    },
+
+    /**
+     * Check if schedule has started
+     */
+    hasScheduleStarted(schedule) {
+      if (!schedule) {
+        return false;
+      }
+      const scheduleTime = schedule.schedule || schedule.Schedule;
+      if (!scheduleTime) {
+        return false;
+      }
+      const now = new Date();
+      const startTime = this.parseLocalDateTime(scheduleTime);
+      if (!startTime) {
+        return false;
+      }
+      return now >= startTime;
+    },
+
+    /**
+     * Check if schedule has ended
+     */
+    hasScheduleEnded(schedule) {
+      if (!schedule) {
+        return false;
+      }
+      const endTime = schedule.end_time || schedule.endTime;
+      if (!endTime) {
+        return false;
+      }
+      const now = new Date();
+      const endTimeDate = this.parseLocalDateTime(endTime);
+      if (!endTimeDate) {
+        return false;
+      }
+      return now >= endTimeDate;
+    },
+
+    /**
+     * Get hover tooltip text for schedule card
+     */
+    getScheduleHoverText(schedule) {
+      if (!schedule) return "";
+      
+      if (!this.hasScheduleStarted(schedule)) {
+        return "Generate QR not available. Training not yet started";
+      }
+      
+      if (this.hasScheduleEnded(schedule)) {
+        return "Generate QR not available. Training already ended";
+      }
+      
+      if (this.isScheduleActive(schedule)) {
+        return "Generate QR?";
+      }
+      
+      return "";
+    },
+
+    /**
+     * Check if schedule can generate QR
+     */
+    canGenerateQRForSchedule(schedule) {
+      return this.isScheduleActive(schedule);
+    },
+
+    /**
+     * Handle schedule card click to generate QR
+     */
+    async handleScheduleClick(schedule) {
+      console.log("Schedule clicked:", schedule);
+      console.log("Schedule start:", schedule.schedule || schedule.Schedule);
+      console.log("Schedule end:", schedule.end_time || schedule.endTime);
+      console.log("Current time:", new Date());
+      
+      if (!this.canGenerateQRForSchedule(schedule)) {
+        if (!this.hasScheduleStarted(schedule)) {
+          const startTime = this.parseLocalDateTime(schedule.schedule || schedule.Schedule);
+          alert(`Cannot generate QR code. Training has not started yet.\nStart time: ${startTime ? startTime.toLocaleString() : 'Unknown'}\nCurrent time: ${new Date().toLocaleString()}`);
+        } else if (this.hasScheduleEnded(schedule)) {
+          const endTime = this.parseLocalDateTime(schedule.end_time || schedule.endTime);
+          alert(`Cannot generate QR code. Training has already ended.\nEnd time: ${endTime ? endTime.toLocaleString() : 'Unknown'}\nCurrent time: ${new Date().toLocaleString()}`);
+        }
+        return;
+      }
+
+      if (!this.selectedTraining || !this.selectedTraining.trainingID) {
+        alert("Please select a training first.");
+        return;
+      }
+
+      // Check if QR is already active for this schedule
+      const scheduleId = schedule.trainingScheduleID;
+      
+      // If QR is already active and displayed for this schedule, just open the modal
+      if (activeTrainingQR.value && 
+          activeTrainingId.value === this.selectedTraining.trainingID &&
+          activeScheduleId.value === scheduleId) {
+        // QR already active for this schedule, just show the modal
+        this.openQRModal(schedule);
+        return;
+      }
+      
+      // If schedule already has an attendance_key (QR already generated), 
+      // just fetch it from backend (which will return existing QR) and show modal
+      // The backend will return the existing QR if it's already generated
+
+      try {
+        console.log("Sending QR generation request for schedule:", schedule.trainingScheduleID || 'No ID');
+        const result = await generateQR(this.selectedTraining, schedule);
+        
+        if (result.success) {
+          // QR code is now active - show it in the modal
+          console.log("QR code generated successfully for schedule");
+          this.openQRModal(schedule);
+        } else {
+          console.error("QR generation failed:", result.error);
+          alert(result.error || "Failed to generate QR code. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error generating QR for schedule:", error);
+        const errorMessage = error.response?.data?.message || error.message || "Failed to generate QR code. Please try again.";
+        alert(errorMessage);
+      }
+    },
+
+    /**
+     * Open QR Modal
+     */
+    openQRModal(schedule = null) {
+      if (!activeTrainingQR.value || activeTrainingId.value !== this.selectedTraining?.trainingID) {
+        return;
+      }
+
+      // If a schedule is provided, use it; otherwise find the active schedule
+      if (schedule) {
+        this.activeScheduleForQR = schedule;
+      } else if (activeScheduleId.value && this.selectedTraining?.schedules) {
+        this.activeScheduleForQR = this.selectedTraining.schedules.find(
+          s => s.trainingScheduleID === activeScheduleId.value
+        );
+      } else {
+        // For backward compatibility with single schedule trainings
+        if (this.selectedTraining?.schedule) {
+          this.activeScheduleForQR = {
+            schedule: this.selectedTraining.schedule,
+            end_time: this.selectedTraining.end_time,
+            mode: this.selectedTraining.mode,
+            location: this.selectedTraining.location,
+            trainingLink: this.selectedTraining.trainingLink
+          };
+        } else {
+          this.activeScheduleForQR = null;
+        }
+      }
+      this.showQRModal = true;
+    },
+
+    /**
+     * Close QR Modal
+     */
+    closeQRModal() {
+      this.showQRModal = false;
+      this.activeScheduleForQR = null;
+    },
+
+    /**
+     * Download QR Code as Image
+     */
+    async downloadQRCode() {
+      if (!activeTrainingQR.value) return;
+      
+      try {
+        const QRCode = await import('qrcode');
+        const canvas = document.createElement('canvas');
+        await QRCode.default.toCanvas(canvas, activeTrainingQR.value, {
+          width: 500,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
+          }
+        });
+        
+        canvas.toBlob((blob) => {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          const trainingTitle = (this.selectedTraining.title || 'Training').replace(/[^a-z0-9]/gi, '_');
+          link.href = url;
+          link.download = `QR-Code-${trainingTitle}-${new Date().getTime()}.png`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }, 'image/png', 1.0);
+      } catch (error) {
+        console.error("Error downloading QR code:", error);
+        alert("Failed to download QR code. Please try again.");
+      }
+    },
+
+    /**
+     * Check if a schedule has active QR code
+     */
+    isScheduleQRActive(schedule) {
+      if (!schedule || !this.selectedTraining) return false;
+      
+      // For backward compatibility, check if it's a single schedule training
+      if (!schedule.trainingScheduleID && schedule.schedule) {
+        // Single schedule training - check if training QR is active
+        return (
+          activeTrainingId.value === this.selectedTraining.trainingID &&
+          activeScheduleId.value === null &&
+          activeTrainingQR.value !== null
+        );
+      }
+      
+      // Multiple schedules - check by schedule ID
+      const scheduleId = schedule.trainingScheduleID;
+      return (
+        activeScheduleId.value === scheduleId &&
+        activeTrainingId.value === this.selectedTraining.trainingID &&
+        activeTrainingQR.value !== null
+      );
+    },
+
+    /**
+     * Check if a training is currently ongoing
+     * A training is ongoing if it has at least one schedule that is active (started but not ended)
+     */
+    isTrainingOngoing(training) {
+      if (!training) return false;
+      
+      const now = new Date();
+      
+      // Check if training has multiple schedules
+      if (training.schedules && Array.isArray(training.schedules) && training.schedules.length > 0) {
+        // Check if any schedule is currently active
+        return training.schedules.some(schedule => {
+          const scheduleTime = schedule.schedule || schedule.Schedule;
+          const endTime = schedule.end_time || schedule.endTime;
+          
+          if (!scheduleTime || !endTime) return false;
+          
+          const startTime = this.parseLocalDateTime(scheduleTime);
+          const endTimeDate = this.parseLocalDateTime(endTime);
+          
+          if (!startTime || !endTimeDate) return false;
+          
+          return now >= startTime && now < endTimeDate;
+        });
+      }
+      
+      // Single schedule format (backward compatibility)
+      const scheduleTime = training.schedule || training.Schedule;
+      const endTime = training.end_time || training.endTime;
+      
+      if (!scheduleTime || !endTime) return false;
+      
+      const startTime = this.parseLocalDateTime(scheduleTime);
+      const endTimeDate = this.parseLocalDateTime(endTime);
+      
+      if (!startTime || !endTimeDate) return false;
+      
+      return now >= startTime && now < endTimeDate;
+    },
 
   },
 
@@ -1866,9 +2561,16 @@ export default {
         const user = JSON.parse(storedUser);
         if (user.organization) {
           this.organizationLogo = user.organization;
+          this.organizationStatus = user.organization.status || user.organization.Status || null;
         } else if (user.logo_directory || user.Logo_directory || user.logoPath) {
           this.organizationLogo = user;
         }
+        if (!this.organizationStatus) {
+          this.organizationStatus = user.status || user.Status || null;
+        }
+        this.isOrganizationVerified = ["approved", "verified"].includes(
+          (this.organizationStatus || "").toString().toLowerCase()
+        );
       } catch (error) {
         console.error("Error parsing user from localStorage:", error);
       }
@@ -1887,6 +2589,12 @@ export default {
   },
 
   computed: {
+    organizationStatusLabel() {
+      return this.isOrganizationVerified ? "Verified" : "Unverified";
+    },
+    organizationStatusClass() {
+      return this.isOrganizationVerified ? "org-status-verified" : "org-status-unverified";
+    },
     logoUrl() {
       if (this.organizationLogo) {
         const logoPath = this.organizationLogo.logo_directory || 
@@ -1916,24 +2624,112 @@ export default {
       return this.showAllCompleted ? list : list.slice(0, 4);
     },
 
-    sortedUpcomingTrainings() {
-      const now = new Date();
+    sortedOngoingTrainings() {
       return this.upcomingtrainings
-        .filter(t => new Date(t.schedule) >= now)
-        .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
+        .filter(t => this.isTrainingOngoing(t))
+        .sort((a, b) => {
+          // Sort by earliest active schedule
+          const aSchedule = this.getEarliestActiveSchedule(a);
+          const bSchedule = this.getEarliestActiveSchedule(b);
+          if (!aSchedule || !bSchedule) return 0;
+          const aTime = this.parseLocalDateTime(aSchedule.schedule || aSchedule.Schedule);
+          const bTime = this.parseLocalDateTime(bSchedule.schedule || bSchedule.Schedule);
+          if (!aTime || !bTime) return 0;
+          return aTime - bTime;
+        });
+    },
+
+    sortedUpcomingTrainings() {
+      // Exclude ongoing trainings - only show trainings where all schedules are in the future
+      return this.upcomingtrainings
+        .filter(t => !this.isTrainingOngoing(t))
+        .filter(t => {
+          const now = new Date();
+          // For multiple schedules, check if earliest schedule is in the future
+          if (t.schedules && Array.isArray(t.schedules) && t.schedules.length > 0) {
+            const earliestSchedule = t.schedules.reduce((earliest, schedule) => {
+              const scheduleTime = schedule.schedule || schedule.Schedule;
+              if (!scheduleTime) return earliest;
+              const startTime = this.parseLocalDateTime(scheduleTime);
+              if (!startTime) return earliest;
+              if (!earliest || startTime < this.parseLocalDateTime(earliest.schedule || earliest.Schedule)) {
+                return schedule;
+              }
+              return earliest;
+            }, null);
+            if (!earliestSchedule) return false;
+            const startTime = this.parseLocalDateTime(earliestSchedule.schedule || earliestSchedule.Schedule);
+            return startTime && startTime > now;
+          }
+          // Single schedule format
+          const scheduleTime = t.schedule || t.Schedule;
+          if (!scheduleTime) return false;
+          const startTime = this.parseLocalDateTime(scheduleTime);
+          return startTime && startTime >= now;
+        })
+        .sort((a, b) => {
+          // Sort by earliest schedule
+          const aSchedule = a.schedule || (a.schedules?.[0]?.schedule || a.schedules?.[0]?.Schedule);
+          const bSchedule = b.schedule || (b.schedules?.[0]?.schedule || b.schedules?.[0]?.Schedule);
+          if (!aSchedule || !bSchedule) return 0;
+          const aTime = this.parseLocalDateTime(aSchedule);
+          const bTime = this.parseLocalDateTime(bSchedule);
+          if (!aTime || !bTime) return 0;
+          return aTime - bTime;
+        });
     },
 
     sortedCompletedTrainings() {
       const now = new Date();
+      // Exclude ongoing trainings - only show trainings where all schedules have ended
       return this.upcomingtrainings
-        .filter(t => new Date(t.schedule) < now)
-        .sort((a, b) => new Date(b.schedule) - new Date(a.schedule));
+        .filter(t => !this.isTrainingOngoing(t))
+        .filter(t => {
+          // For multiple schedules, check if latest schedule has ended
+          if (t.schedules && Array.isArray(t.schedules) && t.schedules.length > 0) {
+            const latestSchedule = t.schedules.reduce((latest, schedule) => {
+              const endTime = schedule.end_time || schedule.endTime;
+              if (!endTime) return latest;
+              const endTimeDate = this.parseLocalDateTime(endTime);
+              if (!endTimeDate) return latest;
+              if (!latest || endTimeDate > this.parseLocalDateTime(latest.end_time || latest.endTime)) {
+                return schedule;
+              }
+              return latest;
+            }, null);
+            if (!latestSchedule) return false;
+            const endTimeDate = this.parseLocalDateTime(latestSchedule.end_time || latestSchedule.endTime);
+            return endTimeDate && endTimeDate < now;
+          }
+          // Single schedule format
+          const endTime = t.end_time || t.endTime;
+          if (!endTime) return false;
+          const endTimeDate = this.parseLocalDateTime(endTime);
+          return endTimeDate && endTimeDate < now;
+        })
+        .sort((a, b) => {
+          // Sort by latest end time
+          const aEndTime = a.end_time || (a.schedules?.[a.schedules?.length - 1]?.end_time || a.schedules?.[a.schedules?.length - 1]?.endTime);
+          const bEndTime = b.end_time || (b.schedules?.[b.schedules?.length - 1]?.end_time || b.schedules?.[b.schedules?.length - 1]?.endTime);
+          if (!aEndTime || !bEndTime) return 0;
+          const aTime = this.parseLocalDateTime(aEndTime);
+          const bTime = this.parseLocalDateTime(bEndTime);
+          if (!aTime || !bTime) return 0;
+          return bTime - aTime; // Descending order
+        });
     },
     filteredUpcoming() {
       const query = this.globalSearchQuery.toLowerCase();
       if (!query) return this.sortedUpcomingTrainings;
       return this.sortedUpcomingTrainings.filter(training =>
         training.title.toLowerCase().startsWith(query) // 🔹 only matches if letters typed are in order from the start
+      );
+    },
+    filteredOngoing() {
+      const query = this.globalSearchQuery.toLowerCase();
+      if (!query) return this.sortedOngoingTrainings;
+      return this.sortedOngoingTrainings.filter(training =>
+        training.title.toLowerCase().startsWith(query)
       );
     },
     filteredCompleted() {
@@ -1947,6 +2743,11 @@ export default {
       return this.showAllUpcoming
         ? this.filteredUpcoming
         : this.filteredUpcoming.slice(0, 4);
+    },
+    visibleFilteredOngoing() {
+      return this.showAllOngoing
+        ? this.filteredOngoing
+        : this.filteredOngoing.slice(0, 4);
     },
     visibleFilteredCompleted() {
       return this.showAllCompleted
@@ -1970,19 +2771,6 @@ export default {
       return this.showAllCompleted ? list : list.slice(0, 4);
     },
 
-    sortedUpcomingTrainings() {
-      const now = new Date();
-      return this.upcomingtrainings
-        .filter(t => new Date(t.schedule) >= now)
-        .sort((a, b) => new Date(a.schedule) - new Date(b.schedule));
-    },
-
-    sortedCompletedTrainings() {
-      const now = new Date();
-      return this.upcomingtrainings
-        .filter(t => new Date(t.schedule) < now)
-        .sort((a, b) => new Date(b.schedule) - new Date(a.schedule));
-    },
     // Filter tags based on search input
     filteredTags() {
       if (!this.newTagName || this.newTagName.trim() === "") {
@@ -2092,6 +2880,96 @@ const logout = () => {
 .tag-chip-selected {
   background-color: #4a5568;
   color: white;
+}
+
+.modal-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.modal-title-row .modal-title {
+  margin: 0;
+}
+
+.modal-title-row .org-choice-toggle {
+  margin: 0;
+}
+
+.modal-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 16px;
+}
+
+.modal-tag-chip {
+  background-color: #d8e3f0;
+  color: #1f2a37;
+  font-size: 0.85rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.org-choice-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.org-choice-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.org-choice-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.org-choice-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #cbd5e0;
+  transition: 0.2s;
+  border-radius: 24px;
+}
+
+.org-choice-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.2s;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.org-choice-switch input:checked + .org-choice-slider {
+  background-color: #44576d;
+}
+
+.org-choice-switch input:checked + .org-choice-slider:before {
+  transform: translateX(20px);
+}
+
+.org-choice-label {
+  font-weight: 500;
+  color: #2d3748;
+  font-size: 0.9rem;
 }
 
 /* Optional fade animation */
@@ -2320,6 +3198,54 @@ const logout = () => {
   text-align: center;
   width: 100%;
   margin: 0 auto;
+  line-height: 1.4;
+}
+
+.org-status-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.org-status-icon-inline {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.org-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.org-status-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.org-status-verified {
+  background-color: #10b981;
+  color: #ffffff;
+  border: 1px solid #059669;
+}
+
+.org-status-unverified {
+  background-color: #f59e0b;
+  color: #ffffff;
+  border: 1px solid #d97706;
 }
 
 .profile-actions {
@@ -2366,6 +3292,14 @@ const logout = () => {
 }
 
 .upcoming {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.ongoing {
   background: white;
   border-radius: 10px;
   padding: 20px;
@@ -2698,6 +3632,81 @@ tbody td {
   transition: background-color 0.2s;
 }
 
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #d1d5db !important;
+  color: #9ca3af !important;
+}
+
+.action-btn.disabled-action:not(:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  background-color: #d1d5db !important;
+  color: #9ca3af !important;
+}
+
+/* Tooltip wrapper for disabled buttons */
+.button-tooltip-wrapper {
+  display: inline-block;
+  position: relative;
+  pointer-events: auto;
+}
+
+.button-tooltip-wrapper:has(button:disabled) {
+  cursor: not-allowed;
+}
+
+.button-tooltip-wrapper button:disabled {
+  pointer-events: none;
+}
+
+/* Custom tooltip that works on disabled buttons */
+.button-tooltip-wrapper[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background-color: #1f2937;
+  color: white;
+  border-radius: 6px;
+  font-size: 13px;
+  white-space: nowrap;
+  z-index: 10000;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: tooltipFadeIn 0.2s ease;
+}
+
+.button-tooltip-wrapper[title]:hover::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 2px;
+  border: 6px solid transparent;
+  border-top-color: #1f2937;
+  z-index: 10001;
+  pointer-events: none;
+  animation: tooltipFadeIn 0.2s ease;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 /* 'Certificate Issued' button (the disabled, lighter one) */
 .certificate-issued-btn {
   background-color: #f0f0f0;
@@ -2873,6 +3882,19 @@ tbody td {
   width: 100%;
   border: none;
   cursor: pointer;
+}
+
+.training-post-btn:disabled,
+.plus-btn-text:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.disabled-action {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .training-save-btn:hover {
@@ -3362,12 +4384,20 @@ tbody td {
   border-radius: 1rem;
   width: min(95vw, 900px);
   max-height: 90vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   position: relative;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
   animation: fadeIn 0.25s ease;
   z-index: 2100;
+  overflow: hidden;
   /* ensure above other overlays */
+}
+
+.training-details-body {
+  flex: 0 0 auto;
+  overflow: visible;
+  padding-right: 0.5rem;
 }
 
 .training-info {
@@ -3387,6 +4417,13 @@ tbody td {
   margin-top: 0.5rem;
 }
 
+/* Schedule Card Wrapper */
+.schedule-card-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
 .schedule-card {
   background: #f5f5f5;
   border-radius: 10px;
@@ -3395,8 +4432,9 @@ tbody td {
   flex-direction: column;
   gap: 0.5rem;
   transition: all 0.3s ease;
-  cursor: pointer;
+  cursor: default;
   border: 1px solid transparent;
+  position: relative;
 }
 
 .schedule-card:hover {
@@ -3404,6 +4442,75 @@ tbody td {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   border-color: #d1d5db;
+}
+
+/* Clickable Schedule Card */
+.schedule-card-clickable {
+  cursor: pointer;
+  border-color: #3b82f6;
+}
+
+.schedule-card-clickable:hover {
+  background: #dbeafe;
+  border-color: #2563eb;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Disabled Schedule Card */
+.schedule-card-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.schedule-card-disabled:hover {
+  background: #f5f5f5;
+  transform: none;
+  border-color: #e5e7eb;
+  box-shadow: none;
+}
+
+/* Active QR Schedule Card */
+.schedule-card-active-qr {
+  border-color: #10b981;
+  background: #d1fae5;
+}
+
+.schedule-card-active-qr:hover {
+  background: #a7f3d0;
+  border-color: #059669;
+}
+
+/* Hover Tooltip Below Card */
+.schedule-hover-tooltip-below {
+  margin-top: 0.5rem;
+  background-color: #1f2937;
+  color: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  position: relative;
+  line-height: 1.4;
+  word-wrap: break-word;
+  max-width: 100%;
+}
+
+.schedule-hover-tooltip-below::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-bottom-color: #1f2937;
+}
+
+.schedule-card-wrapper:hover .schedule-hover-tooltip-below {
+  opacity: 1;
 }
 
 .schedule-date-time {
@@ -3480,6 +4587,10 @@ tbody td {
   margin-top: 1.5rem;
   border-top: 1px solid #e5e7eb;
   padding-top: 1rem;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.5rem;
 }
 
 .registrants-header {
@@ -3554,8 +4665,8 @@ tbody td {
 }
 
 .registrants-table-container.inline {
-  max-height: 320px;
-  overflow-y: auto;
+  max-height: none;
+  overflow-y: visible;
 }
 
 .registrants-footer {
@@ -3755,5 +4866,166 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 .global-search-bar:focus {
   border-color: #44576d;
   box-shadow: 0 0 5px rgba(68, 87, 109, 0.2);
+}
+
+/* QR Code Modal */
+.qr-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.qr-modal {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  width: min(95vw, 500px);
+  max-width: 500px;
+  position: relative;
+  animation: fadeIn 0.25s ease;
+  overflow: hidden;
+}
+
+.qr-modal-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.qr-modal-close:hover {
+  background: #f3f4f6;
+  color: #000;
+  transform: scale(1.1);
+}
+
+.qr-modal-content {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.qr-modal-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+  text-align: center;
+  margin: 0;
+  padding-right: 2rem; /* Space for close button */
+}
+
+.qr-modal-schedule-info {
+  text-align: center;
+  padding: 0.75rem 1rem;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  width: 100%;
+}
+
+.qr-schedule-date {
+  font-size: 0.95rem;
+  color: #374151;
+  margin: 0 0 0.5rem 0;
+  font-weight: 500;
+}
+
+.qr-schedule-mode {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.qr-schedule-mode.mode-onsite {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #3b82f6;
+}
+
+.qr-schedule-mode.mode-online {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #f59e0b;
+}
+
+.qr-code-wrapper {
+  padding: 1rem;
+  background-color: #fff;
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-modal-info {
+  text-align: center;
+  width: 100%;
+}
+
+.qr-expiry-info {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin: 0 0 1rem 0;
+}
+
+.qr-expiry-info strong {
+  color: #374151;
+}
+
+.qr-instructions {
+  font-size: 0.85rem;
+  color: #6b7280;
+  line-height: 1.6;
+  margin: 0;
+  padding: 1rem;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+}
+
+.qr-instructions strong {
+  color: #374151;
+}
+
+.qr-modal-download-btn {
+  background-color: #374151;
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  margin-top: 0.5rem;
+}
+
+.qr-modal-download-btn:hover {
+  background-color: #1f2937;
 }
 </style>

@@ -19,6 +19,7 @@ use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\CareerRecommendationController;
 use App\Http\Controllers\ApplicationFileController;
+use App\Http\Controllers\OrganizationsChoiceController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\MyActivityController;
 use App\Http\Controllers\EventController;
@@ -143,9 +144,14 @@ Route::middleware('auth.custom')->group(function () {
 
 
     // Trainings
-    Route::post('/trainings', [TrainingController::class, 'store']);
-    Route::put('/trainings/{id}', [TrainingController::class, 'update']);
-    Route::delete('/trainings/{id}', [TrainingController::class, 'destroy']);
+    Route::post('/trainings', [TrainingController::class, 'store'])->middleware('require.verified.org');
+    Route::put('/trainings/{id}', [TrainingController::class, 'update'])->middleware('require.verified.org');
+    Route::delete('/trainings/{id}', [TrainingController::class, 'destroy'])->middleware('require.verified.org');
+    
+    // Organization Choices
+    Route::get('/organization/choices', [OrganizationsChoiceController::class, 'index']);
+    Route::post('/organization/choices', [OrganizationsChoiceController::class, 'store'])->middleware('require.verified.org');
+    Route::delete('/organization/choices/{trainingID}', [OrganizationsChoiceController::class, 'destroy'])->middleware('require.verified.org');
     
   
     Route::get('/trainings/{trainingID}', [TrainingController::class, 'show']);
@@ -155,21 +161,21 @@ Route::middleware('auth.custom')->group(function () {
     Route::get('/organization/careers', [CareerController::class, 'index']);
 
     // Careers
-    Route::post('/careers', [CareerController::class, 'store']);
+    Route::post('/careers', [CareerController::class, 'store'])->middleware('require.verified.org');
     Route::get('/careers/{id}', [CareerController::class, 'show']);
-    Route::put('/careers/{id}', [CareerController::class, 'update']);
-    Route::delete('/careers/{id}', [CareerController::class, 'destroy']); 
+    Route::put('/careers/{id}', [CareerController::class, 'update'])->middleware('require.verified.org');
+    Route::delete('/careers/{id}', [CareerController::class, 'destroy'])->middleware('require.verified.org'); 
 
     // Certificate issuance
-    Route::put('/registrations/{registrationID}/certificate', [RegistrationController::class, 'updateCertificate']);
-    Route::put('/registrations/{registrationID}/status', [RegistrationController::class, 'updateStatus']);
-    Route::post('/trainings/{trainingID}/certificates/bulk', [RegistrationController::class, 'issueBulkCertificates']);
+    Route::put('/registrations/{registrationID}/certificate', [RegistrationController::class, 'updateCertificate'])->middleware('require.verified.org');
+    Route::put('/registrations/{registrationID}/status', [RegistrationController::class, 'updateStatus'])->middleware('require.verified.org');
+    Route::post('/trainings/{trainingID}/certificates/bulk', [RegistrationController::class, 'issueBulkCertificates'])->middleware('require.verified.org');
 
     // Applicant monitoring
     Route::get('/careers/{careerID}/applicants', [ApplicationController::class, 'getApplicantsByCareer']);
-    Route::put('/applications/{applicationID}/status', [ApplicationController::class, 'updateStatus']);
+    Route::put('/applications/{applicationID}/status', [ApplicationController::class, 'updateStatus'])->middleware('require.verified.org');
     Route::get('/applications/interviews', [InterviewController::class, 'index']);
-    Route::put('/applications/{applicationID}/interview', [ApplicationController::class, 'updateInterview']);
+    Route::put('/applications/{applicationID}/interview', [ApplicationController::class, 'updateInterview'])->middleware('require.verified.org');
     Route::get('/applications/{applicationID}/requirements/signed-url', [ApplicationFileController::class, 'generateSignedUrl']);
     Route::get('/applications/{id}/requirements', [ApplicationController::class, 'getRequirements']);
     Route::post('/applications/{id}/upload-requirement', [ApplicationController::class, 'uploadRequirement']);

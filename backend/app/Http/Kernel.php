@@ -39,6 +39,7 @@ class Kernel extends HttpKernel
         'auth.custom' => \App\Http\Middleware\AuthCustom::class,
         'apitoken' => \App\Http\Middleware\ApiTokenAuth::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class, // ✅ Add this line
+        'require.verified.org' => \App\Http\Middleware\RequireVerifiedOrganization::class,
     ];
 
     // ✅ Auto-generate QR key 1 minute before or right at schedule

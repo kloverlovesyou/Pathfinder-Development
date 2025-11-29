@@ -158,9 +158,8 @@ class OrganizationController extends Controller
             ], 403);
         }
 
-        if ($organization->status === 'pending') {
-            return response()->json(['message' => 'Your registration is still under review.'], 403);
-        }
+        // Allow login even if status is pending (not yet verified by admin)
+        // Organizations can now login and see their unverified status in the UI
 
         if ($organization->status === 'rejected') {
             return response()->json([
