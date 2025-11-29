@@ -145,22 +145,23 @@ const router = createRouter({
       component: OrgChangePassword,
       meta: { requiresAuth: true, role: "organization" },
     },
+
     // Admin Home Page - Public Access
     {
       path: "/admin",
       component: AdminLayout,
-      meta: { requiresAuth: false },
       children: [
         {
           path: "", // /admin
           name: "AdminLogin",
-          component: AdminLogin, // <-- your admin login component
+          component: AdminLogin, // always show login first
+          meta: { requiresAuth: false }, // no auth needed here
         },
         {
           path: "dashboard",
           name: "AdminHomePage",
           component: AdminHomePage,
-          meta: { requiresAuth: true, role: "admin" },
+          meta: { requiresAuth: true, role: "admin" }, // only for logged-in admin
         },
         {
           path: "adminupdatedelete",
@@ -187,28 +188,27 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const user = JSON.parse(localStorage.getItem("user"));
 
-  // 1️⃣ Block access if route requires auth and no user
-  if (to.meta.requiresAuth && !user) {
-    return next({ name: "Login" });
-  }
-
-  // 2️⃣ Block access if role does not match
-  if (to.meta.role && (!user || user.role !== to.meta.role)) {
-    return next({ name: "Login" });
-  }
-
-  // 3️⃣ Prevent logged-in users from accessing login/register routes
-  if (user && to.path.startsWith("/auth")) {
-    if (user.role === "organization") {
-      return next({ name: "OrgHome" });
-    } else if (user.role === "admin") {
-      return next({ name: "AdminHomepage" });
+  // Block access if route requires auth and no user
+  if (to.meta.requiresAuth && (!user || (to.meta.role && user.role !== to.meta.role))) {
+    if (to.meta.role === "admin") {
+      return next({ name: "AdminLogin" }); // redirect to admin login
     } else {
-      return next({ name: "Homepage" });
+      return next({ name: "Login" }); // normal user login
     }
   }
 
-  // 4️⃣ Allow navigation
+  // Prevent logged-in users from accessing login/register routes
+  if (user && to.path.startsWith("/auth")) {
+    if (user.role === "organization") return next({ name: "OrgHome" });
+    if (user.role === "admin") return next({ name: "AdminHomePage" });
+    return next({ name: "Homepage" });
+  }
+
+  // Prevent logged-in admin from accessing /admin (login) again
+  if (user && user.role === "admin" && to.name === "AdminLogin") {
+    return next({ name: "AdminHomePage" });
+  }
+
   next();
 });
 
