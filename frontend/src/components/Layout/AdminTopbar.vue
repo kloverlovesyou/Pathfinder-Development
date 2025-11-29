@@ -4,6 +4,9 @@ import { isLoggedIn, currentUser } from "@/stores/store";
 import { authState, logout } from "@/stores/authState";
 import axios from "axios";
 import { useRoute } from "vue-router";
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
 const route = useRoute();
 const toasts = ref([]);
 
@@ -35,7 +38,7 @@ async function fetchApplicants() {
 
 function handleLogout() {
   logout(); // clears user and token, sets isLoggedIn to false
-  $router.push({ name: "AdminLogin" }); // redirect to login page
+  router.push({ name: "AdminLogin" }); // redirect to login page
 }
 
 // Open modal and load applicants
