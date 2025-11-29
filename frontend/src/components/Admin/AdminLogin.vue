@@ -77,7 +77,7 @@
 import { ref } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
-
+import { isLoggedIn , currentUser } from "@/stores/store";
 const router = useRouter();
 
 const email = ref("");
@@ -96,6 +96,7 @@ const showToast = (msg) => {
   setTimeout(() => (toastMessage.value = ""), 3000);
 };
 
+
 const handleAdminLogin = async () => {
   loginError.value = "";
   emailError.value = !validateEmail(email.value);
@@ -113,12 +114,13 @@ const handleAdminLogin = async () => {
     const adminData = res.data.admin;
     const token = res.data.token;
 
-    // Save admin login
+    // Save admin login in localStorage
     localStorage.setItem("admin_token", token);
-    localStorage.setItem(
-      "user",
-      JSON.stringify({ ...adminData, role: "admin" })
-    );
+    localStorage.setItem("user", JSON.stringify({ ...adminData, role: "admin" }));
+
+    // Update reactive store
+    isLoggedIn.value = true;
+    currentUser.value = { ...adminData, role: "admin" };
 
     router.push("/admin"); // redirect to admin dashboard
   } catch (err) {

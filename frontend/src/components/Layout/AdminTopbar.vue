@@ -1,11 +1,12 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, watch, reactive } from "vue";
+import { isLoggedIn, currentUser } from "@/stores/store";
 import axios from "axios";
 import { useRoute } from "vue-router";
 
 const route = useRoute();
 const toasts = ref([]);
-const isLoggedIn = ref(false);
+
 
 async function fetchApplicants() {
   console.log("📡 Fetching applicants...");
@@ -32,26 +33,10 @@ async function fetchApplicants() {
   }
 }
 
-async function logout() {
-  try {
-    // Call backend logout API (optional if you want to revoke token server-side)
-    await axios.post(import.meta.env.VITE_API_BASE_URL + '/admin/logout', {}, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('admin_token')}`, // adjust if using a different key
-      },
-    });
-
-    // Clear local token/session
-    localStorage.removeItem('admin_token');
-
-    // Redirect to login page
-    $router.push({ name: 'AdminLoginPage' });
-
-    showToast('Logged out successfully', 'success');
-  } catch (err) {
-    console.error('Logout failed:', err);
-    showToast('Failed to logout', 'error');
-  }
+function logout() {
+  localStorage.removeItem("admin_token");
+  isLoggedIn.value = false;
+  router.push({ name: "AdminLoginPage" });
 }
 
 
@@ -331,8 +316,7 @@ async function deleteOrganization(id) {
 }
 
 onMounted(() => {
-  const token = localStorage.getItem("admin_token"); // match the key you set in login
-  isLoggedIn.value = !!token; // true if token exists
+  isLoggedIn.value = !!localStorage.getItem("admin_token");
 });
 </script>
 
