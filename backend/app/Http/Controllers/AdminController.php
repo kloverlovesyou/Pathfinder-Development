@@ -28,7 +28,7 @@ class AdminController extends Controller
         }
 
         // Find admin by email
-        $admin = Admin::where('EmailAddress', $request->emailAddress)->first();
+        $admin = Admin::where('emailAddress', $request->emailAddress)->first();
 
         if (!$admin) {
             return response()->json([
@@ -37,7 +37,7 @@ class AdminController extends Controller
         }
 
         // Verify password
-        if (!Hash::check($request->password, $admin->Password)) {
+        if (!Hash::check($request->password, $admin->password)) {
             return response()->json([
                 'message' => 'Invalid email or password.'
             ], 401);
