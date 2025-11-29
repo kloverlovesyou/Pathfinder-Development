@@ -1,9 +1,9 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, watch, reactive } from "vue";
 import { isLoggedIn, currentUser } from "@/stores/store";
+import { authState, logout } from "@/stores/authState";
 import axios from "axios";
 import { useRoute } from "vue-router";
-
 const route = useRoute();
 const toasts = ref([]);
 
@@ -33,19 +33,10 @@ async function fetchApplicants() {
   }
 }
 
-function logout() {
-  // Clear localStorage
-  localStorage.removeItem("admin_token");
-  localStorage.removeItem("user");
-
-  // Update reactive store
-  isLoggedIn.value = false;
-  currentUser.value = null;
-
-  // Redirect to login page
-  router.push({ name: "AdminLogin" });
+function handleLogout() {
+  logout(); // clears user and token, sets isLoggedIn to false
+  router.push({ name: "AdminLogin" }); // redirect to login page
 }
-
 
 // Open modal and load applicants
 const openApplicantModal = async () => {
@@ -328,7 +319,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-if="isLoggedIn" class="flex-grow flex items-center justify-between p-4 font-poppins">
+  <div v-if=authState.isLoggedIn class="flex-grow flex items-center justify-between p-4 font-poppins">
     <div class="flex items-center justify-between p-4 w-full">
       <!-- LEFT: Logo -->
       <button
@@ -419,10 +410,10 @@ onMounted(() => {
         </button>
       </div>
 
-      <!-- RIGHT: Logout button (on AdminHomePage only) -->
+       <!-- RIGHT: Logout button -->
       <div class="absolute top-2 right-6">
         <button
-          @click="logout"
+          @click="handleLogout"
           :class="[
             'flex flex-col items-center justify-center transition-all duration-200',
             route.name === 'Logout'

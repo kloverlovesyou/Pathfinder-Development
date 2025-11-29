@@ -1,13 +1,9 @@
 <template>
   <div class="flex h-screen">
-    <!-- Sidebar -->
-
-    <!-- Main Area -->
     <div class="flex flex-col flex-1">
       <!-- Header -->
       <header class="h-16 text-dark-slate flex items-center px-4">
-        <!-- Only show topbar if admin is logged in -->
-        <AdminTopBar v-if="isLoggedIn" />
+        <AdminTopBar v-if="isLoggedIn" @logout="handleLogout" />
       </header>
 
       <!-- Page Content -->
@@ -23,25 +19,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { computed } from "vue";
+import { authState, logout } from "@/stores/authState";
+import { useRouter } from "vue-router";
 import AdminTopBar from "@/components/Layout/AdminTopBar.vue";
 
-// Reactive ref for login status
-const isLoggedIn = ref(false);
+const router = useRouter();
 
-function checkLogin() {
-  const user = JSON.parse(localStorage.getItem("user"));
-  isLoggedIn.value = user && user.role === "admin";
+// Reactive login check
+const isLoggedIn = computed(() => authState.user && authState.user.role === "admin");
+
+// Logout handler
+function handleLogout() {
+  logout(); // clears user and token
+  router.push({ name: "AdminLogin" }); // redirects automatically
 }
-
-// Initial check on mount
-onMounted(() => {
-  checkLogin();
-  window.addEventListener("storage", checkLogin); // detect logout in other tabs
-});
-
-// Cleanup listener
-onBeforeUnmount(() => {
-  window.removeEventListener("storage", checkLogin);
-});
 </script>
