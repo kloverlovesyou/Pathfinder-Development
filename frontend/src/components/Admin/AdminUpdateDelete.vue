@@ -160,40 +160,34 @@ const userName = ref("");
 
 onMounted(async () => {
   try {
-    // Use authState.token consistently
-    const token = authState.token;
-
+    // Use token from authState or localStorage
+    const token = authState.token || localStorage.getItem("admin_token");
     if (!token) {
-      console.error("❌ No admin token found, user not logged in.");
+      console.error("❌ No admin token found, redirecting to login.");
+      router.push("/admin/login");
       return;
     }
 
     const res = await axios.get(
       import.meta.env.VITE_API_BASE_URL + "/admin/details",
       {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
 
     const admin = res.data;
 
-    // Update form fields safely
+    // Update reactive form and store
     form.value.name = admin.name || "";
     form.value.location = admin.location || "";
     form.value.websiteURL = admin.websiteURL || "";
     form.value.emailAddress = admin.emailAddress || "";
 
-    // Update reactive authState and localStorage
     authState.user = admin;
     localStorage.setItem("user", JSON.stringify(admin));
 
   } catch (error) {
-    console.error(
-      "❌ Error fetching admin details:",
-      error.response?.data?.message || error
-    );
+    console.error("❌ Error fetching admin details:", error.response?.data?.message || error);
   }
 });
 
