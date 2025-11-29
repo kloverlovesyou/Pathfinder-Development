@@ -297,11 +297,8 @@ const handleLogin = async () => {
     const role =
       userData.role || (userData.adminID ? "organization" : "applicant");
 
-    // Handle pending status
-    if (role === "organization" && userData.status === "pending") {
-      showToast("Your organization account is not yet approved by the admin.");
-      return;
-    }
+    // Allow login even if status is pending (not yet verified by admin)
+    // Organizations can now login and see their unverified status in the UI
 
     // Handle rejected status with reason
     if (role === "organization" && userData.status === "rejected") {

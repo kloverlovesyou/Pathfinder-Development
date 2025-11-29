@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Training;
 use App\Models\TrainingSchedule;
 use App\Models\Registration;
+use App\Models\OrganizationsChoice;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -35,10 +36,21 @@ class TrainingController extends Controller
      */
     public function autoGenerateQRForSchedule(TrainingSchedule $schedule)
     {
-        $now = now();
+        // Schedule times are stored as datetime without timezone info
+        // They should be interpreted as Asia/Manila time (Philippine Standard Time)
+        $timezone = 'Asia/Manila';
+        $now = Carbon::now($timezone);
+        
+        // Parse schedule times: get the raw datetime string and interpret it as Asia/Manila time
+        // The datetime format is "Y-m-d H:i" (e.g., "2025-11-29 07:05")
+        $scheduleStartStr = $schedule->schedule->format('Y-m-d H:i');
+        $scheduleEndStr = $schedule->end_time->format('Y-m-d H:i');
+        
+        $scheduleStart = Carbon::createFromFormat('Y-m-d H:i', $scheduleStartStr, $timezone);
+        $scheduleEnd = Carbon::createFromFormat('Y-m-d H:i', $scheduleEndStr, $timezone);
 
         // Clear QR if schedule ended
-        if ($schedule->attendance_key && $now->greaterThanOrEqualTo($schedule->end_time)) {
+        if ($schedule->attendance_key && $now->greaterThanOrEqualTo($scheduleEnd)) {
             $schedule->attendance_key = null;
             $schedule->qr_generated_at = null;
             $schedule->attendance_expires_at = null;
@@ -47,9 +59,9 @@ class TrainingController extends Controller
         }
 
         // Generate QR key if schedule started
-        if ($now->greaterThanOrEqualTo($schedule->schedule)
+        if ($now->greaterThanOrEqualTo($scheduleStart)
             && !$schedule->attendance_key
-            && $now->lessThan($schedule->end_time)) 
+            && $now->lessThan($scheduleEnd)) 
         {
             $schedule->attendance_key = $this->generateSafeKey(16);
             $schedule->qr_generated_at = $now;
@@ -107,42 +119,67 @@ class TrainingController extends Controller
             return response()->json(['message' => 'QR Code Expired'], 400);
         }
 
-        // ✅ Step 1: find applicant by email and training
-        $applicant = DB::table('applicant')
-            ->join('registration', 'registration.applicantID', '=', 'applicant.applicantID')
+        // ✅ Step 1: Find registration for this training and email
+        // Only registered applicants can scan QR and have their attendance updated
+        $registrationData = DB::table('registration')
+            ->join('applicant', 'registration.applicantID', '=', 'applicant.applicantID')
             ->where('registration.trainingID', $request->trainingID)
             ->where('applicant.emailAddress', $request->emailAddress)
-            ->select('applicant.*', 'registration.registrationID')
+            ->select(
+                'applicant.*',
+                'registration.registrationID',
+                DB::raw('COALESCE(registration.registrationStatus, registration.RegistrationStatus) as registrationStatus')
+            )
             ->first();
 
-        if (!$applicant) {
-            return response()->json(['message' => '⚠️ No registration found with this email.'], 404);
+        // Check if applicant is registered for this training
+        if (!$registrationData) {
+            return response()->json([
+                'message' => '⚠️ Access Denied: You are not registered for this training. Only registered applicants can scan the QR code and record attendance. Please register for this training first.'
+            ], 403);
         }
 
-        // ✅ Step 2: check first/last name
-        if ($applicant->firstName !== $request->firstName || $applicant->lastName !== $request->lastName) {
-            return response()->json(['message' => '⚠️ Name does not match our records.'], 400);
+        // Check if registration is cancelled
+        $registrationStatus = strtolower(trim($registrationData->registrationStatus ?? ''));
+        if ($registrationStatus === 'cancelled') {
+            return response()->json([
+                'message' => '⚠️ Access Denied: Your registration for this training has been cancelled. You cannot record attendance.'
+            ], 403);
         }
 
-        // ✅ Step 3: check phone number
-        if ($applicant->phoneNumber !== $request->phoneNumber) {
-            return response()->json(['message' => '⚠️ Phone number does not match our records.'], 400);
+        // ✅ Step 2: Verify first/last name matches registered applicant
+        if ($registrationData->firstName !== $request->firstName || $registrationData->lastName !== $request->lastName) {
+            return response()->json([
+                'message' => '⚠️ Verification Failed: Name does not match the registered applicant\'s information. Please use the same name you used when registering for this training.'
+            ], 400);
         }
 
-        // ✅ Step 4: update attendance
-        $registration = Registration::find($applicant->registrationID);
+        // ✅ Step 3: Verify phone number matches registered applicant
+        if ($registrationData->phoneNumber !== $request->phoneNumber) {
+            return response()->json([
+                'message' => '⚠️ Verification Failed: Phone number does not match the registered applicant\'s information. Please use the same phone number you used when registering for this training.'
+            ], 400);
+        }
+
+        // ✅ Step 4: Update attendance (only for registered applicants)
+        $registration = Registration::find($registrationData->registrationID);
         if ($registration) {
             $registration->checked_in_at = now();
             $registration->registrationStatus = 'Attended';
             $registration->certTrackingID = $request->key;
             $registration->recordStage('attended', now());
             $registration->save();
+        } else {
+            return response()->json([
+                'message' => '⚠️ Error: Could not update attendance record. Please contact support.'
+            ], 500);
         }
 
         return response()->json(['message' => '✅ Attendance Recorded Successfully']);
     }
     /**
      * Manually generate QR (optional)
+     * Accepts optional trainingScheduleID to generate QR for a specific schedule
      */
     public function generateQRCode(Request $request)
     {
@@ -152,28 +189,68 @@ class TrainingController extends Controller
             return response()->json(['message' => 'Training not found'], 404);
         }
 
-        // Get the first schedule (or specify which schedule to generate QR for)
-        $schedule = $training->schedules->first();
+        // Get specific schedule if trainingScheduleID is provided, otherwise get first schedule
+        $schedule = null;
+        if ($request->has('trainingScheduleID')) {
+            $schedule = $training->schedules->firstWhere('trainingScheduleID', $request->trainingScheduleID);
+        } else {
+            $schedule = $training->schedules->first();
+        }
+
         if (!$schedule) {
-            return response()->json(['message' => 'Training has no schedules'], 400);
+            return response()->json(['message' => 'Training schedule not found'], 400);
         }
 
-        if (now()->lessThan($schedule->end_time)) {
-            $this->autoGenerateQRForSchedule($schedule);
-            $schedule->refresh();
+        // Schedule times are stored as datetime without timezone info
+        // They should be interpreted as Asia/Manila time (Philippine Standard Time)
+        // Convert both current time and schedule times to Asia/Manila for proper comparison
+        $timezone = 'Asia/Manila';
+        $now = Carbon::now($timezone);
+        
+        // Parse schedule times: get the raw datetime string and interpret it as Asia/Manila time
+        // The datetime format is "Y-m-d H:i" (e.g., "2025-11-29 07:05")
+        $scheduleStartStr = $schedule->schedule->format('Y-m-d H:i');
+        $scheduleEndStr = $schedule->end_time->format('Y-m-d H:i');
+        
+        $scheduleStart = Carbon::createFromFormat('Y-m-d H:i', $scheduleStartStr, $timezone);
+        $scheduleEnd = Carbon::createFromFormat('Y-m-d H:i', $scheduleEndStr, $timezone);
 
-            // ✅ Create full attendance URL
-            $attendanceUrl = env('FRONTEND_URL') . '/attendance/checkin?trainingID='
-                            . $training->trainingID . '&key=' . $schedule->attendance_key;
-
+        // Check if schedule has started
+        if ($now->lessThan($scheduleStart)) {
             return response()->json([
-                'key' => $schedule->attendance_key,
-                'attendance_link' => $attendanceUrl,
-                'expires_at' => $schedule->end_time,
-            ]);
+                'message' => 'Cannot generate QR — training not yet started',
+                'start_time' => $scheduleStart->format('Y-m-d H:i:s T'),
+                'current_time' => $now->format('Y-m-d H:i:s T')
+            ], 400);
         }
 
-        return response()->json(['message' => 'Cannot generate QR — training already ended'], 400);
+        // Check if schedule has ended
+        if ($now->greaterThanOrEqualTo($scheduleEnd)) {
+            return response()->json([
+                'message' => 'Cannot generate QR — training already ended',
+                'end_time' => $scheduleEnd->format('Y-m-d H:i:s T'),
+                'current_time' => $now->format('Y-m-d H:i:s T')
+            ], 400);
+        }
+
+        // Generate QR if within timeframe
+        $this->autoGenerateQRForSchedule($schedule);
+        $schedule->refresh();
+
+        // ✅ Create full attendance URL
+        $attendanceUrl = env('FRONTEND_URL') . '/attendance/checkin?trainingID='
+                        . $training->trainingID . '&key=' . $schedule->attendance_key;
+
+        // Format expiry time in Asia/Manila timezone for frontend
+        // Parse the end_time and ensure it's in Asia/Manila timezone
+        $expiresAt = Carbon::createFromFormat('Y-m-d H:i', $schedule->end_time->format('Y-m-d H:i'), $timezone);
+        
+        return response()->json([
+            'key' => $schedule->attendance_key,
+            'attendance_link' => $attendanceUrl,
+            'expires_at' => $expiresAt->format('Y-m-d\TH:i:sP'), // ISO 8601 format: 2025-11-29T12:00:00+08:00
+            'trainingScheduleID' => $schedule->trainingScheduleID,
+        ]);
     }
 
     /**
@@ -181,7 +258,7 @@ class TrainingController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Training::with(['organization', 'tags']);
+        $query = Training::with(['organization', 'tags', 'schedules', 'organizationChoices']);
 
         $user = $request->user();
         if ($user && isset($user->organizationID)) {
@@ -190,7 +267,7 @@ class TrainingController extends Controller
             $query->where('organizationID', $request->organizationID);
         }
 
-        $trainings = $query->with('schedules')->get();
+        $trainings = $query->get();
 
         // Auto-generate QR for each schedule
         foreach ($trainings as $training) {
@@ -212,7 +289,7 @@ class TrainingController extends Controller
             return response()->json(['message' => 'Unauthorized - Organization access required'], 401);
         }
 
-        $trainings = Training::with(['organization', 'tags', 'schedules'])
+        $trainings = Training::with(['organization', 'tags', 'schedules', 'organizationChoices'])
             ->where('organizationID', $user->organizationID)
             ->get();
 
@@ -236,6 +313,16 @@ class TrainingController extends Controller
         if ($firstSchedule && $firstSchedule->attendance_key) {
             $attendanceLink = env('FRONTEND_URL') . '/attendance/checkin?trainingID='
                 . $training->trainingID . '&key=' . $firstSchedule->attendance_key;
+        }
+
+        $hasChoice = false;
+        if ($training->relationLoaded('organizationChoices')) {
+            $hasChoice = $training->organizationChoices
+                ->contains(fn ($choice) => (int) $choice->organizationID === (int) $training->organizationID);
+        } else {
+            $hasChoice = OrganizationsChoice::where('trainingID', $training->trainingID)
+                ->where('organizationID', $training->organizationID)
+                ->exists();
         }
 
         return [
@@ -274,6 +361,7 @@ class TrainingController extends Controller
                     'tagName' => $tag->TagName ?? '',
                 ];
             }),
+            'isOrganizationChoice' => $hasChoice,
         ];
     }
     /**
@@ -487,6 +575,7 @@ public function total() {
     {
         // Delete all registrations tied to this training
         DB::table('registration')->where('trainingID', $id)->delete();
+        DB::table('organizationschoice')->where('trainingID', $id)->delete();
 
         // Delete the training itself
         DB::table('training')->where('trainingID', $id)->delete();
@@ -506,6 +595,7 @@ public function total() {
             $training->registrations()->delete();
             //$training->attendances()->delete();
             $training->tags()->detach();
+            DB::table('organizationschoice')->where('trainingID', $training->trainingID)->delete();
             $training->delete();
         });
 

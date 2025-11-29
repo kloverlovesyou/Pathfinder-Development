@@ -5,27 +5,40 @@ import axios from "axios";
 export const activeTrainingQR = ref(null);   // QR code URL
 export const qrExpiresAt = ref(null);        // QR expiry time
 export const activeTrainingId = ref(null);   // Training ID with active QR
+export const activeScheduleId = ref(null);   // Schedule ID with active QR
 let qrExpireTimeout = null;                  // Timeout reference
 
 /**
- * Generate a QR code for a training
+ * Generate a QR code for a training or a specific schedule
  */
-export async function generateQR(training) {
+export async function generateQR(training, schedule = null) {
   try {
     const token = localStorage.getItem("token");
     if (!token) throw new Error("No token found");
 
+    const payload = { trainingID: training.trainingID };
+    if (schedule) {
+      // Always include trainingScheduleID if it exists
+      if (schedule.trainingScheduleID) {
+        payload.trainingScheduleID = schedule.trainingScheduleID;
+      } else {
+        console.warn("Schedule object missing trainingScheduleID:", schedule);
+      }
+    }
+
     const response = await axios.post(
       import.meta.env.VITE_API_BASE_URL + "/trainings/generate-qr",
-      { trainingID: training.trainingID },
+      payload,
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    activeTrainingQR.value =
+    activeTrainingQR.value = response.data.attendance_link || (
       import.meta.env.VITE_API_BASE_URL +
-      `/attendance/checkin?trainingID=${training.trainingID}&key=${response.data.key}`;
+      `/attendance/checkin?trainingID=${training.trainingID}&key=${response.data.key}`
+    );
     qrExpiresAt.value = new Date(response.data.expires_at);
     activeTrainingId.value = training.trainingID;
+    activeScheduleId.value = response.data.trainingScheduleID || (schedule?.trainingScheduleID || null);
 
     // Clear previous timer
     if (qrExpireTimeout) clearTimeout(qrExpireTimeout);
@@ -38,13 +51,20 @@ export async function generateQR(training) {
         activeTrainingQR.value = null;
         qrExpiresAt.value = null;
         activeTrainingId.value = null;
+        activeScheduleId.value = null;
         console.log(`QR for "${training.title}" expired.`);
       }, msUntilExpire);
     }
 
-    console.log(`✅ QR Generated for "${training.title}", expires at ${qrExpiresAt.value}`);
+    const scheduleInfo = schedule ? ` (Schedule: ${schedule.trainingScheduleID})` : '';
+    console.log(`✅ QR Generated for "${training.title}"${scheduleInfo}, expires at ${qrExpiresAt.value}`);
+    return { success: true, data: response.data };
   } catch (error) {
     console.error("QR GENERATION FAILED:", error);
+    return { 
+      success: false, 
+      error: error.response?.data?.message || error.message || "Failed to generate QR code" 
+    };
   }
 }
 

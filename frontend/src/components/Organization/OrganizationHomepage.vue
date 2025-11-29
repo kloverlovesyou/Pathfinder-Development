@@ -29,7 +29,18 @@
         <!-- Profile Section (only when sidebar is open) -->
         <transition name="fade">
           <div v-if="isSidebarOpen" class="profile-section">
-            <h3 class="org-name">{{ organizationName }}</h3>
+            <h3 class="org-name">
+              {{ organizationName }}
+              <span v-if="organizationStatus !== null" class="org-status-inline" :class="organizationStatusClass">
+                <svg v-if="isOrganizationVerified" class="org-status-icon-inline" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <svg v-else class="org-status-icon-inline" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span>{{ organizationStatusLabel }}</span>
+              </span>
+            </h3>
             <div class="profile-actions">
               <div class="action" @click="navigateTo({ name: 'OrgUpdateProfile' })">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -123,6 +134,23 @@
           <span class="logo-text">Pathfinder</span>
         </div>
       </header>
+
+      <!-- Verification Warning Card -->
+      <div v-if="!isOrganizationVerified" class="verification-warning-card">
+        <div class="verification-warning-content">
+          <svg class="verification-warning-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+            <path d="M12 9v4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" />
+          </svg>
+          <div class="verification-warning-text">
+            <p class="verification-warning-title">Account not verified by admin.</p>
+            <p class="verification-warning-email">
+              Contact admin at: <span class="admin-email">admin@pathfinder.com</span>
+            </p>
+          </div>
+        </div>
+      </div>
 
       <!-- 🧾 Summary Cards -->
       <section class="cards-container">
@@ -249,6 +277,8 @@ const toggleSidebar = () => isSidebarOpen.value = !isSidebarOpen.value;
 // ----------------------
 const organizationName = ref('Loading...');
 const organizationLogo = ref(null);
+const organizationStatus = ref(null);
+const isOrganizationVerified = ref(false);
 
 // Computed property for logo URL - use organization logo if available
 const logoUrl = computed(() => {
@@ -274,7 +304,22 @@ onMounted(() => {
     } else if (user.logo_directory || user.Logo_directory || user.logoPath) {
       organizationLogo.value = user;
     }
+    
+    // Get organization status
+    organizationStatus.value = user.status || user.Status || null;
+    isOrganizationVerified.value = ["approved", "verified"].includes(
+      (organizationStatus.value || "").toString().toLowerCase()
+    );
   }
+});
+
+// Computed properties for verification status
+const organizationStatusLabel = computed(() => {
+  return isOrganizationVerified.value ? "Verified" : "Unverified";
+});
+
+const organizationStatusClass = computed(() => {
+  return isOrganizationVerified.value ? "org-status-verified" : "org-status-unverified";
 });
 
 // ----------------------
@@ -791,6 +836,56 @@ const logout = () => {
   font-family: 'Poppins', sans-serif;
 }
 
+/* Verification Warning Card */
+.verification-warning-card {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 2px solid #f59e0b;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+.verification-warning-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.verification-warning-icon {
+  width: 32px;
+  height: 32px;
+  color: #d97706;
+  flex-shrink: 0;
+}
+
+.verification-warning-text {
+  flex: 1;
+}
+
+.verification-warning-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #92400e;
+  margin: 0 0 6px 0;
+}
+
+.verification-warning-email {
+  font-size: 14px;
+  color: #78350f;
+  margin: 0;
+}
+
+.admin-email {
+  font-weight: 600;
+  color: #d97706;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.admin-email:hover {
+  color: #b45309;
+}
 
 .chart-section {
   background: white;
@@ -939,6 +1034,37 @@ const logout = () => {
   text-align: center;
   width: 100%;
   margin: 0 auto;
+  line-height: 1.4;
+}
+
+.org-status-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.org-status-icon-inline {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.org-status-verified {
+  background-color: #10b981;
+  color: #ffffff;
+  border: 1px solid #059669;
+}
+
+.org-status-unverified {
+  background-color: #f59e0b;
+  color: #ffffff;
+  border: 1px solid #d97706;
 }
 
 .profile-actions {

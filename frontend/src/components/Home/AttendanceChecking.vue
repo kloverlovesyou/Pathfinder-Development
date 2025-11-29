@@ -32,7 +32,11 @@
 
     <!-- Attendance Form -->
     <form v-if="!loading && !submitted && !invalidQR" @submit.prevent="submitAttendance" class="space-y-4 w-full max-w-md">
-      <p class="mb-2 text-left font-medium">Please enter your details to record attendance:</p>
+      <div class="mb-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-left">
+        <p class="text-sm text-blue-800 font-medium mb-1">📝 Important:</p>
+        <p class="text-xs text-blue-700">Only registered applicants can record attendance. Please make sure you are registered for this training and use the same email address, name, and phone number you used during registration.</p>
+      </div>
+      <p class="mb-2 text-left font-medium">Please enter your registered details to record attendance:</p>
 
       <div class="form-control">
         <input v-model="first_name" type="text" placeholder="First Name"

@@ -116,6 +116,7 @@ export default {
       careerPdfPublicUrl: "",
       careerPdfUploading: false,
       careerPdfError: "",
+      isOrganizationVerified: false,
     };
   },
 
@@ -430,12 +431,6 @@ export default {
         typeof person.status === "string" &&
         person.status.toLowerCase() === "for interview";
 
-      if (selectedForInterview) {
-        this.$nextTick(() => {
-          this.openScheduleModal(person);
-        });
-      }
-
       try {
         const response = await axios.put(
           import.meta.env.VITE_API_BASE_URL +
@@ -475,7 +470,8 @@ export default {
             this.applicantsList[index].interviewLink = updatedData.interviewLink;
           }
 
-          if (normalizedStatus === "for interview" && !this.showScheduleModal) {
+          // Open scheduling modal only after successful status update to "for interview"
+          if (normalizedStatus === "for interview" && !this.applicantsList[index].interviewSchedule) {
             this.$nextTick(() => {
               this.openScheduleModal(this.applicantsList[index]);
             });
@@ -1354,6 +1350,12 @@ export default {
 
     // Delete a career
     async deleteCareer(career) {
+      // Check if organization is verified
+      if (!this.isOrganizationVerified) {
+        showToast("Your organization account is not yet verified by the admin. Please wait for admin approval before performing this action.");
+        return;
+      }
+
       const careerId = career.careerID || career.id; // fallback to id
       if (!careerId) {
         console.error("No career ID provided", career);
@@ -1554,6 +1556,12 @@ export default {
       }
     },
     async openCareerPopup(career = null) {
+      // Check if organization is verified
+      if (!this.isOrganizationVerified) {
+        showToast("Your organization account is not yet verified by the admin. Please wait for admin approval before creating or editing careers.");
+        return;
+      }
+
       await this.fetchTags(); // Load tags first
       
       if (career) {
@@ -1581,6 +1589,8 @@ export default {
       } else {
         // Posting new career
         this.resetNewCareer();
+        // Set posting date to today's date automatically
+        this.newCareer.postingDate = this.todayDate;
       }
       if (!Array.isArray(this.newCareer.Tags)) {
         this.newCareer.Tags = [];
@@ -1610,6 +1620,12 @@ export default {
       this.applicantSearchQuery = ""; // Clear search when closing modal
     },
     async saveCareer() {
+      // Check if organization is verified
+      if (!this.isOrganizationVerified) {
+        showToast("Your organization account is not yet verified by the admin. Please wait for admin approval before performing this action.");
+        return;
+      }
+
       try {
         // 🔹 0. Get token from localStorage
         let token = localStorage.getItem("token");
@@ -1627,8 +1643,6 @@ export default {
         const requiredFields = [
           "position",
           "placeOfAssignment",
-          "details",
-          "qualificationStandard",
           "postingDate",
           "closingDate",
         ];
@@ -1640,18 +1654,32 @@ export default {
           }
         }
 
-        // 🔹 2. Optional tags confirmation
-        if (!this.newCareer.Tags || this.newCareer.Tags.length === 0) {
-          const proceed = confirm("No tags selected. Continue without tags?");
-          if (!proceed) return;
-        }
-
         if (this.careerPdfUploading) {
           alert("Please wait for the PDF upload to finish before saving.");
           return;
         }
 
         const pdfPath = this.newCareer.pdfPath || "";
+
+        // 🔹 1.5. Validate details and qualificationStandard - required only if no PDF is uploaded
+        if (!pdfPath || pdfPath.trim() === "") {
+          // No PDF uploaded, so details and qualificationStandard are required
+          if (!this.newCareer.details || this.newCareer.details.trim() === "") {
+            showToast("Please fill out the details field or upload a PDF file.");
+            return;
+          }
+          if (!this.newCareer.qualificationStandard || this.newCareer.qualificationStandard.trim() === "") {
+            showToast("Please fill out the qualification standard field or upload a PDF file.");
+            return;
+          }
+        }
+        // If PDF is uploaded, details and qualificationStandard are optional
+
+        // 🔹 2. Optional tags confirmation
+        if (!this.newCareer.Tags || this.newCareer.Tags.length === 0) {
+          const proceed = confirm("No tags selected. Continue without tags?");
+          if (!proceed) return;
+        }
 
         // 🔹 3. Prepare payload (matches actual database schema - camelCase)
         const payload = {
@@ -1926,6 +1954,20 @@ export default {
         } else if (user.logo_directory || user.Logo_directory || user.logoPath) {
           this.organizationLogo = user;
         }
+        
+        // Initialize organization verification status
+        // Check nested organization status first, then fall back to user status
+        let organizationStatus = null;
+        if (user.organization) {
+          organizationStatus = user.organization.status || user.organization.Status || null;
+        }
+        if (!organizationStatus) {
+          organizationStatus = user.status || user.Status || null;
+        }
+        
+        this.isOrganizationVerified = ["approved", "verified"].includes(
+          (organizationStatus || "").toString().toLowerCase()
+        );
       } catch (error) {
         console.error("Error parsing user from localStorage:", error);
       }
@@ -1943,13 +1985,14 @@ export default {
 </script>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useOrganizationLogo } from "@/composables/useOrganizationLogo.js";
 
 const router = useRouter();
 const isSidebarOpen = ref(true);
 const organizationName = ref("");
+const organizationStatus = ref(null);
 
 // Get organization logo
 const { logoUrl } = useOrganizationLogo();
@@ -1966,8 +2009,30 @@ onMounted(() => {
     const user = JSON.parse(storedUser);
     if (user.role === "organization") {
       organizationName.value = user.displayName || user.name;
+      // Check nested organization status first, then fall back to user status
+      if (user.organization) {
+        organizationStatus.value = user.organization.status || user.organization.Status || null;
+      }
+      if (!organizationStatus.value) {
+        organizationStatus.value = user.status || user.Status || null;
+      }
     }
   }
+});
+
+// Computed properties for verification status
+const organizationStatusLabel = computed(() => {
+  const isVerified = ["approved", "verified"].includes(
+    (organizationStatus.value || "").toString().toLowerCase()
+  );
+  return isVerified ? "Verified" : "Unverified";
+});
+
+const organizationStatusClass = computed(() => {
+  const isVerified = ["approved", "verified"].includes(
+    (organizationStatus.value || "").toString().toLowerCase()
+  );
+  return isVerified ? "org-status-verified" : "org-status-unverified";
 });
 
 // Sidebar navigation functions
@@ -2029,7 +2094,18 @@ async function viewRequirement(id) {
         <!-- Profile Section (only when sidebar is open) -->
         <transition name="fade">
           <div v-if="isSidebarOpen" class="profile-section">
-            <h3 class="org-name">{{ organizationName }}</h3>
+            <h3 class="org-name">
+              {{ organizationName }}
+              <span v-if="organizationStatus !== null" class="org-status-inline" :class="organizationStatusClass">
+                <svg v-if="isOrganizationVerified" class="org-status-icon-inline" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <svg v-else class="org-status-icon-inline" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span>{{ organizationStatusLabel }}</span>
+              </span>
+            </h3>
             <div class="profile-actions">
               <div class="action" @click="navigateTo({ name: 'OrgUpdateProfile' })">
                 <!-- Update Profile Icon -->
@@ -2209,7 +2285,7 @@ async function viewRequirement(id) {
             Open Careers
             <span class="count-badge">{{ sortedUpcomingCareers.length }}</span>
           </h2>
-          <button class="plus-btn-text" @click="openCareerPopup()">+</button>
+          <button class="plus-btn-text" @click="openCareerPopup()" :disabled="!isOrganizationVerified" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">+</button>
         </div>
 
         <div class="career-grid">
@@ -2239,8 +2315,8 @@ async function viewRequirement(id) {
                 @click.stop
               >
                 <ul>
-                  <li @click="deleteCareer(career)">Delete Career</li>
-                  <li @click="openCareerPopup(career)">Update Career</li>
+                  <li @click="deleteCareer(career)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Delete Career</li>
+                  <li @click="openCareerPopup(career)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Update Career</li>
                 </ul>
               </div>
             </div>
@@ -2294,7 +2370,7 @@ async function viewRequirement(id) {
                 @click.stop
               >
                 <ul>
-                  <li @click="deleteCareer(career)">Delete Career</li>
+                  <li @click="deleteCareer(career)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Delete Career</li>
                 </ul>
               </div>
             </div>
@@ -2542,8 +2618,8 @@ async function viewRequirement(id) {
             <!-- Inputs -->
             <input v-model="newCareer.position" type="text" placeholder="Position" class="career-input" required />
             <input v-model="newCareer.placeOfAssignment" type="text" placeholder="Place of Assignment" class="career-input" required />
-            <textarea v-model="newCareer.details" placeholder="Details" class="career-input" required></textarea>
-            <textarea v-model="newCareer.qualificationStandard" placeholder="Qualification Standard" class="career-input" required></textarea>
+            <textarea v-model="newCareer.details" :placeholder="newCareer.pdfPath ? 'Details (optional if PDF uploaded)' : 'Details (required if no PDF)'" class="career-input"></textarea>
+            <textarea v-model="newCareer.qualificationStandard" :placeholder="newCareer.pdfPath ? 'Qualification Standard (optional if PDF uploaded)' : 'Qualification Standard (required if no PDF)'" class="career-input"></textarea>
             <div class="career-upload-wrapper">
               <label class="career-upload-label">Attach PDF (optional)</label>
               <input ref="careerPdfInput" type="file" accept="application/pdf" class="career-input"
@@ -2634,7 +2710,7 @@ async function viewRequirement(id) {
             </div>
 
             <!-- Submit -->
-            <button type="submit" class="career-save-btn">
+            <button type="submit" class="career-save-btn" :disabled="!isOrganizationVerified" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
               {{ isEditMode ? "Update" : "Post" }}
             </button>
           </form>
@@ -2733,7 +2809,6 @@ async function viewRequirement(id) {
                     <th>Status</th>
                     <th>Requirements</th>
                     <th>Schedule Interview</th>
-                    <th>View Schedule</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2780,7 +2855,7 @@ async function viewRequirement(id) {
                       <div v-else-if="
                         person.status === 'for interview' &&
                         person.interviewSchedule
-                      " class="schedule-card">
+                      " class="schedule-card clickable" @click="openScheduleModal(person)">
                         <div class="schedule-card-header">
                           <div class="schedule-icon">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -2845,21 +2920,12 @@ async function viewRequirement(id) {
                                 stroke-linejoin="round" />
                             </svg>
                             <a :href="person.interviewLink" target="_blank" rel="noopener noreferrer"
-                              class="schedule-link">
+                              class="schedule-link" @click.stop>
                               {{ person.interviewLink }}
                             </a>
                           </div>
                         </div>
                       </div>
-                      <span v-else>-</span>
-                    </td>
-                    <td>
-                      <button v-if="
-                        person.status === 'for interview' &&
-                        person.interviewSchedule
-                      " class="schedule-btn update" @click="openScheduleModal(person)">
-                        Update
-                      </button>
                       <span v-else>-</span>
                     </td>
                   </tr>
@@ -3191,6 +3257,37 @@ async function viewRequirement(id) {
   text-align: center;
   width: 100%;
   margin: 0 auto;
+  line-height: 1.4;
+}
+
+.org-status-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.org-status-icon-inline {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.org-status-verified {
+  background-color: #10b981;
+  color: #ffffff;
+  border: 1px solid #059669;
+}
+
+.org-status-unverified {
+  background-color: #f59e0b;
+  color: #ffffff;
+  border: 1px solid #d97706;
 }
 
 .profile-actions {
@@ -3668,6 +3765,19 @@ async function viewRequirement(id) {
   background: #1f2937;
 }
 
+.career-save-btn:disabled,
+.plus-btn-text:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.disabled-action {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .career-upload-wrapper {
   display: flex;
   flex-direction: column;
@@ -3929,13 +4039,8 @@ async function viewRequirement(id) {
 
 .applicants-table-container.inline th:nth-child(5),
 .applicants-table-container.inline td:nth-child(5) {
-  width: 20%;
+  width: 26%;
   /* Increased width for Schedule Interview column to accommodate schedule display */
-}
-
-.applicants-table-container.inline th:nth-child(6),
-.applicants-table-container.inline td:nth-child(6) {
-  width: 14%;
 }
 
 .download-btn {
@@ -4170,6 +4275,18 @@ tbody td {
   line-height: 1.5;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease;
+}
+
+.schedule-card.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.schedule-card.clickable:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: #94a3b8;
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
 }
 
 .schedule-card:hover {

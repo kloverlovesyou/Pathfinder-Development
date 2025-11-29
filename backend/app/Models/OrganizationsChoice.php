@@ -14,6 +14,7 @@ class OrganizationsChoice extends Model
     public $timestamps = false;
 
     protected $fillable = [
+        'organizationsChoiceID',
         'trainingID',
         'organizationID',
         'careerID',

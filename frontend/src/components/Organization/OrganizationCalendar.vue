@@ -29,7 +29,18 @@
           <!-- Profile Section (only when sidebar is open) -->
           <transition name="fade">
             <div v-if="isSidebarOpen" class="profile-section">
-              <h3 class="org-name">{{ organizationName }}</h3>
+              <h3 class="org-name">
+                {{ organizationName }}
+                <span v-if="organizationStatus !== null" class="org-status-inline" :class="organizationStatusClass">
+                  <svg v-if="isOrganizationVerified" class="org-status-icon-inline" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                    <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                  <svg v-else class="org-status-icon-inline" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                  <span>{{ organizationStatusLabel }}</span>
+                </span>
+              </h3>
               <div class="profile-actions">
                 <div class="action" @click="navigateTo({ name: 'OrgUpdateProfile' })">
                   <!-- Update Profile Icon -->
@@ -763,6 +774,8 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 const isSidebarOpen = ref(true);
 const organizationName = ref("");
+const organizationStatus = ref(null);
+const isOrganizationVerified = ref(false);
 
 // Get org name from localStorage on mount
 onMounted(() => {
@@ -771,6 +784,10 @@ onMounted(() => {
     const user = JSON.parse(storedUser);
     if (user.role === "organization") {
       organizationName.value = user.displayName || user.name;
+      organizationStatus.value = user.status || user.Status || null;
+      isOrganizationVerified.value = ["approved", "verified"].includes(
+        (organizationStatus.value || "").toString().toLowerCase()
+      );
     }
   }
 });
@@ -800,11 +817,24 @@ onMounted(() => {
       const user = JSON.parse(storedUser);
       if (user.role === "organization") {
         organizationName.value = user.displayName || user.name || "Organization";
+        organizationStatus.value = user.status || user.Status || null;
+        isOrganizationVerified.value = ["approved", "verified"].includes(
+          (organizationStatus.value || "").toString().toLowerCase()
+        );
       }
     } catch (e) {
       console.error("Failed to parse user from localStorage:", e);
     }
   }
+});
+
+// Computed properties for verification status
+const organizationStatusLabel = computed(() => {
+  return isOrganizationVerified.value ? "Verified" : "Unverified";
+});
+
+const organizationStatusClass = computed(() => {
+  return isOrganizationVerified.value ? "org-status-verified" : "org-status-unverified";
 });
 
 // Toggle sidebar
@@ -1064,6 +1094,37 @@ const isToday = (date) => {
   text-align: center;
   width: 100%;
   margin: 0 auto;
+  line-height: 1.4;
+}
+
+.org-status-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.org-status-icon-inline {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.org-status-verified {
+  background-color: #10b981;
+  color: #ffffff;
+  border: 1px solid #059669;
+}
+
+.org-status-unverified {
+  background-color: #f59e0b;
+  color: #ffffff;
+  border: 1px solid #d97706;
 }
 
 .profile-actions {
