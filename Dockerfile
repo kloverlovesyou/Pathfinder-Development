@@ -7,9 +7,9 @@ RUN apt-get update && apt-get install -y \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
     libpng-dev \
-    zip unzip git curl \
+    zip unzip git curl libonig-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo_mysql pdo_pgsql pgsql
+    && docker-php-ext-install gd pdo_mysql pdo_pgsql pgsql bcmath mbstring zip
 
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
@@ -17,23 +17,26 @@ RUN a2enmod rewrite
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy Laravel app from /backend to container working directory
-COPY backend/ /var/www/html/
-
-# Set Apache DocumentRoot to Laravel public folder
-RUN sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
+# Copy only composer files first (better caching)
+COPY backend/composer.json backend/composer.lock ./
 
 # Install Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer
 
 # Install Laravel dependencies
-RUN composer install --optimize-autoloader --no-dev
+RUN composer install --no-dev --optimize-autoloader
 
-# Set permissions for Laravel
+# Copy the rest of the app
+COPY backend/ /var/www/html/
+
+# Set Apache DocumentRoot to public
+RUN sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
+
+# Set permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Expose port 80
 EXPOSE 80
 
-# Start Apache in foreground
+# Start Apache
 CMD ["apache2-foreground"]
