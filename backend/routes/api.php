@@ -97,6 +97,79 @@ Route::post('/clear-cache', function() {
     ]);
 });
 
+// Diagnostic endpoint to check email configuration
+Route::get('/check-email-config', function() {
+    $brevoApiKeyFromConfig = config('services.brevo.api_key');
+    $brevoApiKeyFromEnv = env('BREVO_API_KEY');
+    $brevoApiKey = trim($brevoApiKeyFromConfig ?: $brevoApiKeyFromEnv ?: '');
+    
+    $mailConfig = [
+        'mailer' => config('mail.default'),
+        'host' => config('mail.mailers.smtp.host'),
+        'port' => config('mail.mailers.smtp.port'),
+        'username' => config('mail.mailers.smtp.username'),
+        'encryption' => config('mail.mailers.smtp.encryption'),
+        'from_address' => config('mail.from.address'),
+        'from_name' => config('mail.from.name'),
+    ];
+    
+    return response()->json([
+        'brevo_api_key' => [
+            'set' => !empty($brevoApiKey),
+            'length' => $brevoApiKey ? strlen($brevoApiKey) : 0,
+            'preview' => $brevoApiKey ? substr($brevoApiKey, 0, 10) . '...' : 'not set',
+            'from_config' => !empty($brevoApiKeyFromConfig),
+            'from_env' => !empty($brevoApiKeyFromEnv),
+            'raw_config' => $brevoApiKeyFromConfig ? substr($brevoApiKeyFromConfig, 0, 10) . '...' : 'not set',
+            'raw_env' => $brevoApiKeyFromEnv ? substr($brevoApiKeyFromEnv, 0, 10) . '...' : 'not set',
+        ],
+        'mail_config' => $mailConfig,
+        'recommendation' => !empty($brevoApiKey) 
+            ? 'Brevo API is configured. Emails should use Brevo API.' 
+            : 'Brevo API key not found. Will fallback to SMTP. Add BREVO_API_KEY to .env file.',
+    ]);
+});
+
+// Test Brevo API key directly
+Route::post('/test-brevo-api', function(\Illuminate\Http\Request $request) {
+    $brevoApiKeyFromConfig = config('services.brevo.api_key');
+    $brevoApiKeyFromEnv = env('BREVO_API_KEY');
+    $brevoApiKey = trim($brevoApiKeyFromConfig ?: $brevoApiKeyFromEnv ?: '');
+    
+    if (empty($brevoApiKey)) {
+        return response()->json([
+            'success' => false,
+            'error' => 'Brevo API key not found'
+        ], 400);
+    }
+    
+    $testEmail = $request->input('email', 'test@example.com');
+    
+    try {
+        $brevoService = app(\App\Services\BrevoEmailService::class);
+        
+        $htmlContent = '<html><body><h1>Test Email from Pathfinder</h1><p>This is a test email to verify Brevo API is working correctly.</p></body></html>';
+        
+        $brevoService->send(
+            $testEmail,
+            'Test Email - Pathfinder Brevo API',
+            $htmlContent
+        );
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Test email sent successfully via Brevo API',
+            'to' => $testEmail
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'trace' => config('app.debug') ? $e->getTraceAsString() : null
+        ], 500);
+    }
+});
+
 // Applicant & Organization
 Route::post('/applicants', [ApplicantController::class, 'a_register']);
 Route::post('/applicants/login', [ApplicantController::class, 'login']);

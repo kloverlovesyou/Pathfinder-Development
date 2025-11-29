@@ -88,6 +88,8 @@ export default {
         cc: "",
         body: "",
       },
+      scheduleAction: "scheduleOnly", // "scheduleOnly" or "scheduleAndEmail"
+      showScheduleDropdown: false,
       showConflictModal: false,
       conflictInfo: null,
       pendingSchedulePayload: null,
@@ -389,19 +391,38 @@ export default {
       } catch (error) {
         console.error("Error fetching applicants:", error);
         console.error("Error response:", error.response);
+        
+        // Helper function to sanitize error messages (remove technical PHP errors)
+        const sanitizeErrorMessage = (message) => {
+          if (!message || typeof message !== 'string') return null;
+          // Filter out technical PHP errors and show user-friendly messages
+          if (message.includes('Call to a member function') || 
+              message.includes('on string') ||
+              message.includes('Fatal error') ||
+              message.includes('Parse error') ||
+              message.includes('Warning:') ||
+              message.includes('Notice:')) {
+            return null; // Don't show technical errors
+          }
+          return message;
+        };
+
         if (error.response?.status === 401) {
-          this.applicantsError =
-            error.response.data?.message || "Token invalid or expired.";
-          alert("Unauthorized. Please log in again.");
+          this.applicantsError = "Token invalid or expired. Please log in again.";
+          showToast("Unauthorized. Please log in again.", "error");
         } else if (error.response?.status === 403) {
-          this.applicantsError =
-            "Access denied. You don't have permission to view applicants for this career.";
-          alert(this.applicantsError);
+          this.applicantsError = "Access denied. You don't have permission to view applicants for this career.";
+          showToast(this.applicantsError, "error");
+        } else if (error.response?.status === 500) {
+          // For 500 errors, always show a user-friendly message, not the raw backend error
+          const backendMessage = sanitizeErrorMessage(error.response?.data?.message);
+          this.applicantsError = backendMessage || "Server error occurred while fetching applicants. Please try again later.";
+          showToast("Server error: Unable to load applicants. Please try again later.", "error");
         } else {
-          this.applicantsError =
-            error.response?.data?.message ||
-            "An error occurred while fetching applicants. Please try again.";
-          alert(this.applicantsError);
+          // For other errors, sanitize the message if it exists
+          const backendMessage = sanitizeErrorMessage(error.response?.data?.message);
+          this.applicantsError = backendMessage || "An error occurred while fetching applicants. Please try again.";
+          showToast(this.applicantsError, "error");
         }
         this.applicantsList = [];
       } finally {
@@ -995,8 +1016,10 @@ export default {
             this.scheduleData.mode === "online"
               ? this.scheduleData.detail
               : null,
-          cc: this.scheduleData.cc || null,
-          body: this.scheduleData.body || null,
+          // Only include email fields if "Schedule and Email" is selected
+          sendEmail: this.scheduleAction === "scheduleAndEmail",
+          cc: this.scheduleAction === "scheduleAndEmail" ? (this.scheduleData.cc || null) : null,
+          body: this.scheduleAction === "scheduleAndEmail" ? (this.scheduleData.body || null) : null,
         };
 
         const conflict = this.findScheduleConflict(formattedDate);
@@ -1027,6 +1050,11 @@ export default {
       const targetTs = this.toTimestamp(formattedDate);
       if (!targetTs) return null;
 
+      // Default interview duration: 30 minutes (can be adjusted)
+      const INTERVIEW_DURATION_MS = 30 * 60 * 1000; // 30 minutes in milliseconds
+      const newInterviewStart = targetTs;
+      const newInterviewEnd = targetTs + INTERVIEW_DURATION_MS;
+
       const conflict = this.applicantsList.find((app) => {
         if (
           !app.interviewSchedule ||
@@ -1037,7 +1065,16 @@ export default {
         }
         const existingTs = this.toTimestamp(app.interviewSchedule);
         if (!existingTs) return false;
-        return Math.abs(existingTs - targetTs) < 60 * 1000;
+
+        // Calculate existing interview time range
+        const existingInterviewStart = existingTs;
+        const existingInterviewEnd = existingTs + INTERVIEW_DURATION_MS;
+
+        // Check for overlap: new interview overlaps if it starts before existing ends AND ends after existing starts
+        const hasOverlap = 
+          (newInterviewStart < existingInterviewEnd && newInterviewEnd > existingInterviewStart);
+
+        return hasOverlap;
       });
 
       if (!conflict) return null;
@@ -1100,9 +1137,22 @@ export default {
       }
 
       this.closeScheduleModal();
-      showToast(
-        "✅ Interview scheduled successfully! The schedule has been saved."
-      );
+      
+      // Show appropriate message based on email sending status
+      if (response.data.email_sent) {
+        showToast(
+          "✅ Interview scheduled and email sent successfully!"
+        );
+      } else if (response.data.email_error) {
+        showToast(
+          "⚠️ Interview scheduled, but email could not be sent: " + response.data.email_error,
+          "error"
+        );
+      } else {
+        showToast(
+          "✅ Interview scheduled successfully! The schedule has been saved."
+        );
+      }
     },
 
     handleScheduleError(error) {
@@ -1284,6 +1334,11 @@ export default {
         this.openUpcomingMenu = null;
         this.openCompletedMenu = null;
       }
+      // Close schedule dropdown if clicking outside
+      const clickedInsideScheduleDropdown = event.target.closest(".schedule-dropdown-wrapper");
+      if (!clickedInsideScheduleDropdown) {
+        this.showScheduleDropdown = false;
+      }
     },
 
     showMoreUpcoming() {
@@ -1299,6 +1354,8 @@ export default {
         this.selectedPerson = person;
         this.showScheduleModal = true;
         this.showViewScheduleModal = false;
+        this.scheduleAction = "scheduleOnly";
+        this.showScheduleDropdown = false;
 
         // If person already has a schedule, populate the form with existing data
         if (person.interviewSchedule) {
@@ -1344,8 +1401,37 @@ export default {
     closeScheduleModal() {
       this.showScheduleModal = false;
       this.scheduleData = { date: "", mode: "", detail: "", cc: "", body: "" };
+      this.scheduleAction = "scheduleOnly";
+      this.showScheduleDropdown = false;
       this.selectedPerson = null;
       this.cancelConflictSchedule();
+    },
+
+    selectScheduleAction(action) {
+      this.scheduleAction = action;
+      this.showScheduleDropdown = false;
+    },
+
+    getScheduleButtonText() {
+      if (this.selectedPerson?.interviewSchedule) {
+        return this.scheduleAction === "scheduleAndEmail" 
+          ? "Update Schedule and Email" 
+          : "Update Schedule";
+      }
+      return this.scheduleAction === "scheduleAndEmail" 
+        ? "Schedule and Email" 
+        : "Schedule only";
+    },
+
+    handleScheduleDropdownBlur(event) {
+      // Delay closing to allow click events to fire first
+      setTimeout(() => {
+        // Check if focus moved to dropdown menu or if clicking outside
+        const relatedTarget = event.relatedTarget;
+        if (!relatedTarget || !relatedTarget.closest('.schedule-dropdown-wrapper')) {
+          this.showScheduleDropdown = false;
+        }
+      }, 150);
     },
 
     // Delete a career
@@ -1430,24 +1516,35 @@ export default {
     formatInterviewDateTime(dateTimeString) {
       if (!dateTimeString) return "Not scheduled";
       try {
+        // Validate input type
+        if (typeof dateTimeString !== 'string' && typeof dateTimeString !== 'number') {
+          return "Invalid date";
+        }
+        
         const date = new Date(dateTimeString);
         if (isNaN(date.getTime())) {
           // Try parsing as MySQL datetime format (YYYY-MM-DD HH:mm:ss)
-          const parts = dateTimeString.split(" ");
-          if (parts.length === 2) {
-            const [datePart, timePart] = parts;
-            const [year, month, day] = datePart.split("-");
-            const [hour, minute] = timePart.split(":");
-            const parsedDate = new Date(year, month - 1, day, hour, minute);
-            return parsedDate.toLocaleString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            });
+          if (typeof dateTimeString === 'string') {
+            const parts = dateTimeString.split(" ");
+            if (parts.length === 2) {
+              const [datePart, timePart] = parts;
+              const [year, month, day] = datePart.split("-");
+              const [hour, minute] = timePart.split(":");
+              if (year && month && day && hour && minute) {
+                const parsedDate = new Date(year, month - 1, day, hour, minute);
+                if (!isNaN(parsedDate.getTime())) {
+                  return parsedDate.toLocaleString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
+                }
+              }
+            }
           }
-          return dateTimeString;
+          return dateTimeString || "Invalid date";
         }
         return date.toLocaleString("en-US", {
           year: "numeric",
@@ -1457,8 +1554,8 @@ export default {
           minute: "2-digit",
         });
       } catch (error) {
-        console.error("Error formatting date:", error);
-        return dateTimeString;
+        console.warn("Error formatting interview date:", error, dateTimeString);
+        return dateTimeString || "Not scheduled";
       }
     },
     openCalendar() {
@@ -1602,18 +1699,30 @@ export default {
       this.resetNewCareer();
     },
     openCareerDetails(career) {
-      const normalizedCareer = this.normalizeCareer(career);
-      this.selectedCareer = {
-        ...normalizedCareer,
-        careerID: normalizedCareer.careerID, // keep the correct ID
-        _id: normalizedCareer.careerID, // mirror for safety
-      };
-      this.applicantsList = [];
-      this.applicantsError = "";
-      this.applicantsLoading = false;
-      this.applicantSearchQuery = ""; // Clear search when opening modal
-      this.loadApplicantsForCareer(normalizedCareer);
-      this.showCareerDetailsModal = true;
+      try {
+        if (!career) {
+          showToast("Invalid career data. Please try again.", "error");
+          return;
+        }
+        const normalizedCareer = this.normalizeCareer(career);
+        this.selectedCareer = {
+          ...normalizedCareer,
+          careerID: normalizedCareer.careerID, // keep the correct ID
+          _id: normalizedCareer.careerID, // mirror for safety
+        };
+        this.applicantsList = [];
+        this.applicantsError = "";
+        this.applicantsLoading = false;
+        this.applicantSearchQuery = ""; // Clear search when opening modal
+        this.showCareerDetailsModal = true;
+        // Load applicants after modal is shown to prevent blocking
+        this.$nextTick(() => {
+          this.loadApplicantsForCareer(normalizedCareer);
+        });
+      } catch (error) {
+        console.error("Error opening career details:", error);
+        showToast("Error opening career details. Please try again.", "error");
+      }
     },
     closeCareerDetails() {
       this.showCareerDetailsModal = false;
@@ -1775,27 +1884,43 @@ export default {
     formatdeadline(deadline) {
       if (!deadline) return "No deadline set";
       try {
+        // Handle string dates that might be in different formats
+        if (typeof deadline !== 'string' && typeof deadline !== 'number') {
+          return "Invalid date";
+        }
         const date = new Date(deadline);
+        if (isNaN(date.getTime())) {
+          return deadline; // Return original if invalid
+        }
         return date.toLocaleString("en-US", {
           year: "numeric",
           month: "long",
           day: "numeric",
         });
       } catch (error) {
-        return deadline;
+        console.warn("Error formatting deadline:", error, deadline);
+        return deadline || "No deadline set";
       }
     },
     formatDate(date) {
       if (!date) return "Not set";
       try {
+        // Handle string dates that might be in different formats
+        if (typeof date !== 'string' && typeof date !== 'number') {
+          return "Invalid date";
+        }
         const dateObj = new Date(date);
+        if (isNaN(dateObj.getTime())) {
+          return date || "Not set"; // Return original if invalid
+        }
         return dateObj.toLocaleString("en-US", {
           year: "numeric",
           month: "long",
           day: "numeric",
         });
       } catch (error) {
-        return date;
+        console.warn("Error formatting date:", error, date);
+        return date || "Not set";
       }
     },
   },
@@ -2502,9 +2627,42 @@ async function viewRequirement(id) {
             </div>
 
             <div class="modal-actions">
-              <button class="confirm-btn" @click="confirmSchedule">
-                {{ selectedPerson?.interviewSchedule ? 'Update Schedule' : 'Confirm' }}
-              </button>
+              <div class="schedule-dropdown-wrapper">
+                <div class="schedule-dropdown-container">
+                  <button 
+                    class="confirm-btn schedule-dropdown-main-btn" 
+                    @click="confirmSchedule"
+                  >
+                    {{ getScheduleButtonText() }}
+                  </button>
+                  <button 
+                    class="schedule-dropdown-toggle" 
+                    :class="{ 'dropdown-open': showScheduleDropdown }"
+                    @click.stop="showScheduleDropdown = !showScheduleDropdown"
+                    @blur="handleScheduleDropdownBlur"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" class="dropdown-arrow">
+                      <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
+                <div v-if="showScheduleDropdown" class="schedule-dropdown-menu" @click.stop>
+                  <button 
+                    class="schedule-dropdown-item" 
+                    :class="{ active: scheduleAction === 'scheduleOnly' }"
+                    @click="selectScheduleAction('scheduleOnly')"
+                  >
+                    Schedule only
+                  </button>
+                  <button 
+                    class="schedule-dropdown-item" 
+                    :class="{ active: scheduleAction === 'scheduleAndEmail' }"
+                    @click="selectScheduleAction('scheduleAndEmail')"
+                  >
+                    Schedule and Email
+                  </button>
+                </div>
+              </div>
               <button class="cancel-btn" @click="closeScheduleModal">
                 Cancel
               </button>
@@ -2535,7 +2693,10 @@ async function viewRequirement(id) {
             }}</strong
             >.
           </p>
-          <p class="conflict-message">Do you still want to continue?</p>
+          <p class="conflict-message">
+            This interview schedule overlaps with the existing one. Scheduling both interviews at overlapping times may cause conflicts.
+          </p>
+          <p class="conflict-message">Do you still want to proceed with scheduling this interview?</p>
           <div class="modal-actions">
             <button class="confirm-btn" @click="confirmConflictSchedule">
               Continue
@@ -4500,22 +4661,43 @@ input[type="text"] {
 .modal-box {
   background: #fff;
   border-radius: 12px;
-  padding: 18px 22px;
-  /* slightly reduced padding */
+  padding: 24px 28px;
   width: 100%;
-  max-width: 400px;
-  /* narrower modal */
+  max-width: 600px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
   position: relative;
   animation: fadeIn 0.2s ease-in-out;
+  max-height: 90vh;
+  overflow-y: auto;
+  overflow-x: visible;
+}
+
+/* Make schedule modal even bigger */
+.schedule-modal-overlay .modal-box {
+  max-width: 700px;
+  padding: 28px 32px;
+  overflow: visible;
+}
+
+/* Ensure modal actions area allows dropdown to overflow */
+.schedule-modal-overlay .modal-actions {
+  position: relative;
+  overflow: visible;
+  z-index: 1;
 }
 
 .modal-box h3 {
-  font-size: 1.2rem;
-  margin-bottom: 10px;
-  /* tighter title spacing */
+  font-size: 1.3rem;
+  margin-bottom: 20px;
   color: #222;
   text-align: center;
+  font-weight: 600;
+}
+
+/* Schedule modal title */
+.schedule-modal-overlay .modal-box h3 {
+  font-size: 1.4rem;
+  margin-bottom: 24px;
 }
 
 .modal-close-btn {
@@ -4552,24 +4734,42 @@ input[type="text"] {
 .schedule-form label {
   display: block;
   font-weight: 500;
-  margin: 6px 0 3px;
-  /* tighter spacing */
+  margin: 8px 0 6px;
   color: #000;
-  /* ✅ labels are now black */
+  font-size: 0.95rem;
+}
+
+/* Schedule modal labels */
+.schedule-modal-overlay .schedule-form label {
+  margin: 10px 0 8px;
+  font-size: 1rem;
 }
 
 .schedule-form input[type="datetime-local"],
 .schedule-form input[type="text"] {
   width: 100%;
-  padding: 6px 9px;
+  padding: 10px 12px;
   border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 0.9rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
   margin-bottom: 8px;
   background: #fff;
-  /* ✅ makes textboxes white */
   color: #000;
-  /* ensures readable text */
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.schedule-form input[type="datetime-local"]:focus,
+.schedule-form input[type="text"]:focus {
+  outline: none;
+  border-color: #4c6ef5;
+  box-shadow: 0 0 0 3px rgba(76, 110, 245, 0.1);
+}
+
+/* Schedule modal inputs */
+.schedule-modal-overlay .schedule-form input[type="datetime-local"],
+.schedule-modal-overlay .schedule-form input[type="text"] {
+  padding: 12px 14px;
+  font-size: 1rem;
 }
 
 .input-group.full-width {
@@ -4581,55 +4781,123 @@ input[type="text"] {
 .schedule-input,
 .schedule-textarea {
   width: 100%;
-  padding: 6px 9px;
+  padding: 10px 12px;
   border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 0.9rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
   margin-bottom: 8px;
   background: #fff;
   color: #000;
   box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.schedule-input:focus,
+.schedule-textarea:focus {
+  outline: none;
+  border-color: #4c6ef5;
+  box-shadow: 0 0 0 3px rgba(76, 110, 245, 0.1);
 }
 
 .schedule-textarea {
-  min-height: 90px;
+  min-height: 100px;
   resize: vertical;
+  font-family: inherit;
+}
+
+/* Schedule modal inputs */
+.schedule-modal-overlay .schedule-input,
+.schedule-modal-overlay .schedule-textarea {
+  padding: 12px 14px;
+  font-size: 1rem;
+}
+
+.schedule-modal-overlay .schedule-textarea {
+  min-height: 120px;
 }
 
 .mode-selection {
   display: flex;
-  gap: 12px;
-  /* slightly reduced */
-  margin: 6px 0;
-  /* closer to inputs */
+  gap: 16px;
+  margin: 10px 0;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
 }
 
 .mode-selection label {
   cursor: pointer;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Schedule modal mode selection */
+.schedule-modal-overlay .mode-selection {
+  gap: 20px;
+  padding: 16px;
+  margin: 12px 0;
+}
+
+.schedule-modal-overlay .mode-selection label {
+  font-size: 1rem;
 }
 
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Schedule modal actions */
+.schedule-modal-overlay .modal-actions {
+  margin-top: 24px;
+  padding-top: 24px;
+  gap: 12px;
 }
 
 .confirm-btn {
   background: #334155;
   color: white;
   border: none;
-  padding: 7px 12px;
+  padding: 10px 20px;
   border-radius: 6px;
   cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.confirm-btn:hover {
+  background: #1e293b;
+  transform: translateY(-1px);
+}
+
+.confirm-btn:active {
+  transform: translateY(0);
+}
+
+/* Schedule modal buttons */
+.schedule-modal-overlay .confirm-btn {
+  padding: 12px 24px;
+  font-size: 1rem;
 }
 
 .cancel-btn {
-  background: #ddd;
+  background: #e5e7eb;
   border: none;
-  padding: 7px 12px;
+  padding: 10px 20px;
   border-radius: 6px;
   cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #374151;
+  transition: background 0.2s, transform 0.1s;
 }
 
 .confirm-btn:hover {
@@ -4637,7 +4905,118 @@ input[type="text"] {
 }
 
 .cancel-btn:hover {
-  background: #bbb;
+  background: #d1d5db;
+  transform: translateY(-1px);
+}
+
+.cancel-btn:active {
+  transform: translateY(0);
+}
+
+/* Schedule modal buttons */
+.schedule-modal-overlay .cancel-btn {
+  padding: 12px 24px;
+  font-size: 1rem;
+}
+
+/* Schedule Dropdown Button */
+.schedule-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+  z-index: 1;
+}
+
+/* Ensure dropdown is above modal overlay */
+.schedule-modal-overlay .schedule-dropdown-wrapper {
+  z-index: 2300;
+}
+
+.schedule-dropdown-container {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.schedule-dropdown-main-btn {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right: none;
+  flex: 1;
+}
+
+.schedule-dropdown-toggle {
+  background: #334155;
+  color: white;
+  border: none;
+  padding: 7px 8px;
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.schedule-dropdown-toggle:hover {
+  background: #1e293b;
+}
+
+.schedule-dropdown-toggle .dropdown-arrow {
+  transition: transform 0.2s;
+}
+
+.schedule-dropdown-toggle.dropdown-open .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.schedule-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 180px;
+  overflow: hidden;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+/* Ensure dropdown menu appears above modal overlay */
+.schedule-modal-overlay .schedule-dropdown-menu {
+  z-index: 2300;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.schedule-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  text-align: left;
+  background: white;
+  border: none;
+  color: #374151;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.schedule-dropdown-item:hover {
+  background: #f3f4f6;
+}
+
+.schedule-dropdown-item.active {
+  background: #e0e7ff;
+  color: #4c6ef5;
+  font-weight: 500;
+}
+
+.schedule-dropdown-item.active:hover {
+  background: #c7d2fe;
 }
 
 .view-schedule-info p {

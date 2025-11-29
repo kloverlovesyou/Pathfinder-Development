@@ -24,6 +24,7 @@ class Application extends Model
     protected $casts = [
         'careerID'          => 'int',
         'applicantID'       => 'int',
+        'dateSubmitted'     => 'datetime',
         'appliedDate'       => 'datetime',
         'screenDate'        => 'datetime',
         'pendingDate'       => 'datetime',
