@@ -23,12 +23,25 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { ref, onMounted, onBeforeUnmount } from "vue";
 import AdminTopBar from "@/components/Layout/AdminTopBar.vue";
 
-// Reactive check for admin login
-const isLoggedIn = computed(() => {
+// Reactive ref for login status
+const isLoggedIn = ref(false);
+
+function checkLogin() {
   const user = JSON.parse(localStorage.getItem("user"));
-  return user && user.role === "admin";
+  isLoggedIn.value = user && user.role === "admin";
+}
+
+// Initial check on mount
+onMounted(() => {
+  checkLogin();
+  window.addEventListener("storage", checkLogin); // detect logout in other tabs
+});
+
+// Cleanup listener
+onBeforeUnmount(() => {
+  window.removeEventListener("storage", checkLogin);
 });
 </script>
