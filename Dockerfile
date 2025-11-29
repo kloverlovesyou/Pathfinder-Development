@@ -5,11 +5,13 @@ FROM php:8.2-apache
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     libfreetype6-dev \
-    libjpeg62-turbo-dev \
+    libjpeg-dev \
     libpng-dev \
-    zip unzip git curl libonig-dev \
+    libonig-dev \
+    zip unzip git curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo_mysql pdo_pgsql pgsql bcmath mbstring zip
+    && docker-php-ext-install gd pdo_mysql pdo_pgsql bcmath mbstring zip \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
