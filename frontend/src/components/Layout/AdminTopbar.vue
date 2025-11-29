@@ -153,7 +153,7 @@ async function performSearch() {
         location: item.Location || item.location || "N/A",
         emailAddress: item.EmailAddress || item.emailAddress || item.email || "N/A", // map to emailAddress
         type: "organization",
-        websiteURL: item.WebsiteURL || item.websiteURL || item.website || "N/A",
+        websiteURL: item.websiteURL || "N/A",
         phone: item.PhoneNumber || item.phoneNumber || item.phone || "N/A",
       };
     } else {
