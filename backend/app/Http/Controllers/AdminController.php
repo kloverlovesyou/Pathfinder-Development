@@ -50,10 +50,10 @@ class AdminController extends Controller
             'message' => 'Admin login successful.',
             'admin' => [
                 'adminID' => $admin->adminID,
-                'name' => $admin->Name,
-                'location' => $admin->Location,
-                'websiteURL' => $admin->WebsiteURL,
-                'emailAddress' => $admin->EmailAddress,
+                'name' => $admin->name,
+                'location' => $admin->location,
+                'websiteURL' => $admin->websiteURL,
+                'emailAddress' => $admin->emailAddress,
                 'role' => 'admin'
             ],
             'token' => $token
