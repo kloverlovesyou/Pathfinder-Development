@@ -42,11 +42,22 @@ function handleLogout() {
 }
 
 // Open modal and load applicants
-const openApplicantModal = async () => {
+const openApplicantModal = async (applicant = null) => {
   showApplicantModal.value = true;
-  await fetchApplicants();
+
+  if (!applicant) {
+    // No applicant provided → fetch all
+    await fetchApplicants();
+  } else {
+    // Single applicant provided → just show that one
+    allApplicants.value = [applicant];
+    selectedApplicant.value = applicant;
+  }
+
   console.log("🟢 openApplicantModal triggered");
 };
+
+
 
 // Delete applicant
 async function deleteApplicant(id) {
@@ -90,6 +101,7 @@ function clearSearch() {
   showDropdown.value = false;
 }
 
+// 🖱 Handle click on search result
 async function handleResultClick(item) {
   showDropdown.value = false;
   searchInput.value = "";
@@ -98,19 +110,16 @@ async function handleResultClick(item) {
     openOrganizationModal(item);
     selectedOrg.value = item;
   } else if (item.type === "applicant") {
-    // Only show the clicked applicant
-    const applicant = {
-      id: item.id,
-      name: item.name,
-      email: item.email,
-      location: item.location || "N/A",
-      phone: item.phone || "N/A"
-    };
+  const applicant = {
+    id: item.id,
+    name: item.name,
+    email: item.email,
+    location: item.location || "N/A",
+    phone: item.phone || "N/A",
+  };
 
-    allApplicants.value = [applicant]; // <-- only the selected applicant
-    selectedApplicant.value = applicant;
-    showApplicantModal.value = true;
-  }
+  openApplicantModal(applicant); // ✅ Use the centralized function
+}
 }
 
 async function performSearch() {
