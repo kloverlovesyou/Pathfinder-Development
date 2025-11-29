@@ -10,6 +10,9 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\InterviewSchedule;
+use App\Services\BrevoEmailService;
 
 class ApplicationController extends Controller
 {
@@ -526,14 +529,39 @@ public function viewRequirement(Request $request, $id)
                     }
                 }
                 
+                // Helper function to safely format dates
+                $formatDate = function($date, $format) use ($app) {
+                    if (!$date) return null;
+                    // If it's already a Carbon instance, format it
+                    if ($date instanceof Carbon || $date instanceof \DateTime) {
+                        return $date->format($format);
+                    }
+                    // If it's a string, try to parse it first
+                    if (is_string($date)) {
+                        try {
+                            $carbon = Carbon::parse($date);
+                            return $carbon->format($format);
+                        } catch (\Exception $e) {
+                            // If parsing fails, log and return the original string
+                            Log::warning('Failed to parse date in ApplicationController', [
+                                'date' => $date,
+                                'applicationID' => $app->applicationID ?? null,
+                                'error' => $e->getMessage()
+                            ]);
+                            return $date;
+                        }
+                    }
+                    return null;
+                };
+                
                 return [
                     'id' => $app->applicationID,
                     'applicantID' => $app->applicantID,
                     'name' => $applicantName,
-                    'dateSubmitted' => $app->dateSubmitted ? $app->dateSubmitted->format('M d, Y') : null,
+                    'dateSubmitted' => $formatDate($app->dateSubmitted, 'M d, Y'),
                     'status' => $app->applicationStatus ? strtolower($app->applicationStatus) : 'submitted',
                     'requirement_directory' => $app->getAttribute('requirement_directory'), // Use getAttribute to ensure proper retrieval
-                    'interviewSchedule' => $app->interviewSchedule ? $app->interviewSchedule->format('Y-m-d H:i:s') : null,
+                    'interviewSchedule' => $formatDate($app->interviewSchedule, 'Y-m-d H:i:s'),
                     'interviewMode' => $app->interviewMode,
                     'interviewLocation' => $app->interviewLocation,
                     'interviewLink' => $app->interviewLink,
@@ -619,6 +647,9 @@ public function viewRequirement(Request $request, $id)
             'interviewMode' => 'required|in:On-Site,Online',
             'interviewLocation' => 'required_if:interviewMode,On-Site|nullable|string',
             'interviewLink' => 'required_if:interviewMode,Online|nullable|url',
+            'cc' => 'nullable|string',
+            'body' => 'nullable|string',
+            'sendEmail' => 'nullable|boolean', // Flag to indicate if email should be sent
         ]);
         
         try {
@@ -634,7 +665,190 @@ public function viewRequirement(Request $request, $id)
             // Refresh the model to get updated data
             $application->refresh();
             
-            return response()->json([
+            // Send email if sendEmail flag is true (Schedule and Email option)
+            $emailSent = false;
+            $emailError = null;
+            
+            if ($validated['sendEmail'] ?? false) {
+                try {
+                    // Load applicant relationship to get email
+                    $application->load('applicant', 'career.organization');
+                    
+                    if ($application->applicant && $application->applicant->emailAddress) {
+                        $applicantEmail = $application->applicant->emailAddress;
+                        // Handle both camelCase and PascalCase field names
+                        $firstName = $application->applicant->firstName ?? $application->applicant->FirstName ?? '';
+                        $lastName = $application->applicant->lastName ?? $application->applicant->LastName ?? '';
+                        $applicantName = trim($firstName . ' ' . $lastName);
+                        if (empty($applicantName)) {
+                            $applicantName = 'Applicant'; // Fallback if name is not available
+                        }
+                        $positionTitle = $application->career->position ?? 'Position';
+                        $organizationName = $application->career->organization->name ?? 'Organization';
+                        
+                        // Format interview date
+                        $interviewDate = Carbon::parse($validated['interviewSchedule'])
+                            ->format('F j, Y \a\t g:i A');
+                        
+                        // Prepare CC emails
+                        $ccEmails = [];
+                        if (!empty($validated['cc'])) {
+                            $ccList = array_map('trim', explode(',', $validated['cc']));
+                            $ccEmails = array_filter($ccList, function($email) {
+                                return filter_var($email, FILTER_VALIDATE_EMAIL);
+                            });
+                        }
+                        
+                        // Create email mailable
+                        $mailable = new InterviewSchedule(
+                            $applicantName,
+                            $positionTitle,
+                            $organizationName,
+                            $interviewDate,
+                            $validated['interviewMode'],
+                            $validated['interviewLocation'] ?? null,
+                            $validated['interviewLink'] ?? null,
+                            $validated['body'] ?? null
+                        );
+                        
+                        // Try to send via Brevo API first, then fallback to SMTP
+                        // Try multiple ways to get the API key
+                        $brevoApiKeyFromConfig = config('services.brevo.api_key');
+                        $brevoApiKeyFromEnv = env('BREVO_API_KEY');
+                        $brevoApiKey = trim($brevoApiKeyFromConfig ?: $brevoApiKeyFromEnv ?: '');
+                        
+                        Log::info('Checking email sending method', [
+                            'brevo_api_key_set' => !empty($brevoApiKey),
+                            'brevo_api_key_length' => $brevoApiKey ? strlen($brevoApiKey) : 0,
+                            'from_config' => !empty($brevoApiKeyFromConfig),
+                            'from_env' => !empty($brevoApiKeyFromEnv),
+                            'api_key_preview' => $brevoApiKey ? substr($brevoApiKey, 0, 10) . '...' : 'not set',
+                        ]);
+                        
+                        if (!empty($brevoApiKey)) {
+                            try {
+                                $brevoService = app(BrevoEmailService::class);
+                                $htmlContent = view('emails.interview-schedule', [
+                                    'applicantName' => $applicantName,
+                                    'positionTitle' => $positionTitle,
+                                    'organizationName' => $organizationName,
+                                    'interviewDate' => $interviewDate,
+                                    'interviewMode' => $validated['interviewMode'],
+                                    'interviewLocation' => $validated['interviewLocation'] ?? null,
+                                    'interviewLink' => $validated['interviewLink'] ?? null,
+                                    'customBody' => $validated['body'] ?? null,
+                                ])->render();
+                                
+                                // Send via Brevo with CC support
+                                $brevoService->sendWithCc(
+                                    $applicantEmail,
+                                    $mailable->envelope()->subject,
+                                    $htmlContent,
+                                    $ccEmails
+                                );
+                                
+                                $emailSent = true;
+                                Log::info('Interview schedule email sent via Brevo API', [
+                                    'applicant_email' => $applicantEmail,
+                                    'cc_emails' => $ccEmails,
+                                ]);
+                            } catch (\Exception $brevoException) {
+                                $brevoError = $brevoException->getMessage();
+                                Log::error('Brevo API failed for interview schedule email', [
+                                    'error' => $brevoError,
+                                    'error_code' => $brevoException->getCode(),
+                                    'trace' => $brevoException->getTraceAsString(),
+                                ]);
+                                
+                                // Store Brevo error for better error message
+                                $emailError = 'Brevo API error: ' . $brevoError . '. Falling back to SMTP.';
+                                
+                                // Fall through to SMTP
+                            }
+                        } else {
+                            Log::warning('Brevo API key not found, will try SMTP fallback');
+                        }
+                        
+                        // Fallback to SMTP if Brevo failed or not configured
+                        if (!$emailSent) {
+                            try {
+                                $mailTo = Mail::to($applicantEmail);
+                                
+                                // Add CC if provided
+                                if (!empty($ccEmails)) {
+                                    foreach ($ccEmails as $ccEmail) {
+                                        $mailTo->cc($ccEmail);
+                                    }
+                                }
+                                
+                                $mailTo->send($mailable);
+                                
+                                $emailSent = true;
+                                Log::info('Interview schedule email sent via SMTP', [
+                                    'applicant_email' => $applicantEmail,
+                                    'cc_emails' => $ccEmails,
+                                ]);
+                            } catch (\Exception $smtpException) {
+                                // Provide more helpful error message
+                                $errorMessage = $smtpException->getMessage();
+                                
+                                // Check if it's an authentication error
+                                if (strpos($errorMessage, 'Authentication failed') !== false || 
+                                    strpos($errorMessage, '535') !== false) {
+                                    $emailError = 'Both Brevo API and SMTP failed. ' .
+                                                  'Brevo API error: ' . (isset($brevoError) ? $brevoError : 'Unknown') . '. ' .
+                                                  'SMTP authentication also failed. Please check your Brevo API key at https://app.brevo.com/settings/keys/api or verify SMTP credentials.';
+                                } else {
+                                    $emailError = 'Both Brevo API and SMTP failed. ' .
+                                                  'Brevo API error: ' . (isset($brevoError) ? $brevoError : 'Unknown') . '. ' .
+                                                  'SMTP error: ' . $errorMessage;
+                                }
+                                
+                                Log::error('SMTP failed for interview schedule email (after Brevo failed)', [
+                                    'applicant_email' => $applicantEmail,
+                                    'brevo_error' => isset($brevoError) ? $brevoError : 'Unknown',
+                                    'smtp_error' => $smtpException->getMessage(),
+                                    'trace' => $smtpException->getTraceAsString(),
+                                ]);
+                                
+                                // Re-throw to be caught by outer catch block
+                                throw $smtpException;
+                            }
+                        }
+                    } else {
+                        $emailError = 'Applicant email address not found';
+                        Log::warning('Cannot send interview schedule email: applicant email not found', [
+                            'application_id' => $applicationID,
+                        ]);
+                    }
+                } catch (\Exception $emailException) {
+                    // Provide user-friendly error message
+                    $errorMessage = $emailException->getMessage();
+                    
+                    // Check if it's an authentication error and provide helpful guidance
+                    if (strpos($errorMessage, 'Authentication failed') !== false || 
+                        strpos($errorMessage, '535') !== false) {
+                        $emailError = 'Email authentication failed. Please check your SMTP credentials or configure Brevo API. ' .
+                                      'The interview was scheduled successfully, but the email notification could not be sent.';
+                    } elseif (strpos($errorMessage, 'Connection') !== false || 
+                              strpos($errorMessage, 'timeout') !== false) {
+                        $emailError = 'Email connection failed. Please check your SMTP settings or network connection. ' .
+                                      'The interview was scheduled successfully, but the email notification could not be sent.';
+                    } else {
+                        $emailError = 'Email sending failed: ' . $errorMessage . '. ' .
+                                      'The interview was scheduled successfully, but the email notification could not be sent.';
+                    }
+                    
+                    Log::error('Failed to send interview schedule email', [
+                        'application_id' => $applicationID,
+                        'error' => $emailException->getMessage(),
+                        'trace' => $emailException->getTraceAsString(),
+                    ]);
+                    // Don't fail the entire request if email fails
+                }
+            }
+            
+            $response = [
                 'message' => 'Interview scheduled successfully',
                 'success' => true,
                 'data' => [
@@ -645,7 +859,29 @@ public function viewRequirement(Request $request, $id)
                     'interviewLocation' => $application->interviewLocation,
                     'interviewLink' => $application->interviewLink,
                 ],
-            ], 200);
+            ];
+            
+            if ($emailSent) {
+                $response['email_sent'] = true;
+                $response['message'] = 'Interview scheduled and email sent successfully';
+            } elseif ($emailError) {
+                $response['email_sent'] = false;
+                $response['email_error'] = $emailError;
+                $response['message'] = 'Interview scheduled successfully, but email could not be sent';
+                
+                // Add helpful debugging info
+                $brevoApiKeyFromConfig = config('services.brevo.api_key');
+                $brevoApiKeyFromEnv = env('BREVO_API_KEY');
+                $brevoApiKey = trim($brevoApiKeyFromConfig ?: $brevoApiKeyFromEnv ?: '');
+                
+                if (empty($brevoApiKey)) {
+                    $response['email_debug'] = 'Brevo API key not found. Please check your .env file - ensure BREVO_API_KEY has no spaces around the equals sign (BREVO_API_KEY=value, not BREVO_API_KEY = value). Then run: php artisan config:clear. You can check your config at /api/check-email-config';
+                } else {
+                    $response['email_debug'] = 'Brevo API key found but email still failed. Check logs for details. You can check your config at /api/check-email-config';
+                }
+            }
+            
+            return response()->json($response, 200);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Failed to save interview schedule',
