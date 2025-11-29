@@ -28,6 +28,7 @@ async function fetchApplicants() {
       name: a.firstName && a.lastName ? `${a.firstName} ${a.lastName}` : a.name,
       email: a.emailAddress || a.email,
       location: a.address || a.location || "N/A",
+      phone: a.phoneNumber || a.phone || "N/A",
     }));
 
     console.log("✅ Applicants loaded:", allApplicants.value);
