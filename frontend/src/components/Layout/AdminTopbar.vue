@@ -34,9 +34,16 @@ async function fetchApplicants() {
 }
 
 function logout() {
+  // Clear localStorage
   localStorage.removeItem("admin_token");
+  localStorage.removeItem("user");
+
+  // Update reactive store
   isLoggedIn.value = false;
-  router.push({ name: "AdminLoginPage" });
+  currentUser.value = null;
+
+  // Redirect to login page
+  router.push({ name: "AdminLogin" });
 }
 
 
