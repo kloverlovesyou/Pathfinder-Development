@@ -115,7 +115,7 @@ async function handleResultClick(item) {
     name: item.name,
     email: item.email,
     location: item.location || "N/A",
-    phone: item.phone || "N/A",
+    phone: item.phoneNumber || "N/A",
   };
 
   openApplicantModal(applicant); // ✅ Use the centralized function
