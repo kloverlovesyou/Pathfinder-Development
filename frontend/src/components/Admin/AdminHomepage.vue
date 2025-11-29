@@ -114,6 +114,18 @@ async function loadApprovedOrganizations() {
     loadingApproved.value = false; // stop loading
   }
 }
+
+// Format date as "Month Day, Year"
+function formatDate(dateString) {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+}
+
 onMounted(() => {
   loadPendingOrganizations();
   loadApprovedOrganizations();
@@ -234,7 +246,7 @@ onMounted(() => {
               <div>
                 <h3 class="font-semibold">{{ org.name }}</h3>
                 <p class="text-sm text-gray-600">{{ org.emailAddress }}</p>
-                <p class="text-sm text-gray-600">{{ org.statusDate }}</p>
+                <p class="text-sm text-gray-600">{{ formatDate(org.statusDate) }}</p>
               </div>
 
               <span class="px-3 py-1 bg-green-600 text-white rounded-lg text-sm">
@@ -283,6 +295,7 @@ onMounted(() => {
         <div>
           <h3 class="font-semibold">{{ org.name }}</h3>
           <p class="text-sm text-gray-600">{{ org.emailAddress }}</p>
+          <p class="text-sm text-gray-600">{{ formatDate(org.statusDate) }}</p>
         </div>
 
         <span class="px-3 py-1 bg-red-600 text-white rounded-lg text-sm">
@@ -326,6 +339,7 @@ onMounted(() => {
             </a>
           </p>
           <p><strong>Email:</strong> {{ selectedOrg.emailAddress }}</p>
+          <p><strong>Verified:</strong> {{ formatDate(selectedOrg.statusDate) }}</p>
         </div>
 
         <div class="mt-6 flex justify-end space-x-2">
@@ -349,7 +363,7 @@ onMounted(() => {
     <!-- Reject Reason Modal -->
     <div
       v-if="rejectModal"
-      class="fixed inset-0 z-50 bg-black bg-opacity-30 flex items-center justify-center"
+      class="fixed inset-0 z-50 flex items-center justify-center"
     >
       <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md relative">
         <button
