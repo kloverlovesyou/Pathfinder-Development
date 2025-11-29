@@ -692,42 +692,45 @@
                   </div>
 
                   <div class="schedule-item-details">
-                    <!-- Start Time -->
-                    <div class="time-input-wrapper">
-                      <label :for="'startTime-' + index">Start Time</label>
-                      <div class="date-input-wrapper">
-                        <input type="time" :id="'startTime-' + index" v-model="schedule.startTime"
-                          placeholder="Start Time" />
-                        <span class="calendar-icon">
-                          <svg width="26" height="26" viewBox="0 0 26 26" fill="none"
-                            xmlns="http://www.w3.org/2000/svg">
-                            <path
-                              d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
-                              fill="black" />
-                            <path
-                              d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
-                              fill="black" />
-                          </svg>
-                        </span>
+                    <!-- Start Time and End Time in one row -->
+                    <div class="time-inputs-row">
+                      <!-- Start Time -->
+                      <div class="time-input-wrapper">
+                        <label :for="'startTime-' + index">Start Time</label>
+                        <div class="date-input-wrapper">
+                          <input type="time" :id="'startTime-' + index" v-model="schedule.startTime"
+                            placeholder="Start Time" />
+                          <span class="calendar-icon">
+                            <svg width="26" height="26" viewBox="0 0 26 26" fill="none"
+                              xmlns="http://www.w3.org/2000/svg">
+                              <path
+                                d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
+                                fill="black" />
+                              <path
+                                d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
+                                fill="black" />
+                            </svg>
+                          </span>
+                        </div>
                       </div>
-                    </div>
 
-                    <!-- End Time -->
-                    <div class="time-input-wrapper">
-                      <label :for="'endTime-' + index">End Time</label>
-                      <div class="date-input-wrapper">
-                        <input type="time" :id="'endTime-' + index" v-model="schedule.endTime" placeholder="End Time" />
-                        <span class="calendar-icon">
-                          <svg width="26" height="26" viewBox="0 0 26 26" fill="none"
-                            xmlns="http://www.w3.org/2000/svg">
-                            <path
-                              d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
-                              fill="black" />
-                            <path
-                              d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
-                              fill="black" />
-                          </svg>
-                        </span>
+                      <!-- End Time -->
+                      <div class="time-input-wrapper">
+                        <label :for="'endTime-' + index">End Time</label>
+                        <div class="date-input-wrapper">
+                          <input type="time" :id="'endTime-' + index" v-model="schedule.endTime" placeholder="End Time" />
+                          <span class="calendar-icon">
+                            <svg width="26" height="26" viewBox="0 0 26 26" fill="none"
+                              xmlns="http://www.w3.org/2000/svg">
+                              <path
+                                d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
+                                fill="black" />
+                              <path
+                                d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
+                                fill="black" />
+                            </svg>
+                          </span>
+                        </div>
                       </div>
                     </div>
 
@@ -2661,117 +2664,253 @@ export default {
 
     sortedUpcomingTrainings() {
       const orgId = this.currentOrganizationId;
-      // Exclude ongoing trainings - only show trainings where all schedules are in the future
+      const now = new Date();
+      
+      // Show trainings that:
+      // 1. Are not currently ongoing
+      // 2. Have at least one schedule that hasn't started yet (future schedule exists)
+      // This includes trainings between schedules where previous schedules have ended but future ones are coming
       return this.upcomingtrainings
         .filter(t => {
           // Filter by organization ID if available
           if (orgId && t.organization_id !== orgId && t.organizationID !== orgId) {
             return false;
           }
-          return true;
-        })
-        .filter(t => !this.isTrainingOngoing(t))
-        .filter(t => {
-          const now = new Date();
-          // For multiple schedules, check if earliest schedule is in the future
-          if (t.schedules && Array.isArray(t.schedules) && t.schedules.length > 0) {
-            const earliestSchedule = t.schedules.reduce((earliest, schedule) => {
-              const scheduleTime = schedule.schedule || schedule.Schedule;
-              if (!scheduleTime) return earliest;
-              const startTime = this.parseLocalDateTime(scheduleTime);
-              if (!startTime) return earliest;
-              if (!earliest || startTime < this.parseLocalDateTime(earliest.schedule || earliest.Schedule)) {
-                return schedule;
-              }
-              return earliest;
-            }, null);
-            if (!earliestSchedule) return false;
-            const startTime = this.parseLocalDateTime(earliestSchedule.schedule || earliestSchedule.Schedule);
-            return startTime && startTime > now;
+          
+          // Exclude ongoing trainings
+          if (this.isTrainingOngoing(t)) {
+            return false;
           }
-          // Single schedule format
+          
+          // Check if training has multiple schedules
+          if (t.schedules && Array.isArray(t.schedules) && t.schedules.length > 0) {
+            // Check if there's at least one schedule that hasn't started yet
+            const hasFutureSchedule = t.schedules.some(schedule => {
+              const scheduleTime = schedule.schedule || schedule.Schedule;
+              if (!scheduleTime) return false;
+              const startTime = this.parseLocalDateTime(scheduleTime);
+              return startTime && startTime.getTime() > now.getTime();
+            });
+            return hasFutureSchedule; // Show if any schedule is in the future
+          }
+          
+          // Single schedule format - check if it hasn't started yet
           const scheduleTime = t.schedule || t.Schedule;
           if (!scheduleTime) return false;
           const startTime = this.parseLocalDateTime(scheduleTime);
-          return startTime && startTime >= now;
+          return startTime && startTime.getTime() > now.getTime();
         })
         .sort((a, b) => {
-          // Sort by earliest schedule
-          const aSchedule = a.schedule || (a.schedules?.[0]?.schedule || a.schedules?.[0]?.Schedule);
-          const bSchedule = b.schedule || (b.schedules?.[0]?.schedule || b.schedules?.[0]?.Schedule);
-          if (!aSchedule || !bSchedule) return 0;
-          const aTime = this.parseLocalDateTime(aSchedule);
-          const bTime = this.parseLocalDateTime(bSchedule);
+          // Sort by earliest upcoming schedule
+          const getEarliestUpcomingSchedule = (training) => {
+            if (training.schedules && Array.isArray(training.schedules) && training.schedules.length > 0) {
+              let earliest = null;
+              for (const schedule of training.schedules) {
+                const scheduleTime = schedule.schedule || schedule.Schedule;
+                if (scheduleTime) {
+                  const startTime = this.parseLocalDateTime(scheduleTime);
+                  if (startTime && startTime.getTime() > now.getTime()) {
+                    if (!earliest || startTime < earliest) {
+                      earliest = startTime;
+                    }
+                  }
+                }
+              }
+              return earliest;
+            }
+            const scheduleTime = training.schedule || training.Schedule;
+            return scheduleTime ? this.parseLocalDateTime(scheduleTime) : null;
+          };
+          
+          const aTime = getEarliestUpcomingSchedule(a);
+          const bTime = getEarliestUpcomingSchedule(b);
           if (!aTime || !bTime) return 0;
-          return aTime - bTime;
+          return aTime.getTime() - bTime.getTime();
         });
     },
 
     sortedCompletedTrainings() {
       const now = new Date();
       const orgId = this.currentOrganizationId;
-      // Exclude ongoing trainings - only show trainings where all schedules have ended
-      return this.upcomingtrainings
-        .filter(t => {
-          // Filter by organization ID if available
-          if (orgId && t.organization_id !== orgId && t.organizationID !== orgId) {
-            return false;
-          }
-          return true;
-        })
-        .filter(t => !this.isTrainingOngoing(t))
-        .filter(t => {
-          // For multiple schedules, check if latest schedule has ended
-          if (t.schedules && Array.isArray(t.schedules) && t.schedules.length > 0) {
-            const latestSchedule = t.schedules.reduce((latest, schedule) => {
-              const endTime = schedule.end_time || schedule.endTime || schedule.endTimeDate;
-              if (!endTime) return latest;
+      
+      // Helper function to get the latest end time for a training
+      const getLatestEndTime = (training) => {
+        if (training.schedules && Array.isArray(training.schedules) && training.schedules.length > 0) {
+          let latest = null;
+          for (const schedule of training.schedules) {
+            const endTime = schedule.end_time || schedule.endTime || schedule.endTimeDate;
+            if (endTime) {
               const endTimeDate = this.parseLocalDateTime(endTime);
-              if (!endTimeDate) return latest;
-              const latestEndTime = latest ? (latest.end_time || latest.endTime || latest.endTimeDate) : null;
-              const latestEndTimeDate = latestEndTime ? this.parseLocalDateTime(latestEndTime) : null;
-              if (!latest || !latestEndTimeDate || endTimeDate > latestEndTimeDate) {
-                return schedule;
-              }
-              return latest;
-            }, null);
-            if (!latestSchedule) return false;
-            const endTime = latestSchedule.end_time || latestSchedule.endTime || latestSchedule.endTimeDate;
-            if (!endTime) return false;
-            const endTimeDate = this.parseLocalDateTime(endTime);
-            if (!endTimeDate) return false;
-            // Add a small buffer (1 minute) to account for timing issues
-            const bufferTime = new Date(now.getTime() - 60 * 1000);
-            return endTimeDate < bufferTime;
-          }
-          // Single schedule format
-          const endTime = t.end_time || t.endTime || t.endTimeDate;
-          if (!endTime) {
-            // If no end_time, check if schedule exists and use it as fallback
-            const scheduleTime = t.schedule || t.Schedule;
-            if (scheduleTime) {
-              const scheduleDate = this.parseLocalDateTime(scheduleTime);
-              // If schedule is in the past (more than 1 day ago), consider it completed
-              if (scheduleDate) {
-                const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-                return scheduleDate < oneDayAgo;
+              if (endTimeDate && (!latest || endTimeDate.getTime() > latest.getTime())) {
+                latest = endTimeDate;
               }
             }
+          }
+          return latest;
+        }
+        // Fallback to top-level end_time for single schedule trainings
+        const endTime = training.end_time || training.endTime || training.endTimeDate;
+        return endTime ? this.parseLocalDateTime(endTime) : null;
+      };
+      
+      // A training is completed if:
+      // 1. It belongs to this organization (if orgId is set)
+      // 2. It's not currently ongoing
+      // 3. All schedules have ended (no schedules in the future, and latest end time has passed)
+      const completedTrainings = this.upcomingtrainings
+        .filter(t => {
+          // Filter by organization ID if available
+          if (orgId) {
+            const trainingOrgId = t.organizationID || t.organization_id;
+            if (!trainingOrgId || trainingOrgId !== orgId) {
+              return false;
+            }
+          }
+          
+          // Exclude ongoing trainings
+          if (this.isTrainingOngoing(t)) {
             return false;
           }
-          const endTimeDate = this.parseLocalDateTime(endTime);
-          return endTimeDate && endTimeDate < now;
+          
+          // Check if training has multiple schedules
+          if (t.schedules && Array.isArray(t.schedules) && t.schedules.length > 0) {
+            // For multiple schedules, training is completed if:
+            // 1. ALL schedules have ended (latest end time has passed)
+            // 2. NO schedules are in the future (all schedules have started and ended)
+            
+            let latestEndTime = null;
+            let hasFutureSchedule = false;
+            
+            // Check all schedules
+            for (const schedule of t.schedules) {
+              // Check if this schedule hasn't started yet (future schedule)
+              const scheduleTime = schedule.schedule || schedule.Schedule;
+              if (scheduleTime) {
+                const startTime = this.parseLocalDateTime(scheduleTime);
+                if (startTime && startTime.getTime() > now.getTime()) {
+                  hasFutureSchedule = true;
+                  break; // Found a future schedule, so training is not completed
+                }
+              }
+              
+              // Track latest end time
+              const endTime = schedule.end_time || schedule.endTime || schedule.endTimeDate;
+              if (endTime) {
+                const endTimeDate = this.parseLocalDateTime(endTime);
+                if (endTimeDate && (!latestEndTime || endTimeDate.getTime() > latestEndTime.getTime())) {
+                  latestEndTime = endTimeDate;
+                }
+              }
+            }
+            
+            // If there's a future schedule, it's not completed (it's upcoming)
+            if (hasFutureSchedule) {
+              return false;
+            }
+            
+            // No future schedules, check if latest end time has passed
+            // This means ALL schedules have ended
+            if (latestEndTime) {
+              return latestEndTime.getTime() <= now.getTime();
+            }
+            
+            return false;
+          } else {
+            // Single schedule format
+            const scheduleTime = t.schedule || t.Schedule;
+            const endTime = t.end_time || t.endTime || t.endTimeDate;
+            
+            if (!scheduleTime) {
+              return false;
+            }
+            
+            const startTime = this.parseLocalDateTime(scheduleTime);
+            
+            // If schedule hasn't started yet, it's upcoming
+            if (startTime && startTime.getTime() > now.getTime()) {
+              return false;
+            }
+            
+            // Schedule has started, check if it has ended
+            if (endTime) {
+              const endTimeDate = this.parseLocalDateTime(endTime);
+              if (endTimeDate) {
+                return endTimeDate.getTime() <= now.getTime();
+              }
+            }
+            
+            // Fallback: if no end_time, check if schedule was more than 1 day ago
+            if (startTime) {
+              const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+              return startTime.getTime() < oneDayAgo.getTime();
+            }
+            
+            return false;
+          }
         })
         .sort((a, b) => {
-          // Sort by latest end time
-          const aEndTime = a.end_time || (a.schedules?.[a.schedules?.length - 1]?.end_time || a.schedules?.[a.schedules?.length - 1]?.endTime);
-          const bEndTime = b.end_time || (b.schedules?.[b.schedules?.length - 1]?.end_time || b.schedules?.[b.schedules?.length - 1]?.endTime);
+          // Sort by latest end time (most recent first)
+          const aEndTime = getLatestEndTime(a);
+          const bEndTime = getLatestEndTime(b);
           if (!aEndTime || !bEndTime) return 0;
-          const aTime = this.parseLocalDateTime(aEndTime);
-          const bTime = this.parseLocalDateTime(bEndTime);
-          if (!aTime || !bTime) return 0;
-          return bTime - aTime; // Descending order
+          return bEndTime.getTime() - aEndTime.getTime(); // Descending order (most recent first)
         });
+      
+      // Enhanced debug logging to understand why trainings aren't showing
+      if (completedTrainings.length === 0 && this.upcomingtrainings.length > 0) {
+        const debugInfo = this.upcomingtrainings.map(t => {
+          const trainingOrgId = t.organizationID || t.organization_id;
+          const isOrgMatch = !orgId || trainingOrgId === orgId;
+          const isOngoing = this.isTrainingOngoing(t);
+          const latestEndTime = getLatestEndTime(t);
+          const latestEndTimeStr = latestEndTime ? latestEndTime.toISOString() : 'N/A';
+          const latestEndLocalStr = latestEndTime ? latestEndTime.toLocaleString() : 'N/A';
+          const nowLocalStr = now.toLocaleString();
+          const isEndTimePassed = latestEndTime ? latestEndTime.getTime() <= now.getTime() : false;
+          
+          let hasFutureSchedule = false;
+          if (t.schedules && Array.isArray(t.schedules) && t.schedules.length > 0) {
+            hasFutureSchedule = t.schedules.some(schedule => {
+              const scheduleTime = schedule.schedule || schedule.Schedule;
+              if (scheduleTime) {
+                const startTime = this.parseLocalDateTime(scheduleTime);
+                return startTime && startTime.getTime() > now.getTime();
+              }
+              return false;
+            });
+          }
+          
+          return {
+            id: t.trainingID,
+            title: t.title,
+            orgId: trainingOrgId,
+            isOrgMatch: isOrgMatch,
+            isOngoing: isOngoing,
+            hasFutureSchedule: hasFutureSchedule,
+            latestEndTime: latestEndTimeStr,
+            latestEndTimeLocal: latestEndLocalStr,
+            currentTimeLocal: nowLocalStr,
+            isEndTimePassed: isEndTimePassed,
+            schedules: t.schedules?.map(s => ({
+              start: s.schedule,
+              end: s.end_time,
+              startParsed: this.parseLocalDateTime(s.schedule)?.toLocaleString(),
+              endParsed: this.parseLocalDateTime(s.end_time)?.toLocaleString()
+            })) || [{ start: t.schedule, end: t.end_time }]
+          };
+        });
+        
+        console.log("🔍 Debug: Completed Trainings Analysis", {
+          totalTrainings: this.upcomingtrainings.length,
+          completedCount: completedTrainings.length,
+          orgId: orgId,
+          currentTimeUTC: now.toISOString(),
+          currentTimeLocal: now.toLocaleString(),
+          trainings: debugInfo
+        });
+      }
+      
+      return completedTrainings;
     },
     filteredUpcoming() {
       const query = this.globalSearchQuery.toLowerCase();
@@ -4154,6 +4293,17 @@ tbody td {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.time-inputs-row {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.time-inputs-row .time-input-wrapper {
+  flex: 1;
 }
 
 /* Counter Badge */
