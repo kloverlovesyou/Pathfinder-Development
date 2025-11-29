@@ -9,6 +9,21 @@ use Illuminate\Support\Facades\Validator;
 
 class AdminController extends Controller
 {
+    public function AdminInfo(Request $request)
+    {
+        $admin = $request->user();
+
+        return response()->json([
+            'adminID' => $admin->adminID,
+            'name' => $admin->name,
+            'location' => $admin->location,
+            'websiteURL' => $admin->websiteURL,
+            'emailAddress' => $admin->emailAddress,
+            'role' => 'admin'
+        ]);
+    }
+
+
     /**
      * Admin Login
      */
