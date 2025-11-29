@@ -122,7 +122,7 @@ const handleAdminLogin = async () => {
     isLoggedIn.value = true;
     currentUser.value = { ...adminData, role: "admin" };
 
-    router.push("/admin"); // redirect to admin dashboard
+    router.push("/admin/dashboard"); // redirect to admin dashboard
   } catch (err) {
     console.error("Admin login error:", err);
 
