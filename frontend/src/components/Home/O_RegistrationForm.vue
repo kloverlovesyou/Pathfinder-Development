@@ -119,7 +119,6 @@
           />
         </div>
 
-        <!-- Address Fields - Segmented Dropdowns (shown when API works) -->
         <template v-if="!apiFailed">
           <div class="form-control mb-4">
             <label class="label">
@@ -211,23 +210,85 @@
           </div>
         </template>
 
-        <!-- Fallback: Manual address input if API fails -->
-        <div v-else class="form-control mb-4">
-          <label class="label">
-            <span class="label-text text-sm font-medium text-gray-700">Location*</span>
-          </label>
-          <input
-            class="input w-full bg-gray-100"
-            type="text"
-            required
-            placeholder="Enter your complete address"
-            name="location"
-            v-model="form.location"
-          />
-          <p class="text-xs text-gray-500 mt-1">
-            Location API is unavailable. Please enter your full address manually.
-          </p>
-        </div>
+        <!-- Fallback: Segmented dropdowns using philippine-location-json-for-geer -->
+        <template v-else>
+          <div class="form-control mb-4">
+            <label class="label">
+              <span class="label-text text-sm font-medium text-gray-700">Region*</span>
+            </label>
+            <select class="select w-full bg-gray-100" v-model="form.region" @change="onRegionChangeFallback">
+              <option value="" disabled>Select Region</option>
+              <option v-for="region in regions" :key="region.psgc_code" :value="region.psgc_code">
+                {{ region.name }}
+              </option>
+            </select>
+          </div>`
+
+          <div class="form-control mb-4">
+            <label class="label">
+              <span class="label-text text-sm font-medium text-gray-700">Province*</span>
+            </label>
+            <select
+              class="select w-full bg-gray-100"
+              v-model="form.province"
+              @change="onProvinceChangeFallback"
+              :disabled="!form.region"
+            >
+              <option value="" disabled>{{ !form.region ? 'Select Region first' : 'Select Province' }}</option>
+              <option v-for="province in provinces" :key="province.psgc_code" :value="province.psgc_code">
+                {{ province.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-control mb-4">
+            <label class="label">
+              <span class="label-text text-sm font-medium text-gray-700">City/Municipality*</span>
+            </label>
+            <select
+              class="select w-full bg-gray-100"
+              v-model="form.city"
+              @change="onCityChangeFallback"
+              :disabled="!form.province"
+            >
+              <option value="" disabled>{{ !form.province ? 'Select Province first' : 'Select City/Municipality' }}</option>
+              <option v-for="city in cities" :key="city.psgc_code" :value="city.psgc_code">
+                {{ city.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-control mb-4">
+            <label class="label">
+              <span class="label-text text-sm font-medium text-gray-700">Barangay*</span>
+            </label>
+            <select
+              class="select w-full bg-gray-100"
+              v-model="form.barangay"
+              :disabled="!form.city"
+            >
+              <option value="" disabled>{{ !form.city ? 'Select City/Municipality first' : 'Select Barangay' }}</option>
+              <option v-for="barangay in barangays" :key="barangay.psgc_code" :value="barangay.psgc_code">
+                {{ barangay.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-control mb-4">
+            <label class="label">
+              <span class="label-text text-sm font-medium text-gray-700">Street Address (Optional)</span>
+            </label>
+            <input
+              class="input w-full bg-gray-100"
+              type="text"
+              placeholder="House/Building Number, Street Name"
+              v-model="form.streetAddress"
+            />
+            <p class="text-xs text-gray-500 mt-1">
+              Location API is unavailable. Using fallback data from philippine-location-json-for-geer.
+            </p>
+          </div>
+        </template>
 
         <div class="form-control mb-4">
           <label class="label">
