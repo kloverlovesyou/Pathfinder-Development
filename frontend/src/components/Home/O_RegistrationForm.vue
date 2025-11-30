@@ -906,7 +906,7 @@ async function fetchRegions() {
     console.error("Error fetching regions:", error);
     // Fallback 1: Try alternative GitHub repository
     try {
-      const fallbackResponse = await axios.get("https://raw.githubusercontent.com/simonbengtsson/jsondata/master/philippines/regions.json");
+      const fallbackResponse = await axios.get("api/regions");
       regions.value = (fallbackResponse.data || []).map(region => ({
         psgc_code: region.code || region.id,
         name: region.name
@@ -966,18 +966,15 @@ async function onRegionChange() {
   
   loadingProvinces.value = true;
   try {
-    const response = await axios.get(`${PH_LOCATION_API_BASE}/provinces.json`);
+    const response = await axios.get('api/provinces');
     const allProvinces = response.data || [];
     provinces.value = allProvinces
-      .filter(p => {
-        const regionCode = p.region_code || p.regionCode || p.region?.code || p.region?.psgc_code || p.region_id;
-        return regionCode === form.value.region || regionCode?.toString() === form.value.region?.toString();
-      })
-      .map(province => ({
-        psgc_code: province.code || province.psgc_code || province.province_code || province.id,
-        name: province.name || province.province_name,
-        region_code: province.region_code || province.regionCode || province.region_id
-      }));
+  .filter(p => p.region_code == form.value.region) // only check region_code
+  .map(province => ({
+    psgc_code: province.code,      // province code
+    name: province.name,           // province name
+    region_code: province.region_code
+  }));
   } catch (error) {
     console.error("Error fetching provinces:", error);
     // Fallback: Try PSGC API
@@ -1008,18 +1005,15 @@ async function onProvinceChange() {
   
   loadingCities.value = true;
   try {
-    const response = await axios.get(`${PH_LOCATION_API_BASE}/cities.json`);
+    const response = await axios.get("/api/cities");
     const allCities = response.data || [];
     cities.value = allCities
-      .filter(c => {
-        const provinceCode = c.province_code || c.provinceCode || c.province?.code || c.province?.psgc_code || c.province_id;
-        return provinceCode === form.value.province || provinceCode?.toString() === form.value.province?.toString();
-      })
-      .map(city => ({
-        psgc_code: city.code || city.psgc_code || city.city_code || city.id,
-        name: city.name || city.city_name,
-        province_code: city.province_code || city.provinceCode || city.province_id
-      }));
+  .filter(c => c.province_code == form.value.province) // just compare province_code
+  .map(city => ({
+    psgc_code: city.code,          // city code
+    name: city.name,               // city name
+    province_code: city.province_code
+  }));
   } catch (error) {
     console.error("Error fetching cities:", error);
     // Fallback: Try PSGC API
@@ -1048,18 +1042,16 @@ async function onCityChange() {
   
   loadingBarangays.value = true;
   try {
-    const response = await axios.get(`${PH_LOCATION_API_BASE}/barangays.json`);
+    const response = await axios.get("/api/barangays");
     const allBarangays = response.data || [];
     barangays.value = allBarangays
-      .filter(b => {
-        const cityCode = b.city_code || b.cityCode || b.city?.code || b.city?.psgc_code || b.municipality_code || b.municipalityCode || b.city_municipality_code;
-        return cityCode === form.value.city || cityCode?.toString() === form.value.city?.toString();
-      })
-      .map(barangay => ({
-        psgc_code: barangay.code || barangay.psgc_code || barangay.barangay_code || barangay.id,
-        name: barangay.name || barangay.barangay_name,
-        city_code: barangay.city_code || barangay.cityCode || barangay.municipality_code || barangay.city_municipality_code
-      }));
+      barangays.value = allBarangays
+  .filter(b => b.city_code == form.value.city) // just compare city_code
+  .map(barangay => ({
+    psgc_code: barangay.code,       // barangay code
+    name: barangay.name,            // barangay name
+    city_code: barangay.city_code
+  }));
   } catch (error) {
     console.error("Error fetching barangays:", error);
     // Fallback: Try PSGC API

@@ -27,6 +27,7 @@ use App\Http\Controllers\InterviewController;
 use App\Http\Controllers\AdminSearchController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\LocationController;
 // ----------------------
 // Public routes (no auth)
 // ----------------------
@@ -37,6 +38,11 @@ Route::get('/dashboard', [DashboardController::class, 'getChartData']);
 
 // Trainings
 Route::get('/trainings', [TrainingController::class, 'index']);
+
+Route::get('/regions', [LocationController::class, 'regions']);
+Route::get('/provinces', [LocationController::class, 'provinces']);
+Route::get('/cities', [LocationController::class, 'cities']);
+Route::get('/barangays', [LocationController::class, 'barangays']);
 
 // Careers with recommendations
 Route::get('/careers', [CareerRecommendationController::class, 'index']);
