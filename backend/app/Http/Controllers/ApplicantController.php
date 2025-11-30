@@ -143,6 +143,7 @@ public function login(Request $request)
             'emailAddress' => 'nullable|email|max:255',
             'phoneNumber' => 'nullable|string|max:20',
             'displayPicture_directory' => 'nullable|string|max:255',
+            // Accept DisplayPicture_directory for backward compatibility but normalize it
             'DisplayPicture_directory' => 'nullable|string|max:255',
         ]);
 
@@ -156,18 +157,23 @@ public function login(Request $request)
             'phoneNumber' => $request->phoneNumber ?? $applicant->phoneNumber,
         ]);
 
-        if (
-            $request->has('displayPicture_directory') ||
-            $request->has('DisplayPicture_directory')
-        ) {
-            $applicant->DisplayPicture_directory =
-                $request->input('displayPicture_directory') ??
-                $request->input('DisplayPicture_directory');
+        // Handle display picture - normalize to displayPicture_directory (camelCase)
+        $displayPicturePath = $request->input('displayPicture_directory') ??
+            $request->input('DisplayPicture_directory');
+        
+        if ($displayPicturePath !== null) {
+            // Use setAttribute directly with the exact database column name (camelCase)
+            // This ensures Laravel uses the correct column name, not DisplayPicture_directory
+            $applicant->setAttribute('displayPicture_directory', $displayPicturePath);
         }
 
         $applicant->save();
 
-        return response()->json(['message' => 'Profile updated successfully']);
+        // Return updated applicant data including the displayPicture_directory
+        return response()->json([
+            'message' => 'Profile updated successfully',
+            'user' => $applicant->fresh() // Return fresh data from database
+        ]);
     }
 // Delete applicant account
    public function destroy(Request $request)
