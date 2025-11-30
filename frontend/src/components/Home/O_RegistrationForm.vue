@@ -897,11 +897,12 @@ async function fetchRegions() {
   loadingRegions.value = true;
   try {
     // Try primary source: iamkevinluke's repository
-    const response = await axios.get(import.meta.env.VITE_API_BASE_URL + `/regions`);
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/regions`);
     regions.value = (response.data || []).map(region => ({
       psgc_code: region.code || region.psgc_code || region.id || region.region_code,
       name: region.name || region.region_name || region.regionName
     }));
+    console.log("Regions:", regions.value);
   } catch (error) {
     console.error("Error fetching regions:", error);
     // Fallback 1: Try alternative GitHub repository
@@ -966,7 +967,7 @@ async function onRegionChange() {
   
   loadingProvinces.value = true;
   try {
-    const response = await axios.get('api/provinces');
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/provinces`);
     const allProvinces = response.data || [];
     provinces.value = allProvinces
   .filter(p => p.region_code == form.value.region) // only check region_code
@@ -975,6 +976,7 @@ async function onRegionChange() {
     name: province.name,           // province name
     region_code: province.region_code
   }));
+  console.log("Provinces:", provinces.value);
   } catch (error) {
     console.error("Error fetching provinces:", error);
     // Fallback: Try PSGC API
@@ -1005,7 +1007,7 @@ async function onProvinceChange() {
   
   loadingCities.value = true;
   try {
-    const response = await axios.get(import.meta.env.VITE_API_BASE_URL + "/cities");
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/cities`);
     const allCities = response.data || [];
     cities.value = allCities
   .filter(c => c.province_code == form.value.province) // just compare province_code
@@ -1042,7 +1044,7 @@ async function onCityChange() {
   
   loadingBarangays.value = true;
   try {
-    const response = await axios.get(import.meta.env.VITE_API_BASE_URL + "/barangays");
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/barangays`);
     const allBarangays = response.data || [];
     barangays.value = allBarangays
       barangays.value = allBarangays
