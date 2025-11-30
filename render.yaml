@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: pathfinder-dev
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    region: oregon
+    branch: primo
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: LOG_LEVEL
+        value: error
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_DRIVER
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: APP_NAME
+        value: "Pathfinder Dev"
+      - key: MAIL_FROM_NAME
+        value: "Pathfinder Dev"
+    buildCommand: ""
+    startCommand: ""
+

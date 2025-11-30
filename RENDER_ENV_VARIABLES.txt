@@ -1,0 +1,31 @@
+# Copy and paste these into Render Environment Variables
+# Replace the placeholder values with your actual credentials
+
+APP_NAME=Pathfinder Dev
+APP_ENV=production
+APP_KEY=base64:MbgSQUb+WFGZsKhx36IszwlgqlPQmSny/dmyj0rPwDI=
+APP_DEBUG=false
+APP_URL=https://pathfinder-dev.onrender.com
+
+DB_CONNECTION=pgsql
+DB_HOST=REPLACE_WITH_YOUR_SUPABASE_HOST
+DB_PORT=5432
+DB_DATABASE=postgres
+DB_USERNAME=postgres
+DB_PASSWORD=REPLACE_WITH_YOUR_SUPABASE_PASSWORD
+DB_SSLMODE=require
+
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=REPLACE_WITH_YOUR_GMAIL
+MAIL_PASSWORD=REPLACE_WITH_YOUR_GMAIL_APP_PASSWORD
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=REPLACE_WITH_YOUR_GMAIL
+MAIL_FROM_NAME=Pathfinder Dev
+
+SESSION_DRIVER=database
+CACHE_DRIVER=database
+QUEUE_CONNECTION=database
+LOG_LEVEL=error
+
