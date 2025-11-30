@@ -917,7 +917,7 @@ async function fetchRegions() {
   loadingRegions.value = true;
   try {
     // Try primary source: iamkevinluke's repository
-    const response = await axios.get(`${PH_LOCATION_API_BASE}/regions.json`);
+    const response = await axios.get("/api/regions");
     regions.value = (response.data || []).map(region => ({
       psgc_code: region.code || region.psgc_code || region.id || region.region_code,
       name: region.name || region.region_name || region.regionName
@@ -1132,7 +1132,7 @@ function constructAddress() {
 
 // Fetch regions on component mount
 onMounted(async () => {
-  await fetchRegionsPSGC();
+  await fetchRegions();
 });
 </script>
 

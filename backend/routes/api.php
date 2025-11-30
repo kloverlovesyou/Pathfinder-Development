@@ -3,7 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
-
+use Illuminate\Support\Facades\Http;
 use App\Http\Controllers\ApplicantController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\AuthController;
@@ -39,10 +39,40 @@ Route::get('/dashboard', [DashboardController::class, 'getChartData']);
 // Trainings
 Route::get('/trainings', [TrainingController::class, 'index']);
 
-Route::get('/locations/regions', [LocationController::class, 'regions']);
-Route::get('/locations/provinces/{region}', [LocationController::class, 'provinces']);
-Route::get('/locations/cities/{province}', [LocationController::class, 'cities']);
-Route::get('/locations/barangays/{city}', [LocationController::class, 'barangays']);
+Route::get('/regions', function () {
+    try {
+        // Try PSGC API
+        $response = Http::get('https://psgc.gitlab.io/api/regions.json');
+        if ($response->successful()) {
+            return $response->json();
+        }
+
+        // Fallback 1: GitHub JSON
+        $fallback1 = Http::get('https://raw.githubusercontent.com/simonbengtsson/jsondata/master/philippines/regions.json');
+        if ($fallback1->successful()) {
+            return $fallback1->json();
+        }
+
+        // Fallback 2: Another GitHub JSON
+        $fallback2 = Http::get('https://raw.githubusercontent.com/iamkevinluke/philippines-regions-provinces-cities-municipalities-barangays/master/regions.json');
+        if ($fallback2->successful()) {
+            return $fallback2->json();
+        }
+
+        // Last resort: Hardcoded
+        return response()->json([
+            ["code" => "010000000", "name" => "Ilocos Region (Region I)"],
+            ["code" => "020000000", "name" => "Cagayan Valley (Region II)"],
+            ["code" => "030000000", "name" => "Central Luzon (Region III)"],
+            // ... add the rest
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            "error" => "Failed to fetch regions",
+            "message" => $e->getMessage()
+        ], 500);
+    }
+});
 
 // Careers with recommendations
 Route::get('/careers', [CareerRecommendationController::class, 'index']);
