@@ -996,72 +996,28 @@ onMounted(async () => {
       <div class="training-modal-box">
         <button class="training-modal-close" @click="closeTrainingModal">✕</button>
 
-        <h2 class="training-modal-title">
-          {{ selectedTraining.title || "Untitled Training" }}
-        </h2>
-        <p class="training-modal-info">
-          <strong>Organization:</strong>
-          {{
-            selectedTraining.organization?.name ||
-            selectedTraining.organizationName ||
-            selectedTraining.provider ||
-            selectedTraining.organization ||
-            "Unknown"
-          }}
-        </p>
-        <p class="training-modal-info">
-          <strong>Description:</strong>
-          {{ selectedTraining.description || "No description provided." }}
-        </p>
-
-        <div class="training-modal-actions">
-          <button
-            class="btn btn-sm text-white flex items-center gap-2"
-            :class="
-              selectedTrainingRegistered
-                ? 'bg-gray-500 hover:bg-gray-600'
-                : 'bg-customButton hover:bg-dark-slate'
-            "
-            @click="
-              selectedTrainingRegistered
-                ? unregisterFromTraining(selectedTraining)
-                : registerForTraining(selectedTraining)
-            "
-            :disabled="trainingActionLoading"
-          >
-            <svg
-              v-if="trainingActionLoading"
-              class="animate-spin h-4 w-4 text-white"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              ></circle>
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
-              ></path>
-            </svg>
-            <span>
-              {{ selectedTrainingRegistered ? "Unregister" : "Register" }}
-            </span>
-          </button>
-          <p v-if="trainingActionError" class="training-modal-error">
-            {{ trainingActionError }}
+        <div class="flex-1 overflow-y-auto pr-4">
+          <h2 class="training-modal-title">
+            {{ selectedTraining.title || "Untitled Training" }}
+          </h2>
+          <p class="training-modal-info">
+            <strong>Organization:</strong>
+            {{
+              selectedTraining.organization?.name ||
+              selectedTraining.organizationName ||
+              selectedTraining.provider ||
+              selectedTraining.organization ||
+              "Unknown"
+            }}
           </p>
-        </div>
+          <p class="training-modal-info">
+            <strong>Description:</strong>
+            {{ selectedTraining.description || "No description provided." }}
+          </p>
 
-        <div class="training-modal-section-title">Schedule/s</div>
+          <div class="training-modal-section-title">Schedule/s</div>
 
-        <div class="training-schedules-container">
+          <div class="training-schedules-container">
           <template v-if="selectedTraining?.schedules?.length">
             <div class="training-schedules-grid">
               <div
@@ -1295,6 +1251,53 @@ onMounted(async () => {
           <div v-else class="training-schedule-card training-schedule-empty">
             No schedule set.
           </div>
+          </div>
+        </div>
+
+        <!-- Button at bottom - full width -->
+        <div class="mt-4 pt-4 border-t border-gray-300 flex flex-col gap-2">
+          <button
+            class="btn w-full text-white flex items-center justify-center gap-2"
+            :class="
+              selectedTrainingRegistered
+                ? 'bg-gray-500 hover:bg-gray-600'
+                : 'bg-customButton hover:bg-dark-slate'
+            "
+            @click="
+              selectedTrainingRegistered
+                ? unregisterFromTraining(selectedTraining)
+                : registerForTraining(selectedTraining)
+            "
+            :disabled="trainingActionLoading"
+          >
+            <svg
+              v-if="trainingActionLoading"
+              class="animate-spin h-4 w-4 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
+              ></path>
+            </svg>
+            <span>
+              {{ selectedTrainingRegistered ? "Unregister" : "Register" }}
+            </span>
+          </button>
+          <p v-if="trainingActionError" class="training-modal-error text-center">
+            {{ trainingActionError }}
+          </p>
         </div>
       </div>
     </div>
@@ -1349,8 +1352,8 @@ onMounted(async () => {
               <strong>Training Match:</strong>
               {{ selectedCareerDetails.trainingsAttendedPercentage }}%
             </p>
-            <p v-if="orgChoiceProgress">
-              <strong>Organization Choice Training Progress:</strong>
+            <p v-if="orgChoiceProgress" class="text-green-600">
+              <strong class="text-green-600">Organization Choice Training Progress:</strong>
               {{ orgChoiceProgress.completed }}/{{ orgChoiceProgress.total }} 
               ({{ orgChoiceProgress.percentage }}%)
             </p>
@@ -1414,15 +1417,15 @@ onMounted(async () => {
 
     <!-- Training Details Modal -->
     <dialog v-if="showTrainingModal && selectedTraining" open class="modal sm:modal-middle">
-      <div class="modal-box max-w-3xl relative font-poppins bg-gray-800 text-white">
+      <div class="modal-box max-w-3xl relative font-poppins bg-gray-800 text-white flex flex-col" style="max-height: 90vh;">
         <!-- Close button -->
-        <button class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2 text-white"
+        <button class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2 text-white z-10"
           @click="closeTrainingModal">
           ✕
         </button>
 
         <!-- Training Details -->
-        <div>
+        <div class="flex-1 overflow-y-auto pr-4">
           <h2 class="text-xl font-bold mb-2">{{ selectedTraining.title }}</h2>
           <p class="text-sm text-gray-400 mb-2">
             Organization:
@@ -1433,17 +1436,6 @@ onMounted(async () => {
               "Unknown"
             }}
           </p>
-
-          <div class="my-4 flex justify-end gap-2">
-            <button v-if="!myRegistrations.has(selectedTraining.trainingID)"
-              class="btn btn-sm bg-blue-600 text-white hover:bg-blue-700"
-              @click="registerForTraining(selectedTraining)">
-              REGISTER
-            </button>
-            <button v-else class="btn btn-sm bg-gray-500 text-white" @click="unregisterFromTraining(selectedTraining)">
-              Unregister
-            </button>
-          </div>
 
           <!-- Divider -->
           <div class="divider my-4"></div>
@@ -1469,6 +1461,18 @@ onMounted(async () => {
               <strong>Description:</strong> {{ selectedTraining.description }}
             </p>
           </div>
+        </div>
+
+        <!-- Button at bottom - full width -->
+        <div class="mt-4 pt-4 border-t border-gray-600">
+          <button v-if="!myRegistrations.has(selectedTraining.trainingID)"
+            class="btn w-full bg-blue-600 text-white hover:bg-blue-700"
+            @click="registerForTraining(selectedTraining)">
+            REGISTER
+          </button>
+          <button v-else class="btn w-full bg-gray-500 text-white hover:bg-gray-600" @click="unregisterFromTraining(selectedTraining)">
+            Unregister
+          </button>
         </div>
       </div>
     </dialog>
@@ -1615,11 +1619,12 @@ onMounted(async () => {
   color: #1f2937;
   width: min(95vw, 900px);
   max-height: 90vh;
-  overflow-y: auto;
   border-radius: 1rem;
   padding: 2rem;
   position: relative;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
 }
 
 .training-modal-close {
