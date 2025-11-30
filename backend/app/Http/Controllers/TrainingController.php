@@ -99,17 +99,15 @@ class TrainingController extends Controller
             'phoneNumber' => 'required|string',
         ]);
 
-        // Find the training with the QR key
-        $training = DB::table('training')
-            ->where('trainingID', $request->trainingID)
-            ->where('attendance_key', $request->key)
-            ->first();
+        // Find the training by trainingID
+        $training = Training::find($request->trainingID);
 
         if (!$training) {
             return response()->json(['message' => 'Invalid or fake QR code'], 400);
         }
 
         // Check if QR is valid by finding the schedule with this key
+        // attendance_key is stored on the trainingschedule table, not the training table
         $schedule = $training->schedules()->where('attendance_key', $request->key)->first();
         if (!$schedule) {
             return response()->json(['message' => 'Invalid or fake QR code'], 400);
@@ -128,7 +126,7 @@ class TrainingController extends Controller
             ->select(
                 'applicant.*',
                 'registration.registrationID',
-                DB::raw('COALESCE(registration.registrationStatus, registration.RegistrationStatus) as registrationStatus')
+                DB::raw('registration."registrationStatus" as registrationStatus')
             )
             ->first();
 

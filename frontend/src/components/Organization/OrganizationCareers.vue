@@ -3,50 +3,11 @@ import { ref, onMounted } from "vue";
 import axios from "axios";
 import api from "@/api/axios";
 import { uploadPDF, getPDFUrl } from "@/lib/supabase";
+import { useToast } from "@/composables/useToast.js";
 
 const pdfUrl = ref(null);
 const showModal = ref(false);
-const toasts = ref([]);
-const fetchTags = async () => {
-  try {
-    const response = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + "/tags"
-    );
-    console.log(response.data); // Log the API response
-    this.tagOptions = response.data; // Update tagOptions
-  } catch (error) {
-    console.error("Error fetching tags:", error);
-  }
-};
-
-function showToast(message, type = "success", duration = 3000) {
-  const id = Date.now();
-  toasts.value.push({ id, message, type });
-
-  setTimeout(() => {
-    toasts.value = toasts.value.filter((t) => t.id !== id);
-  }, duration);
-}
-
-function showConfirmToast(message) {
-  return new Promise((resolve) => {
-    const id = Date.now();
-
-    toasts.value.push({
-      id,
-      message,
-      type: "confirm",
-      onConfirm: () => {
-        toasts.value = toasts.value.filter((t) => t.id !== id);
-        resolve(true);
-      },
-      onCancel: () => {
-        toasts.value = toasts.value.filter((t) => t.id !== id);
-        resolve(false);
-      },
-    });
-  });
-}
+const { toasts, showToast, showConfirmToast } = useToast();
 // Helper to display readable status names
 const displayStatus = (status) => {
   const map = {
@@ -62,6 +23,7 @@ const displayStatus = (status) => {
 export default {
   data() {
     return {
+      toasts: toasts,
       selectedCareer: { title: "", careerID: null, position: "" },
       newTagName: "",
       organizationLogo: null,
@@ -73,6 +35,7 @@ export default {
 
       showViewScheduleModal: false,
       showScheduleModal: false,
+      showStatusEmailModal: false,
       selectedPerson: null,
 
       showAllUpcoming: false,
@@ -90,10 +53,14 @@ export default {
       },
       scheduleAction: "scheduleOnly", // "scheduleOnly" or "scheduleAndEmail"
       showScheduleDropdown: false,
+      statusEmailData: {
+        body: "",
+      },
       showConflictModal: false,
       conflictInfo: null,
       pendingSchedulePayload: null,
       pendingFormattedDate: "",
+      sendingStatusEmail: false,
 
       applicantsList: [],
       applicantsLoading: false,
@@ -176,14 +143,14 @@ export default {
       if (!file) return;
 
       if (file.type !== "application/pdf") {
-        alert("Please upload a PDF file.");
+        showToast("Please upload a PDF file.", "error");
         event.target.value = "";
         return;
       }
 
       const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
       if (file.size > MAX_BYTES) {
-        alert("PDF is too large. Maximum size is 10MB.");
+        showToast("PDF is too large. Maximum size is 10MB.", "error");
         event.target.value = "";
         return;
       }
@@ -224,7 +191,7 @@ export default {
 
     viewCareerPdf() {
       if (!this.newCareer.pdfPath) {
-        alert("No PDF attached yet.");
+        showToast("No PDF attached yet.", "error");
         return;
       }
       const url =
@@ -233,7 +200,7 @@ export default {
       if (url) {
         window.open(url, "_blank");
       } else {
-        alert("Unable to open the PDF. Please try again.");
+        showToast("Unable to open the PDF. Please try again.", "error");
       }
     },
 
@@ -247,7 +214,7 @@ export default {
         "";
 
       if (!pdfPath) {
-        alert("No PDF attached for this career.");
+        showToast("No PDF attached for this career.", "error");
         return;
       }
 
@@ -262,7 +229,7 @@ export default {
       if (url) {
         window.open(url, "_blank");
       } else {
-        alert("Unable to open the PDF. Please try again.");
+        showToast("Unable to open the PDF. Please try again.", "error");
       }
     },
 
@@ -430,33 +397,34 @@ export default {
       }
     },
 
-    async updateApplicationStatus(person) {
+    async updateApplicationStatus(person, event) {
       const token = localStorage.getItem("token");
       if (!token) {
         showToast("Please log in to continue.");
         return;
       }
 
-      // Store original status in case of error
-      const originalStatus = person.status;
+      // Get the index first to access the original status
+      const index = this.applicantsList.findIndex((a) => a.id === person.id);
+      
+      // Store original status BEFORE the change (from the list, not from person object which may already be updated)
+      const originalStatus = index !== -1 ? this.applicantsList[index].status : null;
+      const newStatus = person.status; // This is the new status from the dropdown
 
       console.log(
         "Updating status for application ID:",
         person.id,
+        "Original status:",
+        originalStatus,
         "New status:",
-        person.status
+        newStatus
       );
-      console.log("Token exists:", !!token);
-
-      const selectedForInterview =
-        typeof person.status === "string" &&
-        person.status.toLowerCase() === "for interview";
 
       try {
         const response = await axios.put(
           import.meta.env.VITE_API_BASE_URL +
             `/applications/${person.id}/status`,
-          { status: person.status },
+          { status: newStatus },
           {
             headers: {
               Authorization: `Bearer ${token.trim()}`,
@@ -467,12 +435,11 @@ export default {
         );
 
         // Update local state with response data
-        const index = this.applicantsList.findIndex((a) => a.id === person.id);
         if (index !== -1) {
           const updatedData = response.data?.data || response.data || {};
           const normalizedStatus = updatedData.applicationStatus
             ? String(updatedData.applicationStatus).toLowerCase()
-            : String(person.status).toLowerCase();
+            : String(newStatus).toLowerCase();
 
           Object.assign(this.applicantsList[index], {
             status: normalizedStatus,
@@ -496,6 +463,33 @@ export default {
             this.$nextTick(() => {
               this.openScheduleModal(this.applicantsList[index]);
             });
+          }
+
+          // Open status email modal automatically after successful status update to "hired", "declined", or "rejected"
+          const normalizedStatusTrimmed = normalizedStatus.trim();
+          
+          console.log("Status change check:", {
+            normalizedStatus: normalizedStatusTrimmed,
+            newStatus: newStatus,
+            originalStatus: originalStatus,
+            shouldOpen: normalizedStatusTrimmed === "hired" || normalizedStatusTrimmed === "declined" || normalizedStatusTrimmed === "rejected"
+          });
+          
+          // Check both normalizedStatus and newStatus to catch any case variations
+          const statusToCheck = normalizedStatusTrimmed || String(newStatus).toLowerCase().trim();
+          if (statusToCheck === "hired" || statusToCheck === "declined" || statusToCheck === "rejected") {
+            console.log("Opening status email modal for:", statusToCheck);
+            // Use setTimeout to ensure the DOM has updated and any other modals are closed
+            setTimeout(() => {
+              console.log("Calling openStatusEmailModal with:", this.applicantsList[index]);
+              if (this.applicantsList[index]) {
+                this.openStatusEmailModal(this.applicantsList[index]);
+              } else {
+                console.error("Applicant not found in list at index:", index);
+              }
+            }, 300);
+          } else {
+            console.log("Modal not opening - status is:", statusToCheck);
           }
         }
       } catch (error) {
@@ -521,17 +515,88 @@ export default {
       }
     },
 
+    openStatusEmailModal(person) {
+      console.log("openStatusEmailModal called with person:", person);
+      this.selectedPerson = person;
+      this.statusEmailData.body = "";
+      this.showStatusEmailModal = true;
+      console.log("showStatusEmailModal set to:", this.showStatusEmailModal);
+    },
+
+    closeStatusEmailModal() {
+      this.showStatusEmailModal = false;
+      this.selectedPerson = null;
+      this.statusEmailData.body = "";
+      this.sendingStatusEmail = false;
+    },
+
+    async sendStatusEmail() {
+      if (!this.selectedPerson) {
+        showToast("No applicant selected.", "error");
+        return;
+      }
+
+      const token = localStorage.getItem("token");
+      if (!token) {
+        showToast("Please log in to continue.", "error");
+        return;
+      }
+
+      // Set loading state
+      this.sendingStatusEmail = true;
+
+      try {
+        const payload = {};
+        if (this.statusEmailData.body && this.statusEmailData.body.trim()) {
+          payload.body = this.statusEmailData.body.trim();
+        }
+
+        const response = await axios.post(
+          import.meta.env.VITE_API_BASE_URL +
+            `/applications/${this.selectedPerson.id}/send-status-email`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token.trim()}`,
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+          }
+        );
+
+        showToast(response.data?.message || "Email sent successfully!", "success");
+        this.closeStatusEmailModal();
+      } catch (error) {
+        console.error("Error sending status email:", error);
+        if (error.response?.status === 401) {
+          showToast("Unauthorized. Please log in again.", "error");
+        } else if (error.response?.status === 403) {
+          showToast("Access denied. You don't have permission to send this email.", "error");
+        } else if (error.response?.status === 400) {
+          showToast(error.response?.data?.message || "Cannot send email for this status.", "error");
+        } else {
+          showToast(
+            error.response?.data?.message ||
+              "Failed to send email. Please try again.",
+            "error"
+          );
+        }
+      } finally {
+        this.sendingStatusEmail = false;
+      }
+    },
+
     async viewRequirements(applicationID, rawFilePath) {
       let token = localStorage.getItem("token");
       if (!token) {
-        alert("Please log in to view requirements.");
+        showToast("Please log in to view requirements.", "error");
         return;
       }
 
       token = token.trim().replace(/^"(.*)"$/, "$1");
 
       if (!applicationID) {
-        alert("Application ID missing. Please refresh the page.");
+        showToast("Application ID missing. Please refresh the page.", "error");
         return;
       }
 
@@ -642,13 +707,13 @@ export default {
       console.error("❌ This likely means the backend API is not returning the 'requirement_directory' field");
       console.error("❌ Please check that the /careers/{careerID}/applicants endpoint includes requirement_directory in its response");
 
-      alert("Unable to view requirements. The requirement file path is not available in the API response. Please contact support or check if the file was uploaded correctly.");
+      showToast("Unable to view requirements. The requirement file path is not available in the API response. Please contact support or check if the file was uploaded correctly.", "error");
     },
 
     async downloadRequirements(applicationID, rawFilePath) {
       let token = localStorage.getItem("token");
       if (!token) {
-        alert("Please log in to download requirements.");
+        showToast("Please log in to download requirements.", "error");
         return;
       }
 
@@ -656,7 +721,7 @@ export default {
       token = token.trim().replace(/^"(.*)"$/, "$1");
 
       if (!applicationID) {
-        alert("Application ID missing. Please refresh the page.");
+        showToast("Application ID missing. Please refresh the page.", "error");
         return;
       }
 
@@ -951,17 +1016,17 @@ export default {
         // Only show "No requirement file" if we've confirmed there's no filePath
         if (backendError.response?.status === 404) {
           if (!hasValidFilePath) {
-            alert("No requirement file has been uploaded for this application.");
+            showToast("No requirement file has been uploaded for this application.", "error");
           } else {
-            alert("Requirement file not found. The file may have been deleted or moved.");
+            showToast("Requirement file not found. The file may have been deleted or moved.", "error");
           }
         } else if (backendError.response?.status === 401) {
-          alert("Unauthorized. Please log in again.");
+          showToast("Unauthorized. Please log in again.", "error");
         } else if (backendError.response?.status === 403) {
-          alert("Access denied. You don't have permission to download this requirement.");
+          showToast("Access denied. You don't have permission to download this requirement.", "error");
         } else {
           const errorMsg = backendError.response?.data?.message || backendError.message || "Please try again.";
-          alert(`Failed to download requirements: ${errorMsg}`);
+          showToast(`Failed to download requirements: ${errorMsg}`, "error");
         }
       }
     },
@@ -1764,7 +1829,7 @@ export default {
         }
 
         if (this.careerPdfUploading) {
-          alert("Please wait for the PDF upload to finish before saving.");
+          showToast("Please wait for the PDF upload to finish before saving.", "error");
           return;
         }
 
@@ -2762,6 +2827,44 @@ async function viewRequirement(id) {
         </div>
       </div>
 
+      <!-- Status Email Modal -->
+      <div v-if="showStatusEmailModal" class="modal-overlay schedule-modal-overlay" @click.self="closeStatusEmailModal">
+        <div class="modal-box">
+          <button class="modal-close-btn" @click="closeStatusEmailModal">✕</button>
+          <h3>
+            Send {{ selectedPerson?.status === 'hired' ? 'Hired' : 'Declined' }} Status Email
+            <span v-if="selectedPerson?.name">to {{ selectedPerson.name }}</span>
+          </h3>
+
+          <div class="schedule-form">
+            <div class="input-group full-width">
+              <label>Custom Message (Optional):</label>
+              <textarea
+                v-model="statusEmailData.body"
+                rows="6"
+                placeholder="Add a custom message to include in the email. If left empty, the default message will be sent."
+                class="schedule-textarea"
+              ></textarea>
+              <p class="help-text">This message will be included in the email notification sent to the applicant.</p>
+            </div>
+
+            <div class="modal-actions">
+              <button 
+                class="confirm-btn" 
+                @click="sendStatusEmail"
+                :disabled="sendingStatusEmail"
+              >
+                <span v-if="sendingStatusEmail">Sending...</span>
+                <span v-else>📧 Send Email</span>
+              </button>
+              <button class="cancel-btn" @click="closeStatusEmailModal" :disabled="sendingStatusEmail">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Career Popup Modal -->
       <div v-if="showCareerPopup" class="career-popup-overlay">
         <div class="career-popup">
@@ -2777,10 +2880,22 @@ async function viewRequirement(id) {
 
           <form @submit.prevent="saveCareer" class="Career-popup-form">
             <!-- Inputs -->
-            <input v-model="newCareer.position" type="text" placeholder="Position" class="career-input" required />
-            <input v-model="newCareer.placeOfAssignment" type="text" placeholder="Place of Assignment" class="career-input" required />
-            <textarea v-model="newCareer.details" :placeholder="newCareer.pdfPath ? 'Details (optional if PDF uploaded)' : 'Details (required if no PDF)'" class="career-input"></textarea>
-            <textarea v-model="newCareer.qualificationStandard" :placeholder="newCareer.pdfPath ? 'Qualification Standard (optional if PDF uploaded)' : 'Qualification Standard (required if no PDF)'" class="career-input"></textarea>
+            <div class="input-with-counter">
+              <input v-model="newCareer.position" type="text" placeholder="Position" class="career-input" required maxlength="100" />
+              <span class="char-counter">{{ (newCareer.position || '').length }}/100</span>
+            </div>
+            <div class="input-with-counter">
+              <input v-model="newCareer.placeOfAssignment" type="text" placeholder="Place of Assignment" class="career-input" required maxlength="100" />
+              <span class="char-counter">{{ (newCareer.placeOfAssignment || '').length }}/100</span>
+            </div>
+            <div class="input-with-counter">
+              <textarea v-model="newCareer.details" :placeholder="newCareer.pdfPath ? 'Details (optional if PDF uploaded)' : 'Details (required if no PDF)'" class="career-input" maxlength="1000"></textarea>
+              <span class="char-counter">{{ (newCareer.details || '').length }}/1000</span>
+            </div>
+            <div class="input-with-counter">
+              <textarea v-model="newCareer.qualificationStandard" :placeholder="newCareer.pdfPath ? 'Qualification Standard (optional if PDF uploaded)' : 'Qualification Standard (required if no PDF)'" class="career-input" maxlength="1000"></textarea>
+              <span class="char-counter">{{ (newCareer.qualificationStandard || '').length }}/1000</span>
+            </div>
             <div class="career-upload-wrapper">
               <label class="career-upload-label">Attach PDF (optional)</label>
               <input ref="careerPdfInput" type="file" accept="application/pdf" class="career-input"
@@ -2897,14 +3012,16 @@ async function viewRequirement(id) {
               <span>{{ selectedCareer.placeOfAssignment || selectedCareer.applicationLetterAddress }}</span>
             </span>
           </p>
-          <p class="career-info">
-            <span class="career-group">
+          <p class="career-info" v-if="selectedCareer.details || selectedCareer.detailsAndInstructions">
+            <span class="career-group career-group-fullwidth">
               <strong>Details:</strong>
-              <span>{{ selectedCareer.details || selectedCareer.detailsAndInstructions }}</span>
+              <span class="career-text-value">{{ selectedCareer.details || selectedCareer.detailsAndInstructions }}</span>
             </span>
-            <span class="career-group">
+          </p>
+          <p class="career-info" v-if="selectedCareer.qualificationStandard || selectedCareer.qualifications">
+            <span class="career-group career-group-fullwidth">
               <strong>Qualification Standard:</strong>
-              <span>{{ selectedCareer.qualificationStandard || selectedCareer.qualifications }}</span>
+              <span class="career-text-value">{{ selectedCareer.qualificationStandard || selectedCareer.qualifications }}</span>
             </span>
           </p>
           <p class="career-info">
@@ -2925,9 +3042,10 @@ async function viewRequirement(id) {
           </p>
           <p
             class="career-info"
+            v-if="selectedCareerPdfName"
           >
             <strong>Attached PDF:</strong>
-            <span class="uploaded-file-name" v-if="selectedCareerPdfName">
+            <span class="uploaded-file-name">
               {{ selectedCareerPdfName }}
             </span>
             <button type="button" class="upload-action view-link" @click="viewSelectedCareerPdf">
@@ -2945,8 +3063,11 @@ async function viewRequirement(id) {
 
             <!-- Search Bar for Applicants -->
             <div class="applicants-search-wrapper" v-if="applicantsList.length > 0 && !applicantsLoading">
-              <input type="text" v-model="applicantSearchQuery" placeholder="Search by name or status..."
-                class="applicants-search-input" />
+              <div class="relative">
+                <input type="text" v-model="applicantSearchQuery" placeholder="Search by name or status..."
+                  class="applicants-search-input" maxlength="100" />
+                <span class="char-counter-search">{{ (applicantSearchQuery || '').length }}/100</span>
+              </div>
             </div>
 
             <p v-if="applicantsError" class="applicants-error">
@@ -2983,23 +3104,37 @@ async function viewRequirement(id) {
                       </p>
                     </td>
                     <td>
-                      <select v-model="person.status" @change="updateApplicationStatus(person)" class="status-dropdown">
-                        <option value="submitted">
-                          {{ displayStatus("submitted") }}
-                        </option>
-                        <option value="for review">
-                          {{ displayStatus("for review") }}
-                        </option>
-                        <option value="for interview">
-                          {{ displayStatus("for interview") }}
-                        </option>
-                        <option value="hired">
-                          {{ displayStatus("hired") }}
-                        </option>
-                        <option value="declined">
-                          {{ displayStatus("declined") }}
-                        </option>
-                      </select>
+                      <div class="status-cell-wrapper">
+                        <select 
+                          v-model="person.status" 
+                          @change="updateApplicationStatus(person, $event)" 
+                          class="status-dropdown"
+                        >
+                          <option value="submitted">
+                            {{ displayStatus("submitted") }}
+                          </option>
+                          <option value="for review">
+                            {{ displayStatus("for review") }}
+                          </option>
+                          <option value="for interview">
+                            {{ displayStatus("for interview") }}
+                          </option>
+                          <option value="hired">
+                            {{ displayStatus("hired") }}
+                          </option>
+                          <option value="declined">
+                            {{ displayStatus("declined") }}
+                          </option>
+                        </select>
+                        <button
+                          v-if="person.status === 'hired' || person.status === 'declined' || person.status === 'rejected'"
+                          @click="openStatusEmailModal(person)"
+                          class="resend-email-btn"
+                          title="Send status change email"
+                        >
+                          📧
+                        </button>
+                      </div>
                     </td>
                     <td class="requirements-col">
                       <button class="download-btn" @click="viewRequirements(person.id, person.requirement_directory)">
@@ -3135,6 +3270,14 @@ async function viewRequirement(id) {
 </template>
 
 <style scoped>
+.status-cell-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
 .status-dropdown {
   padding: 6px 10px;
   border: 1px solid #ddd;
@@ -3142,6 +3285,53 @@ async function viewRequirement(id) {
   font-size: 0.9rem;
   background-color: white;
   cursor: pointer;
+  flex: 1;
+  min-width: 120px;
+}
+
+.resend-email-btn {
+  background-color: #44576D;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.resend-email-btn:hover {
+  background-color: #334155;
+  transform: scale(1.05);
+}
+
+.resend-email-btn:active {
+  transform: scale(0.98);
+}
+
+/* Responsive adjustments for status cell */
+@media (max-width: 768px) {
+  .status-cell-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+  
+  .status-dropdown {
+    width: 100%;
+    min-width: 0;
+  }
+  
+  .resend-email-btn {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 .view-btn {
@@ -4067,6 +4257,30 @@ async function viewRequirement(id) {
   white-space: normal;
 }
 
+/* Full-width groups for details and qualification standard to prevent overlap */
+.career-group-fullwidth {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  width: 100%;
+  gap: 0.5rem;
+}
+
+.career-group-fullwidth strong {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.career-text-value {
+  flex: 1;
+  min-width: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
 .career-description {
   margin-top: 1rem;
   color: #555;
@@ -4115,6 +4329,32 @@ async function viewRequirement(id) {
 
 .applicants-search-input::placeholder {
   color: #9ca3af;
+}
+
+/* Character Counter Styles */
+.input-with-counter {
+  position: relative;
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+.char-counter {
+  font-size: 12px;
+  color: #6b7280;
+  text-align: right;
+  margin-top: 4px;
+  display: block;
+}
+
+.char-counter-search {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  font-size: 12px;
+  color: #6b7280;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 2px 4px;
+  border-radius: 4px;
 }
 
 .applicants-refresh-btn {
@@ -4675,8 +4915,75 @@ input[type="text"] {
 /* Make schedule modal even bigger */
 .schedule-modal-overlay .modal-box {
   max-width: 700px;
+  width: 90%;
+  max-height: 90vh;
   padding: 28px 32px;
-  overflow: visible;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin: 20px;
+}
+
+/* Responsive modal styles */
+@media (max-width: 768px) {
+  .schedule-modal-overlay .modal-box {
+    width: 95%;
+    max-width: 95%;
+    padding: 20px 16px;
+    margin: 10px;
+    max-height: 85vh;
+  }
+  
+  .schedule-modal-overlay .modal-box h3 {
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+  }
+  
+  .schedule-modal-overlay .schedule-form {
+    gap: 10px;
+  }
+  
+  .schedule-modal-overlay .schedule-form label {
+    font-size: 0.9rem;
+    margin: 8px 0 6px;
+  }
+  
+  .schedule-modal-overlay .schedule-form input[type="datetime-local"],
+  .schedule-modal-overlay .schedule-form input[type="text"],
+  .schedule-modal-overlay .schedule-textarea {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+  }
+  
+  .schedule-modal-overlay .modal-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .schedule-modal-overlay .confirm-btn,
+  .schedule-modal-overlay .cancel-btn {
+    width: 100%;
+    padding: 10px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .schedule-modal-overlay .modal-box {
+    width: 98%;
+    max-width: 98%;
+    padding: 16px 12px;
+    margin: 5px;
+    max-height: 90vh;
+  }
+  
+  .schedule-modal-overlay .modal-box h3 {
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+    line-height: 1.3;
+  }
+  
+  .schedule-modal-overlay .schedule-textarea {
+    min-height: 100px;
+  }
 }
 
 /* Ensure modal actions area allows dropdown to overflow */
@@ -4814,6 +5121,14 @@ input[type="text"] {
 
 .schedule-modal-overlay .schedule-textarea {
   min-height: 120px;
+}
+
+.help-text {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 4px;
+  margin-bottom: 12px;
+  font-style: italic;
 }
 
 .mode-selection {

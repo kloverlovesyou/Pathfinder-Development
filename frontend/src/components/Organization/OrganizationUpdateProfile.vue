@@ -143,34 +143,77 @@
                 <form @submit.prevent="updateAccount">
                     <div class="input-group">
                         <label>Organization Name</label>
-                        <input type="text" v-model="form.organizationName" placeholder="Enter organization name" />
+                        <input type="text" v-model="form.organizationName" placeholder="Enter organization name" 
+                            maxlength="100" />
+                        <span class="char-counter">{{ form.organizationName.length }}/100</span>
                     </div>
 
                     <div class="input-group">
                         <label>Location</label>
-                        <input type="text" v-model="form.organizationLocation" placeholder="Enter location" />
+                        <input type="text" v-model="form.organizationLocation" placeholder="Enter location" 
+                            maxlength="100" />
+                        <span class="char-counter">{{ form.organizationLocation.length }}/100</span>
                     </div>
 
                     <div class="input-group">
                         <label>Website URL</label>
-                        <input type="text" v-model="form.organizationWebsiteURL" placeholder="Enter website URL" />
+                        <input type="text" v-model="form.organizationWebsiteURL" placeholder="Enter website URL" 
+                            maxlength="100" />
+                        <span class="char-counter">{{ form.organizationWebsiteURL.length }}/100</span>
                     </div>
 
                     <div class="input-group">
                         <label>Phone Number</label>
-                        <input type="text" v-model="form.organizationPhoneNumber" placeholder="Enter phone number" />
+                        <input type="text" v-model="form.organizationPhoneNumber" placeholder="Enter phone number" 
+                            maxlength="11" />
+                        <span class="char-counter">{{ form.organizationPhoneNumber.length }}/11</span>
                     </div>
 
                     <div class="input-group">
                         <label>Confirm Password</label>
                         <input type="password" v-model="form.organizationConfirmPassword"
-                            placeholder="Enter your password to confirm changes" required />
+                            placeholder="Enter your password to confirm changes" required maxlength="128" />
+                        <span class="char-counter">{{ form.organizationConfirmPassword.length }}/128</span>
                     </div>
                     
                     <button type="submit" class="save-btn">Save Changes</button>
                 </form>
             </div>
         </main>
+        <div class="fixed top-5 right-5 space-y-2 z-50">
+          <div
+            v-for="toast in toasts"
+            :key="toast.id"
+            :class="[
+              'px-4 py-2 rounded shadow flex items-center gap-2',
+              toast.type === 'success'
+                ? 'bg-white text-black'
+                : toast.type === 'error'
+                ? 'bg-red-500 text-white'
+                : toast.type === 'confirm'
+                ? 'bg-dark-slate text-white'
+                : 'bg-gray-500 text-white',
+            ]"
+          >
+            <span class="flex-1">{{ toast.message }}</span>
+
+            <!-- ONLY SHOW WHEN CONFIRM -->
+            <template v-if="toast.type === 'confirm'">
+              <button
+                @click="toast.onConfirm()"
+                class="px-2 py-1 bg-white text-black rounded"
+              >
+                Yes
+              </button>
+              <button
+                @click="toast.onCancel()"
+                class="px-2 py-1 bg-gray-700 text-white rounded"
+              >
+                No
+              </button>
+            </template>
+          </div>
+        </div>
     </div>
 </template>
 
@@ -208,6 +251,9 @@ import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
 import { useOrganizationLogo } from "@/composables/useOrganizationLogo.js";
+import { useToast } from "@/composables/useToast.js";
+
+const { toasts, showToast } = useToast();
 
 // Get organization logo
 const { logoUrl } = useOrganizationLogo();
@@ -264,7 +310,7 @@ const getOrgDetails = async () => {
     const token = localStorage.getItem("token");
 
     if (!token) {
-        alert("Please log in again.");
+        showToast("Please log in again.", "error");
         router.push({ name: "OrgLogin" });
         return;
     }
@@ -290,7 +336,7 @@ const getOrgDetails = async () => {
 
     } catch (error) {
         console.error("Error fetching organization details:", error);
-        alert("Failed to load organization details.");
+        showToast("Failed to load organization details.", "error");
     }
 };
 
@@ -304,14 +350,14 @@ const updateAccount = async () => {
     const token = localStorage.getItem("token");
 
     if (!token) {
-        alert("Please log in again.");
+        showToast("Please log in again.", "error");
         router.push({ name: "OrgLogin" });
         return;
     }
 
     // Verify confirm password is provided
     if (!form.value.organizationConfirmPassword) {
-        alert("Please enter your password to confirm changes.");
+        showToast("Please enter your password to confirm changes.", "error");
         return;
     }
 
@@ -342,7 +388,7 @@ const updateAccount = async () => {
         );
 
         if (response.data.message) {
-            alert("Profile updated successfully!");
+            showToast("Profile updated successfully!", "success");
             // Clear confirm password field
             form.value.organizationConfirmPassword = "";
             // Refresh organization details
@@ -352,7 +398,7 @@ const updateAccount = async () => {
     } catch (error) {
         console.error("Error updating profile:", error);
         const errorMessage = error.response?.data?.message || "Failed to update profile. Please check your password and try again.";
-        alert(errorMessage);
+        showToast(errorMessage, "error");
     }
 };
 
@@ -697,6 +743,13 @@ const logout = () => {
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 6px;
+}
+
+.char-counter {
+    font-size: 12px;
+    color: #6b7280;
+    text-align: right;
+    margin-top: 4px;
 }
 
 .save-btn {

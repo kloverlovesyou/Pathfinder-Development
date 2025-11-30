@@ -143,17 +143,20 @@
                 <form @submit.prevent="changePassword">
                     <div class="input-group">
                         <label>Current Password</label>
-                        <input type="password" v-model="form.currentPassword" placeholder="Enter current password" required />
+                        <input type="password" v-model="form.currentPassword" placeholder="Enter current password" required maxlength="128" />
+                        <span class="char-counter">{{ form.currentPassword.length }}/128</span>
                     </div>
 
                     <div class="input-group">
                         <label>New Password</label>
-                        <input type="password" v-model="form.newPassword" placeholder="Enter new password" required />
+                        <input type="password" v-model="form.newPassword" placeholder="Enter new password" required maxlength="128" />
+                        <span class="char-counter">{{ form.newPassword.length }}/128</span>
                     </div>
 
                     <div class="input-group">
                         <label>Confirm New Password</label>
-                        <input type="password" v-model="form.confirmPassword" placeholder="Confirm new password" required />
+                        <input type="password" v-model="form.confirmPassword" placeholder="Confirm new password" required maxlength="128" />
+                        <span class="char-counter">{{ form.confirmPassword.length }}/128</span>
                         <p v-if="showPasswordMismatch" class="error-message">
                             Passwords do not match.
                         </p>
@@ -163,6 +166,40 @@
                 </form>
             </div>
         </main>
+        <div class="fixed top-5 right-5 space-y-2 z-50">
+          <div
+            v-for="toast in toasts"
+            :key="toast.id"
+            :class="[
+              'px-4 py-2 rounded shadow flex items-center gap-2',
+              toast.type === 'success'
+                ? 'bg-white text-black'
+                : toast.type === 'error'
+                ? 'bg-red-500 text-white'
+                : toast.type === 'confirm'
+                ? 'bg-dark-slate text-white'
+                : 'bg-gray-500 text-white',
+            ]"
+          >
+            <span class="flex-1">{{ toast.message }}</span>
+
+            <!-- ONLY SHOW WHEN CONFIRM -->
+            <template v-if="toast.type === 'confirm'">
+              <button
+                @click="toast.onConfirm()"
+                class="px-2 py-1 bg-white text-black rounded"
+              >
+                Yes
+              </button>
+              <button
+                @click="toast.onCancel()"
+                class="px-2 py-1 bg-gray-700 text-white rounded"
+              >
+                No
+              </button>
+            </template>
+          </div>
+        </div>
     </div>
 </template>
 
@@ -171,6 +208,9 @@ import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
 import { useOrganizationLogo } from "@/composables/useOrganizationLogo.js";
+import { useToast } from "@/composables/useToast.js";
+
+const { toasts, showToast } = useToast();
 
 // Get organization logo
 const { logoUrl } = useOrganizationLogo();
@@ -229,20 +269,20 @@ const changePassword = async () => {
     const token = localStorage.getItem("token");
 
     if (!token) {
-        alert("Please log in again.");
+        showToast("Please log in again.", "error");
         router.push({ name: "OrgLogin" });
         return;
     }
 
     // Validate passwords match
     if (form.value.newPassword !== form.value.confirmPassword) {
-        alert("New password and confirmation do not match.");
+        showToast("New password and confirmation do not match.", "error");
         return;
     }
 
     // Validate password length
     if (form.value.newPassword.length < 8) {
-        alert("New password must be at least 8 characters long.");
+        showToast("New password must be at least 8 characters long.", "error");
         return;
     }
 
@@ -263,7 +303,7 @@ const changePassword = async () => {
         );
 
         if (response.data.message) {
-            alert("Password changed successfully!");
+            showToast("Password changed successfully!", "success");
             // Clear form
             form.value.currentPassword = "";
             form.value.newPassword = "";
@@ -273,7 +313,7 @@ const changePassword = async () => {
     } catch (error) {
         console.error("Error changing password:", error);
         const errorMessage = error.response?.data?.message || "Failed to change password. Please check your current password and try again.";
-        alert(errorMessage);
+        showToast(errorMessage, "error");
     }
 };
 
@@ -620,6 +660,13 @@ const logout = () => {
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 6px;
+}
+
+.char-counter {
+    font-size: 12px;
+    color: #6b7280;
+    text-align: right;
+    margin-top: 4px;
 }
 
 .error-message {

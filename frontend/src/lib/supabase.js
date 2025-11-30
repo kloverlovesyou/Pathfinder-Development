@@ -54,6 +54,13 @@ export async function uploadRequirement(file, bucketName = DEFAULT_BUCKET) {
 }
 
 /**
+ * Upload PDF to Organization Requirements folder
+ */
+export async function uploadOrgRequirement(file, bucketName = DEFAULT_BUCKET) {
+  return uploadPDF(file, bucketName, "org_requirement_directory");
+}
+
+/**
  * Upload PDF to Certificates folder
  */
 export async function uploadCertificate(file, bucketName = "Requirements") {
