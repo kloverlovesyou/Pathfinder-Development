@@ -96,6 +96,50 @@ Route::get('/provinces/{regionCode}', function ($regionCode) {
     }
 });
 
+Route::get('/cities/{provinceCode}', function ($provinceCode) {
+    try {
+        // Try PSGC API
+        $response = Http::get("https://psgc.gitlab.io/api/provinces/{$provinceCode}/cities-municipalities.json");
+        if ($response->successful()) {
+            return $response->json();
+        }
+
+        // Optional fallback: GitHub JSON
+        $fallback = Http::get("https://raw.githubusercontent.com/.../cities.json"); 
+        if ($fallback->successful()) {
+            return $fallback->json();
+        }
+
+        return response()->json([], 404);
+    } catch (\Exception $e) {
+        return response()->json([
+            "error" => "Failed to fetch cities",
+            "message" => $e->getMessage()
+        ], 500);
+    }
+});
+
+Route::get('/barangays/{cityCode}', function ($cityCode) {
+    try {
+        // PSGC API for barangays
+        $response = Http::get("https://psgc.gitlab.io/api/cities-municipalities/{$cityCode}/barangays.json");
+        if ($response->successful()) {
+            return $response->json();
+        }
+
+        // Optional fallback (GitHub JSON or hardcoded)
+        // $fallback = Http::get("https://raw.githubusercontent.com/.../barangays.json");
+        // if ($fallback->successful()) return $fallback->json();
+
+        return response()->json([], 404);
+    } catch (\Exception $e) {
+        return response()->json([
+            "error" => "Failed to fetch barangays",
+            "message" => $e->getMessage()
+        ], 500);
+    }
+});
+
 // Careers with recommendations
 Route::get('/careers', [CareerRecommendationController::class, 'index']);
 Route::get('/careers/recommend/{careerID}', [CareerRecommendationController::class, 'recommendedCareers'])

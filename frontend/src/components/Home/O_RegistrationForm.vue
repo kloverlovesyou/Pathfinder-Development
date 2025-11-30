@@ -1028,7 +1028,7 @@ async function onProvinceChange() {
   
   loadingCities.value = true;
   try {
-    const response = await axios.get(`${PH_LOCATION_API_BASE}/cities.json`);
+    const response = await axios.get(`/api/cities/${form.value.province}`);
     const allCities = response.data || [];
     cities.value = allCities
       .filter(c => {
@@ -1068,7 +1068,7 @@ async function onCityChange() {
   
   loadingBarangays.value = true;
   try {
-    const response = await axios.get(`${PH_LOCATION_API_BASE}/barangays.json`);
+    const response = await axios.get(`/api/barangays/${form.value.city}`);
     const allBarangays = response.data || [];
     barangays.value = allBarangays
       .filter(b => {
