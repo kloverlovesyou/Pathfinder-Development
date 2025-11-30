@@ -11,6 +11,38 @@ class BrevoEmailService
     private $fromEmail;
     private $fromName;
 
+    public function sendOrganizationApprovedEmail($toEmail, $orgName)
+    {
+        $subject = "Your Organization Has Been Approved!";
+        
+        $html = "
+            <h2>Congratulations, {$orgName}!</h2>
+            <p>Your organization has been <strong>approved</strong> by our administrators.</p>
+            <p>You can now log in and start managing your trainings and careers.</p>
+            <br>
+            <p>Thank you,<br>The Admin Team</p>
+        ";
+
+        return $this->send($toEmail, $subject, $html);
+    }
+
+    public function sendOrganizationRejectedEmail($toEmail, $orgName, $reason)
+    {
+        $subject = "Your Organization Registration Was Rejected";
+
+        $html = "
+            <h2>Hello, {$orgName}</h2>
+            <p>We regret to inform you that your organization registration has been <strong>rejected</strong>.</p>
+            <p><strong>Reason:</strong> {$reason}</p>
+            <br>
+            <p>If you believe this was a mistake or would like to reapply, please contact support.</p>
+            <br>
+            <p>Thank you,<br>The Admin Team</p>
+        ";
+
+        return $this->send($toEmail, $subject, $html);
+    }
+
     public function __construct()
     {
         // Try multiple ways to get the API key, with trimming to handle spaces

@@ -188,12 +188,27 @@ class OrganizationController extends Controller
         $org = Organization::findOrFail($id);
 
         $org->status = 'approved';
-        $org->statusDate = now(); // <-- ADD THIS LINE
-
+        $org->statusDate = now();
         $org->save();
 
+        try {
+            // Send approval email
+            app(\App\Services\BrevoEmailService::class)
+                ->sendOrganizationApprovedEmail(
+                    $org->emailAddress,
+                    $org->name
+                );
+
+        } catch (\Throwable $e) {
+            \Log::error('Failed to send organization approval email', [
+                'org_id' => $org->organizationID,
+                'email' => $org->emailAddress,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         return response()->json([
-            'message' => 'Organization approved',
+            'message' => 'Organization approved and email sent.',
             'statusDate' => $org->statusDate
         ]);
     }
@@ -211,13 +226,30 @@ class OrganizationController extends Controller
 
         $org->status = 'rejected';
         $org->rejectionReason = $validated['reason'];
-        $org->statusDate = now(); // <-- add this line
+        $org->statusDate = now();
         $org->save();
+
+        try {
+            // Send rejection email
+            app(\App\Services\BrevoEmailService::class)
+                ->sendOrganizationRejectedEmail(
+                    $org->emailAddress,
+                    $org->name,
+                    $validated['reason']
+                );
+
+        } catch (\Throwable $e) {
+            \Log::error('Failed to send organization rejection email', [
+                'org_id' => $org->organizationID,
+                'email' => $org->emailAddress,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'message' => 'Organization rejected successfully',
             'rejectionReason' => $org->rejectionReason,
-            'statusDate' => $org->statusDate // <-- optionally return it
+            'statusDate' => $org->statusDate
         ]);
     }
 
