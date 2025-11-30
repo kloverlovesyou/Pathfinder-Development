@@ -39,10 +39,10 @@ Route::get('/dashboard', [DashboardController::class, 'getChartData']);
 // Trainings
 Route::get('/trainings', [TrainingController::class, 'index']);
 
-Route::get('/regions', [LocationController::class, 'regions']);
-Route::get('/provinces', [LocationController::class, 'provinces']);
-Route::get('/cities', [LocationController::class, 'cities']);
-Route::get('/barangays', [LocationController::class, 'barangays']);
+Route::get('/locations/regions', [LocationController::class, 'regions']);
+Route::get('/locations/provinces/{region}', [LocationController::class, 'provinces']);
+Route::get('/locations/cities/{province}', [LocationController::class, 'cities']);
+Route::get('/locations/barangays/{city}', [LocationController::class, 'barangays']);
 
 // Careers with recommendations
 Route::get('/careers', [CareerRecommendationController::class, 'index']);

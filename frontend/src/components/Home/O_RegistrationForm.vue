@@ -889,6 +889,30 @@ const copyVerificationLink = () => {
 const showPassword = ref(false);
 const showConfirm = ref(false);
 
+async function fetchRegionsPSGC() {
+  loadingRegions.value = true;
+  try {
+    const response = await axios.get("https://psgc.gitlab.io/api/regions.json");
+    regions.value = (response.data || []).map(region => ({
+      psgc_code: region.code || region.psgc_code,
+      name: region.name
+    }));
+    apiFailed.value = false;
+  } catch (error) {
+    console.error("PSGC API failed, will fallback to GitHub JSON:", error);
+    apiFailed.value = true;
+    // Optional: call your existing fetchRegions() as fallback
+    await fetchRegions(); // your existing function
+  } finally {
+    loadingRegions.value = false;
+  }
+}
+
+// On mount, use PSGC API first
+onMounted(async () => {
+  await fetchRegionsPSGC();
+});
+
 // Philippines Location API - Using multiple reliable sources
 const PH_LOCATION_API_BASE = "https://raw.githubusercontent.com/iamkevinluke/philippines-regions-provinces-cities-municipalities-barangays/master";
 
