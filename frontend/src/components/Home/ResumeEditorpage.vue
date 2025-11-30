@@ -86,6 +86,54 @@ function showToast(message, type = "info") {
   }, 3000);
 }
 
+// --- Load User Data ---
+async function loadUserData() {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/user", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const user = res.data;
+    
+    // Populate form with user data
+    form.firstName = user.firstName || user.first_name || "";
+    form.middleName = user.middleName || user.middle_name || "";
+    form.lastName = user.lastName || user.last_name || "";
+    form.emailAddress = user.emailAddress || user.email || user.email_address || "";
+    form.phoneNumber = user.phoneNumber || user.phone || user.phone_number || "";
+    form.address = user.address || "";
+
+    // Set userName for display
+    if (user.firstName && user.lastName) {
+      userName.value = `${user.firstName} ${user.lastName}`.trim();
+    }
+  } catch (error) {
+    console.error("Error loading user data:", error.response?.data || error);
+    // Fallback to localStorage if API fails
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser);
+        form.firstName = user.firstName || user.first_name || "";
+        form.middleName = user.middleName || user.middle_name || "";
+        form.lastName = user.lastName || user.last_name || "";
+        form.emailAddress = user.emailAddress || user.email || user.email_address || "";
+        form.phoneNumber = user.phoneNumber || user.phone || user.phone_number || "";
+        form.address = user.address || "";
+
+        if (user.firstName && user.lastName) {
+          userName.value = `${user.firstName} ${user.lastName}`.trim();
+        }
+      } catch (parseError) {
+        console.error("Error parsing saved user data:", parseError);
+      }
+    }
+  }
+}
+
 // --- Load Resume ---
 async function loadResume() {
   try {
@@ -242,11 +290,23 @@ async function addExperience() {
     return;
   }
 
-  const startDate = toDateFromYear(newExperience.startYear);
-  const endDate = toDateFromYear(newExperience.endYear);
+  // Convert to integers and validate
+  const startYear = parseInt(newExperience.startYear, 10);
+  const endYear = parseInt(newExperience.endYear, 10);
 
-  if (!startDate || !endDate) {
-    showToast("Please provide valid start and end years.");
+  // Validate years are valid integers in range
+  if (!Number.isInteger(startYear) || startYear < 1900 || startYear > 2099) {
+    showToast("Start year must be a valid year between 1900 and 2099.");
+    return;
+  }
+
+  if (!Number.isInteger(endYear) || endYear < 1900 || endYear > 2099) {
+    showToast("End year must be a valid year between 1900 and 2099.");
+    return;
+  }
+
+  if (endYear < startYear) {
+    showToast("End year must be greater than or equal to start year.");
     return;
   }
 
@@ -268,9 +328,11 @@ async function addExperience() {
     const { data } = await axios.post(
       import.meta.env.VITE_API_BASE_URL + "/experiences",
       {
-        ...newExperience,
-        startYear: startDate,
-        endYear: endDate,
+        jobTitle: newExperience.jobTitle,
+        companyName: newExperience.companyName,
+        companyAddress: newExperience.companyAddress,
+        startYear: startYear,
+        endYear: endYear,
         resumeID: resume.resumeID,
       },
       { headers: { Authorization: `Bearer ${token}` } }
@@ -435,8 +497,16 @@ async function generatePdf() {
   const fullName = [form.firstName, form.middleName, form.lastName]
     .filter((name) => name && name.trim() !== "") // remove empty strings or null
     .join(" ");
-  doc.text(fullName, pageWidth / 2, y, { align: "center" });
-  y += 8;
+  const nameLines = doc.splitTextToSize(fullName, pageWidth - 2 * margin);
+  nameLines.forEach((line) => {
+    if (y > pageHeight - margin) {
+      doc.addPage();
+      y = margin;
+    }
+    doc.text(line, pageWidth / 2, y, { align: "center" });
+    y += 8;
+  });
+  y += 4;
 
   doc.setFont("times", "regular");
   doc.setFontSize(10);
@@ -447,8 +517,16 @@ async function generatePdf() {
   if (form.phoneNumber) contactParts.push(form.phoneNumber);
   if (form.address) contactParts.push(form.address);
   const contactLine = contactParts.join(" • ");
-  doc.text(contactLine, pageWidth / 2, y, { align: "center" });
-  y += 12;
+  const contactLines = doc.splitTextToSize(contactLine, pageWidth - 2 * margin);
+  contactLines.forEach((line) => {
+    if (y > pageHeight - margin) {
+      doc.addPage();
+      y = margin;
+    }
+    doc.text(line, pageWidth / 2, y, { align: "center" });
+    y += 6;
+  });
+  y += 6;
 
   // Summary
   y = sectionHeader("Summary", margin, y, pageWidth, margin);
@@ -464,16 +542,44 @@ async function generatePdf() {
         new Date(b.endYear).getFullYear() - new Date(a.endYear).getFullYear()
     );
     sortedExperiences.forEach((exp) => {
+      if (y > pageHeight - margin - 20) {
+        doc.addPage();
+        y = margin;
+      }
       const start = getYearOnly(exp.startYear);
       const end = exp.endYear ? getYearOnly(exp.endYear) : "Present";
+      const yearText = `${start} – ${end}`;
+      
+      // Estimate year text width (approximately 40-50 units for "YYYY – YYYY" or "YYYY – Present")
       doc.setFont("times", "bold");
-      doc.text(exp.jobTitle || "", margin, y);
-      doc.setFont("times", "bold");
-      doc.text(`${start} – ${end}`, pageWidth - margin, y, { align: "right" });
-      y += 6;
+      const yearWidth = doc.getTextWidth(yearText) || 50;
+      
+      // Job title with wrapping, leaving space for year on the right
+      const jobTitleMaxWidth = pageWidth - 2 * margin - yearWidth - 10;
+      const jobTitleLines = doc.splitTextToSize(exp.jobTitle || "", Math.max(jobTitleMaxWidth, 50));
+      jobTitleLines.forEach((line, index) => {
+        if (y > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
+        doc.text(line, margin, y);
+        // Only show year on first line of job title
+        if (index === 0) {
+          doc.text(yearText, pageWidth - margin, y, { align: "right" });
+        }
+        y += 6;
+      });
+      
+      // Company name with wrapping
       doc.setFont("times", "italic");
-      doc.text(`${exp.companyName || ""}`, margin, y);
-      y += 6;
+      y = addWrappedText(exp.companyName || "", margin, y, pageWidth - 2 * margin);
+      
+      // Company address with wrapping if it exists
+      if (exp.companyAddress) {
+        doc.setFont("times", "regular");
+        y = addWrappedText(exp.companyAddress, margin, y, pageWidth - 2 * margin);
+      }
+      y += 4;
     });
   }
 
@@ -482,7 +588,7 @@ async function generatePdf() {
     y = sectionHeader("Education", margin, y, pageWidth, margin);
 
     resume.education.forEach((edu) => {
-      if (y > pageHeight - margin) {
+      if (y > pageHeight - margin - 20) {
         doc.addPage();
         y = margin;
       }
@@ -494,38 +600,42 @@ async function generatePdf() {
         "";
       const institutionAddress = edu.institutionAddress || "";
 
+      // Institution name with wrapping, leaving space for year on the right
       doc.setFont("times", "bold");
-      doc.text(`${edu.institutionName || ""}`, margin, y);
-      doc.text(gradYear, pageWidth - margin, y, { align: "right" });
-      y += 6;
-
-      doc.setFont("times", "regular");
-      if (programLabel || institutionAddress) {
-        if (programLabel) {
-          doc.text(programLabel, margin, y);
+      const yearWidth = gradYear ? (doc.getTextWidth(gradYear) || 30) : 0;
+      const institutionMaxWidth = pageWidth - 2 * margin - yearWidth - 10;
+      const institutionLines = doc.splitTextToSize(edu.institutionName || "", Math.max(institutionMaxWidth, 50));
+      institutionLines.forEach((line, index) => {
+        if (y > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
         }
-        if (institutionAddress) {
-          const addressLines = doc.splitTextToSize(
-            institutionAddress,
-            pageWidth / 2
-          );
-          doc.text(addressLines[0], pageWidth - margin, y, {
-            align: "right",
-          });
-          for (let i = 1; i < addressLines.length; i++) {
-            y += 6;
-            doc.text(addressLines[i], pageWidth - margin, y, {
-              align: "right",
-            });
-          }
+        doc.text(line, margin, y);
+        // Only show year on first line of institution name
+        if (index === 0 && gradYear) {
+          doc.text(gradYear, pageWidth - margin, y, { align: "right" });
         }
         y += 6;
+      });
+
+      doc.setFont("times", "regular");
+      if (programLabel) {
+        y = addWrappedText(programLabel, margin, y, pageWidth - 2 * margin);
+      }
+      
+      if (institutionAddress) {
+        y = addWrappedText(institutionAddress, margin, y, pageWidth - 2 * margin);
       }
 
       if (edu.major) {
-        doc.text(edu.major, margin, y);
-        y += 6;
+        y = addWrappedText(edu.major, margin, y, pageWidth - 2 * margin);
       }
+      
+      if (edu.strand) {
+        y = addWrappedText(edu.strand, margin, y, pageWidth - 2 * margin);
+      }
+      
+      y += 4;
     });
   }
 
@@ -547,7 +657,7 @@ async function generatePdf() {
     doc.setFontSize(11);
 
     resume.certificates.forEach((cert) => {
-      if (y > pageHeight - margin) {
+      if (y > pageHeight - margin - 20) {
         doc.addPage();
         y = margin;
       }
@@ -555,8 +665,8 @@ async function generatePdf() {
       // ✅ Add bullet point before certificate name
       const bullet = "•";
       const certName = cert.certificationName || cert.title || "";
-      doc.text(`${bullet} ${certName}`, margin, y);
-      y += 6;
+      y = addWrappedText(`${bullet} ${certName}`, margin, y, pageWidth - 2 * margin);
+      y += 2;
     });
   }
 
@@ -575,16 +685,7 @@ function closeModal() {
 
 // --- Autofill + Load Data ---
 onMounted(async () => {
-  const savedUser = localStorage.getItem("user");
-  if (savedUser) {
-    try {
-      const user = JSON.parse(savedUser);
-      userName.value = `${user.firstName} ${user.lastName}`;
-      Object.assign(form, user);
-    } catch {
-      userName.value = "Guest";
-    }
-  }
+  await loadUserData(); // Fetch user data from backend
   await loadResume();
   await activityStore.fetchCounts();
   await fetchSelectedCertificates(); // Ensure certificates are loaded
@@ -654,48 +755,63 @@ onActivated(async () => {
               type="text"
               placeholder="First Name"
               class="input-field border rounded p-2"
+              maxlength="50"
             />
             <input
               v-model="form.emailAddress"
               type="email"
               placeholder="Email"
               class="input-field border rounded p-2"
+              maxlength="50"
             />
             <input
               v-model="form.middleName"
               type="text"
               placeholder="Middle Name"
               class="input-field border rounded p-2"
+              maxlength="50"
             />
             <input
               v-model="form.phoneNumber"
               type="text"
               placeholder="Mobile Number"
               class="input-field border rounded p-2"
+              maxlength="50"
             />
             <input
               v-model="form.lastName"
               type="text"
               placeholder="Last Name"
               class="input-field border rounded p-2"
+              maxlength="50"
             />
             <input
               v-model="form.address"
               type="text"
               placeholder="Address"
               class="input-field border rounded p-2"
+              maxlength="100"
             />
           </div>
 
           <!-- URL -->
           <div class="border rounded p-4 space-y-4 relative">
             <h2 class="text-lg font-semibold">Professional Link</h2>
-            <input
-              type="url"
-              placeholder="URL"
-              class="input-field border rounded p-2 w-full"
-              v-model="resume.url"
-            />
+            <div>
+              <input
+                type="url"
+                placeholder="URL"
+                class="input-field border rounded p-2 w-full"
+                v-model="resume.url"
+                maxlength="100"
+              />
+              <p v-if="resume.url.length >= 100" class="text-xs text-red-500 mt-1">
+                Maximum character limit (100) reached
+              </p>
+              <p v-else-if="resume.url.length > 0" class="text-xs text-gray-500 mt-1">
+                {{ 100 - resume.url.length }} characters remaining
+              </p>
+            </div>
           </div>
           <!-- Professional Summary -->
           <div class="border rounded p-4 space-y-4 relative">
@@ -707,7 +823,14 @@ onActivated(async () => {
                 rows="3"
                 class="input-field w-full"
                 v-model="resume.summary"
+                maxlength="1000"
               ></textarea>
+              <p v-if="resume.summary.length >= 1000" class="text-xs text-red-500 mt-1">
+                Maximum character limit (1000) reached
+              </p>
+              <p v-else-if="resume.summary.length > 0" class="text-xs text-gray-500 mt-1">
+                {{ 1000 - resume.summary.length }} characters remaining
+              </p>
             </div>
           </div>
 
@@ -733,48 +856,71 @@ onActivated(async () => {
               class="border p-3 rounded space-y-3 mt-3"
             >
               <div>
-                <label class="block font-medium mb-1">Job Title</label>
+                <label class="block font-medium mb-1">Job Title*</label>
                 <input
                   v-model="newExperience.jobTitle"
                   type="text"
-                  placeholder="Enter job title"
+                  placeholder="Enter job title*"
                   class="input-field border rounded w-full p-2"
+                  maxlength="100"
                 />
+                <p v-if="newExperience.jobTitle.length >= 100" class="text-xs text-red-500 mt-1">
+                  Maximum character limit (100) reached
+                </p>
+                <p v-else-if="newExperience.jobTitle.length > 0" class="text-xs text-gray-500 mt-1">
+                  {{ 100 - newExperience.jobTitle.length }} characters remaining
+                </p>
               </div>
               <div>
-                <label class="block font-medium mb-1">Company Name</label>
+                <label class="block font-medium mb-1">Company Name*</label>
                 <input
                   v-model="newExperience.companyName"
                   type="text"
-                  placeholder="Enter company name"
+                  placeholder="Enter company name*"
                   class="input-field border rounded w-full p-2"
+                  maxlength="100"
                 />
+                <p v-if="newExperience.companyName.length >= 100" class="text-xs text-red-500 mt-1">
+                  Maximum character limit (100) reached
+                </p>
+                <p v-else-if="newExperience.companyName.length > 0" class="text-xs text-gray-500 mt-1">
+                  {{ 100 - newExperience.companyName.length }} characters remaining
+                </p>
               </div>
               <div>
-                <label class="block font-medium mb-1">Company Address</label>
+                <label class="block font-medium mb-1">Company Address*</label>
                 <input
                   v-model="newExperience.companyAddress"
                   type="text"
-                  placeholder="Enter company address"
+                  placeholder="Enter company address*"
                   class="input-field border rounded w-full p-2"
+                  maxlength="100"
                 />
+                <p v-if="newExperience.companyAddress.length >= 100" class="text-xs text-red-500 mt-1">
+                  Maximum character limit (100) reached
+                </p>
+                <p v-else-if="newExperience.companyAddress.length > 0" class="text-xs text-gray-500 mt-1">
+                  {{ 100 - newExperience.companyAddress.length }} characters remaining
+                </p>
               </div>
               <div>
-                <label class="block font-medium mb-1">Start Year</label>
+                <label class="block font-medium mb-1">Start Year*</label>
                 <input
                   v-model="newExperience.startYear"
                   type="number"
-                  placeholder="e.g. 2020"
+                  placeholder="e.g. 2020*"
                   class="input-field border rounded w-full p-2"
+                  :max="new Date().getFullYear()"
                 />
               </div>
               <div>
-                <label class="block font-medium mb-1">End Year</label>
+                <label class="block font-medium mb-1">End Year*</label>
                 <input
                   v-model="newExperience.endYear"
                   type="number"
-                  placeholder="e.g. 2022"
+                  placeholder="e.g. 2022*"
                   class="input-field border rounded w-full p-2"
+                  :max="new Date().getFullYear()"
                 />
               </div>
               <button
@@ -832,7 +978,7 @@ onActivated(async () => {
             >
               <!-- Education Level -->
               <div>
-                <label class="block font-medium mb-1">Education Level</label>
+                <label class="block font-medium mb-1">Education Level*</label>
                 <select
                   v-model="newEducation.educationLevel"
                   class="input-field border rounded w-full p-2"
@@ -858,7 +1004,14 @@ onActivated(async () => {
                     newEducation.educationLevel === 'High School' ||
                     newEducation.educationLevel === 'Senior High School'
                   "
+                  maxlength="100"
                 />
+                <p v-if="newEducation.program.length >= 100" class="text-xs text-red-500 mt-1">
+                  Maximum character limit (100) reached
+                </p>
+                <p v-else-if="newEducation.program.length > 0" class="text-xs text-gray-500 mt-1">
+                  {{ 100 - newEducation.program.length }} characters remaining
+                </p>
               </div>
               <!-- Major -->
               <div>
@@ -873,7 +1026,14 @@ onActivated(async () => {
                     newEducation.educationLevel === 'High School' ||
                     newEducation.educationLevel === 'Senior High School'
                   "
+                  maxlength="100"
                 />
+                <p v-if="newEducation.major.length >= 100" class="text-xs text-red-500 mt-1">
+                  Maximum character limit (100) reached
+                </p>
+                <p v-else-if="newEducation.major.length > 0" class="text-xs text-gray-500 mt-1">
+                  {{ 100 - newEducation.major.length }} characters remaining
+                </p>
               </div>
               <div>
                 <label class="block font-medium mb-1">Strand</label>
@@ -889,41 +1049,62 @@ onActivated(async () => {
                     newEducation.educationLevel === 'Masters Degree' ||
                     newEducation.educationLevel === 'Doctorate'
                   "
+                  maxlength="100"
                 />
+                <p v-if="newEducation.strand.length >= 100" class="text-xs text-red-500 mt-1">
+                  Maximum character limit (100) reached
+                </p>
+                <p v-else-if="newEducation.strand.length > 0" class="text-xs text-gray-500 mt-1">
+                  {{ 100 - newEducation.strand.length }} characters remaining
+                </p>
               </div>
               <!-- Institution Name -->
               <div>
-                <label class="block font-medium mb-1">Institution Name</label>
+                <label class="block font-medium mb-1">Institution Name*</label>
                 <input
                   v-model="newEducation.institutionName"
                   type="text"
-                  placeholder="Enter institution name"
+                  placeholder="Enter institution name*"
                   class="input-field border rounded w-full p-2"
+                  maxlength="100"
                 />
+                <p v-if="newEducation.institutionName.length >= 100" class="text-xs text-red-500 mt-1">
+                  Maximum character limit (100) reached
+                </p>
+                <p v-else-if="newEducation.institutionName.length > 0" class="text-xs text-gray-500 mt-1">
+                  {{ 100 - newEducation.institutionName.length }} characters remaining
+                </p>
               </div>
 
               <!-- Institution Address -->
               <div>
                 <label class="block font-medium mb-1"
-                  >Institution Address</label
+                  >Institution Address*</label
                 >
                 <input
                   v-model="newEducation.institutionAddress"
                   type="text"
-                  placeholder="Enter address"
+                  placeholder="Enter address*"
                   class="input-field border rounded w-full p-2"
+                  maxlength="100"
                 />
+                <p v-if="newEducation.institutionAddress.length >= 100" class="text-xs text-red-500 mt-1">
+                  Maximum character limit (100) reached
+                </p>
+                <p v-else-if="newEducation.institutionAddress.length > 0" class="text-xs text-gray-500 mt-1">
+                  {{ 100 - newEducation.institutionAddress.length }} characters remaining
+                </p>
               </div>
 
               <!-- Graduation Year -->
               <div>
-                <label class="block font-medium mb-1">Graduation Year</label>
+                <label class="block font-medium mb-1">Graduation Year*</label>
                 <input
                   v-model.number="newEducation.graduationYear"
                   type="number"
                   min="1900"
-                  max="2099"
-                  placeholder="e.g. 2025"
+                  :max="new Date().getFullYear()"
+                  placeholder="e.g. 2025*"
                   class="input-field border rounded w-full p-2"
                 />
               </div>
@@ -971,13 +1152,22 @@ onActivated(async () => {
 
             <div class="flex gap-2">
               <!-- 👇 use newSkill, not resume.skills -->
-              <input
-                v-model="newSkill"
-                type="text"
-                placeholder="Type a skill"
-                class="input-field flex-1 border rounded p-2"
-                @keyup.enter="addSkill"
-              />
+              <div class="flex-1">
+                <input
+                  v-model="newSkill"
+                  type="text"
+                  placeholder="Type a skill"
+                  class="input-field w-full border rounded p-2"
+                  @keyup.enter="addSkill"
+                  maxlength="100"
+                />
+                <p v-if="newSkill.length >= 100" class="text-xs text-red-500 mt-1">
+                  Maximum character limit (100) reached
+                </p>
+                <p v-else-if="newSkill.length > 0" class="text-xs text-gray-500 mt-1">
+                  {{ 100 - newSkill.length }} characters remaining
+                </p>
+              </div>
               <button
                 type="button"
                 @click="addSkill"

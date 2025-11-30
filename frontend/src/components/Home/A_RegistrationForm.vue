@@ -42,7 +42,14 @@
             required
             placeholder="Enter your first name"
             v-model="form.firstName"
+            maxlength="50"
           />
+          <p v-if="form.firstName.length >= 50" class="text-xs text-red-500 mt-1">
+            Maximum character limit (50) reached
+          </p>
+          <p v-else-if="form.firstName.length > 0" class="text-xs text-gray-500 mt-1">
+            {{ 50 - form.firstName.length }} characters remaining
+          </p>
         </div>
 
         <div class="form-control mb-4">
@@ -54,7 +61,14 @@
             type="text"
             placeholder="Enter your middle name (optional)"
             v-model="form.middleName"
+            maxlength="50"
           />
+          <p v-if="form.middleName.length >= 50" class="text-xs text-red-500 mt-1">
+            Maximum character limit (50) reached
+          </p>
+          <p v-else-if="form.middleName.length > 0" class="text-xs text-gray-500 mt-1">
+            {{ 50 - form.middleName.length }} characters remaining
+          </p>
         </div>
 
         <div class="form-control mb-4">
@@ -67,7 +81,14 @@
             required
             placeholder="Enter your last name"
             v-model="form.lastName"
+            maxlength="50"
           />
+          <p v-if="form.lastName.length >= 50" class="text-xs text-red-500 mt-1">
+            Maximum character limit (50) reached
+          </p>
+          <p v-else-if="form.lastName.length > 0" class="text-xs text-gray-500 mt-1">
+            {{ 50 - form.lastName.length }} characters remaining
+          </p>
         </div>
 
         <!-- Address Fields - Segmented Dropdowns (shown when API works) -->
@@ -158,12 +179,19 @@
               type="text"
               placeholder="House/Building Number, Street Name"
               v-model="form.streetAddress"
+              maxlength="100"
             />
+            <p v-if="form.streetAddress.length >= 100" class="text-xs text-red-500 mt-1">
+              Maximum character limit (100) reached
+            </p>
+            <p v-else-if="form.streetAddress.length > 0" class="text-xs text-gray-500 mt-1">
+              {{ 100 - form.streetAddress.length }} characters remaining
+            </p>
           </div>
         </template>
 
         <!-- Fallback: Manual address input if API fails -->
-        <div v-else class="form-control mb-4">
+          <div v-else class="form-control mb-4">
           <label class="label">
             <span class="label-text text-sm font-medium text-gray-700">Full Address*</span>
           </label>
@@ -173,9 +201,16 @@
             required
             placeholder="Enter your complete address"
             v-model="form.address"
+            maxlength="50"
           />
           <p class="text-xs text-gray-500 mt-1">
             Location API is unavailable. Please enter your full address manually.
+          </p>
+          <p v-if="form.address.length >= 50" class="text-xs text-red-500 mt-1">
+            Maximum character limit (50) reached
+          </p>
+          <p v-else-if="form.address.length > 0" class="text-xs text-gray-500 mt-1">
+            {{ 50 - form.address.length }} characters remaining
           </p>
         </div>
 
@@ -189,8 +224,15 @@
             required
             placeholder="Enter your email address"
             v-model="form.emailAddress"
+            maxlength="50"
           />
           <p class="validator-hint hidden">Invalid Email</p>
+          <p v-if="form.emailAddress.length >= 50" class="text-xs text-red-500 mt-1">
+            Maximum character limit (50) reached
+          </p>
+          <p v-else-if="form.emailAddress.length > 0" class="text-xs text-gray-500 mt-1">
+            {{ 50 - form.emailAddress.length }} characters remaining
+          </p>
         </div>
 
         <div class="form-control mb-4">
@@ -222,6 +264,7 @@
             v-model="form.password"
             pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
             title="Must contain at least 8 characters, including a number, a lowercase and an uppercase letter"
+            maxlength="50"
           />
 
           <!-- 👁 Toggle Button -->
@@ -331,6 +374,7 @@
               placeholder="Re-enter your password"
               minlength="8"
               v-model="form.confirmPassword"
+              maxlength="50"
             />
 
             <!-- Toggle Button -->

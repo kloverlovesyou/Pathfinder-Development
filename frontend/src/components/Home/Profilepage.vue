@@ -23,9 +23,24 @@ const careerActivities = ref([]);
 const trainingActivities = ref([]);
 
 const filteredActivities = computed(() => {
-  return activeTab.value === "training"
-    ? trainingActivities.value
-    : careerActivities.value;
+  if (activeTab.value === "training") {
+    return trainingActivities.value;
+  }
+  
+  // Sort careers: those with interviewSchedule first
+  const sortedCareers = [...careerActivities.value].sort((a, b) => {
+    const aHasInterview = !!a.interviewSchedule;
+    const bHasInterview = !!b.interviewSchedule;
+    
+    // If one has interview and the other doesn't, prioritize the one with interview
+    if (aHasInterview && !bHasInterview) return -1;
+    if (!aHasInterview && bHasInterview) return 1;
+    
+    // If both have interviews or both don't, maintain original order
+    return 0;
+  });
+  
+  return sortedCareers;
 });
 
 const currentSteps = computed(() =>
@@ -1262,7 +1277,7 @@ onBeforeUnmount(() => {
                       class="text-blue-500 underline"
                       @click.stop
                     >
-                    View Details
+                    Attachments
                     </a>
                   </p>
                   <p>
@@ -1570,7 +1585,7 @@ onBeforeUnmount(() => {
                           rel="noopener noreferrer"
                           class="text-blue-500 underline"
                         >
-                          View Details
+                          Attachments
                         </a>
                       </p>
 

@@ -76,7 +76,26 @@ function closeUploadModal() {
 }
 
 function handleFileUpload(event) {
-  uploadedFile.value = event.target.files[0];
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // Check if file is PDF
+  if (file.type !== "application/pdf") {
+    addToast("PLEASE UPLOAD A PDF FILE", "accent");
+    event.target.value = "";
+    return;
+  }
+
+  // Check file size (5MB = 5 * 1024 * 1024 bytes)
+  const MAX_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+  if (file.size > MAX_SIZE) {
+    addToast("PDF SIZE EXCEEDS 5MB LIMIT. PLEASE UPLOAD A SMALLER FILE", "accent");
+    event.target.value = "";
+    uploadedFile.value = null;
+    return;
+  }
+
+  uploadedFile.value = file;
   console.log("Uploaded file:", uploadedFile.value);
 }
 
@@ -92,6 +111,19 @@ async function submitApplication() {
 
   if (!uploadedFile.value) {
     addToast("PLEASE ATTACH YOUR REQUIREMENTS PDF", "accent");
+    return;
+  }
+
+  // Validate file size before submission (double-check)
+  const MAX_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+  if (uploadedFile.value.size > MAX_SIZE) {
+    addToast("PDF SIZE EXCEEDS 5MB LIMIT. PLEASE UPLOAD A SMALLER FILE", "accent");
+    return;
+  }
+
+  // Validate file type before submission
+  if (uploadedFile.value.type !== "application/pdf") {
+    addToast("PLEASE UPLOAD A PDF FILE", "accent");
     return;
   }
 

@@ -611,9 +611,7 @@ function toISODate(d) {
       <div class="flex flex-col items-center gap-4 mt-12 overflow-y-auto">
         <!-- Built-in Calendar -->
         <div class="w-full flex flex-col gap-2">
-          <label class="text-sm font-medium text-gray-600 mb-2">
-            Select a date
-          </label>
+        
           
           <!-- Calendar Header -->
           <div class="flex items-center justify-between mb-2">

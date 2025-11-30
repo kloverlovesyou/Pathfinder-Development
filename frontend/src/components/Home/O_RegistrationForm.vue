@@ -116,7 +116,14 @@
             placeholder="Enter organization name"
             name="name"
             v-model="form.name"
+            maxlength="50"
           />
+          <p v-if="form.name.length >= 50" class="text-xs text-red-500 mt-1">
+            Maximum character limit (50) reached
+          </p>
+          <p v-else-if="form.name.length > 0" class="text-xs text-gray-500 mt-1">
+            {{ 50 - form.name.length }} characters remaining
+          </p>
         </div>
 
         <!-- Address Fields - Segmented Dropdowns (shown when API works) -->
@@ -207,7 +214,14 @@
               type="text"
               placeholder="House/Building Number, Street Name"
               v-model="form.streetAddress"
+              maxlength="100"
             />
+            <p v-if="form.streetAddress.length >= 100" class="text-xs text-red-500 mt-1">
+              Maximum character limit (100) reached
+            </p>
+            <p v-else-if="form.streetAddress.length > 0" class="text-xs text-gray-500 mt-1">
+              {{ 100 - form.streetAddress.length }} characters remaining
+            </p>
           </div>
         </template>
 
@@ -223,7 +237,14 @@
             placeholder="Enter your complete address"
             name="location"
             v-model="form.location"
+            maxlength="50"
           />
+          <p v-if="form.location.length >= 50" class="text-xs text-red-500 mt-1">
+            Maximum character limit (50) reached
+          </p>
+          <p v-else-if="form.location.length > 0" class="text-xs text-gray-500 mt-1">
+            {{ 50 - form.location.length }} characters remaining
+          </p>
           <p class="text-xs text-gray-500 mt-1">
             Location API is unavailable. Please enter your full address manually.
           </p>
@@ -239,7 +260,14 @@
             placeholder="Enter website URL"
             name="websiteURL"
             v-model="form.websiteURL"
+            maxlength="50"
           />
+          <p v-if="form.websiteURL.length >= 50" class="text-xs text-red-500 mt-1">
+            Maximum character limit (50) reached
+          </p>
+          <p v-else-if="form.websiteURL.length > 0" class="text-xs text-gray-500 mt-1">
+            {{ 50 - form.websiteURL.length }} characters remaining
+          </p>
         </div>
 
         <div class="form-control mb-4">
@@ -253,8 +281,15 @@
             placeholder="Enter your email address"
             name="emailAddress"
             v-model="form.emailAddress"
+            maxlength="50"
           />
           <p class="validator-hint hidden">Invalid Email</p>
+          <p v-if="form.emailAddress.length >= 50" class="text-xs text-red-500 mt-1">
+            Maximum character limit (50) reached
+          </p>
+          <p v-else-if="form.emailAddress.length > 0" class="text-xs text-gray-500 mt-1">
+            {{ 50 - form.emailAddress.length }} characters remaining
+          </p>
         </div>
 
         <div class="form-control mb-4">
@@ -286,6 +321,7 @@
             v-model="form.password"
             pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
             title="Must contain at least 8 characters, including a number, a lowercase and an uppercase letter"
+            maxlength="50"
           />
 
           <!-- 👁 Toggle Button -->
@@ -395,6 +431,7 @@
               placeholder="Re-enter your password"
               minlength="8"
               v-model="form.confirmPassword"
+              maxlength="50"
             />
 
             <!-- Toggle Button -->
