@@ -9,7 +9,6 @@ use App\Models\Training;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
-use Supabase\Storage\StorageClient;
 
 class CertificateController extends Controller
 {
@@ -291,41 +290,26 @@ public function index($applicantID)
         if ($hasFile) {
             $file = $request->file('certificate');
             
-            // Initialize Supabase client
-            $storage = new StorageClient(
-                env('SUPABASE_URL'),
-                env('SUPABASE_SECRET')
-            );
-
-            $bucket = env('SUPABASE_BUCKET', 'Requirements');
-            
-            // Generate unique filename in certificate_directory
-            $sanitizedName = preg_replace('/[^A-Za-z0-9._-]/', '_', $file->getClientOriginalName());
-            $fileName = 'certificate_directory/' . time() . '_' . $sanitizedName;
-            $fileBytes = file_get_contents($file->getRealPath());
-
-            // Upload to Supabase
-            $result = $storage->from($bucket)->upload($fileName, $fileBytes);
-
-            if (!empty($result['error'])) {
-                Log::error('❌ Failed to upload certificate to Supabase', [
-                    'error' => $result['error'],
+            try {
+                $fileName = $this->uploadCertificateToSupabase($file);
+                
+                // Store the path instead of binary data
+                $data['certificate_path'] = $fileName;
+                $data['certificate'] = ''; // Empty string for bytea column (required by schema)
+                
+                Log::info('✅ Certificate uploaded to Supabase', [
                     'file_name' => $fileName,
+                ]);
+            } catch (\Exception $e) {
+                Log::error('❌ Failed to upload certificate to Supabase', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
                 ]);
                 return $this->safeJsonResponse([
                     'message' => 'Failed to upload certificate to storage',
-                    'error' => $result['error']
+                    'error' => $e->getMessage()
                 ], 500);
             }
-
-            // Store the path instead of binary data
-            $data['certificate_path'] = $fileName;
-            $data['certificate'] = ''; // Empty string for bytea column (required by schema)
-            
-            Log::info('✅ Certificate uploaded to Supabase', [
-                'file_name' => $fileName,
-                'bucket' => $bucket,
-            ]);
         }
         // Handle base64 input (manual certificates fallback) - also upload to Supabase
         elseif ($hasBase64) {
@@ -353,40 +337,31 @@ public function index($applicantID)
                 ], 422);
             }
 
-            // Initialize Supabase client
-            $storage = new StorageClient(
-                env('SUPABASE_URL'),
-                env('SUPABASE_SECRET')
-            );
+            try {
+                // Generate unique filename in certificate_directory
+                $fileName = 'certificate_directory/' . time() . '_certificate.png'; // Default to PNG for base64 images
+                
+                // Upload to Supabase using HTTP
+                $this->uploadBytesToSupabase($fileName, $decoded, 'image/png');
 
-            $bucket = env('SUPABASE_BUCKET', 'Requirements');
-            
-            // Generate unique filename in certificate_directory
-            $fileName = 'certificate_directory/' . time() . '_certificate.png'; // Default to PNG for base64 images
-
-            // Upload to Supabase
-            $result = $storage->from($bucket)->upload($fileName, $decoded);
-
-            if (!empty($result['error'])) {
-                Log::error('❌ Failed to upload base64 certificate to Supabase', [
-                    'error' => $result['error'],
+                // Store the path instead of binary data
+                $data['certificate_path'] = $fileName;
+                $data['certificate'] = ''; // Empty string for bytea column (required by schema)
+                
+                Log::info('✅ Base64 certificate uploaded to Supabase', [
                     'file_name' => $fileName,
+                    'decoded_length' => strlen($decoded),
+                ]);
+            } catch (\Exception $e) {
+                Log::error('❌ Failed to upload base64 certificate to Supabase', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
                 ]);
                 return $this->safeJsonResponse([
                     'message' => 'Failed to upload certificate to storage',
-                    'error' => $result['error']
+                    'error' => $e->getMessage()
                 ], 500);
             }
-
-            // Store the path instead of binary data
-            $data['certificate_path'] = $fileName;
-            $data['certificate'] = ''; // Empty string for bytea column (required by schema)
-            
-            Log::info('✅ Base64 certificate uploaded to Supabase', [
-                'file_name' => $fileName,
-                'bucket' => $bucket,
-                'decoded_length' => strlen($decoded),
-            ]);
         }
         // For organization certificates without file, don't include certificate field at all
         // This matches RegistrationController which creates certificates without certificate field
@@ -510,8 +485,7 @@ public function index($applicantID)
 
 
     // ✅ Delete a certificate
-       // Delete a certificate
-        public function destroy($id)
+    public function destroy($id)
         {
             $cert = Certification::find($id);
 
@@ -591,41 +565,170 @@ public function issueCertificate(Request $request, $certificationID)
 
     $cert = Certification::findOrFail($certificationID);
 
-    // Initialize Supabase client
-    $storage = new StorageClient(
-        env('SUPABASE_URL'),
-        env('SUPABASE_SECRET')
-    );
+    try {
+        $file = $request->file('issued_certificate');
+        
+        // Use certificate_directory instead of issued_certificates
+        $fileName = $this->uploadCertificateToSupabase($file);
 
-    $bucket = env('SUPABASE_BUCKET', 'Requirements'); // default bucket
+        // Save the path to DB
+        $cert->certificate_path = $fileName;
+        $cert->save();
 
-    // Use certificate_directory instead of issued_certificates
-    $fileName = 'certificate_directory/' . time() . '_' . $request->file('issued_certificate')->getClientOriginalName();
-    $fileBytes = file_get_contents($request->file('issued_certificate'));
+        // Get a public URL
+        $publicUrl = $this->generateSupabaseUrl($fileName);
 
-    // Upload to Supabase
-    $result = $storage->from($bucket)->upload($fileName, $fileBytes);
-
-    if (!empty($result['error'])) {
+        return $this->safeJsonResponse([
+            'message' => 'Certificate issued successfully',
+            'path' => $fileName,
+            'public_url' => $publicUrl
+        ]);
+    } catch (\Exception $e) {
+        Log::error('❌ Failed to upload issued certificate', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+        ]);
         return $this->safeJsonResponse([
             'message' => 'Failed to upload issued certificate',
-            'error' => $result['error']
+            'error' => $e->getMessage()
         ], 500);
     }
-
-    // Save the path to DB
-    $cert->certificate_path = $fileName;
-    $cert->save();
-
-    // Get a public URL
-    $publicUrl = $storage->from($bucket)->getPublicUrl($fileName);
-
-    return $this->safeJsonResponse([
-        'message' => 'Certificate issued successfully',
-        'path' => $fileName,
-        'public_url' => $publicUrl
-    ]);
 }
+
+    /**
+     * Upload certificate file to Supabase Storage using HTTP
+     */
+    protected function uploadCertificateToSupabase($file): string
+    {
+        $supabaseUrl = env('SUPABASE_URL', 'https://hmevengvfponcwslnyye.supabase.co');
+        $supabaseUrl = preg_replace('#/storage/v1/object/public/?$#', '', $supabaseUrl);
+        $supabaseUrl = rtrim($supabaseUrl, '/');
+        
+        $bucket = env('SUPABASE_BUCKET', 'Requirements');
+        $supabaseKey = env('SUPABASE_SECRET') ?: env('SUPABASE_KEY');
+
+        if (!$bucket || !$supabaseKey) {
+            Log::error('Supabase Storage not configured', [
+                'has_bucket' => !empty($bucket),
+                'has_key' => !empty($supabaseKey),
+            ]);
+            throw new \RuntimeException('Supabase Storage not configured. Please check SUPABASE_BUCKET and SUPABASE_SECRET in .env');
+        }
+
+        $sanitizedName = preg_replace('/[^A-Za-z0-9._-]/', '_', $file->getClientOriginalName());
+        $storagePath = 'certificate_directory/' . time() . '_' . $sanitizedName;
+        
+        $fileContents = file_get_contents($file->getRealPath());
+        $contentType = $file->getMimeType() ?: 'image/png';
+
+        return $this->uploadBytesToSupabase($storagePath, $fileContents, $contentType, $supabaseUrl, $bucket, $supabaseKey);
+    }
+
+    /**
+     * Upload bytes to Supabase Storage using HTTP
+     */
+    protected function uploadBytesToSupabase(string $storagePath, string $fileContents, string $contentType, ?string $supabaseUrl = null, ?string $bucket = null, ?string $supabaseKey = null): string
+    {
+        if ($supabaseUrl === null) {
+            $supabaseUrl = env('SUPABASE_URL', 'https://hmevengvfponcwslnyye.supabase.co');
+            $supabaseUrl = preg_replace('#/storage/v1/object/public/?$#', '', $supabaseUrl);
+            $supabaseUrl = rtrim($supabaseUrl, '/');
+        }
+        
+        if ($bucket === null) {
+            $bucket = env('SUPABASE_BUCKET', 'Requirements');
+        }
+        
+        if ($supabaseKey === null) {
+            $supabaseKey = env('SUPABASE_SECRET') ?: env('SUPABASE_KEY');
+        }
+
+        if (!$bucket || !$supabaseKey) {
+            Log::error('Supabase Storage not configured', [
+                'has_bucket' => !empty($bucket),
+                'has_key' => !empty($supabaseKey),
+            ]);
+            throw new \RuntimeException('Supabase Storage not configured. Please check SUPABASE_BUCKET and SUPABASE_SECRET in .env');
+        }
+
+        $uploadUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}/{$storagePath}";
+
+        Log::info('Attempting Supabase upload', [
+            'url' => $uploadUrl,
+            'bucket' => $bucket,
+            'path' => $storagePath,
+            'size' => strlen($fileContents),
+            'content_type' => $contentType,
+        ]);
+
+        try {
+            // SSL verification: For Windows development, SSL certificate issues are common
+            // Set SUPABASE_VERIFY_SSL=true in .env for production (recommended)
+            // For development on Windows, you may need SUPABASE_VERIFY_SSL=false
+            $verifySSL = filter_var(env('SUPABASE_VERIFY_SSL', 'false'), FILTER_VALIDATE_BOOLEAN);
+            
+            $client = new \GuzzleHttp\Client([
+                'verify' => $verifySSL,
+            ]);
+            $response = $client->request('POST', $uploadUrl, [
+                'headers' => [
+                    'Authorization' => "Bearer {$supabaseKey}",
+                    'Content-Type' => $contentType,
+                    'x-upsert' => 'true',
+                ],
+                'body' => $fileContents,
+            ]);
+            
+            $statusCode = $response->getStatusCode();
+            
+            if ($statusCode !== 200 && $statusCode !== 201) {
+                $responseBody = $response->getBody()->getContents();
+                Log::error('Supabase upload failed', [
+                    'status' => $statusCode,
+                    'body' => $responseBody,
+                    'path' => $storagePath,
+                ]);
+                throw new \RuntimeException('Supabase upload failed: ' . $responseBody);
+            }
+
+            Log::info('Certificate file stored in Supabase', [
+                'path' => $storagePath,
+                'status' => $statusCode,
+            ]);
+
+            return $storagePath;
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            $errorMessage = $e->getMessage();
+            $statusCode = null;
+            $responseBody = null;
+            
+            if ($e->hasResponse()) {
+                $response = $e->getResponse();
+                $statusCode = $response->getStatusCode();
+                $responseBody = $response->getBody()->getContents();
+                $errorMessage = $responseBody ?: $errorMessage;
+            }
+            
+            Log::error('Supabase upload exception', [
+                'message' => $e->getMessage(),
+                'status_code' => $statusCode,
+                'response_body' => $responseBody,
+                'upload_url' => $uploadUrl,
+                'bucket' => $bucket,
+                'path' => $storagePath,
+            ]);
+            throw new \RuntimeException('Supabase upload failed: ' . $errorMessage);
+        } catch (\Exception $e) {
+            Log::error('Supabase upload general exception', [
+                'message' => $e->getMessage(),
+                'upload_url' => $uploadUrl,
+                'bucket' => $bucket,
+                'path' => $storagePath,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw new \RuntimeException('Supabase upload failed: ' . $e->getMessage());
+        }
+    }
 
     protected function safeJsonResponse($data, int $status = 200)
     {
