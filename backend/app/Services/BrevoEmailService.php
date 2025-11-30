@@ -13,61 +13,55 @@ class BrevoEmailService
 
     public function sendOrganizationApprovedEmail($toEmail, $orgName)
     {
-        $subject = "Your Organization Has Been Approved!";
-        
-        $html = "
-    <div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>
-        <h2 style='color: #16a34a;'>🎉 Organization Approved!</h2>
-        <p>Hello <strong>{$orgName}</strong>,</p>
+        $subject = "🎉 Your Organization Has Been Approved!";
 
-        <p>We are pleased to inform you that your organization has been 
-        <span style='color: #16a34a; font-weight: bold;'>APPROVED</span>.</p>
-
-        <p>You may now log in to your account and begin managing your 
-        trainings, events, and other organization details.</p>
-
-        <div style='margin-top: 20px;'>
-            <a href='https://your-system-login-url.com'
-                style='background-color: #16a34a; 
-                       padding: 10px 18px; 
-                       color: white; 
-                       text-decoration: none; 
-                       border-radius: 6px;'>
-                Go to Login
-            </a>
+        $htmlContent = "
+        <div style='font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;'>
+            <div style='max-width: 600px; margin: auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.1);'>
+                <div style='background-color: #4CAF50; color: #fff; padding: 20px; text-align: center;'>
+                    <h1>Congratulations!</h1>
+                </div>
+                <div style='padding: 20px; color: #333; line-height: 1.6;'>
+                    <p>Hi <strong>{$orgName}</strong>,</p>
+                    <p>We are excited to inform you that your organization has been <strong>approved</strong> by our admin team.</p>
+                    <p>You can now log in and start managing your trainings and careers.</p>
+                    <div style='text-align: center; margin: 20px 0;'>
+                        <a href='" . url('/login') . "' style='background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Login Now</a>
+                    </div>
+                    <p>Thank you,<br>The Admin Team</p>
+                </div>
+            </div>
         </div>
+        ";
 
-        <br>
-        <p>Thank you,<br>DICT Admin Team</p>
-    </div>
-";
-
-        return $this->send($toEmail, $subject, $html);
+        return $this->send($toEmail, $subject, $htmlContent);
     }
 
     public function sendOrganizationRejectedEmail($toEmail, $orgName, $reason)
     {
-        $subject = "Your Organization Registration Was Rejected";
+        $subject = "⚠️ Your Organization Registration Was Rejected";
 
-       $html = "
-        <div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>
-            <h2 style='color: #dc2626;'>❗ Registration Rejected</h2>
-            <p>Hello <strong>{$orgName}</strong>,</p>
-
-            <p>We regret to inform you that your organization registration has been 
-            <span style='color: #dc2626; font-weight: bold;'>REJECTED</span>.</p>
-
-            <p><strong>Reason:</strong> {$reason}</p>
-
-            <p>If you believe this is a mistake or wish to reapply, feel free to 
-            contact our support team or submit a new registration.</p>
-
-            <br>
-            <p>Thank you,<br>DICT Admin Team</p>
+        $htmlContent = "
+        <div style='font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;'>
+            <div style='max-width: 600px; margin: auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.1);'>
+                <div style='background-color: #f44336; color: #fff; padding: 20px; text-align: center;'>
+                    <h1>Registration Rejected</h1>
+                </div>
+                <div style='padding: 20px; color: #333; line-height: 1.6;'>
+                    <p>Hi <strong>{$orgName}</strong>,</p>
+                    <p>We regret to inform you that your organization registration has been <strong>rejected</strong>.</p>
+                    <p><strong>Reason:</strong> {$reason}</p>
+                    <p>If you believe this is a mistake or would like to reapply, please contact support.</p>
+                    <div style='text-align: center; margin: 20px 0;'>
+                        <a href='" . url('/contact') . "' style='background-color: #f44336; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Contact Support</a>
+                    </div>
+                    <p>Thank you,<br>The Admin Team</p>
+                </div>
+            </div>
         </div>
-    ";
+        ";
 
-        return $this->send($toEmail, $subject, $html);
+        return $this->send($toEmail, $subject, $htmlContent);
     }
 
     public function __construct()
