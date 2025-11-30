@@ -161,18 +161,39 @@ async function handleProfileImageChange(event) {
     return;
   }
 
+  // Sanitize filename to prevent path length issues
+  // Max path length is 255, folder is ~30 chars, timestamp is ~13, so filename should be max ~200
+  const originalName = file.name;
+  const fileExtension = originalName.substring(originalName.lastIndexOf('.'));
+  const baseName = originalName.substring(0, originalName.lastIndexOf('.')).replace(/[^a-zA-Z0-9._-]/g, '_');
+  const maxBaseNameLength = 180; // Leave room for folder, timestamp, and extension
+  const sanitizedBaseName = baseName.length > maxBaseNameLength 
+    ? baseName.substring(0, maxBaseNameLength) 
+    : baseName;
+  const sanitizedFileName = sanitizedBaseName + fileExtension;
+  
+  // Create a new File object with sanitized name
+  const sanitizedFile = new File([file], sanitizedFileName, { type: file.type });
+
   avatarUploading.value = true;
   const previousPath = profileImagePath.value;
   let newPath = "";
 
   try {
-    newPath = await uploadImage(file, AVATAR_BUCKET, AVATAR_FOLDER);
+    newPath = await uploadImage(sanitizedFile, AVATAR_BUCKET, AVATAR_FOLDER);
     if (!newPath) {
       showToast("Failed to upload image. Please try again.", "error");
       return;
     }
 
-    await axios.put(
+    // Check if path is too long (backend max is 255 characters)
+    if (newPath.length > 255) {
+      showToast("Image path is too long. Please try again with a different image.", "error");
+      await deleteStorageFile(newPath, AVATAR_BUCKET);
+      return;
+    }
+
+    const response = await axios.put(
       import.meta.env.VITE_API_BASE_URL + "/user",
       { displayPicture_directory: newPath },
       { headers: { Authorization: `Bearer ${token}` } }
@@ -209,10 +230,31 @@ async function handleProfileImageChange(event) {
     }
   } catch (error) {
     console.error("Error updating profile picture:", error);
-    if (newPath) {
-      await deleteStorageFile(newPath, AVATAR_BUCKET);
+    console.error("Error response:", error.response?.data);
+    console.error("Error status:", error.response?.status);
+    
+    // Show more detailed error message
+    let errorMessage = "Failed to update profile picture.";
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    } else if (error.response?.data?.error) {
+      errorMessage = error.response.data.error;
+    } else if (error.response?.status === 500) {
+      errorMessage = "Server error. Please try again later or contact support.";
+    } else if (error.message) {
+      errorMessage = `Error: ${error.message}`;
     }
-    showToast("Failed to update profile picture.", "error");
+    
+    showToast(errorMessage, "error");
+    
+    // Clean up uploaded file if update failed
+    if (newPath) {
+      try {
+        await deleteStorageFile(newPath, AVATAR_BUCKET);
+      } catch (deleteError) {
+        console.warn("Failed to delete uploaded file:", deleteError);
+      }
+    }
   } finally {
     avatarUploading.value = false;
     if (event.target) event.target.value = "";

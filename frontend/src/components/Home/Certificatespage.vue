@@ -955,9 +955,16 @@ const deselectAllCertificates = async () => {
               <input
                 v-model="cert.title"
                 type="text"
-                placeholder="Certificate Title"
+                placeholder="Certificate Title*"
                 class="input-field border rounded p-2"
+                maxlength="50"
               />
+              <p v-if="cert.title.length >= 50" class="text-xs text-red-500 mt-1">
+                Maximum character limit (50) reached
+              </p>
+              <p v-else-if="cert.title.length > 0" class="text-xs text-gray-500 mt-1">
+                {{ 50 - cert.title.length }} characters remaining
+              </p>
               <input
                 type="file"
                 accept="image/jpeg,image/jpg,image/png"

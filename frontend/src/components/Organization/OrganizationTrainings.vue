@@ -268,6 +268,49 @@
         </button>
       </section>
 
+      <!-- ✅ All Trainings Section (from all organizations) -->
+      <section class="all-trainings">
+        <div class="flex items-center justify-between">
+          <h2 class="section-title flex items-center gap-1">
+            All Trainings
+            <span class="count-badge">{{ sortedAllTrainings.length }}</span>
+          </h2>
+        </div>
+
+        <!-- ✅ Grid Layout -->
+        <div class="trainings-grid">
+          <div v-for="training in visibleFilteredAllTrainings" :key="training.trainingID" class="training-card"
+            @click="openTrainingDetails(training)">
+            <div class="training-right" @click="openTrainingDetails(training)">
+              <h3 class="training-title">{{ training.title }}</h3>
+              <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
+              <p v-if="training.organization" class="training-org" style="font-size: 0.85rem; color: #666; margin-top: 4px;">
+                by {{ training.organization.name || training.organization.OrganizationName }}
+              </p>
+            </div>
+
+            <!-- Menu (only show for own trainings) -->
+            <div class="menu" v-if="isTrainingOwnedByCurrentOrg(training)">
+              <div class="menu-icon" @click.stop="toggleAllTrainingsMenu(training.trainingID)">
+                ⋮
+              </div>
+              <div v-if="openAllTrainingsMenu === training.trainingID" class="dropdown-menu" @click.stop>
+                <ul>
+                  <li @click="deleteTraining(training.trainingID)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Delete Training</li>
+                  <li @click="updateTraining(training.trainingID)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Update Training</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Show More Button -->
+        <button v-if="sortedAllTrainings.length > 4" class="show-more-btn"
+          @click="showAllTrainings = !showAllTrainings">
+          {{ showAllTrainings ? 'Show Less' : 'Show More' }}
+        </button>
+      </section>
+
       <!-- Training Details Modal -->
       <div v-if="showTrainingDetailsModal" class="modal-overlay" @click.self="closeTrainingDetails">
         <div class="training-details-modal">
@@ -960,6 +1003,7 @@ export default {
       showAllUpcoming: false,
       showAllOngoing: false,
       showAllCompleted: false,
+      showAllTrainings: false,
       activeTrainingQR,  // <-- QR code value (reactive)
       activeTrainingId,  // <-- which training is active
       activeScheduleId,  // <-- which schedule is active
@@ -992,6 +1036,7 @@ export default {
       openUpcomingMenu: null,
       openOngoingMenu: null,
       openCompletedMenu: null,
+      openAllTrainingsMenu: null,
 
       showTrainingDetailsModal: false,
       selectedTraining: {},
@@ -1016,6 +1061,7 @@ export default {
 
       upcomingtrainings: [],
       completedtrainings: [],
+      allTrainings: [], // All trainings from all organizations
 
       // Popup state + form
       showTrainingPopup: false,
@@ -1573,6 +1619,7 @@ export default {
       this.openUpcomingMenu = null;
       this.openOngoingMenu = null;
       this.openCompletedMenu = null;
+      this.openAllTrainingsMenu = null;
     },
 
     handleOutsideClick(e) {
@@ -1912,6 +1959,39 @@ export default {
       } catch (error) {
         console.error("Error fetching trainings:", error);
       }
+    },
+
+    async fetchAllTrainings() {
+      try {
+        // Fetch all trainings without organizationID filter
+        const { data } = await api.get("/trainings");
+        
+        this.allTrainings = data.map(training => ({
+          ...training,
+          isOrganizationChoice: Boolean(training.isOrganizationChoice)
+        }));
+
+        // Schedule QR for all trainings
+        this.allTrainings.forEach(training => {
+          scheduleQR(training);
+        });
+      } catch (error) {
+        console.error("Error fetching all trainings:", error);
+      }
+    },
+
+    isTrainingOwnedByCurrentOrg(training) {
+      const orgId = this.currentOrganizationId;
+      if (!orgId) return false;
+      const trainingOrgId = training.organizationID || training.organization_id;
+      return trainingOrgId === orgId;
+    },
+
+    toggleAllTrainingsMenu(id) {
+      this.openAllTrainingsMenu = this.openAllTrainingsMenu === id ? null : id;
+      this.openUpcomingMenu = null;
+      this.openOngoingMenu = null;
+      this.openCompletedMenu = null;
     },
 
     openTrainingPopup() {
@@ -2643,11 +2723,13 @@ export default {
       }
     }
     this.fetchTrainings();
+    this.fetchAllTrainings();
     document.addEventListener("click", this.handleOutsideClick);
 
     // Poll every 30 seconds to update trainings
     this.trainingPollInterval = setInterval(() => {
       this.fetchTrainings();
+      this.fetchAllTrainings();
     }, 30000);
   },
 
@@ -3011,6 +3093,47 @@ export default {
       return this.showAllCompleted
         ? this.filteredCompleted
         : this.filteredCompleted.slice(0, 4);
+    },
+    sortedAllTrainings() {
+      const now = new Date();
+      return this.allTrainings
+        .sort((a, b) => {
+          // Sort by earliest schedule
+          const getEarliestSchedule = (training) => {
+            if (training.schedules && Array.isArray(training.schedules) && training.schedules.length > 0) {
+              let earliest = null;
+              for (const schedule of training.schedules) {
+                const scheduleTime = schedule.schedule || schedule.Schedule;
+                if (scheduleTime) {
+                  const startTime = this.parseLocalDateTime(scheduleTime);
+                  if (startTime && (!earliest || startTime < earliest)) {
+                    earliest = startTime;
+                  }
+                }
+              }
+              return earliest;
+            }
+            const scheduleTime = training.schedule || training.Schedule;
+            return scheduleTime ? this.parseLocalDateTime(scheduleTime) : null;
+          };
+          
+          const aTime = getEarliestSchedule(a);
+          const bTime = getEarliestSchedule(b);
+          if (!aTime || !bTime) return 0;
+          return aTime.getTime() - bTime.getTime();
+        });
+    },
+    filteredAllTrainings() {
+      const query = this.globalSearchQuery.toLowerCase();
+      if (!query) return this.sortedAllTrainings;
+      return this.sortedAllTrainings.filter(training =>
+        training.title.toLowerCase().startsWith(query)
+      );
+    },
+    visibleFilteredAllTrainings() {
+      return this.showAllTrainings
+        ? this.filteredAllTrainings
+        : this.filteredAllTrainings.slice(0, 4);
     },
 
     visibleUpcomingTrainings() {

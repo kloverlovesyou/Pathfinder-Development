@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from "vue";
 import { useRegistrationStore } from "@/stores/registrationStore";
+import axios from "axios";
 
 const props = defineProps({
   isOpen: Boolean,
@@ -10,6 +11,8 @@ const props = defineProps({
 const emit = defineEmits(["close", "toggle-register"]);
 const regStore = useRegistrationStore();
 const actionError = ref("");
+const showConflictDialog = ref(false);
+const conflictingTrainings = ref([]);
 
 const trainingId = computed(() => resolveTrainingId(props.training));
 const isRegistered = computed(() => {
@@ -22,6 +25,86 @@ const isLoading = computed(() => {
 });
 const canToggleRegistration = computed(() => !!trainingId.value && !isLoading.value);
 
+// Check for same-day onsite conflicts
+async function checkSameDayOnsiteConflict(newTraining) {
+  const token = localStorage.getItem("token");
+  if (!token) return false;
+
+  try {
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/registrations",
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    const existingRegistrations = res.data || [];
+    const newTrainingSchedules = newTraining?.schedules || [];
+    
+    if (!Array.isArray(newTrainingSchedules) && newTraining?.schedule) {
+      newTrainingSchedules.push({
+        schedule: newTraining.schedule,
+        mode: newTraining.mode,
+        location: newTraining.location,
+      });
+    }
+
+    const newTrainingHasOnsite = newTrainingSchedules.some((schedule) => {
+      const mode = (schedule?.mode || "").toString().toLowerCase();
+      return mode === "on-site" || mode === "onsite";
+    });
+
+    if (!newTrainingHasOnsite) return false;
+
+    const newTrainingDates = new Set();
+    newTrainingSchedules.forEach((schedule) => {
+      const scheduleDate = schedule?.schedule || schedule?.start_time;
+      if (scheduleDate) {
+        const date = new Date(scheduleDate);
+        const dateStr = date.toISOString().split("T")[0];
+        newTrainingDates.add(dateStr);
+      }
+    });
+
+    const conflicts = [];
+    existingRegistrations.forEach((registration) => {
+      const existingTraining = registration?.training;
+      if (!existingTraining) return;
+
+      const existingSchedules = existingTraining?.schedules || [];
+      if (!Array.isArray(existingSchedules) && existingTraining?.schedule) {
+        existingSchedules.push({
+          schedule: existingTraining.schedule,
+          mode: existingTraining.mode,
+          location: existingTraining.location,
+        });
+      }
+
+      existingSchedules.forEach((existingSchedule) => {
+        const existingMode = (existingSchedule?.mode || "").toString().toLowerCase();
+        if (existingMode !== "on-site" && existingMode !== "onsite") return;
+
+        const existingScheduleDate = existingSchedule?.schedule || existingSchedule?.start_time;
+        if (existingScheduleDate) {
+          const existingDate = new Date(existingScheduleDate);
+          const existingDateStr = existingDate.toISOString().split("T")[0];
+
+          if (newTrainingDates.has(existingDateStr)) {
+            conflicts.push({
+              training: existingTraining,
+              schedule: existingSchedule,
+              date: existingDateStr,
+            });
+          }
+        }
+      });
+    });
+
+    return conflicts.length > 0 ? conflicts : false;
+  } catch (error) {
+    console.error("Error checking conflicts:", error);
+    return false;
+  }
+}
+
 async function handleRegisterClick() {
   if (!props.training || isLoading.value) return;
 
@@ -33,6 +116,16 @@ async function handleRegisterClick() {
       error: new Error(actionError.value),
     });
     return;
+  }
+
+  // Only check conflicts when registering (not unregistering)
+  if (!isRegistered.value) {
+    const conflicts = await checkSameDayOnsiteConflict(props.training);
+    if (conflicts && conflicts.length > 0) {
+      conflictingTrainings.value = conflicts;
+      showConflictDialog.value = true;
+      return;
+    }
   }
 
   actionError.value = "";
@@ -49,6 +142,29 @@ async function handleRegisterClick() {
     actionError.value = "Failed to update registration. Please try again.";
     emit("toggle-register", { training: props.training, error });
   }
+}
+
+async function confirmConflictRegistration() {
+  showConflictDialog.value = false;
+  conflictingTrainings.value = [];
+  actionError.value = "";
+
+  try {
+    await regStore.toggleRegister(props.training);
+    emit("toggle-register", {
+      training: props.training,
+      isRegistered: isRegistered.value,
+    });
+  } catch (error) {
+    console.error("Failed to toggle registration:", error);
+    actionError.value = "Failed to update registration. Please try again.";
+    emit("toggle-register", { training: props.training, error });
+  }
+}
+
+function cancelConflictRegistration() {
+  showConflictDialog.value = false;
+  conflictingTrainings.value = [];
 }
 
 function resolveTrainingId(training) {
@@ -431,6 +547,65 @@ function formatScheduleTime(schedule) {
         <!-- Register/Unregister Button -->
         
       </template>
+    </div>
+
+    <!-- Conflict Confirmation Dialog -->
+    <div v-if="showConflictDialog" class="modal-overlay" @click.self="cancelConflictRegistration">
+      <div class="training-details-modal">
+        <button class="modal-close-btn" @click="cancelConflictRegistration">✕</button>
+
+        <h3 class="modal-title text-orange-600">
+          ⚠️ Schedule Conflict Detected
+        </h3>
+
+        <div class="training-info">
+          <p class="mb-3">
+            You are trying to register for an <strong>onsite training</strong> that is scheduled on the same day as another onsite training you're already registered for.
+          </p>
+
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
+            <p class="font-semibold text-gray-800 mb-2">New Training:</p>
+            <p class="text-gray-700">{{ training?.title || "Training" }}</p>
+            <p v-if="training?.schedules?.[0]?.schedule" class="text-sm text-gray-600 mt-1">
+              Date: {{ formatDate(training.schedules[0].schedule) }}
+            </p>
+          </div>
+
+          <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+            <p class="font-semibold text-gray-800 mb-2">Conflicting Training(s):</p>
+            <div v-for="(conflict, index) in conflictingTrainings" :key="index" class="mb-2 last:mb-0">
+              <p class="text-gray-700">{{ conflict.training?.title || "Training" }}</p>
+              <p v-if="conflict.schedule?.schedule" class="text-sm text-gray-600">
+                Date: {{ formatDate(conflict.schedule.schedule) }}
+              </p>
+              <p v-if="conflict.schedule?.location" class="text-sm text-gray-600">
+                Location: {{ conflict.schedule.location }}
+              </p>
+            </div>
+          </div>
+
+          <p class="text-gray-700 mt-4 font-medium">
+            Do you still want to register for this training?
+          </p>
+        </div>
+
+        <div class="flex justify-end gap-2 mt-4">
+          <button
+            type="button"
+            class="btn btn-outline btn-sm"
+            @click="cancelConflictRegistration"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn bg-customButton hover:bg-dark-slate text-white btn-sm"
+            @click="confirmConflictRegistration"
+          >
+            Yes, Register Anyway
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>

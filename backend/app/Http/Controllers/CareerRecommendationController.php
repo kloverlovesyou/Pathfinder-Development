@@ -122,8 +122,13 @@ class CareerRecommendationController extends Controller
          // Use Laravel's DB facade to call the stored procedure with parameter binding
          $trainings = DB::select('SELECT * FROM sp_getrecommendedtrainings_bycareer(?)', [$careerID]);
  
-         // ✅ Map organization name from stored procedure result
-         $trainingsWithOrg = collect($trainings)->map(function ($training) {
+         // Get all training IDs that are in organizationschoice table
+         $organizationChoiceTrainingIds = DB::table('organizationschoice')
+             ->pluck('trainingID')
+             ->toArray();
+ 
+         // ✅ Map organization name from stored procedure result and add isOrganizationChoice flag
+         $trainingsWithOrg = collect($trainings)->map(function ($training) use ($organizationChoiceTrainingIds) {
              // The stored procedure returns 'organizationName', map it to multiple fields for compatibility
              if (isset($training->organizationName)) {
                  // Stored procedure already returns organizationName
@@ -143,6 +148,11 @@ class CareerRecommendationController extends Controller
                  $training->organizationName = 'Unknown';
                  $training->provider = 'Unknown';
              }
+             
+             // Check if this training is in organizationschoice table
+             $trainingId = $training->trainingID ?? $training->TrainingID ?? null;
+             $training->isOrganizationChoice = $trainingId && in_array($trainingId, $organizationChoiceTrainingIds);
+             
              return $training;
          });
  
@@ -179,8 +189,13 @@ class CareerRecommendationController extends Controller
          // Fetch recommended trainings (includes trainings for target career)
          $recommended_trainings = DB::select('SELECT * FROM sp_getrecommendedtrainings_bycareer(?)', [$careerID]);
          
-         // ✅ Map organization name from stored procedure result
-         $trainingsWithOrg = collect($recommended_trainings)->map(function ($training) {
+         // Get all training IDs that are in organizationschoice table
+         $organizationChoiceTrainingIds = DB::table('organizationschoice')
+             ->pluck('trainingID')
+             ->toArray();
+         
+         // ✅ Map organization name from stored procedure result and add isOrganizationChoice flag
+         $trainingsWithOrg = collect($recommended_trainings)->map(function ($training) use ($organizationChoiceTrainingIds) {
              // The stored procedure returns 'organizationName', map it to multiple fields for compatibility
              if (isset($training->organizationName)) {
                  // Stored procedure already returns organizationName
@@ -200,6 +215,10 @@ class CareerRecommendationController extends Controller
                  $training->organizationName = 'Unknown';
                  $training->provider = 'Unknown';
              }
+             
+             // Check if this training is in organizationschoice table
+             $trainingId = $training->trainingID ?? $training->TrainingID ?? null;
+             $training->isOrganizationChoice = $trainingId && in_array($trainingId, $organizationChoiceTrainingIds);
              
              return $training;
          });
