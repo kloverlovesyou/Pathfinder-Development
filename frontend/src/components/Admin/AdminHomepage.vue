@@ -13,6 +13,8 @@ const loadingRejected = ref(true);
 const rejectModal = ref(false);
 const rejectReason = ref("");
 const rejectOrgID = ref(null); // target organization being rejected
+const toastMessage = ref("");
+const toastType = ref("success"); // "success" or "error"
 
 // Open reject modal
 function openRejectModal(id) {
@@ -24,7 +26,7 @@ function openRejectModal(id) {
 // Submit rejection
 async function submitRejection() {
   if (!rejectReason.value.trim()) {
-    alert("Please enter a reason."); // or showToast
+    showToast("Please enter a reason for rejection.", "error"); // use toast instead of alert
     return;
   }
 
@@ -51,10 +53,10 @@ async function submitRejection() {
     rejectReason.value = "";
     rejectOrgID.value = null;
 
-    showToast("Organization rejected successfully.");
+    showToast("Organization rejected successfully.", "success");
   } catch (err) {
     console.error("Rejection failed:", err.response?.data || err.message);
-    showToast("Failed to reject organization.");
+    showToast("Failed to reject organization.", "error");
   }
 }
 
@@ -90,13 +92,34 @@ function openModal(org) {
 }
 
 // Approve Organization
+// Approve Organization
 async function acceptOrg(id) {
   try {
-    await axios.post(import.meta.env.VITE_API_BASE_URL + `/organization/${id}/approve`);
+    const res = await axios.post(
+      import.meta.env.VITE_API_BASE_URL + `/organization/${id}/approve`
+    );
+
+    // Remove approved org from the pending list
     organizations.value = organizations.value.filter((o) => o.organizationID !== id);
-    selectedOrg.value = null;
+
+    // Optionally, add to approvedOrganizations list immediately
+    const approvedOrg = res.data.organization; // adjust if your API returns the org details
+    if (approvedOrg) {
+      approvedOrganizations.value.push(approvedOrg);
+    }
+
+    // Close modal if open
+    if (selectedOrg.value?.organizationID === id) {
+      selectedOrg.value = null;
+    }
+
+    // Show success toast
+    showToast("Organization approved and email sent successfully!", "success");
   } catch (err) {
-    console.error("Approval failed:", err);
+    console.error("Approval failed:", err.response?.data || err.message);
+
+    // Show error toast
+    showToast("Failed to approve organization or send email.", "error");
   }
 }
 
@@ -399,6 +422,17 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+          <!-- Toast -->
+      <div
+        v-if="toastMessage"
+        :class="[
+          'fixed top-5 right-5 px-4 py-2 rounded shadow-md transition-all z-50',
+          toastType === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+        ]"
+      >
+        {{ toastMessage }}
+      </div>
   </div>
 </template>
 
