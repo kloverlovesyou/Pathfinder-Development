@@ -908,10 +908,6 @@ async function fetchRegionsPSGC() {
   }
 }
 
-// On mount, use PSGC API first
-onMounted(async () => {
-  await fetchRegionsPSGC();
-});
 
 // Philippines Location API - Using multiple reliable sources
 const PH_LOCATION_API_BASE = "https://raw.githubusercontent.com/iamkevinluke/philippines-regions-provinces-cities-municipalities-barangays/master";
@@ -1136,7 +1132,7 @@ function constructAddress() {
 
 // Fetch regions on component mount
 onMounted(async () => {
-  await fetchRegions();
+  await fetchRegionsPSGC();
 });
 </script>
 
