@@ -49,8 +49,7 @@ class Applicant extends Model
 	];
 
 	protected $fillable = [
-		'DisplayPicture_directory',
-		'displayPicture_directory', // backward compatibility
+		'displayPicture_directory', // actual database column (camelCase, quoted in PostgreSQL)
 		'FirstName',
 		'firstName', // backward compatibility
 		'MiddleName',
@@ -69,6 +68,22 @@ class Applicant extends Model
 		'email_verification_token',
 		'email_verified_at',
 	];
+
+	/**
+	 * Map DisplayPicture_directory to the actual database column
+	 * The database column is "displayPicture_directory" (camelCase, quoted in PostgreSQL)
+	 * This mutator handles when code tries to set DisplayPicture_directory (capital D and P)
+	 * or displaypicture_directory (all lowercase) - PHP method names are case-insensitive
+	 */
+	public function setDisplayPictureDirectoryAttribute($value)
+	{
+		$this->attributes['displayPicture_directory'] = $value;
+	}
+
+	public function getDisplayPictureDirectoryAttribute()
+	{
+		return $this->attributes['displayPicture_directory'] ?? null;
+	}
 
 	public function applications()
 	{

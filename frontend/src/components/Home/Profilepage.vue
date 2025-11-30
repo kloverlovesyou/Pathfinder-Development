@@ -24,7 +24,20 @@ const trainingActivities = ref([]);
 
 const filteredActivities = computed(() => {
   if (activeTab.value === "training") {
-    return trainingActivities.value;
+    // Sort trainings: certified trainings (with certificates) go to the bottom
+    const sortedTrainings = [...trainingActivities.value].sort((a, b) => {
+      const aHasCertificate = hasCertificate(a);
+      const bHasCertificate = hasCertificate(b);
+      
+      // If one has certificate and the other doesn't, certified one goes to bottom
+      if (aHasCertificate && !bHasCertificate) return 1;
+      if (!aHasCertificate && bHasCertificate) return -1;
+      
+      // If both have certificates or both don't, maintain original order
+      return 0;
+    });
+    
+    return sortedTrainings;
   }
   
   // Sort careers: those with interviewSchedule first
@@ -130,7 +143,7 @@ const TRAINING_STEPS = [
   { key: "registered", label: "Registered", dateField: "registeredDate" },
   { key: "ongoing", label: "Ongoing", dateField: "ongoingDate" },
   { key: "completed", label: "Completed", dateField: "completedDate" },
-  { key: "certified", label: "Certified", dateField: "certifiedDate" },
+  { key: "certified", label: "Certified", dateField: "certifiedDate", fallbackDateField: "certGivenDate" },
 ];
 
 function getStatusSteps(activity) {
@@ -241,6 +254,12 @@ function isStepActive(activity, step, stepIndex) {
     if (activeKeys) {
       return activeKeys.has(step.key);
     }
+  }
+
+  // For training activities: if download certificate button is enabled 
+  // (i.e., certificate is available), fill all status circles
+  if (activity.type === "training" && hasCertificate(activity)) {
+    return true;
   }
 
   const currentIndex = getCurrentStepIndex(activity);
@@ -671,6 +690,9 @@ function normalizeTraining(registration) {
     location: primary.location || registration.location || null,
     trainingLink: primary.trainingLink || registration.trainingLink || null,
     certGivenDate: registration.certGivenDate,
+    certifiedDate: registration.certifiedDate || registration.certGivenDate || null,
+    ongoingDate: registration.ongoingDate || null,
+    completedDate: registration.completedDate || null,
     certificate: registration.certificatePath,
     registeredDate:
       registration.registeredDate ||

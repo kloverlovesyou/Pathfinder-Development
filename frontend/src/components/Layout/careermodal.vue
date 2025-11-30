@@ -263,21 +263,53 @@ function viewPDF(event) {
   <div>
     <!-- Career Modal -->
     <dialog v-if="show" open class="modal sm:modal-middle">
-      <div class="modal-box max-w-3xl relative font-poppins" style="word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; max-width: 900px; width: min(95vw, 900px);">
-        <button class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
+      <div class="modal-box max-w-3xl relative font-poppins flex flex-col" style="word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; max-width: 900px; width: min(95vw, 900px); max-height: 90vh;">
+        <button class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2 z-10"
           @click="$emit('close')">
           ✕
         </button>
 
-        <h2 class="text-xl font-bold mb-2">{{ career.position }}</h2>
-        <p class="text-sm text-gray-600 mb-2">
-          Organization: {{ career.organizationName || career.organization || 'Unknown' }}
-        </p>
+        <div class="flex-1 overflow-y-auto pr-4">
+          <h2 class="text-xl font-bold mb-2">{{ career.position }}</h2>
+          <p class="text-sm text-gray-600 mb-2">
+            Organization: {{ career.organizationName || career.organization || 'Unknown' }}
+          </p>
 
-        <div class="my-4 flex justify-end gap-2">
+          <!-- Career Details -->
+          <div class="space-y-2 text-sm">
+            <p v-if="career.placeOfAssignment"><strong>Place of Assignment:</strong> {{ career.placeOfAssignment }}</p>
+            <p v-if="career.details || career.detailsAndInstructions" class="career-text-inline">
+              <strong>Details:</strong>
+              <span class="career-text-value">{{ career.details || career.detailsAndInstructions }}</span>
+            </p>
+            <p v-if="career.qualificationStandard" class="career-text-inline">
+              <strong>Qualification Standard:</strong>
+              <span class="career-text-value">{{ career.qualificationStandard }}</span>
+            </p>
+            <p v-if="career.postingDate"><strong>Posting Date:</strong> {{ formatDateTime(career.postingDate) }}</p>
+            <p>
+              <strong>Closing Date:</strong>
+              {{ formatDateTime(career.closingDate || career.deadlineOfSubmission) }}
+            </p>
+            <p v-if="career.trainingsAttendedPercentage !== null && career.trainingsAttendedPercentage !== undefined">
+              <strong>Trainings Attended Percentage:</strong> {{ career.trainingsAttendedPercentage }}%
+            </p>
+            <p v-if="career.pdf_directory">
+              <a 
+                href="#" 
+                @click="viewPDF" 
+                class="text-blue-600 hover:underline cursor-pointer ml-2"
+              >View Details
+              </a>
+            </p>
+          </div>
+        </div>
+
+        <!-- Buttons at bottom - full width -->
+        <div class="mt-4 pt-4 border-t border-gray-200 flex gap-2">
           <button
             v-if="!isApplied"
-            class="btn btn-sm bg-customButton text-white"
+            class="btn flex-1 bg-customButton text-white hover:bg-dark-slate"
             @click="openUploadModal"
           >
             Apply
@@ -285,7 +317,7 @@ function viewPDF(event) {
 
           <button
             v-else
-            class="btn btn-sm bg-gray-500 hover:bg-red-700 text-white flex items-center gap-2"
+            class="btn flex-1 bg-gray-500 hover:bg-red-700 text-white flex items-center justify-center gap-2"
             :disabled="unapplyLoading"
             @click="unapplyApplication"
           >
@@ -313,33 +345,6 @@ function viewPDF(event) {
             <span>{{ unapplyLoading ? "Processing" : "Unapply" }}</span>
           </button>
         </div>
-
-        <!-- Career Details -->
-        <p v-if="career.placeOfAssignment"><strong>Place of Assignment:</strong> {{ career.placeOfAssignment }}</p>
-        <p v-if="career.details || career.detailsAndInstructions" class="career-text-inline">
-          <strong>Details:</strong>
-          <span class="career-text-value">{{ career.details || career.detailsAndInstructions }}</span>
-        </p>
-        <p v-if="career.qualificationStandard" class="career-text-inline">
-          <strong>Qualification Standard:</strong>
-          <span class="career-text-value">{{ career.qualificationStandard }}</span>
-        </p>
-        <p v-if="career.postingDate"><strong>Posting Date:</strong> {{ formatDateTime(career.postingDate) }}</p>
-        <p>
-          <strong>Closing Date:</strong>
-          {{ formatDateTime(career.closingDate || career.deadlineOfSubmission) }}
-        </p>
-        <p v-if="career.trainingsAttendedPercentage !== null && career.trainingsAttendedPercentage !== undefined">
-          <strong>Trainings Attended Percentage:</strong> {{ career.trainingsAttendedPercentage }}%
-        </p>
-        <p v-if="career.pdf_directory">
-          <a 
-            href="#" 
-            @click="viewPDF" 
-            class="text-blue-600 hover:underline cursor-pointer ml-2"
-          >View Details
-          </a>
-        </p>
       </div>
     </dialog>
 
@@ -419,30 +424,5 @@ function viewPDF(event) {
   word-break: break-all;
   display: inline-block;
   max-width: 100%;
-}
-
-/* Career text inline format to prevent overlap */
-.career-text-inline {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 0.5rem;
-  margin: 0.5rem 0;
-  width: 100%;
-}
-
-.career-text-inline strong {
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.career-text-value {
-  flex: 1;
-  min-width: 0;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  word-break: break-word;
-  white-space: pre-wrap;
-  line-height: 1.6;
 }
 </style>

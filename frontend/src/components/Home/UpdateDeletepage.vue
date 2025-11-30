@@ -4,9 +4,7 @@ import axios from "axios";
 import { useRouter } from "vue-router";
 import { useActivityStore } from "@/stores/activityStore";
 import {
-  uploadImage,
   getImageUrl,
-  deleteStorageFile,
 } from "@/lib/supabase";
 
 const router = useRouter();
@@ -59,10 +57,8 @@ const showPasswordFields = reactive({
 
 const profilePreview = ref("");
 const profileImagePath = ref("");
-const avatarUploading = ref(false);
 
 const AVATAR_BUCKET = "Requirements";
-const AVATAR_FOLDER = "profile_picture_directory";
 
 if (typeof window !== "undefined") {
   const storedUrl = localStorage.getItem("profileAvatarUrl");
@@ -130,136 +126,6 @@ function applyUserAvatar(user) {
   }
 }
 
-async function handleProfileImageChange(event) {
-  const file = event.target?.files?.[0];
-  if (!file) return;
-
-  const validImageTypes = [
-    "image/jpeg",
-    "image/jpg",
-    "image/png",
-    "image/gif",
-    "image/webp",
-  ];
-  if (!validImageTypes.includes(file.type)) {
-    showToast("Please upload a valid image file (JPEG, PNG, GIF, WebP).", "error");
-    event.target.value = "";
-    return;
-  }
-
-  const MAX_SIZE = 5 * 1024 * 1024;
-  if (file.size > MAX_SIZE) {
-    showToast("Image is too large. Maximum size is 5MB.", "error");
-    event.target.value = "";
-    return;
-  }
-
-  const token = localStorage.getItem("token");
-  if (!token) {
-    showToast("You are not logged in.", "error");
-    event.target.value = "";
-    return;
-  }
-
-  // Sanitize filename to prevent path length issues
-  // Max path length is 255, folder is ~30 chars, timestamp is ~13, so filename should be max ~200
-  const originalName = file.name;
-  const fileExtension = originalName.substring(originalName.lastIndexOf('.'));
-  const baseName = originalName.substring(0, originalName.lastIndexOf('.')).replace(/[^a-zA-Z0-9._-]/g, '_');
-  const maxBaseNameLength = 180; // Leave room for folder, timestamp, and extension
-  const sanitizedBaseName = baseName.length > maxBaseNameLength 
-    ? baseName.substring(0, maxBaseNameLength) 
-    : baseName;
-  const sanitizedFileName = sanitizedBaseName + fileExtension;
-  
-  // Create a new File object with sanitized name
-  const sanitizedFile = new File([file], sanitizedFileName, { type: file.type });
-
-  avatarUploading.value = true;
-  const previousPath = profileImagePath.value;
-  let newPath = "";
-
-  try {
-    newPath = await uploadImage(sanitizedFile, AVATAR_BUCKET, AVATAR_FOLDER);
-    if (!newPath) {
-      showToast("Failed to upload image. Please try again.", "error");
-      return;
-    }
-
-    // Check if path is too long (backend max is 255 characters)
-    if (newPath.length > 255) {
-      showToast("Image path is too long. Please try again with a different image.", "error");
-      await deleteStorageFile(newPath, AVATAR_BUCKET);
-      return;
-    }
-
-    const response = await axios.put(
-      import.meta.env.VITE_API_BASE_URL + "/user",
-      { displayPicture_directory: newPath },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    profileImagePath.value = newPath;
-    const publicUrl = resolveAvatarUrl(newPath) || profilePreview.value;
-    profilePreview.value = publicUrl;
-    updateLocalAvatarStorage({ url: publicUrl, path: newPath });
-
-    const savedUserRaw = localStorage.getItem("user");
-    if (savedUserRaw) {
-      try {
-        const savedUser = JSON.parse(savedUserRaw);
-        savedUser.displayPicture_directory = newPath;
-        savedUser.DisplayPicture_directory = newPath;
-        savedUser.profilePicture = publicUrl;
-        localStorage.setItem("user", JSON.stringify(savedUser));
-      } catch (error) {
-        console.warn("Failed to update local user cache:", error);
-      }
-    }
-
-    window.dispatchEvent(
-      new CustomEvent("profile-avatar-updated", {
-        detail: { url: publicUrl, path: newPath },
-      })
-    );
-
-    showToast("Profile picture updated!", "success");
-
-    if (previousPath && previousPath !== newPath) {
-      await deleteStorageFile(previousPath, AVATAR_BUCKET);
-    }
-  } catch (error) {
-    console.error("Error updating profile picture:", error);
-    console.error("Error response:", error.response?.data);
-    console.error("Error status:", error.response?.status);
-    
-    // Show more detailed error message
-    let errorMessage = "Failed to update profile picture.";
-    if (error.response?.data?.message) {
-      errorMessage = error.response.data.message;
-    } else if (error.response?.data?.error) {
-      errorMessage = error.response.data.error;
-    } else if (error.response?.status === 500) {
-      errorMessage = "Server error. Please try again later or contact support.";
-    } else if (error.message) {
-      errorMessage = `Error: ${error.message}`;
-    }
-    
-    showToast(errorMessage, "error");
-    
-    // Clean up uploaded file if update failed
-    if (newPath) {
-      try {
-        await deleteStorageFile(newPath, AVATAR_BUCKET);
-      } catch (deleteError) {
-        console.warn("Failed to delete uploaded file:", deleteError);
-      }
-    }
-  } finally {
-    avatarUploading.value = false;
-    if (event.target) event.target.value = "";
-  }
-}
 
 onMounted(async () => {
   activityStore.fetchCounts();
@@ -268,6 +134,11 @@ onMounted(async () => {
     const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/user", {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
+    
+    // Apply user avatar (profile picture or initials)
+    if (res.data) {
+      applyUserAvatar(res.data);
+    }
 
     const user = res.data;
     console.log(form.value.newPassword, form.value.confirmPassword);
@@ -559,59 +430,17 @@ const logout = () => {
           <!-- FORM -->
           <form @submit.prevent="handleUpdate" class="space-y-4 pt-4">
 
-            <!-- Profile Avatar -->
+            <!-- Profile Avatar (Read-only) -->
             <div class="flex justify-center mb-6 lg:mb-12">
               <div class="flex flex-col items-center gap-3">
                 <div class="relative">
                   <img
                     :src="displayAvatar"
-                    alt="Profile preview"
+                    alt="Profile picture"
                     class="w-28 h-28 rounded-full object-cover border-4 border-white shadow"
+                    @error="profilePreview = fallbackAvatar"
                   />
-                  <label
-                    :class="[
-                      'absolute bottom-0 right-0 bg-customButton text-white p-2 rounded-full shadow transition',
-                      avatarUploading
-                        ? 'opacity-50 cursor-not-allowed'
-                        : 'hover:bg-dark-slate cursor-pointer',
-                    ]"
-                    title="Upload new profile picture"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      class="w-4 h-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M3 7h2l2-3h10l2 3h2a2 2 0 012 2v8a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z"
-                      />
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M12 15a3 3 0 110-6 3 3 0 010 6z"
-                      />
-                    </svg>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      class="hidden"
-                      :disabled="avatarUploading"
-                      @change="handleProfileImageChange"
-                    />
-                  </label>
                 </div>
-                <p class="text-sm text-gray-500 text-center">
-                  {{
-                    avatarUploading
-                      ? "Uploading..."
-                      : "Upload or change your profile picture"
-                  }}
-                </p>
               </div>
             </div>
 

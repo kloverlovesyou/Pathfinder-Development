@@ -256,67 +256,33 @@ function formatScheduleTime(schedule) {
       <button class="modal-close-btn" @click="$emit('close')">✕</button>
 
       <template v-if="training">
-        <!-- Training Title -->
-        <h3 class="modal-title">
-          {{ training.title || "Untitled Training" }}
-        </h3>
+        <div class="flex-1 overflow-y-auto pr-4">
+          <!-- Training Title -->
+          <h3 class="modal-title">
+            {{ training.title || "Untitled Training" }}
+          </h3>
 
-        <!-- Organization -->
-        <p class="training-info">
-          <strong>Organization:</strong>
-          {{
-            training.organization?.name ||
-            training.organizationName ||
-            "Unknown"
-          }}
-        </p>
-
-        <!-- Description -->
-        <p class="training-info">
-          <strong>Description:</strong> {{ training.description }}
-        </p>
-
-        <div class="my-4 flex flex-col items-end gap-2">
-          <button
-            class="btn btn-sm text-white"
-            :class="isRegistered ? 'bg-gray-500' : 'bg-customButton'"
-            @click="handleRegisterClick"
-            :disabled="!canToggleRegistration"
-          >
-            <svg
-              v-if="isLoading"
-              class="animate-spin h-4 w-4 text-white"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              ></circle>
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
-              ></path>
-            </svg>
-            <span v-else>{{ isRegistered ? "Unregister" : "Register" }}</span>
-          </button>
-          <p v-if="actionError" class="text-xs text-red-500">
-            {{ actionError }}
+          <!-- Organization -->
+          <p class="training-info">
+            <strong>Organization:</strong>
+            {{
+              training.organization?.name ||
+              training.organizationName ||
+              "Unknown"
+            }}
           </p>
-        </div>
-        <!-- Schedule/s Label -->
-        <div class="training-info">
-          <strong>Schedule/s:</strong>
-        </div>
 
-        <!-- Schedules Display (Card Style) -->
-        <div class="schedules-container">
+          <!-- Description -->
+          <p class="training-info">
+            <strong>Description:</strong> {{ training.description }}
+          </p>
+          <!-- Schedule/s Label -->
+          <div class="training-info">
+            <strong>Schedule/s:</strong>
+          </div>
+
+          <!-- Schedules Display (Card Style) -->
+          <div class="schedules-container">
           <!-- Multiple Schedules -->
           <div
             v-if="training.schedules && training.schedules.length > 0"
@@ -542,11 +508,45 @@ function formatScheduleTime(schedule) {
           <div v-else class="schedule-card">
             <p class="text-gray-500">No schedule set</p>
           </div>
+          </div>
         </div>
-
-        <!-- Register/Unregister Button -->
-        
       </template>
+
+      <!-- Buttons at bottom - full width -->
+      <div class="mt-4 pt-4 border-t border-gray-200 flex flex-col gap-2">
+        <button
+          class="btn w-full text-white flex items-center justify-center gap-2"
+          :class="isRegistered ? 'bg-gray-500' : 'bg-customButton'"
+          @click="handleRegisterClick"
+          :disabled="!canToggleRegistration"
+        >
+          <svg
+            v-if="isLoading"
+            class="animate-spin h-4 w-4 text-white"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
+            ></path>
+          </svg>
+          <span v-else>{{ isRegistered ? "Unregister" : "Register" }}</span>
+        </button>
+        <p v-if="actionError" class="text-xs text-red-500 text-center">
+          {{ actionError }}
+        </p>
+      </div>
     </div>
 
     <!-- Conflict Confirmation Dialog -->
@@ -633,7 +633,6 @@ function formatScheduleTime(schedule) {
   width: min(95vw, 900px);
   max-width: 900px;
   max-height: 90vh;
-  overflow-y: auto;
   position: relative;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
   animation: fadeIn 0.25s ease;
@@ -641,6 +640,8 @@ function formatScheduleTime(schedule) {
   word-wrap: break-word;
   overflow-wrap: break-word;
   word-break: break-word;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes fadeIn {

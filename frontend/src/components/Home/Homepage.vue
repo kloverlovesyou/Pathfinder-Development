@@ -24,6 +24,7 @@ const selectedPost = ref(null);
 const posts = ref([]);
 const myApplications = ref(new Set());
 const myRegistrations = ref(new Set());
+const myRegistrationsData = ref([]); // Store full registration data
 const toasts = ref([]);
 
 const events = ref({});
@@ -49,6 +50,11 @@ const filteredCareers = computed(() => {
   return allCareers.value.filter((career) =>
     career.position?.toLowerCase().includes(query)
   );
+});
+
+// Computed property for organization choice progress
+const orgChoiceProgress = computed(() => {
+  return calculateOrgChoicePercentage();
 });
 
 const selectedTrainingRegistered = computed(() =>
@@ -116,12 +122,14 @@ async function fetchMyRegistrations() {
         headers: { Authorization: `Bearer ${token}` },
       }
     );
+    myRegistrationsData.value = res.data || []; // Store full registration data
     myRegistrations.value = new Set(res.data.map((r) => r.trainingID));
     res.data.forEach((r) => (registeredPosts[r.trainingID] = true));
   } catch (err) {
     console.error(err);
   }
 }
+
 
 
 // ------------------ MODALS ------------------
@@ -137,7 +145,19 @@ async function openCareerModal(career) {
     //store main career + recommended trainings
     selectedCareerDetails.value = normalizeCareerDetails(res.data?.career);
     const rawTrainings = res.data.recommended_trainings || [];
+    // Debug: Check what the API is returning
+    console.log("API Response - recommended_trainings:", rawTrainings);
+    rawTrainings.forEach((t, idx) => {
+      console.log(`Training ${idx}:`, {
+        title: t.title || t.trainingTitle,
+        trainingID: t.trainingID || t.TrainingID,
+        isOrganizationChoice: t.isOrganizationChoice,
+        IsOrganizationChoice: t.IsOrganizationChoice,
+        allKeys: Object.keys(t)
+      });
+    });
     recommendedTrainings.value = aggregateRecommendedTrainings(rawTrainings);
+    console.log("After aggregation:", recommendedTrainings.value);
     if (!selectedCareerDetails.value) {
       addToast("Career details not found.", "accent");
       return;
@@ -598,6 +618,72 @@ function isTrainingRegistered(training) {
   );
 }
 
+// Check if a training is in the orgschoice table
+// The backend CareerRecommendationController already sets isOrganizationChoice flag
+// by checking if the training ID exists in the organizationschoice table
+function isTrainingOrgChoice(training) {
+  if (!training) return false;
+  // Use the flag set by the backend, matching OrganizationTrainings.vue approach
+  // Handle both case variations and ensure boolean conversion
+  const result = Boolean(training.isOrganizationChoice || training.IsOrganizationChoice);
+  // Debug: Log when checking
+  if (result) {
+    console.log("✅ Training IS org choice:", training.title, training.trainingID, training.isOrganizationChoice);
+  }
+  return result;
+}
+
+// Calculate organization choice percentage for a career
+function calculateOrgChoicePercentage() {
+  if (!recommendedTrainings.value || recommendedTrainings.value.length === 0) {
+    return null;
+  }
+
+  // Get all organization choice trainings for this career
+  const orgChoiceTrainings = recommendedTrainings.value.filter((training) => 
+    isTrainingOrgChoice(training)
+  );
+
+  if (orgChoiceTrainings.length === 0) {
+    return null;
+  }
+
+  // Count completed org choice trainings
+  // A training is considered completed if the user has registered and attended it
+  const completedOrgChoiceTrainings = orgChoiceTrainings.filter((training) => {
+    const trainingID = resolveTrainingId(training);
+    if (!trainingID) return false;
+
+    // Find registration for this training
+    const registration = myRegistrationsData.value.find(
+      (reg) => Number(reg.trainingID) === Number(trainingID)
+    );
+
+    if (!registration) return false;
+
+    // Check if training is completed (attended status or has certificate)
+    const status = (registration.registrationStatus || "").toLowerCase();
+    const hasCertificate = Boolean(
+      registration.certificatePath || 
+      registration.certGivenDate || 
+      registration.certifiedDate
+    );
+
+    return status.includes("attended") || hasCertificate;
+  });
+
+  // Calculate percentage
+  const percentage = Math.round(
+    (completedOrgChoiceTrainings.length / orgChoiceTrainings.length) * 100
+  );
+
+  return {
+    completed: completedOrgChoiceTrainings.length,
+    total: orgChoiceTrainings.length,
+    percentage: percentage
+  };
+}
+
 function formatScheduleFull(schedule) {
   if (!schedule) return "No schedule set";
   try {
@@ -679,6 +765,13 @@ function aggregateRecommendedTrainings(trainings) {
 
     let entry = map.get(id);
     if (!entry) {
+      // Backend already sets isOrganizationChoice by checking organizationschoice table
+      // Preserve it BEFORE spreading item to ensure it's not overwritten
+      const orgChoiceFlag = Boolean(
+        item.isOrganizationChoice !== undefined 
+          ? item.isOrganizationChoice 
+          : (item.IsOrganizationChoice !== undefined ? item.IsOrganizationChoice : false)
+      );
       entry = {
         ...item,
         trainingID: resolveTrainingId(item) ?? id,
@@ -691,8 +784,10 @@ function aggregateRecommendedTrainings(trainings) {
           "",
         provider: item.provider || item.organizationName || item.organization || "",
         schedules: Array.isArray(item.schedules) ? [...item.schedules] : [],
-        isOrganizationChoice: item.isOrganizationChoice || false,
+        // Explicitly set the flag AFTER spread to ensure it's preserved
+        isOrganizationChoice: orgChoiceFlag,
       };
+      console.log("Created entry for training:", entry.title, "isOrganizationChoice:", entry.isOrganizationChoice, "from item:", item.isOrganizationChoice);
       map.set(id, entry);
     } else {
       entry.description = entry.description || item.description || "";
@@ -704,7 +799,12 @@ function aggregateRecommendedTrainings(trainings) {
         "";
       entry.provider = entry.provider || item.provider;
       // Preserve isOrganizationChoice flag - if any item has it as true, keep it true
-      if (item.isOrganizationChoice) {
+      // Backend sets this flag by checking if training ID exists in organizationschoice table
+      // Check both possible case variations and handle truthy values (1, true, "1", etc.)
+      const itemIsOrgChoice = item.isOrganizationChoice !== undefined 
+        ? Boolean(item.isOrganizationChoice) 
+        : (item.IsOrganizationChoice !== undefined ? Boolean(item.IsOrganizationChoice) : false);
+      if (itemIsOrgChoice) {
         entry.isOrganizationChoice = true;
       }
       if (Array.isArray(item.schedules)) {
@@ -896,72 +996,28 @@ onMounted(async () => {
       <div class="training-modal-box">
         <button class="training-modal-close" @click="closeTrainingModal">✕</button>
 
-        <h2 class="training-modal-title">
-          {{ selectedTraining.title || "Untitled Training" }}
-        </h2>
-        <p class="training-modal-info">
-          <strong>Organization:</strong>
-          {{
-            selectedTraining.organization?.name ||
-            selectedTraining.organizationName ||
-            selectedTraining.provider ||
-            selectedTraining.organization ||
-            "Unknown"
-          }}
-        </p>
-        <p class="training-modal-info">
-          <strong>Description:</strong>
-          {{ selectedTraining.description || "No description provided." }}
-        </p>
-
-        <div class="training-modal-actions">
-          <button
-            class="btn btn-sm text-white flex items-center gap-2"
-            :class="
-              selectedTrainingRegistered
-                ? 'bg-gray-500 hover:bg-gray-600'
-                : 'bg-customButton hover:bg-dark-slate'
-            "
-            @click="
-              selectedTrainingRegistered
-                ? unregisterFromTraining(selectedTraining)
-                : registerForTraining(selectedTraining)
-            "
-            :disabled="trainingActionLoading"
-          >
-            <svg
-              v-if="trainingActionLoading"
-              class="animate-spin h-4 w-4 text-white"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              ></circle>
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
-              ></path>
-            </svg>
-            <span>
-              {{ selectedTrainingRegistered ? "Unregister" : "Register" }}
-            </span>
-          </button>
-          <p v-if="trainingActionError" class="training-modal-error">
-            {{ trainingActionError }}
+        <div class="flex-1 overflow-y-auto pr-4">
+          <h2 class="training-modal-title">
+            {{ selectedTraining.title || "Untitled Training" }}
+          </h2>
+          <p class="training-modal-info">
+            <strong>Organization:</strong>
+            {{
+              selectedTraining.organization?.name ||
+              selectedTraining.organizationName ||
+              selectedTraining.provider ||
+              selectedTraining.organization ||
+              "Unknown"
+            }}
           </p>
-        </div>
+          <p class="training-modal-info">
+            <strong>Description:</strong>
+            {{ selectedTraining.description || "No description provided." }}
+          </p>
 
-        <div class="training-modal-section-title">Schedule/s</div>
+          <div class="training-modal-section-title">Schedule/s</div>
 
-        <div class="training-schedules-container">
+          <div class="training-schedules-container">
           <template v-if="selectedTraining?.schedules?.length">
             <div class="training-schedules-grid">
               <div
@@ -1195,6 +1251,53 @@ onMounted(async () => {
           <div v-else class="training-schedule-card training-schedule-empty">
             No schedule set.
           </div>
+          </div>
+        </div>
+
+        <!-- Button at bottom - full width -->
+        <div class="mt-4 pt-4 border-t border-gray-300 flex flex-col gap-2">
+          <button
+            class="btn w-full text-white flex items-center justify-center gap-2"
+            :class="
+              selectedTrainingRegistered
+                ? 'bg-gray-500 hover:bg-gray-600'
+                : 'bg-customButton hover:bg-dark-slate'
+            "
+            @click="
+              selectedTrainingRegistered
+                ? unregisterFromTraining(selectedTraining)
+                : registerForTraining(selectedTraining)
+            "
+            :disabled="trainingActionLoading"
+          >
+            <svg
+              v-if="trainingActionLoading"
+              class="animate-spin h-4 w-4 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
+              ></path>
+            </svg>
+            <span>
+              {{ selectedTrainingRegistered ? "Unregister" : "Register" }}
+            </span>
+          </button>
+          <p v-if="trainingActionError" class="training-modal-error text-center">
+            {{ trainingActionError }}
+          </p>
         </div>
       </div>
     </div>
@@ -1217,17 +1320,6 @@ onMounted(async () => {
           <p class="text-sm text-gray-400 mb-2">
             Organization: {{ selectedCareerDetails.organization }}
           </p>
-
-          <div class="my-4 flex justify-end gap-2">
-            <button v-if="!myApplications.has(selectedCareerDetails.careerID)"
-              class="btn btn-sm bg-blue-600 text-white hover:bg-blue-700"
-              @click="openApplyModal(selectedCareerDetails)">
-              APPLY
-            </button>
-            <button v-else class="btn btn-sm bg-gray-500 text-white" @click="cancelApplication(selectedCareerDetails)">
-              Cancel Application
-            </button>
-          </div>
 
           <!-- Career Details -->
           <div class="space-y-2 text-sm">
@@ -1260,6 +1352,11 @@ onMounted(async () => {
               <strong>Training Match:</strong>
               {{ selectedCareerDetails.trainingsAttendedPercentage }}%
             </p>
+            <p v-if="orgChoiceProgress" class="text-green-600">
+              <strong class="text-green-600">Organization Choice Training Progress:</strong>
+              {{ orgChoiceProgress.completed }}/{{ orgChoiceProgress.total }} 
+              ({{ orgChoiceProgress.percentage }}%)
+            </p>
             <p v-if="selectedCareerDetails.pdf_directory">
               <button class="text-blue-400 underline hover:text-blue-200" @click.prevent="viewCareerPDF">
                 Attachments
@@ -1267,8 +1364,20 @@ onMounted(async () => {
             </p>
           </div>
 
+          <!-- Button on top of Recommended Trainings - full width -->
+          <div class="mt-6 mb-4">
+            <button v-if="!myApplications.has(selectedCareerDetails.careerID)"
+              class="btn w-full bg-blue-600 text-white hover:bg-blue-700"
+              @click="openApplyModal(selectedCareerDetails)">
+              APPLY
+            </button>
+            <button v-else class="btn w-full bg-gray-500 text-white hover:bg-gray-600" @click="cancelApplication(selectedCareerDetails)">
+              Cancel Application
+            </button>
+          </div>
+
           <!-- Recommended Trainings -->
-          <div class="mt-6">
+          <div>
             <h3 class="text-base font-semibold mb-3">Recommended Trainings</h3>
             <div v-if="recommendedTrainings.length === 0" class="text-gray-400 text-sm">
               No recommended trainings available.
@@ -1285,7 +1394,7 @@ onMounted(async () => {
                     {{ training.title }}
                   </h4>
                   <span
-                    v-if="training.isOrganizationChoice"
+                    v-if="isTrainingOrgChoice(training)"
                     class="text-[10px] text-green-600 font-semibold px-2 py-0.5 bg-green-100 rounded whitespace-nowrap"
                   >
                     Org's choice
@@ -1308,15 +1417,15 @@ onMounted(async () => {
 
     <!-- Training Details Modal -->
     <dialog v-if="showTrainingModal && selectedTraining" open class="modal sm:modal-middle">
-      <div class="modal-box max-w-3xl relative font-poppins bg-gray-800 text-white">
+      <div class="modal-box max-w-3xl relative font-poppins bg-gray-800 text-white flex flex-col" style="max-height: 90vh;">
         <!-- Close button -->
-        <button class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2 text-white"
+        <button class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2 text-white z-10"
           @click="closeTrainingModal">
           ✕
         </button>
 
         <!-- Training Details -->
-        <div>
+        <div class="flex-1 overflow-y-auto pr-4">
           <h2 class="text-xl font-bold mb-2">{{ selectedTraining.title }}</h2>
           <p class="text-sm text-gray-400 mb-2">
             Organization:
@@ -1327,17 +1436,6 @@ onMounted(async () => {
               "Unknown"
             }}
           </p>
-
-          <div class="my-4 flex justify-end gap-2">
-            <button v-if="!myRegistrations.has(selectedTraining.trainingID)"
-              class="btn btn-sm bg-blue-600 text-white hover:bg-blue-700"
-              @click="registerForTraining(selectedTraining)">
-              REGISTER
-            </button>
-            <button v-else class="btn btn-sm bg-gray-500 text-white" @click="unregisterFromTraining(selectedTraining)">
-              Unregister
-            </button>
-          </div>
 
           <!-- Divider -->
           <div class="divider my-4"></div>
@@ -1363,6 +1461,18 @@ onMounted(async () => {
               <strong>Description:</strong> {{ selectedTraining.description }}
             </p>
           </div>
+        </div>
+
+        <!-- Button at bottom - full width -->
+        <div class="mt-4 pt-4 border-t border-gray-600">
+          <button v-if="!myRegistrations.has(selectedTraining.trainingID)"
+            class="btn w-full bg-blue-600 text-white hover:bg-blue-700"
+            @click="registerForTraining(selectedTraining)">
+            REGISTER
+          </button>
+          <button v-else class="btn w-full bg-gray-500 text-white hover:bg-gray-600" @click="unregisterFromTraining(selectedTraining)">
+            Unregister
+          </button>
         </div>
       </div>
     </dialog>
@@ -1509,11 +1619,12 @@ onMounted(async () => {
   color: #1f2937;
   width: min(95vw, 900px);
   max-height: 90vh;
-  overflow-y: auto;
   border-radius: 1rem;
   padding: 2rem;
   position: relative;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
 }
 
 .training-modal-close {

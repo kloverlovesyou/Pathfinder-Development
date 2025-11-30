@@ -6,6 +6,13 @@
       :class="[
         'fixed h-screen top-0 left-0 overflow-y-auto bg-dark-slate text-white transition-all duration-300 flex flex-col z-50',
         isExpanded ? 'w-72 px-4' : 'w-16 items-center',
+        // On mobile, hide sidebar when collapsed, show when expanded
+        // On desktop (md+), always show (translate-x-0)
+        // On mobile, show only when expanded
+        {
+          'translate-x-0': isExpanded,
+          '-translate-x-full md:translate-x-0': !isExpanded,
+        }
       ]"
     >
       <!-- Menu Button -->
