@@ -119,6 +119,7 @@
           />
         </div>
 
+        <!-- Address Fields - Segmented Dropdowns (shown when API works) -->
         <template v-if="!apiFailed">
           <div class="form-control mb-4">
             <label class="label">
@@ -210,85 +211,23 @@
           </div>
         </template>
 
-        <!-- Fallback: Segmented dropdowns using philippine-location-json-for-geer -->
-        <template v-else>
-          <div class="form-control mb-4">
-            <label class="label">
-              <span class="label-text text-sm font-medium text-gray-700">Region*</span>
-            </label>
-            <select class="select w-full bg-gray-100" v-model="form.region" @change="onRegionChangeFallback">
-              <option value="" disabled>Select Region</option>
-              <option v-for="region in regions" :key="region.psgc_code" :value="region.psgc_code">
-                {{ region.name }}
-              </option>
-            </select>
-          </div>`
-
-          <div class="form-control mb-4">
-            <label class="label">
-              <span class="label-text text-sm font-medium text-gray-700">Province*</span>
-            </label>
-            <select
-              class="select w-full bg-gray-100"
-              v-model="form.province"
-              @change="onProvinceChangeFallback"
-              :disabled="!form.region"
-            >
-              <option value="" disabled>{{ !form.region ? 'Select Region first' : 'Select Province' }}</option>
-              <option v-for="province in provinces" :key="province.psgc_code" :value="province.psgc_code">
-                {{ province.name }}
-              </option>
-            </select>
-          </div>
-
-          <div class="form-control mb-4">
-            <label class="label">
-              <span class="label-text text-sm font-medium text-gray-700">City/Municipality*</span>
-            </label>
-            <select
-              class="select w-full bg-gray-100"
-              v-model="form.city"
-              @change="onCityChangeFallback"
-              :disabled="!form.province"
-            >
-              <option value="" disabled>{{ !form.province ? 'Select Province first' : 'Select City/Municipality' }}</option>
-              <option v-for="city in cities" :key="city.psgc_code" :value="city.psgc_code">
-                {{ city.name }}
-              </option>
-            </select>
-          </div>
-
-          <div class="form-control mb-4">
-            <label class="label">
-              <span class="label-text text-sm font-medium text-gray-700">Barangay*</span>
-            </label>
-            <select
-              class="select w-full bg-gray-100"
-              v-model="form.barangay"
-              :disabled="!form.city"
-            >
-              <option value="" disabled>{{ !form.city ? 'Select City/Municipality first' : 'Select Barangay' }}</option>
-              <option v-for="barangay in barangays" :key="barangay.psgc_code" :value="barangay.psgc_code">
-                {{ barangay.name }}
-              </option>
-            </select>
-          </div>
-
-          <div class="form-control mb-4">
-            <label class="label">
-              <span class="label-text text-sm font-medium text-gray-700">Street Address (Optional)</span>
-            </label>
-            <input
-              class="input w-full bg-gray-100"
-              type="text"
-              placeholder="House/Building Number, Street Name"
-              v-model="form.streetAddress"
-            />
-            <p class="text-xs text-gray-500 mt-1">
-              Location API is unavailable. Using fallback data from philippine-location-json-for-geer.
-            </p>
-          </div>
-        </template>
+        <!-- Fallback: Manual address input if API fails -->
+        <div v-else class="form-control mb-4">
+          <label class="label">
+            <span class="label-text text-sm font-medium text-gray-700">Location*</span>
+          </label>
+          <input
+            class="input w-full bg-gray-100"
+            type="text"
+            required
+            placeholder="Enter your complete address"
+            name="location"
+            v-model="form.location"
+          />
+          <p class="text-xs text-gray-500 mt-1">
+            Location API is unavailable. Please enter your full address manually.
+          </p>
+        </div>
 
         <div class="form-control mb-4">
           <label class="label">
@@ -685,9 +624,6 @@ import { useRouter } from "vue-router";
 import api from "../../composables/api.js";
 import { uploadImage } from "../../lib/supabase.js";
 
-import phil from "philippine-location-json-for-geer";
-const { regions: regionsData, getProvincesByRegion, getCityMunByProvince, getBarangayByMun } = phil;
-
 const router = useRouter();
 
 const form = ref({
@@ -717,9 +653,6 @@ const loadingCities = ref(false);
 const loadingBarangays = ref(false);
 const apiFailed = ref(false);
 
-// Fallback using philippine-location-json-for-geer
-const usePhilFallback = ref(false);
-
 const logoFile = ref(null);
 const logoPreview = ref(null);
 const logoError = ref("");
@@ -732,13 +665,13 @@ const showSuccessModal = ref(false);
 const registrationResponse = ref(null);
 const registeredEmail = ref("");
 
-// --- Logo handling functions remain unchanged ---
 const handleLogoUpload = async (event) => {
   const file = event?.target?.files?.[0];
   if (!file) return;
 
   logoError.value = "";
 
+  // Validate file type
   const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
   if (!validImageTypes.includes(file.type)) {
     logoError.value = "Please upload a valid image file (JPEG, PNG, GIF, or WebP).";
@@ -746,7 +679,8 @@ const handleLogoUpload = async (event) => {
     return;
   }
 
-  const MAX_SIZE = 5 * 1024 * 1024;
+  // Validate file size (5MB max)
+  const MAX_SIZE = 5 * 1024 * 1024; // 5MB
   if (file.size > MAX_SIZE) {
     logoError.value = "Image is too large. Maximum size is 5MB.";
     event.target.value = "";
@@ -755,6 +689,7 @@ const handleLogoUpload = async (event) => {
 
   logoFile.value = file;
 
+  // Create preview
   const reader = new FileReader();
   reader.onload = (e) => {
     logoPreview.value = e.target.result;
@@ -766,22 +701,30 @@ const removeLogo = () => {
   logoFile.value = null;
   logoPreview.value = null;
   logoError.value = "";
-  if (logoInput.value) logoInput.value.value = "";
+  if (logoInput.value) {
+    logoInput.value.value = "";
+  }
   form.value.logoPath = "";
 };
 
-// --- Registration function remains unchanged ---
 const handleSubmit = async () => {
-  if (!termsAccepted.value) return;
-  if (form.value.password !== form.value.confirmPassword) return;
+  if (!termsAccepted.value) {
+    return;
+  }
+  if (form.value.password !== form.value.confirmPassword) {
+    return;
+  }
 
+  // Validate address fields
   if (!apiFailed.value) {
     if (!form.value.region || !form.value.province || !form.value.city || !form.value.barangay) {
       alert("Please complete all address fields (Region, Province, City/Municipality, and Barangay).");
       return;
     }
+    // Construct full address from selected fields
     form.value.location = constructAddress();
   } else {
+    // If API failed, use manual address input
     if (!form.value.location || form.value.location.trim() === "") {
       alert("Please enter your complete address.");
       return;
@@ -789,13 +732,15 @@ const handleSubmit = async () => {
   }
 
   try {
+    // Upload logo if provided
     if (logoFile.value) {
       logoUploading.value = true;
       logoError.value = "";
       try {
         const logoPath = await uploadImage(logoFile.value, "Requirements", "org_logo_directory");
-        if (logoPath) form.value.logoPath = logoPath;
-        else {
+        if (logoPath) {
+          form.value.logoPath = logoPath;
+        } else {
           logoError.value = "Failed to upload logo. Please try again.";
           logoUploading.value = false;
           return;
@@ -811,16 +756,34 @@ const handleSubmit = async () => {
     }
 
     const { confirmPassword, ...payload } = form.value;
-    const response = await axios.post(import.meta.env.VITE_API_BASE_URL + "/organization", payload);
+    const response = await axios.post(
+      import.meta.env.VITE_API_BASE_URL + "/organization",
+      payload
+    );
 
+    console.log("Registration response:", response);
+    console.log("Response status:", response.status);
+    console.log("Response data:", response.data);
+
+    // Store registration response (handle both direct data and nested organization property)
     registrationResponse.value = response.data;
-    if (response.data.verification_url) registrationResponse.value.verification_url = response.data.verification_url;
+    // Extract verification_url if it exists in the response
+    if (response.data.verification_url) {
+      registrationResponse.value.verification_url =
+        response.data.verification_url;
+    }
     registeredEmail.value = form.value.emailAddress;
+
+    // ✅ Show email verification modal
+    console.log("Setting showSuccessModal to true");
     showSuccessModal.value = true;
+    console.log("showSuccessModal value:", showSuccessModal.value);
 
+    // Force Vue to update
     await nextTick();
+    console.log("After nextTick, showSuccessModal:", showSuccessModal.value);
 
-    // Clear form
+    // ✅ Clear form
     form.value = {
       name: "",
       region: "",
@@ -844,7 +807,61 @@ const handleSubmit = async () => {
     termsAccepted.value = false;
   } catch (error) {
     console.error("Registration error:", error);
-    alert(error.response?.data?.message || "Registration failed. Please try again.");
+    console.error("Error response:", error.response);
+    console.error("Error data:", error.response?.data);
+
+    // Check if it's actually a success (201 status) but axios is treating it as error
+    if (
+      error.response?.status === 201 ||
+      (error.response?.status >= 200 && error.response?.status < 300)
+    ) {
+      // Registration actually succeeded
+      registrationResponse.value =
+        error.response.data.organization || error.response.data;
+      registeredEmail.value = form.value.emailAddress;
+      showSuccessModal.value = true;
+
+      // Clear form
+      form.value = {
+        name: "",
+        region: "",
+        province: "",
+        city: "",
+        barangay: "",
+        streetAddress: "",
+        location: "",
+        websiteURL: "",
+        emailAddress: "",
+        phoneNumber: "",
+        password: "",
+        confirmPassword: "",
+        logoPath: "",
+      };
+      regions.value = [];
+      provinces.value = [];
+      cities.value = [];
+      barangays.value = [];
+      removeLogo();
+      termsAccepted.value = false;
+      return;
+    }
+
+    // Show validation errors to user
+    if (error.response?.status === 422 && error.response?.data?.errors) {
+      const errors = error.response.data.errors;
+      let errorMessage = "Validation errors:\n";
+
+      Object.keys(errors).forEach((key) => {
+        errorMessage += `${key}: ${errors[key].join(", ")}\n`;
+      });
+
+      alert(errorMessage);
+    } else {
+      alert(
+        error.response?.data?.message ||
+          "Registration failed. Please try again."
+      );
+    }
   }
 };
 
@@ -855,77 +872,247 @@ const goToLogin = () => {
 
 const copyVerificationLink = () => {
   if (registrationResponse.value?.verification_url) {
-    navigator.clipboard.writeText(registrationResponse.value.verification_url)
-      .then(() => alert("Verification link copied to clipboard!"))
-      .catch(() => alert("Failed to copy link. Copy manually: " + registrationResponse.value.verification_url));
+    navigator.clipboard
+      .writeText(registrationResponse.value.verification_url)
+      .then(() => {
+        alert("Verification link copied to clipboard!");
+      })
+      .catch(() => {
+        alert(
+          "Failed to copy link. Please copy manually:\n" +
+            registrationResponse.value.verification_url
+        );
+      });
   }
 };
 
 const showPassword = ref(false);
 const showConfirm = ref(false);
 
-// --- Region/Province/City/Barangay using phil as fallback ---
-async function loadRegionsFallback() {
-  regions.value = regionsData.map(r => ({ psgc_code: r.code, name: r.name }));
-  usePhilFallback.value = true;
+// Philippines Location API - Using multiple reliable sources
+const PH_LOCATION_API_BASE = "https://raw.githubusercontent.com/iamkevinluke/philippines-regions-provinces-cities-municipalities-barangays/master";
+
+// Fetch regions on mount
+async function fetchRegions() {
+  loadingRegions.value = true;
+  try {
+    // Try primary source: iamkevinluke's repository
+    const response = await axios.get(`${PH_LOCATION_API_BASE}/regions.json`);
+    regions.value = (response.data || []).map(region => ({
+      psgc_code: region.code || region.psgc_code || region.id || region.region_code,
+      name: region.name || region.region_name || region.regionName
+    }));
+  } catch (error) {
+    console.error("Error fetching regions:", error);
+    // Fallback 1: Try alternative GitHub repository
+    try {
+      const fallbackResponse = await axios.get("https://raw.githubusercontent.com/simonbengtsson/jsondata/master/philippines/regions.json");
+      regions.value = (fallbackResponse.data || []).map(region => ({
+        psgc_code: region.code || region.id,
+        name: region.name
+      }));
+    } catch (fallbackError1) {
+      console.error("Error fetching regions from fallback 1:", fallbackError1);
+      // Fallback 2: Try PSGC API
+      try {
+        const fallbackResponse2 = await axios.get("https://psgc.gitlab.io/api/regions.json");
+        regions.value = (fallbackResponse2.data || []).map(region => ({
+          psgc_code: region.code || region.psgc_code,
+          name: region.name
+        }));
+      } catch (fallbackError2) {
+        console.error("Error fetching regions from all sources:", fallbackError2);
+        // Last resort: Use a minimal hardcoded list of major regions
+        regions.value = [
+          { psgc_code: "010000000", name: "Ilocos Region (Region I)" },
+          { psgc_code: "020000000", name: "Cagayan Valley (Region II)" },
+          { psgc_code: "030000000", name: "Central Luzon (Region III)" },
+          { psgc_code: "040000000", name: "CALABARZON (Region IV-A)" },
+          { psgc_code: "050000000", name: "MIMAROPA (Region IV-B)" },
+          { psgc_code: "060000000", name: "Bicol Region (Region V)" },
+          { psgc_code: "070000000", name: "Western Visayas (Region VI)" },
+          { psgc_code: "080000000", name: "Central Visayas (Region VII)" },
+          { psgc_code: "090000000", name: "Eastern Visayas (Region VIII)" },
+          { psgc_code: "100000000", name: "Zamboanga Peninsula (Region IX)" },
+          { psgc_code: "110000000", name: "Northern Mindanao (Region X)" },
+          { psgc_code: "120000000", name: "Davao Region (Region XI)" },
+          { psgc_code: "130000000", name: "SOCCSKSARGEN (Region XII)" },
+          { psgc_code: "140000000", name: "Caraga (Region XIII)" },
+          { psgc_code: "150000000", name: "Bangsamoro (BARMM)" },
+          { psgc_code: "160000000", name: "Cordillera Administrative Region (CAR)" },
+          { psgc_code: "170000000", name: "National Capital Region (NCR)" }
+        ];
+        // If even hardcoded list fails to load, show manual input
+        if (regions.value.length === 0) {
+          apiFailed.value = true;
+        }
+      }
+    }
+  } finally {
+    loadingRegions.value = false;
+  }
 }
 
-async function onRegionChangeFallback() {
+// Fetch provinces based on selected region
+async function onRegionChange() {
   if (!form.value.region) return;
+  
   form.value.province = "";
   form.value.city = "";
   form.value.barangay = "";
   provinces.value = [];
   cities.value = [];
   barangays.value = [];
-
-  const provincesList = getProvincesByRegion(form.value.region);
-  provinces.value = provincesList.map(p => ({ psgc_code: p.code, name: p.name, region_code: p.region_code }));
+  
+  loadingProvinces.value = true;
+  try {
+    const response = await axios.get(`${PH_LOCATION_API_BASE}/provinces.json`);
+    const allProvinces = response.data || [];
+    provinces.value = allProvinces
+      .filter(p => {
+        const regionCode = p.region_code || p.regionCode || p.region?.code || p.region?.psgc_code || p.region_id;
+        return regionCode === form.value.region || regionCode?.toString() === form.value.region?.toString();
+      })
+      .map(province => ({
+        psgc_code: province.code || province.psgc_code || province.province_code || province.id,
+        name: province.name || province.province_name,
+        region_code: province.region_code || province.regionCode || province.region_id
+      }));
+  } catch (error) {
+    console.error("Error fetching provinces:", error);
+    // Fallback: Try PSGC API
+    try {
+      const fallbackResponse = await axios.get(`https://psgc.gitlab.io/api/regions/${form.value.region}/provinces.json`);
+      provinces.value = (fallbackResponse.data || []).map(province => ({
+        psgc_code: province.code || province.psgc_code,
+        name: province.name,
+        region_code: province.region_code
+      }));
+    } catch (fallbackError) {
+      console.error("Error fetching provinces from fallback:", fallbackError);
+      provinces.value = [];
+    }
+  } finally {
+    loadingProvinces.value = false;
+  }
 }
 
-async function onProvinceChangeFallback() {
+// Fetch cities/municipalities based on selected province
+async function onProvinceChange() {
   if (!form.value.province) return;
+  
   form.value.city = "";
   form.value.barangay = "";
   cities.value = [];
   barangays.value = [];
-
-  const cityList = getCityMunByProvince(form.value.province);
-  cities.value = cityList.map(c => ({ psgc_code: c.code, name: c.name, province_code: c.province_code }));
+  
+  loadingCities.value = true;
+  try {
+    const response = await axios.get(`${PH_LOCATION_API_BASE}/cities.json`);
+    const allCities = response.data || [];
+    cities.value = allCities
+      .filter(c => {
+        const provinceCode = c.province_code || c.provinceCode || c.province?.code || c.province?.psgc_code || c.province_id;
+        return provinceCode === form.value.province || provinceCode?.toString() === form.value.province?.toString();
+      })
+      .map(city => ({
+        psgc_code: city.code || city.psgc_code || city.city_code || city.id,
+        name: city.name || city.city_name,
+        province_code: city.province_code || city.provinceCode || city.province_id
+      }));
+  } catch (error) {
+    console.error("Error fetching cities:", error);
+    // Fallback: Try PSGC API
+    try {
+      const fallbackResponse = await axios.get(`https://psgc.gitlab.io/api/provinces/${form.value.province}/cities-municipalities.json`);
+      cities.value = (fallbackResponse.data || []).map(city => ({
+        psgc_code: city.code || city.psgc_code,
+        name: city.name,
+        province_code: city.province_code
+      }));
+    } catch (fallbackError) {
+      console.error("Error fetching cities from fallback:", fallbackError);
+      cities.value = [];
+    }
+  } finally {
+    loadingCities.value = false;
+  }
 }
 
-async function onCityChangeFallback() {
+// Fetch barangays based on selected city
+async function onCityChange() {
   if (!form.value.city) return;
+  
   form.value.barangay = "";
   barangays.value = [];
-
-  const barangayList = getBarangayByMun(form.value.city);
-  barangays.value = barangayList.map(b => ({ psgc_code: b.code, name: b.name, city_code: b.city_municipality_code }));
+  
+  loadingBarangays.value = true;
+  try {
+    const response = await axios.get(`${PH_LOCATION_API_BASE}/barangays.json`);
+    const allBarangays = response.data || [];
+    barangays.value = allBarangays
+      .filter(b => {
+        const cityCode = b.city_code || b.cityCode || b.city?.code || b.city?.psgc_code || b.municipality_code || b.municipalityCode || b.city_municipality_code;
+        return cityCode === form.value.city || cityCode?.toString() === form.value.city?.toString();
+      })
+      .map(barangay => ({
+        psgc_code: barangay.code || barangay.psgc_code || barangay.barangay_code || barangay.id,
+        name: barangay.name || barangay.barangay_name,
+        city_code: barangay.city_code || barangay.cityCode || barangay.municipality_code || barangay.city_municipality_code
+      }));
+  } catch (error) {
+    console.error("Error fetching barangays:", error);
+    // Fallback: Try PSGC API
+    try {
+      const fallbackResponse = await axios.get(`https://psgc.gitlab.io/api/cities-municipalities/${form.value.city}/barangays.json`);
+      barangays.value = (fallbackResponse.data || []).map(barangay => ({
+        psgc_code: barangay.code || barangay.psgc_code,
+        name: barangay.name,
+        city_code: barangay.city_municipality_code
+      }));
+    } catch (fallbackError) {
+      console.error("Error fetching barangays from fallback:", fallbackError);
+      barangays.value = [];
+    }
+  } finally {
+    loadingBarangays.value = false;
+  }
 }
 
-// --- Keep your existing constructAddress function unchanged ---
+// Construct full address string from selected fields
 function constructAddress() {
   const parts = [];
-  if (form.value.streetAddress) parts.push(form.value.streetAddress);
+  
+  if (form.value.streetAddress) {
+    parts.push(form.value.streetAddress);
+  }
+  
   const selectedBarangay = barangays.value.find(b => b.psgc_code === form.value.barangay);
-  if (selectedBarangay) parts.push(selectedBarangay.name);
+  if (selectedBarangay) {
+    parts.push(selectedBarangay.name);
+  }
+  
   const selectedCity = cities.value.find(c => c.psgc_code === form.value.city);
-  if (selectedCity) parts.push(selectedCity.name);
+  if (selectedCity) {
+    parts.push(selectedCity.name);
+  }
+  
   const selectedProvince = provinces.value.find(p => p.psgc_code === form.value.province);
-  if (selectedProvince) parts.push(selectedProvince.name);
+  if (selectedProvince) {
+    parts.push(selectedProvince.name);
+  }
+  
   const selectedRegion = regions.value.find(r => r.psgc_code === form.value.region);
-  if (selectedRegion) parts.push(selectedRegion.name);
+  if (selectedRegion) {
+    parts.push(selectedRegion.name);
+  }
+  
   return parts.join(", ");
 }
 
-// --- On mounted: try API first, fallback to phil ---
+// Fetch regions on component mount
 onMounted(async () => {
-  try {
-    await fetchRegions();
-    if (regions.value.length === 0) await loadRegionsFallback();
-  } catch {
-    await loadRegionsFallback();
-  }
+  await fetchRegions();
 });
 </script>
 
