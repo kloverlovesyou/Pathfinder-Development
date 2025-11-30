@@ -268,186 +268,236 @@ class RegistrationController extends Controller
 
     public function updateCertificate(Request $request, $registrationID)
     {
-        $user = $request->user();
-        
-        if (!$user || !isset($user->organizationID)) {
-            return response()->json(['message' => 'Unauthorized'], 401);
-        }
-        
-        $registration = Registration::find($registrationID);
-        if (!$registration) {
-            return response()->json(['message' => 'Registration not found'], 404);
-        }
-        
-        // Load training relationship
-        $registration->load('training');
-        
-        // Verify training belongs to organization
-        $training = \App\Models\Training::where('trainingID', $registration->trainingID)
-            ->where('organizationID', $user->organizationID)
-            ->first();
-        
-        if (!$training) {
-            return response()->json(['message' => 'Access denied'], 403);
-        }
-        
-        // Ensure we have the training title
-        if (!$training->title) {
-            $training->refresh();
-        }
-        
-        $validated = $request->validate([
-            'certificateTrackingID' => 'required|string',
-            'certificateGivenDate' => 'required|date',
-            'certificatePath' => 'nullable|string', // Optional if file is uploaded
-            'file' => 'nullable|file|mimes:jpeg,png,jpg|max:4096', // Only accept images
-        ]);
-        
-        $certificatePath = $validated['certificatePath'] ?? null;
-        
-        // If file is uploaded, process it and upload to Supabase
-        if ($request->hasFile('file')) {
-            $file = $request->file('file');
-            $mimeType = $file->getMimeType();
-            $fileContents = file_get_contents($file->getRealPath());
-            $fileExtension = $file->getClientOriginalExtension();
-            $contentType = $mimeType;
+        try {
+            $user = $request->user();
             
-            // Upload to Supabase Storage
-            $supabaseUrl = env('SUPABASE_URL', 'https://hmevengvfponcwslnyye.supabase.co');
-            $supabaseUrl = preg_replace('#/storage/v1/object/public/?$#', '', $supabaseUrl);
-            $supabaseUrl = rtrim($supabaseUrl, '/');
-            $supabaseKey = env('SUPABASE_SECRET') ?: env('SUPABASE_KEY');
-            $bucket = env('SUPABASE_BUCKET', 'Requirements');
-            
-            if (!$supabaseKey || !$bucket) {
-                return response()->json([
-                    'message' => 'Supabase Storage not configured'
-                ], 500);
+            if (!$user || !isset($user->organizationID)) {
+                return response()->json(['message' => 'Unauthorized'], 401);
             }
             
-            // Generate storage path
-            $safeName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $registrationID);
-            $storagePath = "certificate_directory/{$safeName}_" . time() . ".{$fileExtension}";
-            
-            $uploadUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}/{$storagePath}";
-            
-            try {
-                $client = new \GuzzleHttp\Client();
-                $response = $client->request('POST', $uploadUrl, [
-                    'headers' => [
-                        'Authorization' => "Bearer {$supabaseKey}",
-                        'Content-Type' => $contentType,
-                        'x-upsert' => 'true',
-                    ],
-                    'body' => $fileContents,
-                ]);
-                
-                if ($response->getStatusCode() !== 200 && $response->getStatusCode() !== 201) {
-                    throw new \Exception('Failed to upload certificate to Supabase');
-                }
-                
-                $certificatePath = $storagePath;
-                
-                Log::info('Certificate uploaded to Supabase successfully', [
-                    'registrationID' => $registrationID,
-                    'path' => $certificatePath
-                ]);
-            } catch (\Exception $e) {
-                Log::error('Failed to upload certificate to Supabase', [
-                    'registrationID' => $registrationID,
-                    'error' => $e->getMessage()
-                ]);
-                return response()->json([
-                    'message' => 'Failed to upload certificate: ' . $e->getMessage()
-                ], 500);
+            $registration = Registration::find($registrationID);
+            if (!$registration) {
+                return response()->json(['message' => 'Registration not found'], 404);
             }
-        }
-        
-        if (!$certificatePath) {
-            return response()->json([
-                'message' => 'Either certificatePath or file must be provided'
-            ], 400);
-        }
-        
-        // Store the Supabase path in the database
-        $registration->update([
-            'certTrackingID' => $validated['certificateTrackingID'],
-            'certGivenDate' => $validated['certificateGivenDate'],
-            'certificatePath' => $certificatePath,
-        ]);
-
-        $registration->recordStage('certified', Carbon::parse($validated['certificateGivenDate']), true);
-        $registration->save();
-        
-        // Automatically create a Certification entry for the applicant
-        // This ensures organization-issued certificates appear in the Certificates page
-        if (!empty($certificatePath)) {
-            // Check if certification already exists for this certificate path
-            $existingCertification = Certification::where('applicantID', $registration->applicantID)
-                ->where('certificate_path', $certificatePath)
+            
+            // Load training relationship
+            $registration->load('training');
+            
+            // Verify training belongs to organization
+            $training = \App\Models\Training::where('trainingID', $registration->trainingID)
+                ->where('organizationID', $user->organizationID)
                 ->first();
             
-            if (!$existingCertification) {
-                Log::info('Creating new Certification entry', [
-                    'registrationID' => $registrationID,
-                    'applicantID' => $registration->applicantID,
-                    'certificatePath' => $certificatePath,
-                    'trainingID' => $training->trainingID ?? null,
-                    'trainingTitle' => $training->title ?? 'Unknown'
-                ]);
+            if (!$training) {
+                return response()->json(['message' => 'Access denied'], 403);
+            }
+            
+            // Ensure we have the training title
+            if (!$training->title) {
+                $training->refresh();
+            }
+            
+            $validated = $request->validate([
+                'certificateTrackingID' => 'required|string',
+                'certificateGivenDate' => 'required|date',
+                'certificatePath' => 'nullable|string', // Optional if file is uploaded
+                'file' => 'nullable|file|mimes:jpeg,png,jpg|max:4096', // Only accept images
+            ]);
+            
+            $certificatePath = $validated['certificatePath'] ?? null;
+            
+            // If file is uploaded, process it and upload to Supabase
+            if ($request->hasFile('file')) {
+                $file = $request->file('file');
+                $mimeType = $file->getMimeType();
+                $fileContents = file_get_contents($file->getRealPath());
+                $fileExtension = $file->getClientOriginalExtension();
+                $contentType = $mimeType;
                 
-                // Create Certification entry using certificate_path (stored in Supabase)
-                $trainingTitle = $training->title ?? 'Training';
-                $certificationName = $trainingTitle . ' - Certificate of Completion';
+                // Upload to Supabase Storage
+                $supabaseUrl = env('SUPABASE_URL', 'https://hmevengvfponcwslnyye.supabase.co');
+                $supabaseUrl = preg_replace('#/storage/v1/object/public/?$#', '', $supabaseUrl);
+                $supabaseUrl = rtrim($supabaseUrl, '/');
+                $supabaseKey = env('SUPABASE_SECRET') ?: env('SUPABASE_KEY');
+                $bucket = env('SUPABASE_BUCKET', 'Requirements');
+                
+                if (!$supabaseKey || !$bucket) {
+                    return response()->json([
+                        'message' => 'Supabase Storage not configured'
+                    ], 500);
+                }
+                
+                // Generate storage path
+                $safeName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $registrationID);
+                $storagePath = "certificate_directory/{$safeName}_" . time() . ".{$fileExtension}";
+                
+                $uploadUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}/{$storagePath}";
                 
                 try {
-                    $newCertification = Certification::create([
-                        'certificationName' => $certificationName,
-                        'certificate_path' => $certificatePath, // Store the Supabase path
-                        'applicantID' => $registration->applicantID,
-                        'IsSelected' => 0, // Default to not selected for resume
-                        'certificate' => '', // Empty string for organization certificates (field is NOT NULL)
+                    // SSL verification: For Windows development, SSL certificate issues are common
+                    // Set SUPABASE_VERIFY_SSL=true in .env for production (recommended)
+                    // For development on Windows, you may need SUPABASE_VERIFY_SSL=false
+                    $verifySSL = filter_var(env('SUPABASE_VERIFY_SSL', 'false'), FILTER_VALIDATE_BOOLEAN);
+                    
+                    $client = new \GuzzleHttp\Client([
+                        'verify' => $verifySSL,
+                    ]);
+                    $response = $client->request('POST', $uploadUrl, [
+                        'headers' => [
+                            'Authorization' => "Bearer {$supabaseKey}",
+                            'Content-Type' => $contentType,
+                            'x-upsert' => 'true',
+                        ],
+                        'body' => $fileContents,
                     ]);
                     
-                    Log::info('✅ Certificate automatically added to Certification model', [
-                        'certificationID' => $newCertification->certificationID,
+                    if ($response->getStatusCode() !== 200 && $response->getStatusCode() !== 201) {
+                        throw new \Exception('Failed to upload certificate to Supabase');
+                    }
+                    
+                    $certificatePath = $storagePath;
+                    
+                    Log::info('Certificate uploaded to Supabase successfully', [
                         'registrationID' => $registrationID,
-                        'applicantID' => $registration->applicantID,
-                        'certificatePath' => $certificatePath,
-                        'certificationName' => $certificationName,
-                        'trainingTitle' => $trainingTitle
+                        'path' => $certificatePath
                     ]);
-                } catch (\Exception $e) {
-                    Log::error('❌ Failed to create Certification entry', [
+                } catch (\GuzzleHttp\Exception\RequestException $e) {
+                    $statusCode = null;
+                    $responseBody = null;
+                    $errorMessage = $e->getMessage();
+                    
+                    if ($e->hasResponse()) {
+                        $response = $e->getResponse();
+                        $statusCode = $response->getStatusCode();
+                        $responseBody = $response->getBody()->getContents();
+                        $errorMessage = $responseBody ?: $errorMessage;
+                    }
+                    
+                    Log::error('Failed to upload certificate to Supabase', [
                         'registrationID' => $registrationID,
-                        'applicantID' => $registration->applicantID,
-                        'certificatePath' => $certificatePath,
-                        'trainingTitle' => $trainingTitle,
                         'error' => $e->getMessage(),
-                        'trace' => substr($e->getTraceAsString(), 0, 500) // Limit trace length
+                        'status_code' => $statusCode,
+                        'response_body' => $responseBody,
+                        'upload_url' => $uploadUrl,
                     ]);
-                    // Don't fail the request, just log the error
+                    return response()->json([
+                        'message' => 'Failed to upload certificate: ' . $errorMessage
+                    ], 500);
+                } catch (\Exception $e) {
+                    Log::error('Failed to upload certificate to Supabase', [
+                        'registrationID' => $registrationID,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                    return response()->json([
+                        'message' => 'Failed to upload certificate: ' . $e->getMessage()
+                    ], 500);
+                }
+            }
+            
+            if (!$certificatePath) {
+                return response()->json([
+                    'message' => 'Either certificatePath or file must be provided'
+                ], 400);
+            }
+            
+            // Store the Supabase path in the database
+            $registration->update([
+                'certTrackingID' => $validated['certificateTrackingID'],
+                'certGivenDate' => $validated['certificateGivenDate'],
+                'certificatePath' => $certificatePath,
+            ]);
+
+            $registration->recordStage('certified', Carbon::parse($validated['certificateGivenDate']), true);
+            $registration->save();
+            
+            // Automatically create a Certification entry for the applicant
+            // This ensures organization-issued certificates appear in the Certificates page
+            if (!empty($certificatePath)) {
+                // Check if certification already exists for this certificate path
+                $existingCertification = Certification::where('applicantID', $registration->applicantID)
+                    ->where('certificate_path', $certificatePath)
+                    ->first();
+                
+                if (!$existingCertification) {
+                    Log::info('Creating new Certification entry', [
+                        'registrationID' => $registrationID,
+                        'applicantID' => $registration->applicantID,
+                        'certificatePath' => $certificatePath,
+                        'trainingID' => $training->trainingID ?? null,
+                        'trainingTitle' => $training->title ?? 'Unknown'
+                    ]);
+                    
+                    // Create Certification entry using certificate_path (stored in Supabase)
+                    $trainingTitle = $training->title ?? 'Training';
+                    $certificationName = $trainingTitle . ' - Certificate of Completion';
+                    
+                    try {
+                        $newCertification = Certification::create([
+                            'certificationName' => $certificationName,
+                            'certificate_path' => $certificatePath, // Store the Supabase path
+                            'applicantID' => $registration->applicantID,
+                            'IsSelected' => 0, // Default to not selected for resume
+                            'certificate' => '', // Empty string for organization certificates (field is NOT NULL)
+                        ]);
+                        
+                        Log::info('✅ Certificate automatically added to Certification model', [
+                            'certificationID' => $newCertification->certificationID,
+                            'registrationID' => $registrationID,
+                            'applicantID' => $registration->applicantID,
+                            'certificatePath' => $certificatePath,
+                            'certificationName' => $certificationName,
+                            'trainingTitle' => $trainingTitle
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::error('❌ Failed to create Certification entry', [
+                            'registrationID' => $registrationID,
+                            'applicantID' => $registration->applicantID,
+                            'certificatePath' => $certificatePath,
+                            'trainingTitle' => $trainingTitle,
+                            'error' => $e->getMessage(),
+                            'trace' => substr($e->getTraceAsString(), 0, 500) // Limit trace length
+                        ]);
+                        // Don't fail the request, just log the error
+                    }
+                } else {
+                    Log::info('ℹ️ Certification entry already exists, skipping creation', [
+                        'certificationID' => $existingCertification->certificationID,
+                        'registrationID' => $registrationID,
+                        'certificatePath' => $certificatePath,
+                        'existingPath' => $existingCertification->certificate_path
+                    ]);
                 }
             } else {
-                Log::info('ℹ️ Certification entry already exists, skipping creation', [
-                    'certificationID' => $existingCertification->certificationID,
+                Log::warning('⚠️ Skipping Certification entry creation - empty certificatePath', [
                     'registrationID' => $registrationID,
-                    'certificatePath' => $certificatePath,
-                    'existingPath' => $existingCertification->certificate_path
+                    'certificatePath' => $certificatePath
                 ]);
             }
-        } else {
-            Log::warning('⚠️ Skipping Certification entry creation - empty certificatePath', [
-                'registrationID' => $registrationID,
-                'certificatePath' => $certificatePath
-            ]);
-        }
         
-        return response()->json([
-            'message' => 'Certificate issued successfully',
-            'data' => $registration,
-        ]);
+            return response()->json([
+                'message' => 'Certificate issued successfully',
+                'data' => $registration,
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation error in updateCertificate', [
+                'registrationID' => $registrationID,
+                'errors' => $e->errors()
+            ]);
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error in updateCertificate', [
+                'registrationID' => $registrationID,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'message' => 'Failed to issue certificate: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function updateStatus(Request $request, $registrationID)

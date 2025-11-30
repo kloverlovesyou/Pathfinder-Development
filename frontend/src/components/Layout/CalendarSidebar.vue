@@ -611,9 +611,7 @@ function toISODate(d) {
       <div class="flex flex-col items-center gap-4 mt-12 overflow-y-auto">
         <!-- Built-in Calendar -->
         <div class="w-full flex flex-col gap-2">
-          <label class="text-sm font-medium text-gray-600 mb-2">
-            Select a date
-          </label>
+        
           
           <!-- Calendar Header -->
           <div class="flex items-center justify-between mb-2">
@@ -997,9 +995,9 @@ function toISODate(d) {
           {{ selectedPost.organization || "Unknown Organization" }}
         </p>
 
-        <p>
+        <p v-if="selectedPost?.detailsAndInstructions">
           <strong>Details:</strong>
-          {{ selectedPost?.detailsAndInstructions || "N/A" }}
+          {{ selectedPost?.detailsAndInstructions }}
         </p>
         <p>
           <strong>Qualifications:</strong>

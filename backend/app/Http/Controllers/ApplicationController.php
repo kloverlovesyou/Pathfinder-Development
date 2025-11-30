@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\InterviewSchedule;
+use App\Mail\ApplicationHired;
+use App\Mail\ApplicationDeclined;
 use App\Services\BrevoEmailService;
 
 class ApplicationController extends Controller
@@ -581,7 +583,7 @@ public function viewRequirement(Request $request, $id)
             return response()->json(['message' => 'Unauthorized - Organization access required'], 401);
         }
         
-        $application = Application::find($applicationID);
+        $application = Application::with(['applicant', 'career.organization'])->find($applicationID);
         if (!$application) {
             return response()->json(['message' => 'Application not found'], 404);
         }
@@ -599,6 +601,7 @@ public function viewRequirement(Request $request, $id)
             'status' => 'required|in:submitted,in review,for interview,pending,accepted,rejected,hired,declined',
             'date' => 'nullable|date',
             'overwrite' => 'nullable|boolean',
+            'body' => 'nullable|string', // Optional custom message for email
         ]);
 
         $timestamp = isset($validated['date'])
@@ -985,5 +988,253 @@ public function viewRequirement(Request $request, $id)
             $application->dateSubmitted = $now;
         }
         $application->save();
+    }
+
+    /**
+     * Send email notification when application status changes to 'hired', 'declined', or 'rejected'
+     */
+    private function sendStatusChangeEmail(Application $application, string $status, ?string $customBody = null): void
+    {
+        Log::info('sendStatusChangeEmail called', [
+            'application_id' => $application->applicationID,
+            'status' => $status,
+            'has_applicant_relation' => $application->relationLoaded('applicant'),
+            'has_career_relation' => $application->relationLoaded('career'),
+        ]);
+        
+        try {
+            // Reload relationships if not already loaded
+            if (!$application->relationLoaded('applicant')) {
+                $application->load('applicant');
+            }
+            if (!$application->relationLoaded('career')) {
+                $application->load('career.organization');
+            }
+
+            $applicant = $application->applicant;
+            $career = $application->career;
+            
+            Log::info('Relationships loaded', [
+                'application_id' => $application->applicationID,
+                'applicant_id' => $applicant ? $applicant->applicantID : null,
+                'career_id' => $career ? $career->careerID : null,
+                'organization_id' => $career && $career->organization ? $career->organization->organizationID : null,
+            ]);
+
+            if (!$applicant || !$career) {
+                Log::warning('Cannot send status change email: missing applicant or career', [
+                    'application_id' => $application->applicationID,
+                    'has_applicant' => !is_null($applicant),
+                    'has_career' => !is_null($career),
+                ]);
+                return;
+            }
+
+            // Get applicant email (handle both camelCase and PascalCase)
+            // Try direct access first (as used in interview schedule)
+            $applicantEmail = null;
+            if ($applicant->emailAddress) {
+                $applicantEmail = $applicant->emailAddress;
+            } elseif ($applicant->EmailAddress) {
+                $applicantEmail = $applicant->EmailAddress;
+            } elseif (isset($applicant->attributes['emailAddress'])) {
+                $applicantEmail = $applicant->attributes['emailAddress'];
+            } elseif (isset($applicant->attributes['EmailAddress'])) {
+                $applicantEmail = $applicant->attributes['EmailAddress'];
+            }
+            
+            Log::info('Applicant email lookup', [
+                'application_id' => $application->applicationID,
+                'applicant_id' => $applicant->applicantID,
+                'email_found' => !empty($applicantEmail),
+                'email_value' => $applicantEmail ? substr($applicantEmail, 0, 5) . '...' : null,
+                'has_emailAddress' => isset($applicant->emailAddress),
+                'has_EmailAddress' => isset($applicant->EmailAddress),
+                'attributes_keys' => array_keys($applicant->attributes ?? []),
+            ]);
+            
+            if (!$applicantEmail) {
+                Log::warning('Cannot send status change email: applicant email not found', [
+                    'application_id' => $application->applicationID,
+                    'applicant_id' => $applicant->applicantID,
+                    'applicant_attributes' => array_keys($applicant->attributes ?? []),
+                ]);
+                return;
+            }
+
+            // Get applicant name
+            $firstName = $applicant->firstName ?? $applicant->FirstName ?? '';
+            $lastName = $applicant->lastName ?? $applicant->LastName ?? '';
+            $applicantName = trim($firstName . ' ' . $lastName) ?: 'Applicant';
+
+            // Get position and organization info
+            $positionTitle = $career->position ?? 'Position';
+            $organizationName = $career->organization->name ?? 'Organization';
+
+            $emailSent = false;
+            $statusLower = strtolower(trim($status));
+
+            if ($statusLower === 'hired') {
+                $mailable = new ApplicationHired(
+                    $applicantName,
+                    $positionTitle,
+                    $organizationName,
+                    $customBody
+                );
+            } elseif ($statusLower === 'declined' || $statusLower === 'rejected') {
+                // Treat 'rejected' the same as 'declined' for email purposes
+                $mailable = new ApplicationDeclined(
+                    $applicantName,
+                    $positionTitle,
+                    $organizationName,
+                    $customBody
+                );
+            } else {
+                Log::warning('sendStatusChangeEmail called with invalid status', [
+                    'status' => $status,
+                    'application_id' => $application->applicationID,
+                ]);
+                return;
+            }
+
+            // Try to send via Brevo API first, then fallback to SMTP
+            $brevoApiKeyFromConfig = config('services.brevo.api_key');
+            $brevoApiKeyFromEnv = env('BREVO_API_KEY');
+            $brevoApiKey = trim($brevoApiKeyFromConfig ?: $brevoApiKeyFromEnv ?: '');
+
+            if (!empty($brevoApiKey)) {
+                try {
+                    $brevoService = app(BrevoEmailService::class);
+                    // Use declined template for both 'declined' and 'rejected' statuses
+                    $viewName = $statusLower === 'hired' ? 'emails.application-hired' : 'emails.application-declined';
+                    $htmlContent = view($viewName, [
+                        'applicantName' => $applicantName,
+                        'positionTitle' => $positionTitle,
+                        'organizationName' => $organizationName,
+                        'customBody' => $customBody,
+                    ])->render();
+
+                    $brevoService->send(
+                        $applicantEmail,
+                        $mailable->envelope()->subject,
+                        $htmlContent
+                    );
+
+                    $emailSent = true;
+                    Log::info('Status change email sent via Brevo API', [
+                        'status' => $status,
+                        'applicant_email' => $applicantEmail,
+                        'application_id' => $application->applicationID,
+                    ]);
+                } catch (\Exception $brevoException) {
+                    Log::error('Brevo API failed for status change email', [
+                        'status' => $status,
+                        'error' => $brevoException->getMessage(),
+                        'error_code' => $brevoException->getCode(),
+                        'application_id' => $application->applicationID,
+                    ]);
+                    // Fall through to SMTP
+                }
+            } else {
+                Log::warning('Brevo API key not found, will try SMTP fallback for status change email');
+            }
+
+            // Fallback to SMTP if Brevo failed or not configured
+            if (!$emailSent) {
+                try {
+                    Mail::to($applicantEmail)->send($mailable);
+                    $emailSent = true;
+                    Log::info('Status change email sent via SMTP', [
+                        'status' => $status,
+                        'applicant_email' => $applicantEmail,
+                        'application_id' => $application->applicationID,
+                    ]);
+                } catch (\Exception $smtpException) {
+                    Log::error('SMTP failed for status change email', [
+                        'status' => $status,
+                        'error' => $smtpException->getMessage(),
+                        'error_code' => $smtpException->getCode(),
+                        'application_id' => $application->applicationID,
+                        'trace' => $smtpException->getTraceAsString(),
+                    ]);
+                }
+            }
+            
+            if (!$emailSent) {
+                Log::error('Status change email failed to send via both Brevo and SMTP', [
+                    'status' => $status,
+                    'application_id' => $application->applicationID,
+                    'applicant_email' => $applicantEmail,
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to send status change email - exception caught', [
+                'status' => $status,
+                'application_id' => $application->applicationID,
+                'error' => $e->getMessage(),
+                'error_code' => $e->getCode(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
+    }
+
+    /**
+     * Manually send status change email for an application
+     */
+    public function sendStatusEmail(Request $request, $applicationID)
+    {
+        $user = $request->user();
+        
+        // Check if user is an Organization
+        if (!$user || !($user instanceof \App\Models\Organization)) {
+            return response()->json(['message' => 'Unauthorized - Organization access required'], 401);
+        }
+        
+        $application = Application::with(['applicant', 'career.organization'])->find($applicationID);
+        if (!$application) {
+            return response()->json(['message' => 'Application not found'], 404);
+        }
+        
+        // Verify career belongs to organization
+        $career = \App\Models\Career::where('careerID', $application->careerID)
+            ->where('organizationID', $user->organizationID)
+            ->first();
+        
+        if (!$career) {
+            return response()->json(['message' => 'Access denied'], 403);
+        }
+        
+        $validated = $request->validate([
+            'body' => 'nullable|string', // Optional custom message for email
+        ]);
+
+        $status = strtolower(trim($application->applicationStatus ?? ''));
+        
+        // Only allow sending emails for hired, declined, or rejected statuses
+        if ($status !== 'hired' && $status !== 'declined' && $status !== 'rejected') {
+            return response()->json([
+                'message' => 'Email can only be sent for hired, declined, or rejected statuses',
+                'current_status' => $application->applicationStatus,
+            ], 400);
+        }
+
+        try {
+            $this->sendStatusChangeEmail($application, $status, $validated['body'] ?? null);
+            
+            return response()->json([
+                'message' => 'Status change email sent successfully',
+                'status' => $status,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to manually send status change email', [
+                'application_id' => $applicationID,
+                'status' => $status,
+                'error' => $e->getMessage(),
+            ]);
+            
+            return response()->json([
+                'message' => 'Failed to send email: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }

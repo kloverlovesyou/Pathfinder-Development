@@ -36,6 +36,10 @@ const applyModalOpen = ref(false);
 const organizations = ref({});
 const careerSearch = ref("");
 const careerDropdownOpen = ref(false);
+const showConflictDialog = ref(false);
+const conflictTraining = ref(null);
+const conflictingTrainings = ref([]);
+const pendingRegistration = ref(null);
 
 const filteredCareers = computed(() => {
   const query = careerSearch.value.trim().toLowerCase();
@@ -173,8 +177,99 @@ function cancelApplication(career) {
   myApplications.value.delete(id);
 }
 
+// Check for same-day onsite conflicts
+async function checkSameDayOnsiteConflict(newTraining) {
+  const token = localStorage.getItem("token");
+  if (!token) return false;
+
+  try {
+    // Fetch existing registrations
+    const registrationsRes = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/registrations",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    const existingRegistrations = registrationsRes.data || [];
+
+    // Get schedules from the new training
+    const newTrainingSchedules = newTraining?.schedules || [];
+    if (!Array.isArray(newTrainingSchedules) && newTraining?.schedule) {
+      // Handle single schedule format
+      newTrainingSchedules.push({
+        schedule: newTraining.schedule,
+        mode: newTraining.mode,
+        location: newTraining.location,
+      });
+    }
+
+    // Check if new training has any onsite schedules
+    const newTrainingHasOnsite = newTrainingSchedules.some((schedule) => {
+      const mode = getScheduleMode(schedule);
+      return isOnsiteMode(mode);
+    });
+
+    if (!newTrainingHasOnsite) {
+      return false; // No conflict if new training is not onsite
+    }
+
+    // Extract dates from new training schedules
+    const newTrainingDates = new Set();
+    newTrainingSchedules.forEach((schedule) => {
+      const scheduleDate = schedule?.schedule || schedule?.start_time;
+      if (scheduleDate) {
+        const date = new Date(scheduleDate);
+        const dateStr = date.toISOString().split("T")[0]; // YYYY-MM-DD
+        newTrainingDates.add(dateStr);
+      }
+    });
+
+    // Check for conflicts with existing registrations
+    const conflicts = [];
+    existingRegistrations.forEach((registration) => {
+      const existingTraining = registration?.training;
+      if (!existingTraining) return;
+
+      const existingSchedules = existingTraining?.schedules || [];
+      if (!Array.isArray(existingSchedules) && existingTraining?.schedule) {
+        existingSchedules.push({
+          schedule: existingTraining.schedule,
+          mode: existingTraining.mode,
+          location: existingTraining.location,
+        });
+      }
+
+      existingSchedules.forEach((existingSchedule) => {
+        const existingMode = getScheduleMode(existingSchedule);
+        if (!isOnsiteMode(existingMode)) return; // Only check onsite trainings
+
+        const existingScheduleDate = existingSchedule?.schedule || existingSchedule?.start_time;
+        if (existingScheduleDate) {
+          const existingDate = new Date(existingScheduleDate);
+          const existingDateStr = existingDate.toISOString().split("T")[0];
+
+          // Check if same day
+          if (newTrainingDates.has(existingDateStr)) {
+            conflicts.push({
+              training: existingTraining,
+              schedule: existingSchedule,
+              date: existingDateStr,
+            });
+          }
+        }
+      });
+    });
+
+    return conflicts.length > 0 ? conflicts : false;
+  } catch (error) {
+    console.error("Error checking conflicts:", error);
+    return false; // On error, allow registration to proceed
+  }
+}
+
 // Register for training
-async function registerForTraining(training) {
+async function registerForTraining(training, skipConflictCheck = false) {
   if (!training) return;
 
   const trainingId = resolveTrainingId(training);
@@ -187,6 +282,26 @@ async function registerForTraining(training) {
     selectedTraining.value &&
     resolveTrainingId(selectedTraining.value) === trainingId;
 
+  // Check for same-day onsite conflicts before registering
+  if (!skipConflictCheck) {
+    const conflicts = await checkSameDayOnsiteConflict(training);
+    if (conflicts && conflicts.length > 0) {
+      conflictTraining.value = training;
+      conflictingTrainings.value = conflicts;
+      pendingRegistration.value = { training, affectsSelected };
+      showConflictDialog.value = true;
+      return;
+    }
+  }
+
+  // Proceed with registration
+  await proceedWithRegistration(training, affectsSelected);
+}
+
+// Proceed with actual registration
+async function proceedWithRegistration(training, affectsSelected) {
+  const trainingId = resolveTrainingId(training);
+  
   try {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -227,6 +342,26 @@ async function registerForTraining(training) {
       trainingActionLoading.value = false;
     }
   }
+}
+
+// Handle conflict dialog confirmation
+async function confirmConflictRegistration() {
+  showConflictDialog.value = false;
+  if (pendingRegistration.value) {
+    const { training, affectsSelected } = pendingRegistration.value;
+    pendingRegistration.value = null;
+    await proceedWithRegistration(training, affectsSelected);
+  }
+  conflictTraining.value = null;
+  conflictingTrainings.value = [];
+}
+
+// Handle conflict dialog cancellation
+function cancelConflictRegistration() {
+  showConflictDialog.value = false;
+  pendingRegistration.value = null;
+  conflictTraining.value = null;
+  conflictingTrainings.value = [];
 }
 
 // Unregister from training
@@ -321,7 +456,26 @@ function closeApplyModal() {
 }
 
 function handleFileUpload(e) {
-  uploadedFile.value = e.target.files[0];
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // Check if file is PDF
+  if (file.type !== "application/pdf") {
+    addToast("PLEASE UPLOAD A PDF FILE", "error");
+    e.target.value = "";
+    return;
+  }
+
+  // Check file size (5MB = 5 * 1024 * 1024 bytes)
+  const MAX_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+  if (file.size > MAX_SIZE) {
+    addToast("PDF SIZE EXCEEDS 5MB LIMIT. PLEASE UPLOAD A SMALLER FILE", "error");
+    e.target.value = "";
+    uploadedFile.value = null;
+    return;
+  }
+
+  uploadedFile.value = file;
 }
 
 async function fetchRecommendedCareers() {
@@ -537,6 +691,7 @@ function aggregateRecommendedTrainings(trainings) {
           "",
         provider: item.provider || item.organizationName || item.organization || "",
         schedules: Array.isArray(item.schedules) ? [...item.schedules] : [],
+        isOrganizationChoice: item.isOrganizationChoice || false,
       };
       map.set(id, entry);
     } else {
@@ -548,6 +703,10 @@ function aggregateRecommendedTrainings(trainings) {
         item.provider ||
         "";
       entry.provider = entry.provider || item.provider;
+      // Preserve isOrganizationChoice flag - if any item has it as true, keep it true
+      if (item.isOrganizationChoice) {
+        entry.isOrganizationChoice = true;
+      }
       if (Array.isArray(item.schedules)) {
         item.schedules.forEach((sched) => {
           if (!entry.schedules.some((existing) => existing.trainingScheduleID === sched.trainingScheduleID)) {
@@ -709,7 +868,7 @@ onMounted(async () => {
           </div>
           <div v-for="post in posts" :key="post.careerID"
             class="p-4 bg-blue-gray rounded-lg relative cursor-pointer hover:bg-gray-300 transition" :class="{
-              'ring-2 ring-blue-500': post.careerID === selectedCareerId,
+              '': post.careerID === selectedCareerId,
             }" @click="openCareerModal(post)">
             <div class="flex items-center justify-between">
               <div class="flex-1">
@@ -1076,13 +1235,13 @@ onMounted(async () => {
               <strong>Place of Assignment:</strong>
               {{ selectedCareerDetails.placeOfAssignment || "Not specified" }}
             </p>
-            <p>
+            <p v-if="selectedCareerDetails.details" class="career-text-inline">
               <strong>Details:</strong>
-              {{ selectedCareerDetails.details || "No details provided." }}
+              <span class="career-text-value">{{ selectedCareerDetails.details }}</span>
             </p>
-            <p>
+            <p v-if="selectedCareerDetails.qualificationStandard" class="career-text-inline">
               <strong>Qualification Standard:</strong>
-              {{ selectedCareerDetails.qualificationStandard || "Not specified" }}
+              <span class="career-text-value">{{ selectedCareerDetails.qualificationStandard }}</span>
             </p>
             <p v-if="selectedCareerDetails.postingDate">
               <strong>Posting Date:</strong>
@@ -1103,7 +1262,7 @@ onMounted(async () => {
             </p>
             <p v-if="selectedCareerDetails.pdf_directory">
               <button class="text-blue-400 underline hover:text-blue-200" @click.prevent="viewCareerPDF">
-                View PDF
+                Attachments
               </button>
             </p>
           </div>
@@ -1126,6 +1285,7 @@ onMounted(async () => {
                     {{ training.title }}
                   </h4>
                   <span
+                    v-if="training.isOrganizationChoice"
                     class="text-[10px] text-green-600 font-semibold px-2 py-0.5 bg-green-100 rounded whitespace-nowrap"
                   >
                     Org's choice
@@ -1235,6 +1395,70 @@ onMounted(async () => {
             </button>
           </div>
         </form>
+      </div>
+    </dialog>
+
+    <!-- Conflict Confirmation Dialog -->
+    <dialog v-if="showConflictDialog" open class="modal sm:modal-middle">
+      <div class="modal-box max-w-lg relative font-poppins">
+        <button
+          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2"
+          @click="cancelConflictRegistration"
+        >
+          ✕
+        </button>
+
+        <h2 class="text-xl font-bold mb-4 text-orange-600">
+          ⚠️ Schedule Conflict Detected
+        </h2>
+
+        <div class="mb-4">
+          <p class="text-gray-700 mb-3">
+            You are trying to register for an <strong>onsite training</strong> that is scheduled on the same day as another onsite training you're already registered for.
+          </p>
+
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
+            <p class="font-semibold text-gray-800 mb-2">New Training:</p>
+            <p class="text-gray-700">{{ conflictTraining?.title || "Training" }}</p>
+            <p v-if="conflictTraining?.schedules?.[0]?.schedule" class="text-sm text-gray-600 mt-1">
+              Date: {{ formatDate(conflictTraining.schedules[0].schedule) }}
+            </p>
+          </div>
+
+          <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+            <p class="font-semibold text-gray-800 mb-2">Conflicting Training(s):</p>
+            <div v-for="(conflict, index) in conflictingTrainings" :key="index" class="mb-2 last:mb-0">
+              <p class="text-gray-700">{{ conflict.training?.title || "Training" }}</p>
+              <p v-if="conflict.schedule?.schedule" class="text-sm text-gray-600">
+                Date: {{ formatDate(conflict.schedule.schedule) }}
+              </p>
+              <p v-if="conflict.schedule?.location" class="text-sm text-gray-600">
+                Location: {{ conflict.schedule.location }}
+              </p>
+            </div>
+          </div>
+
+          <p class="text-gray-700 mt-4 font-medium">
+            Do you still want to register for this training?
+          </p>
+        </div>
+
+        <div class="flex justify-end gap-2 mt-4">
+          <button
+            type="button"
+            class="btn btn-outline btn-sm"
+            @click="cancelConflictRegistration"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn bg-customButton hover:bg-dark-slate text-white btn-sm"
+            @click="confirmConflictRegistration"
+          >
+            Yes, Register Anyway
+          </button>
+        </div>
       </div>
     </dialog>
 
@@ -1406,5 +1630,30 @@ onMounted(async () => {
   color: #2563eb;
   text-decoration: underline;
   word-break: break-all;
+}
+
+/* Career text inline format to prevent overlap */
+.career-text-inline {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  width: 100%;
+}
+
+.career-text-inline strong {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.career-text-value {
+  flex: 1;
+  min-width: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.6;
 }
 </style>

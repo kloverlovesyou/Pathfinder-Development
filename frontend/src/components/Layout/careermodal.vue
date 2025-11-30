@@ -76,7 +76,26 @@ function closeUploadModal() {
 }
 
 function handleFileUpload(event) {
-  uploadedFile.value = event.target.files[0];
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // Check if file is PDF
+  if (file.type !== "application/pdf") {
+    addToast("PLEASE UPLOAD A PDF FILE", "accent");
+    event.target.value = "";
+    return;
+  }
+
+  // Check file size (5MB = 5 * 1024 * 1024 bytes)
+  const MAX_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+  if (file.size > MAX_SIZE) {
+    addToast("PDF SIZE EXCEEDS 5MB LIMIT. PLEASE UPLOAD A SMALLER FILE", "accent");
+    event.target.value = "";
+    uploadedFile.value = null;
+    return;
+  }
+
+  uploadedFile.value = file;
   console.log("Uploaded file:", uploadedFile.value);
 }
 
@@ -92,6 +111,19 @@ async function submitApplication() {
 
   if (!uploadedFile.value) {
     addToast("PLEASE ATTACH YOUR REQUIREMENTS PDF", "accent");
+    return;
+  }
+
+  // Validate file size before submission (double-check)
+  const MAX_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+  if (uploadedFile.value.size > MAX_SIZE) {
+    addToast("PDF SIZE EXCEEDS 5MB LIMIT. PLEASE UPLOAD A SMALLER FILE", "accent");
+    return;
+  }
+
+  // Validate file type before submission
+  if (uploadedFile.value.type !== "application/pdf") {
+    addToast("PLEASE UPLOAD A PDF FILE", "accent");
     return;
   }
 
@@ -284,8 +316,14 @@ function viewPDF(event) {
 
         <!-- Career Details -->
         <p v-if="career.placeOfAssignment"><strong>Place of Assignment:</strong> {{ career.placeOfAssignment }}</p>
-        <p><strong>Details:</strong> {{ career.details || career.detailsAndInstructions || 'N/A' }}</p>
-        <p v-if="career.qualificationStandard"><strong>Qualification Standard:</strong> {{ career.qualificationStandard }}</p>
+        <p v-if="career.details || career.detailsAndInstructions" class="career-text-inline">
+          <strong>Details:</strong>
+          <span class="career-text-value">{{ career.details || career.detailsAndInstructions }}</span>
+        </p>
+        <p v-if="career.qualificationStandard" class="career-text-inline">
+          <strong>Qualification Standard:</strong>
+          <span class="career-text-value">{{ career.qualificationStandard }}</span>
+        </p>
         <p v-if="career.postingDate"><strong>Posting Date:</strong> {{ formatDateTime(career.postingDate) }}</p>
         <p>
           <strong>Closing Date:</strong>
@@ -381,5 +419,30 @@ function viewPDF(event) {
   word-break: break-all;
   display: inline-block;
   max-width: 100%;
+}
+
+/* Career text inline format to prevent overlap */
+.career-text-inline {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  width: 100%;
+}
+
+.career-text-inline strong {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.career-text-value {
+  flex: 1;
+  min-width: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.6;
 }
 </style>
