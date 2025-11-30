@@ -16,12 +16,31 @@ class BrevoEmailService
         $subject = "Your Organization Has Been Approved!";
         
         $html = "
-            <h2>Congratulations, {$orgName}!</h2>
-            <p>Your organization has been <strong>approved</strong> by our administrators.</p>
-            <p>You can now log in and start managing your trainings and careers.</p>
-            <br>
-            <p>Thank you,<br>The Admin Team</p>
-        ";
+    <div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>
+        <h2 style='color: #16a34a;'>🎉 Organization Approved!</h2>
+        <p>Hello <strong>{$orgName}</strong>,</p>
+
+        <p>We are pleased to inform you that your organization has been 
+        <span style='color: #16a34a; font-weight: bold;'>APPROVED</span>.</p>
+
+        <p>You may now log in to your account and begin managing your 
+        trainings, events, and other organization details.</p>
+
+        <div style='margin-top: 20px;'>
+            <a href='https://your-system-login-url.com'
+                style='background-color: #16a34a; 
+                       padding: 10px 18px; 
+                       color: white; 
+                       text-decoration: none; 
+                       border-radius: 6px;'>
+                Go to Login
+            </a>
+        </div>
+
+        <br>
+        <p>Thank you,<br>DICT Admin Team</p>
+    </div>
+";
 
         return $this->send($toEmail, $subject, $html);
     }
@@ -30,15 +49,23 @@ class BrevoEmailService
     {
         $subject = "Your Organization Registration Was Rejected";
 
-        $html = "
-            <h2>Hello, {$orgName}</h2>
-            <p>We regret to inform you that your organization registration has been <strong>rejected</strong>.</p>
+       $html = "
+        <div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>
+            <h2 style='color: #dc2626;'>❗ Registration Rejected</h2>
+            <p>Hello <strong>{$orgName}</strong>,</p>
+
+            <p>We regret to inform you that your organization registration has been 
+            <span style='color: #dc2626; font-weight: bold;'>REJECTED</span>.</p>
+
             <p><strong>Reason:</strong> {$reason}</p>
+
+            <p>If you believe this is a mistake or wish to reapply, feel free to 
+            contact our support team or submit a new registration.</p>
+
             <br>
-            <p>If you believe this was a mistake or would like to reapply, please contact support.</p>
-            <br>
-            <p>Thank you,<br>The Admin Team</p>
-        ";
+            <p>Thank you,<br>DICT Admin Team</p>
+        </div>
+    ";
 
         return $this->send($toEmail, $subject, $html);
     }
