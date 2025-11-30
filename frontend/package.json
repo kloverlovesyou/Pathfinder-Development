@@ -20,6 +20,7 @@
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
     "pdfjs-dist": "^5.4.394",
+    "philippine-location-json-for-geer": "^1.1.11",
     "pinia": "^2.3.1",
     "qrcode": "^1.5.4",
     "qrcode.vue": "^3.6.0",
