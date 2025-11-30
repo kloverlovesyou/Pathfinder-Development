@@ -897,7 +897,7 @@ async function fetchRegions() {
   loadingRegions.value = true;
   try {
     // Try primary source: iamkevinluke's repository
-    const response = await axios.get(`${PH_LOCATION_API_BASE}/regions.json`);
+    const response = await axios.get(import.meta.env.VITE_API_BASE_URL + `/regions`);
     regions.value = (response.data || []).map(region => ({
       psgc_code: region.code || region.psgc_code || region.id || region.region_code,
       name: region.name || region.region_name || region.regionName
@@ -906,7 +906,7 @@ async function fetchRegions() {
     console.error("Error fetching regions:", error);
     // Fallback 1: Try alternative GitHub repository
     try {
-      const fallbackResponse = await axios.get("api/regions");
+      const fallbackResponse = await axios.get(import.meta.env.VITE_API_BASE_URL + "/regions");
       regions.value = (fallbackResponse.data || []).map(region => ({
         psgc_code: region.code || region.id,
         name: region.name
@@ -1005,7 +1005,7 @@ async function onProvinceChange() {
   
   loadingCities.value = true;
   try {
-    const response = await axios.get("/api/cities");
+    const response = await axios.get(import.meta.env.VITE_API_BASE_URL + "/cities");
     const allCities = response.data || [];
     cities.value = allCities
   .filter(c => c.province_code == form.value.province) // just compare province_code
@@ -1042,7 +1042,7 @@ async function onCityChange() {
   
   loadingBarangays.value = true;
   try {
-    const response = await axios.get("/api/barangays");
+    const response = await axios.get(import.meta.env.VITE_API_BASE_URL + "/barangays");
     const allBarangays = response.data || [];
     barangays.value = allBarangays
       barangays.value = allBarangays
