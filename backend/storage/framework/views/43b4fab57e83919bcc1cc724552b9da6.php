@@ -59,4 +59,4 @@
 </body>
 </html>
 
-<?php /**PATH C:\Users\User\Documents\Pathfinder\Pathfinder-Frontend2\Pathfinder-Development\backend\resources\views/emails/verification-success.blade.php ENDPATH**/ ?>
+<?php /**PATH C:\PathFinder\Pathfinder-Development\backend\resources\views/emails/verification-success.blade.php ENDPATH**/ ?>

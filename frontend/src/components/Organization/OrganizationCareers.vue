@@ -51,10 +51,10 @@ function showConfirmToast(message) {
 const displayStatus = (status) => {
   const map = {
     submitted: "Submitted",
-    "in review": "In Review",
+    "for review": "For Review",
     "for interview": "For Interview",
-    accepted: "Accepted",
-    rejected: "Rejected",
+    hired: "Hired",
+    declined: "Declined",
   };
   return map[status] || status;
 };
@@ -2987,17 +2987,17 @@ async function viewRequirement(id) {
                         <option value="submitted">
                           {{ displayStatus("submitted") }}
                         </option>
-                        <option value="in review">
-                          {{ displayStatus("in review") }}
+                        <option value="for review">
+                          {{ displayStatus("for review") }}
                         </option>
                         <option value="for interview">
                           {{ displayStatus("for interview") }}
                         </option>
-                        <option value="accepted">
-                          {{ displayStatus("accepted") }}
+                        <option value="hired">
+                          {{ displayStatus("hired") }}
                         </option>
-                        <option value="rejected">
-                          {{ displayStatus("rejected") }}
+                        <option value="declined">
+                          {{ displayStatus("declined") }}
                         </option>
                       </select>
                     </td>
