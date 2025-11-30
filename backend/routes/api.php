@@ -211,10 +211,7 @@ Route::middleware('auth.custom')->group(function () {
 // Protected routes (auth.custom)
 // ----------------------
 Route::middleware('auth.custom')->group(function () {
-// Certificate issuance
-    Route::put('/registrations/{registrationID}/certificate', [RegistrationController::class, 'updateCertificate']);
-    Route::put('/registrations/{registrationID}/status', [RegistrationController::class, 'updateStatus']);
-    Route::post('/trainings/{trainingID}/certificates/bulk', [RegistrationController::class, 'issueBulkCertificates']);
+// Certificate issuance (removed duplicate - see below)
 
 
     // Trainings
@@ -241,13 +238,14 @@ Route::middleware('auth.custom')->group(function () {
     Route::delete('/careers/{id}', [CareerController::class, 'destroy'])->middleware('require.verified.org'); 
 
     // Certificate issuance
-    Route::put('/registrations/{registrationID}/certificate', [RegistrationController::class, 'updateCertificate'])->middleware('require.verified.org');
+    Route::post('/registrations/{registrationID}/certificate', [RegistrationController::class, 'updateCertificate'])->middleware('require.verified.org');
     Route::put('/registrations/{registrationID}/status', [RegistrationController::class, 'updateStatus'])->middleware('require.verified.org');
     Route::post('/trainings/{trainingID}/certificates/bulk', [RegistrationController::class, 'issueBulkCertificates'])->middleware('require.verified.org');
 
     // Applicant monitoring
     Route::get('/careers/{careerID}/applicants', [ApplicationController::class, 'getApplicantsByCareer']);
     Route::put('/applications/{applicationID}/status', [ApplicationController::class, 'updateStatus'])->middleware('require.verified.org');
+    Route::post('/applications/{applicationID}/send-status-email', [ApplicationController::class, 'sendStatusEmail'])->middleware('require.verified.org');
     Route::get('/applications/interviews', [InterviewController::class, 'index']);
     Route::put('/applications/{applicationID}/interview', [ApplicationController::class, 'updateInterview'])->middleware('require.verified.org');
     Route::get('/applications/{applicationID}/requirements/signed-url', [ApplicationFileController::class, 'generateSignedUrl']);

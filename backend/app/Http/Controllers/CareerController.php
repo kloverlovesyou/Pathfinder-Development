@@ -70,10 +70,11 @@ class CareerController extends Controller
         }
 
         // Validate request - using actual database column name
+        // Details and qualificationStandard are required only if pdf_directory is not provided or is empty
         $validated = $request->validate([
             'position' => 'required|string|max:255',
             'placeOfAssignment' => 'required|string|max:255',
-            'details' => 'required|string',
+            'details' => 'nullable|string',
             'qualificationStandard' => 'nullable|string',
             'pdf_directory' => 'nullable|string|max:255',
             'postingDate' => 'required|date',
@@ -83,18 +84,28 @@ class CareerController extends Controller
             'Tags.*' => 'integer|exists:tag,TagID',
         ]);
 
+        // Ensure at least one of details/qualificationStandard OR pdf_directory is provided
+        $pdfDirectory = !empty($validated['pdf_directory']) ? trim($validated['pdf_directory']) : null;
+        $details = !empty($validated['details']) ? trim($validated['details']) : null;
+        $qualificationStandard = !empty($validated['qualificationStandard']) ? trim($validated['qualificationStandard']) : null;
+
+        // If no PDF is uploaded, require at least details or qualificationStandard
+        if (empty($pdfDirectory) && empty($details) && empty($qualificationStandard)) {
+            return response()->json([
+                'message' => 'Either details/qualification standard or PDF file must be provided.'
+            ], 422);
+        }
+
         $postingDateFormatted = Carbon::parse($validated['postingDate'])->format('Y-m-d');
         $closingDateFormatted = Carbon::parse($validated['closingDate'])->format('Y-m-d');
-
-        $qualificationStandard = $validated['qualificationStandard'] ?? null;
 
         // Create career linked to organization - using actual database column names
         $career = Career::create([
             'position' => $validated['position'],
             'placeOfAssignment' => $validated['placeOfAssignment'],
-            'details' => $validated['details'],
+            'details' => $details,
             'qualificationStandard' => $qualificationStandard,
-            'pdf_directory' => $validated['pdf_directory'] ?? null,
+            'pdf_directory' => $pdfDirectory,
             'postingDate' => $postingDateFormatted,
             'closingDate' => $closingDateFormatted,
             'trainingsAttendedPercentage' => $validated['trainingsAttendedPercentage'] ?? null,
@@ -166,10 +177,11 @@ public function countsPartial()
         }
 
         // Validate request - using actual database column name
+        // Details and qualificationStandard are required only if pdf_directory is not provided or is empty
         $validated = $request->validate([
             'position' => 'required|string|max:255',
             'placeOfAssignment' => 'required|string|max:255',
-            'details' => 'required|string',
+            'details' => 'nullable|string',
             'qualificationStandard' => 'nullable|string',
             'pdf_directory' => 'nullable|string|max:255',
             'postingDate' => 'required|date',
@@ -179,13 +191,23 @@ public function countsPartial()
             'Tags.*' => 'integer|exists:tag,TagID',
         ]);
 
-        $qualificationStandard = $validated['qualificationStandard'] ?? null;
+        // Ensure at least one of details/qualificationStandard OR pdf_directory is provided
+        $pdfDirectory = !empty($validated['pdf_directory']) ? trim($validated['pdf_directory']) : null;
+        $details = !empty($validated['details']) ? trim($validated['details']) : null;
+        $qualificationStandard = !empty($validated['qualificationStandard']) ? trim($validated['qualificationStandard']) : null;
+
+        // If no PDF is uploaded, require at least details or qualificationStandard
+        if (empty($pdfDirectory) && empty($details) && empty($qualificationStandard)) {
+            return response()->json([
+                'message' => 'Either details/qualification standard or PDF file must be provided.'
+            ], 422);
+        }
 
         $career->position = $validated['position'];
         $career->placeOfAssignment = $validated['placeOfAssignment'];
-        $career->details = $validated['details'];
+        $career->details = $details;
         $career->qualificationStandard = $qualificationStandard;
-        $career->pdf_directory = $validated['pdf_directory'] ?? null;
+        $career->pdf_directory = $pdfDirectory;
         $career->postingDate = Carbon::parse($validated['postingDate'])->format('Y-m-d');
         $career->closingDate = Carbon::parse($validated['closingDate'])->format('Y-m-d');
         $career->trainingsAttendedPercentage = $validated['trainingsAttendedPercentage'] ?? null;

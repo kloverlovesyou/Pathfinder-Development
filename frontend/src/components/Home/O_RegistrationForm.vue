@@ -116,7 +116,9 @@
             placeholder="Enter organization name"
             name="name"
             v-model="form.name"
+            maxlength="100"
           />
+          <span class="char-counter">{{ (form.name || '').length }}/100</span>
         </div>
 
         <!-- Address Fields - Segmented Dropdowns (shown when API works) -->
@@ -207,7 +209,9 @@
               type="text"
               placeholder="House/Building Number, Street Name"
               v-model="form.streetAddress"
+              maxlength="100"
             />
+            <span class="char-counter">{{ (form.streetAddress || '').length }}/100</span>
           </div>
         </template>
 
@@ -223,7 +227,9 @@
             placeholder="Enter your complete address"
             name="location"
             v-model="form.location"
+            maxlength="100"
           />
+          <span class="char-counter">{{ (form.location || '').length }}/100</span>
           <p class="text-xs text-gray-500 mt-1">
             Location API is unavailable. Please enter your full address manually.
           </p>
@@ -239,7 +245,9 @@
             placeholder="Enter website URL"
             name="websiteURL"
             v-model="form.websiteURL"
+            maxlength="100"
           />
+          <span class="char-counter">{{ (form.websiteURL || '').length }}/100</span>
         </div>
 
         <div class="form-control mb-4">
@@ -253,7 +261,9 @@
             placeholder="Enter your email address"
             name="emailAddress"
             v-model="form.emailAddress"
+            maxlength="100"
           />
+          <span class="char-counter">{{ (form.emailAddress || '').length }}/100</span>
           <p class="validator-hint hidden">Invalid Email</p>
         </div>
 
@@ -272,6 +282,92 @@
             v-model="form.phoneNumber"
           />
           <p class="hidden validator-hint">Must be 11 digits</p>
+        </div>
+
+        <!-- PDF Requirements Upload -->
+        <div class="form-control mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Upload PDF Requirement (Required) <span class="text-red-500">*</span>
+          </label>
+          <p class="text-xs text-gray-600 mb-2">Permits, Documents, etc.</p>
+          <div class="flex items-center space-x-4">
+            <div v-if="requirementFile" class="flex-shrink-0">
+              <div class="h-20 w-20 border-2 border-gray-300 rounded-lg flex items-center justify-center bg-red-50">
+                <svg
+                  class="h-8 w-8 text-red-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+            </div>
+            <div v-else class="flex-shrink-0">
+              <div class="h-20 w-20 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
+                <svg
+                  class="h-8 w-8 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+            </div>
+            <div class="flex-1">
+              <input
+                type="file"
+                ref="requirementInput"
+                accept="application/pdf"
+                @change="handleRequirementUpload"
+                class="hidden"
+                id="requirement-upload"
+                required
+              />
+              <label
+                for="requirement-upload"
+                class="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <svg
+                  class="h-5 w-5 mr-2 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  />
+                </svg>
+                {{ requirementFile ? requirementFile.name : 'Choose PDF File' }}
+              </label>
+              <button
+                v-if="requirementFile"
+                type="button"
+                @click="removeRequirement"
+                class="ml-2 text-sm text-red-600 hover:text-red-800"
+              >
+                Remove
+              </button>
+              <p v-if="requirementError" class="text-red-500 text-xs mt-1">{{ requirementError }}</p>
+              <p class="text-gray-500 text-xs mt-1">
+                Accepted format: PDF only (Max 10MB)
+              </p>
+            </div>
+          </div>
         </div>
 
         <div class="form-control mb-4 relative">
@@ -553,9 +649,9 @@
         <div class="card-actions justify-end pt-4">
           <button
             class="btn w-2/4 bg-customButton hover:bg-dark-slate text-white"
-            :disabled="logoUploading"
+            :disabled="logoUploading || requirementUploading"
           >
-            {{ logoUploading ? 'Uploading Logo...' : 'Register' }}
+            {{ (logoUploading || requirementUploading) ? 'Uploading...' : 'Register' }}
           </button>
         </div>
       </form>
@@ -622,7 +718,7 @@ import { ref, nextTick, onMounted } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
 import api from "../../composables/api.js";
-import { uploadImage } from "../../lib/supabase.js";
+import { uploadImage, uploadOrgRequirement } from "../../lib/supabase.js";
 
 const router = useRouter();
 
@@ -640,6 +736,7 @@ const form = ref({
   password: "",
   confirmPassword: "",
   logoPath: "",
+  RegistrationRequirements: "",
 });
 
 // Philippines Location API data
@@ -658,6 +755,11 @@ const logoPreview = ref(null);
 const logoError = ref("");
 const logoInput = ref(null);
 const logoUploading = ref(false);
+
+const requirementFile = ref(null);
+const requirementError = ref("");
+const requirementInput = ref(null);
+const requirementUploading = ref(false);
 
 const termsAccepted = ref(false);
 const showModal = ref(false);
@@ -707,11 +809,50 @@ const removeLogo = () => {
   form.value.logoPath = "";
 };
 
+const handleRequirementUpload = async (event) => {
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+
+  requirementError.value = "";
+
+  // Validate file type
+  if (file.type !== "application/pdf") {
+    requirementError.value = "Please upload a valid PDF file.";
+    event.target.value = "";
+    return;
+  }
+
+  // Validate file size (10MB max)
+  const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+  if (file.size > MAX_SIZE) {
+    requirementError.value = "PDF is too large. Maximum size is 10MB.";
+    event.target.value = "";
+    return;
+  }
+
+  requirementFile.value = file;
+};
+
+const removeRequirement = () => {
+  requirementFile.value = null;
+  requirementError.value = "";
+  if (requirementInput.value) {
+    requirementInput.value.value = "";
+  }
+  form.value.RegistrationRequirements = "";
+};
+
 const handleSubmit = async () => {
   if (!termsAccepted.value) {
     return;
   }
   if (form.value.password !== form.value.confirmPassword) {
+    return;
+  }
+
+  // Validate PDF requirement is uploaded
+  if (!requirementFile.value) {
+    alert("Please upload a PDF requirement document (Permits, Documents, etc.).");
     return;
   }
 
@@ -732,6 +873,27 @@ const handleSubmit = async () => {
   }
 
   try {
+    // Upload PDF requirement (required) to org_requirement_directory
+    requirementUploading.value = true;
+    requirementError.value = "";
+    try {
+      const requirementPath = await uploadOrgRequirement(requirementFile.value);
+      if (requirementPath) {
+        form.value.RegistrationRequirements = requirementPath;
+      } else {
+        requirementError.value = "Failed to upload PDF requirement. Please try again.";
+        requirementUploading.value = false;
+        return;
+      }
+    } catch (error) {
+      console.error("Error uploading PDF requirement:", error);
+      requirementError.value = "Failed to upload PDF requirement. Please try again.";
+      requirementUploading.value = false;
+      return;
+    } finally {
+      requirementUploading.value = false;
+    }
+
     // Upload logo if provided
     if (logoFile.value) {
       logoUploading.value = true;
@@ -798,12 +960,14 @@ const handleSubmit = async () => {
       password: "",
       confirmPassword: "",
       logoPath: "",
+      RegistrationRequirements: "",
     };
     regions.value = [];
     provinces.value = [];
     cities.value = [];
     barangays.value = [];
     removeLogo();
+    removeRequirement();
     termsAccepted.value = false;
   } catch (error) {
     console.error("Registration error:", error);
@@ -836,12 +1000,14 @@ const handleSubmit = async () => {
         password: "",
         confirmPassword: "",
         logoPath: "",
+        RegistrationRequirements: "",
       };
       regions.value = [];
       provinces.value = [];
       cities.value = [];
       barangays.value = [];
       removeLogo();
+      removeRequirement();
       termsAccepted.value = false;
       return;
     }
@@ -1121,5 +1287,13 @@ input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear,
 input[type="password"]::-webkit-textfield-decoration-container {
   display: none !important;
+}
+
+.char-counter {
+  font-size: 12px;
+  color: #6b7280;
+  text-align: right;
+  margin-top: 4px;
+  display: block;
 }
 </style>
