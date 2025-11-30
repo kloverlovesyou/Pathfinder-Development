@@ -1235,13 +1235,13 @@ onMounted(async () => {
               <strong>Place of Assignment:</strong>
               {{ selectedCareerDetails.placeOfAssignment || "Not specified" }}
             </p>
-            <p>
+            <p v-if="selectedCareerDetails.details" class="career-text-inline">
               <strong>Details:</strong>
-              {{ selectedCareerDetails.details || "No details provided." }}
+              <span class="career-text-value">{{ selectedCareerDetails.details }}</span>
             </p>
-            <p>
+            <p v-if="selectedCareerDetails.qualificationStandard" class="career-text-inline">
               <strong>Qualification Standard:</strong>
-              {{ selectedCareerDetails.qualificationStandard || "Not specified" }}
+              <span class="career-text-value">{{ selectedCareerDetails.qualificationStandard }}</span>
             </p>
             <p v-if="selectedCareerDetails.postingDate">
               <strong>Posting Date:</strong>
@@ -1630,5 +1630,30 @@ onMounted(async () => {
   color: #2563eb;
   text-decoration: underline;
   word-break: break-all;
+}
+
+/* Career text inline format to prevent overlap */
+.career-text-inline {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  width: 100%;
+}
+
+.career-text-inline strong {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.career-text-value {
+  flex: 1;
+  min-width: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.6;
 }
 </style>

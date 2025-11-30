@@ -264,10 +264,49 @@
           </div>
         </section>
       </main>
+      <div class="fixed top-5 right-5 space-y-2 z-50">
+        <div
+          v-for="toast in toasts"
+          :key="toast.id"
+          :class="[
+            'px-4 py-2 rounded shadow flex items-center gap-2',
+            toast.type === 'success'
+              ? 'bg-white text-black'
+              : toast.type === 'error'
+              ? 'bg-red-500 text-white'
+              : toast.type === 'confirm'
+              ? 'bg-dark-slate text-white'
+              : toast.type === 'info'
+              ? 'bg-blue-500 text-white'
+              : 'bg-gray-500 text-white',
+          ]"
+        >
+          <span class="flex-1">{{ toast.message }}</span>
+
+          <!-- ONLY SHOW WHEN CONFIRM -->
+          <template v-if="toast.type === 'confirm'">
+            <button
+              @click="toast.onConfirm()"
+              class="px-2 py-1 bg-white text-black rounded"
+            >
+              Yes
+            </button>
+            <button
+              @click="toast.onCancel()"
+              class="px-2 py-1 bg-gray-700 text-white rounded"
+            >
+              No
+            </button>
+          </template>
+        </div>
+      </div>
     </div>
   </template>
 
 <script>
+import { useToast } from "@/composables/useToast.js";
+
+const { toasts, showToast, showConfirmToast } = useToast();
 import axios from "axios";
 import api from "@/composables/api";
 import { getImageUrl } from "@/lib/supabase.js";
@@ -276,6 +315,7 @@ export default {
   name: "OrganizationCalendar",
   data() {
     return {
+      toasts: toasts,
       organizationLogo: null,
       currentDate: new Date(),
       selectedEvents: { trainings: [], careers: [], scheduledInterviews: [] },
@@ -723,13 +763,13 @@ export default {
     },
 
     editEvent() {
-      alert("Edit function triggered!");
+      showToast("Edit function triggered!", "info");
       this.closeMenu();
     },
-    deleteEvent() {
-      const confirmDelete = confirm("Are you sure you want to delete this event?");
-      if (confirmDelete) {
-        alert("Delete function triggered!");
+    async deleteEvent() {
+      const confirmed = await showConfirmToast("Are you sure you want to delete this event?");
+      if (confirmed) {
+        showToast("Delete function triggered!", "success");
         // Here you can add your logic to remove the event from `trainings` or `careers`
       }
       this.closeMenu();

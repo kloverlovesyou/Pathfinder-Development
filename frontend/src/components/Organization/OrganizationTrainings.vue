@@ -138,8 +138,11 @@
       <!-- ✅ GLOBAL SEARCH -->
       <section class="global-search-section">
         <div class="flex justify-center my-6 px-4">
-          <input type="text" v-model="globalSearchQuery" placeholder="Search trainings..."
-            class="global-search-bar text-black px-4 py-2 border rounded-lg w-full sm:w-3/4 md:w-1/2 lg:w-1/3" />
+          <div class="relative w-full sm:w-3/4 md:w-1/2 lg:w-1/3">
+            <input type="text" v-model="globalSearchQuery" placeholder="Search trainings..."
+              class="global-search-bar text-black px-4 py-2 border rounded-lg w-full" maxlength="100" />
+            <span class="char-counter-search">{{ (globalSearchQuery || '').length }}/100</span>
+          </div>
         </div>
       </section>
 
@@ -634,8 +637,11 @@
           </p>
 
           <form @submit.prevent="sendCertificateDetails" class="cert-form">
-            <input type="text" v-model="selectedRegistrant.certificateTrackingID" placeholder="Certificate Tracking ID"
-              class="cert-input" required />
+            <div class="input-with-counter">
+              <input type="text" v-model="selectedRegistrant.certificateTrackingID" placeholder="Certificate Tracking ID"
+                class="cert-input" required maxlength="50" />
+              <span class="char-counter">{{ (selectedRegistrant.certificateTrackingID || '').length }}/50</span>
+            </div>
 
             <div class="cert-input-wrapper">
               <input type="date" v-model="selectedRegistrant.certificateGivenDate" placeholder="dd/mm/yyyy"
@@ -692,8 +698,14 @@
 
           <!-- Form -->
           <form @submit.prevent="saveTraining" class="training-popup-form">
-            <input v-model="newTraining.title" type="text" placeholder="Title" class="training-input" />
-            <textarea v-model="newTraining.description" placeholder="Description" class="training-input"></textarea>
+            <div class="input-with-counter">
+              <input v-model="newTraining.title" type="text" placeholder="Title" class="training-input" maxlength="100" />
+              <span class="char-counter">{{ (newTraining.title || '').length }}/100</span>
+            </div>
+            <div class="input-with-counter">
+              <textarea v-model="newTraining.description" placeholder="Description" class="training-input" maxlength="1000"></textarea>
+              <span class="char-counter">{{ (newTraining.description || '').length }}/1000</span>
+            </div>
 
             <div class="org-choice-toggle popup-toggle" @click.stop>
               <label class="org-choice-switch">
@@ -790,11 +802,17 @@
                     </div>
 
                     <!-- Conditional fields based on mode -->
-                    <input v-if="schedule.mode === 'On-Site'" v-model="schedule.location" type="text"
-                      placeholder="Location" class="training-input" />
+                    <div v-if="schedule.mode === 'On-Site'" class="input-with-counter">
+                      <input v-model="schedule.location" type="text"
+                        placeholder="Location" class="training-input" maxlength="100" />
+                      <span class="char-counter">{{ (schedule.location || '').length }}/100</span>
+                    </div>
 
-                    <input v-else-if="schedule.mode === 'Online'" v-model="schedule.trainingLink" type="url"
-                      placeholder="Training Link" class="training-input" />
+                    <div v-else-if="schedule.mode === 'Online'" class="input-with-counter">
+                      <input v-model="schedule.trainingLink" type="url"
+                        placeholder="Training Link" class="training-input" maxlength="100" />
+                      <span class="char-counter">{{ (schedule.trainingLink || '').length }}/100</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -804,8 +822,11 @@
             <div class="relative mb-4">
               <label class="block font-semibold text-gray-600 mb-2">Tags</label>
               <!-- Search/Input for New Tag -->
-              <input v-model="newTagName" type="text" placeholder="Search or type a new tag..."
-                class="training-input mb-2" />
+              <div class="input-with-counter mb-2">
+                <input v-model="newTagName" type="text" placeholder="Search or type a new tag..."
+                  class="training-input" maxlength="50" />
+                <span class="char-counter">{{ (newTagName || '').length }}/50</span>
+              </div>
               <!-- Tag List Wrapper for horizontal scrolling -->
               <div class="tag-list-wrapper">
                 <div class="tag-list">
@@ -872,6 +893,40 @@
           </div>
         </div>
       </div>
+      <div class="fixed top-5 right-5 space-y-2 z-50">
+        <div
+          v-for="toast in toasts"
+          :key="toast.id"
+          :class="[
+            'px-4 py-2 rounded shadow flex items-center gap-2',
+            toast.type === 'success'
+              ? 'bg-white text-black'
+              : toast.type === 'error'
+              ? 'bg-red-500 text-white'
+              : toast.type === 'confirm'
+              ? 'bg-dark-slate text-white'
+              : 'bg-gray-500 text-white',
+          ]"
+        >
+          <span class="flex-1">{{ toast.message }}</span>
+
+          <!-- ONLY SHOW WHEN CONFIRM -->
+          <template v-if="toast.type === 'confirm'">
+            <button
+              @click="toast.onConfirm()"
+              class="px-2 py-1 bg-white text-black rounded"
+            >
+              Yes
+            </button>
+            <button
+              @click="toast.onCancel()"
+              class="px-2 py-1 bg-gray-700 text-white rounded"
+            >
+              No
+            </button>
+          </template>
+        </div>
+      </div>
     </main>
   </div>
 </template>
@@ -882,8 +937,11 @@ import QrcodeVue from "qrcode.vue";
 import api from "@/composables/api.js";
 import { activeTrainingQR, activeTrainingId, activeScheduleId, qrExpiresAt, scheduleQR, generateQR } from "@/composables/useTrainingQR.js";
 import { uploadCertificate, getPDFUrl, getImageUrl } from "@/lib/supabase.js";
+import { useToast } from "@/composables/useToast.js";
 import jsPDF from "jspdf";
 import * as pdfjsLib from "pdfjs-dist";
+
+const { toasts, showToast, showConfirmToast } = useToast();
 
 // Configure pdfjs worker - use worker from public folder
 // Files in public folder are served from root in both dev and production
@@ -937,6 +995,7 @@ export default {
   components: { QrcodeVue }, // ✅ register component
   data() {
     return {
+      toasts: toasts,
       organizationLogo: null,
       organizationStatus: null,
       isOrganizationVerified: false,
@@ -1028,11 +1087,17 @@ export default {
   methods: {
 
     viewCertificate(certificatePath) {
-      if (!certificatePath) return alert("Certificate not found.");
+      if (!certificatePath) {
+        showToast("Certificate not found.", "error");
+        return;
+      }
 
       // Get public URL from Supabase
       const publicUrl = getPDFUrl(certificatePath);
-      if (!publicUrl) return alert("Unable to generate certificate URL.");
+      if (!publicUrl) {
+        showToast("Unable to generate certificate URL.", "error");
+        return;
+      }
 
       window.open(publicUrl, "_blank"); // Open in new tab
     },
@@ -1041,7 +1106,7 @@ export default {
       // Early return if disabled conditions are met
       if (person.hasCertificate) return;
       if (person.status !== 'Attended') {
-        alert('Certificates can only be issued to registrants with "Attended" status.');
+        showToast('Certificates can only be issued to registrants with "Attended" status.', "error");
         return;
       }
       // Proceed with issuing certificate
@@ -1052,7 +1117,7 @@ export default {
       try {
         if (person.hasCertificate) return;
         if (person.status !== 'Attended') {
-          alert('Certificates can only be issued to registrants with "Attended" status.');
+          showToast('Certificates can only be issued to registrants with "Attended" status.', "error");
           return;
         }
 
@@ -1088,7 +1153,7 @@ export default {
         // Send image file to backend - backend will upload to Supabase
         const token = localStorage.getItem("token");
         if (!token) {
-          alert("Please log in to continue.");
+          showToast("Please log in to continue.", "error");
           return;
         }
 
@@ -1096,7 +1161,6 @@ export default {
         formData.append("certificateTrackingID", String(person.id)); // Ensure it's a string
         formData.append("certificateGivenDate", givenDate);
         formData.append("file", imageFile); // Send image (PDF already converted)
-        formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
 
         // Send to backend (backend handles conversion and Supabase upload)
         const response = await axios.post(
@@ -1121,11 +1185,11 @@ export default {
           person.certificateUrl = getPDFUrl(person.certificatePath);
         }
 
-        alert(`Certificate issued for ${person.name}!`);
+        showToast(`Certificate issued for ${person.name}!`, "success");
 
       } catch (error) {
         console.error("Error issuing certificate:", error);
-        alert(`Failed to issue certificate for ${person.name}.`);
+        showToast(`Failed to issue certificate for ${person.name}.`, "error");
       }
     },
     async issueBulkCertificates(selectedRegistrants) {
@@ -1133,7 +1197,7 @@ export default {
         const givenDate = new Date().toISOString().split("T")[0];
         const token = localStorage.getItem("token");
         if (!token) {
-          alert("Please log in to continue.");
+          showToast("Please log in to continue.", "error");
           return;
         }
 
@@ -1169,7 +1233,6 @@ export default {
           formData.append("certificateTrackingID", String(person.id)); // Ensure it's a string
           formData.append("certificateGivenDate", givenDate);
           formData.append("file", imageFile); // Send image (PDF already converted)
-          formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
 
           await axios.post(
             `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
@@ -1178,22 +1241,25 @@ export default {
           );
         }
 
-        alert("Bulk certificates issued successfully!");
+        showToast("Bulk certificates issued successfully!", "success");
       } catch (error) {
         console.error("Error issuing bulk certificates:", error);
-        alert("Failed to issue bulk certificates. " + (error.response?.data?.message || error.message));
+        showToast("Failed to issue bulk certificates. " + (error.response?.data?.message || error.message), "error");
       }
     },
 
     async issueCertificatesToSelected() {
       const selectedPeople = this.registrantsList.filter(p => p.selected && !p.hasCertificate && p.status === 'Attended');
-      if (!selectedPeople.length) return alert("No selected registrants with 'Attended' status or all already issued.");
+      if (!selectedPeople.length) {
+        showToast("No selected registrants with 'Attended' status or all already issued.", "error");
+        return;
+      }
 
       try {
         const certGivenDate = new Date().toISOString().split("T")[0];
         const token = localStorage.getItem("token");
         if (!token) {
-          alert("Please log in to continue.");
+          showToast("Please log in to continue.", "error");
           return;
         }
 
@@ -1229,7 +1295,6 @@ export default {
           formData.append("certificateTrackingID", String(person.id)); // Ensure it's a string
           formData.append("certificateGivenDate", certGivenDate);
           formData.append("file", imageFile); // Send image (PDF already converted)
-          formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
 
           await axios.post(
             `${import.meta.env.VITE_API_BASE_URL}/registrations/${person.id}/certificate`,
@@ -1244,7 +1309,7 @@ export default {
           p.certificateTrackingID = p.id;
         });
 
-        alert("Certificates issued successfully!");
+        showToast("Certificates issued successfully!", "success");
 
         // Refresh registrants list
         if (this.selectedTraining) {
@@ -1252,7 +1317,7 @@ export default {
         }
       } catch (error) {
         console.error("Bulk issuance error:", error);
-        alert("Failed to issue certificates. " + (error.response?.data?.message || error.message));
+        showToast("Failed to issue certificates. " + (error.response?.data?.message || error.message), "error");
       }
     },
 
@@ -1274,7 +1339,7 @@ export default {
     openBulkCertModal() {
       const registrantsWithoutCert = this.registrantsList.filter(r => !r.hasCertificate);
       if (registrantsWithoutCert.length === 0) {
-        alert("All registrants already have certificates.");
+        showToast("All registrants already have certificates.", "error");
         return;
       }
       this.bulkCertData = {
@@ -1302,7 +1367,7 @@ export default {
     async sendBulkCertificates() {
       const token = localStorage.getItem("token");
       if (!token) {
-        alert("Please log in to continue.");
+        showToast("Please log in to continue.", "error");
         return;
       }
 
@@ -1329,15 +1394,15 @@ export default {
           }
         );
 
-        alert("Certificates issued successfully to all registrants!");
+        showToast("Certificates issued successfully to all registrants!", "success");
         this.closeBulkCertModal();
         await this.loadRegistrantsForTraining(this.selectedTraining); // Refresh list
       } catch (error) {
         console.error("Error issuing bulk certificates:", error);
         if (error.response) {
-          alert(error.response.data.message || "Failed to issue certificates.");
+          showToast(error.response.data.message || "Failed to issue certificates.", "error");
         } else {
-          alert(error.message || "An error occurred while issuing certificates.");
+          showToast(error.message || "An error occurred while issuing certificates.", "error");
         }
       }
     },
@@ -1378,7 +1443,7 @@ export default {
     async addTag() {
       const trimmedTagName = this.newTagName.trim();
       if (!trimmedTagName) {
-        alert("Please enter a tag name.");
+        showToast("Please enter a tag name.", "error");
         return;
       }
 
@@ -1413,21 +1478,21 @@ export default {
         this.newTagName = '';
       } catch (error) {
         console.error("Error adding tag:", error);
-        alert('Failed to create tag. Please try again.');
+        showToast('Failed to create tag. Please try again.', "error");
       }
     },
 
     // Schedule management methods
     addDate() {
       if (!this.tempDateInput) {
-        alert("Please select a date first.");
+        showToast("Please select a date first.", "error");
         return;
       }
 
       // Check if date already exists
       const dateExists = this.newTraining.schedules.some(s => s.date === this.tempDateInput);
       if (dateExists) {
-        alert("This date has already been added.");
+        showToast("This date has already been added.", "error");
         return;
       }
 
@@ -1467,13 +1532,13 @@ export default {
       }
 
       if (!this.selectedRegistrant.uploadedFile) {
-        alert("Please select a certificate file before sending.");
+        showToast("Please select a certificate file before sending.", "error");
         return;
       }
 
       const token = localStorage.getItem("token");
       if (!token) {
-        alert("Please log in to continue.");
+        showToast("Please log in to continue.", "error");
         return;
       }
 
@@ -1486,7 +1551,7 @@ export default {
           fileToUpload = new File([imageBlob], fileToUpload.name.replace(/\.pdf$/i, ".png"), { type: "image/png" });
         } catch (error) {
           console.error("Error converting PDF to image:", error);
-          alert("Failed to convert PDF to image. Please try uploading an image file instead.");
+          showToast("Failed to convert PDF to image. Please try uploading an image file instead.", "error");
           return;
         }
       }
@@ -1495,7 +1560,6 @@ export default {
       formData.append("certificateTrackingID", String(this.selectedRegistrant.certificateTrackingID || this.selectedRegistrant.id));
       formData.append("certificateGivenDate", this.selectedRegistrant.certificateGivenDate);
       formData.append("file", fileToUpload); // Send image (PDF already converted if it was a PDF)
-      formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
 
       try {
         const res = await axios.post(
@@ -1509,7 +1573,7 @@ export default {
           }
         );
         console.log("Certificate uploaded successfully", res.data);
-        alert("Certificate uploaded successfully!");
+        showToast("Certificate uploaded successfully!", "success");
         this.showCertUploadModal = false;
 
         // Refresh registrants list if details modal is open
@@ -1518,7 +1582,7 @@ export default {
         }
       } catch (err) {
         console.error("Error uploading certificate: ", err);
-        alert(err.response?.data?.message || "Failed to upload certificate. Please try again.");
+        showToast(err.response?.data?.message || "Failed to upload certificate. Please try again.", "error");
       }
     },
 
@@ -1608,7 +1672,7 @@ export default {
         // Send image file to backend - backend will upload to Supabase
         const token = localStorage.getItem("token");
         if (!token) {
-          alert("Please log in to continue.");
+          showToast("Please log in to continue.", "error");
           return;
         }
 
@@ -1616,7 +1680,6 @@ export default {
         formData.append("certificateTrackingID", String(person.id)); // Ensure it's a string
         formData.append("certificateGivenDate", givenDate);
         formData.append("file", imageFile); // Send image (PDF already converted)
-        formData.append("_method", "PUT"); // Laravel workaround for PUT with FormData
 
         // Send to backend (backend handles conversion and Supabase upload)
         const response = await axios.post(
@@ -1636,10 +1699,10 @@ export default {
           person.certificateUrl = getPDFUrl(person.certificatePath);
         }
 
-        alert(`Certificate issued for ${person.name}!`);
+        showToast(`Certificate issued for ${person.name}!`, "success");
       } catch (error) {
         console.error("Error issuing certificate:", error);
-        alert(`Failed to issue certificate for ${person.name}.`);
+        showToast(`Failed to issue certificate for ${person.name}.`, "error");
       }
     },
 
@@ -1671,7 +1734,7 @@ export default {
 
     sendCertificateDetails() {
       if (!this.selectedRegistrant.uploadedFile) {
-        alert("Please select a certificate file before sending.");
+        showToast("Please select a certificate file before sending.", "error");
         return;
       }
 
@@ -1682,7 +1745,7 @@ export default {
         this.closeCertUploadModal();
       }).catch(err => {
         console.error(err);
-        alert("Failed to send certificate.");
+        showToast("Failed to send certificate.", "error");
       });
     },
 
@@ -1727,7 +1790,7 @@ export default {
 
       const token = localStorage.getItem("token");
       if (!token) {
-        alert("Please log in to continue.");
+        showToast("Please log in to continue.", "error");
         return;
       }
 
@@ -1789,7 +1852,7 @@ export default {
     async handleOrganizationChoiceToggle(training, shouldEnable) {
       // Check if organization is verified
       if (!this.isOrganizationVerified) {
-        alert("Your organization account is not yet verified by the admin. Please wait for admin approval before performing this action.");
+        showToast("Your organization account is not yet verified by the admin. Please wait for admin approval before performing this action.", "error");
         return;
       }
 
@@ -1804,13 +1867,13 @@ export default {
 
       try {
         await this.persistOrganizationChoice(training.trainingID, shouldEnable);
-        alert(shouldEnable
+        showToast(shouldEnable
           ? "Training marked as an Organization Choice."
-          : "Training removed from Organization Choices.");
+          : "Training removed from Organization Choices.", "success");
       } catch (error) {
         console.error("Failed to update organization choice:", error);
         this.setChoiceStateLocally(training.trainingID, previousValue);
-        alert(error.response?.data?.message || "Failed to update Organization Choice. Please try again.");
+        showToast(error.response?.data?.message || "Failed to update Organization Choice. Please try again.", "error");
       }
     },
 
@@ -1848,9 +1911,10 @@ export default {
         await this.persistOrganizationChoice(trainingID, desiredValue);
       } catch (error) {
         console.error("Failed to apply organization choice preference:", error);
-        alert(
+        showToast(
           error.response?.data?.message ||
-          "Training saved, but updating the Organization Choice flag failed. Please toggle it manually from the training list."
+          "Training saved, but updating the Organization Choice flag failed. Please toggle it manually from the training list.",
+          "error"
         );
       }
     },
@@ -1933,7 +1997,7 @@ export default {
     openTrainingPopup() {
       // Check if organization is verified
       if (!this.isOrganizationVerified) {
-        alert("Your organization account is not yet verified by the admin. Please wait for admin approval before creating or editing trainings.");
+        showToast("Your organization account is not yet verified by the admin. Please wait for admin approval before creating or editing trainings.", "error");
         return;
       }
       this.showTrainingPopup = true;
@@ -2042,7 +2106,7 @@ export default {
         || this.completedtrainings.find(t => t.trainingID === trainingID);
       
       if (!training) {
-        alert("Training not found.");
+        showToast("Training not found.", "error");
         return;
       }
 
@@ -2055,14 +2119,14 @@ export default {
     async saveTraining() {
       // Check if organization is verified
       if (!this.isOrganizationVerified) {
-        alert("Your organization account is not yet verified by the admin. Please wait for admin approval before performing this action.");
+        showToast("Your organization account is not yet verified by the admin. Please wait for admin approval before performing this action.", "error");
         return;
       }
 
       try {
         // Validate schedules
         if (!this.newTraining.schedules || this.newTraining.schedules.length === 0) {
-          alert("PLEASE ADD AT LEAST ONE DATE WITH TIME AND MODE");
+          showToast("PLEASE ADD AT LEAST ONE DATE WITH TIME AND MODE", "error");
           return;
         }
 
@@ -2070,15 +2134,15 @@ export default {
         for (let i = 0; i < this.newTraining.schedules.length; i++) {
           const schedule = this.newTraining.schedules[i];
           if (!schedule.date || !schedule.startTime || !schedule.endTime || !schedule.mode) {
-            alert(`PLEASE COMPLETE ALL FIELDS FOR DATE: ${this.formatDateDisplay(schedule.date) || 'Date ' + (i + 1)}`);
+            showToast(`PLEASE COMPLETE ALL FIELDS FOR DATE: ${this.formatDateDisplay(schedule.date) || 'Date ' + (i + 1)}`, "error");
             return;
           }
           if (schedule.mode === "On-Site" && !schedule.location) {
-            alert(`PLEASE ENTER A LOCATION FOR DATE: ${this.formatDateDisplay(schedule.date)}`);
+            showToast(`PLEASE ENTER A LOCATION FOR DATE: ${this.formatDateDisplay(schedule.date)}`, "error");
             return;
           }
           if (schedule.mode === "Online" && !schedule.trainingLink) {
-            alert(`PLEASE ENTER A TRAINING LINK FOR DATE: ${this.formatDateDisplay(schedule.date)}`);
+            showToast(`PLEASE ENTER A TRAINING LINK FOR DATE: ${this.formatDateDisplay(schedule.date)}`, "error");
             return;
           }
         }
@@ -2116,7 +2180,7 @@ export default {
             { headers: { Authorization: `Bearer ${token}` } }
           );
           await this.syncOrganizationChoiceAfterSave(this.trainingToEditId, desiredChoice, previousChoice);
-          alert("✅ TRAINING UPDATED SUCCESSFULLY!");
+          showToast("✅ TRAINING UPDATED SUCCESSFULLY!", "success");
         } else {
           // For create mode, create ONE training with MULTIPLE schedules
           // Format schedules array according to database schema
@@ -2148,7 +2212,7 @@ export default {
 
           const newTrainingId = response?.data?.data?.trainingID;
           await this.syncOrganizationChoiceAfterSave(newTrainingId, desiredChoice, false);
-          alert(`✅ TRAINING WITH ${this.newTraining.schedules.length} SCHEDULE(S) POSTED SUCCESSFULLY!`);
+          showToast(`✅ TRAINING WITH ${this.newTraining.schedules.length} SCHEDULE(S) POSTED SUCCESSFULLY!`, "success");
         }
 
         await this.fetchTrainings();
@@ -2158,7 +2222,7 @@ export default {
 
       } catch (error) {
         console.error("ERROR SAVING TRAINING:", error.response?.data || error);
-        alert("❌ SOMETHING WENT WRONG WHILE SAVING THE TRAINING");
+        showToast("❌ SOMETHING WENT WRONG WHILE SAVING THE TRAINING", "error");
       }
     },
 
@@ -2166,7 +2230,7 @@ export default {
     async deleteTraining(trainingID) {
       // Check if organization is verified
       if (!this.isOrganizationVerified) {
-        alert("Your organization account is not yet verified by the admin. Please wait for admin approval before performing this action.");
+        showToast("Your organization account is not yet verified by the admin. Please wait for admin approval before performing this action.", "error");
         return;
       }
 
@@ -2180,7 +2244,7 @@ export default {
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        alert("✅ Training deleted successfully!");
+        showToast("✅ Training deleted successfully!", "success");
         await this.fetchTrainings();
 
         if (this.activeTrainingId === trainingID) {
@@ -2192,7 +2256,7 @@ export default {
 
       } catch (error) {
         console.error("Failed to delete training:", error.response?.data || error);
-        alert("❌ Something went wrong while deleting the training.");
+        showToast("❌ Something went wrong while deleting the training.", "error");
       }
     },
 
@@ -2444,16 +2508,16 @@ export default {
       if (!this.canGenerateQRForSchedule(schedule)) {
         if (!this.hasScheduleStarted(schedule)) {
           const startTime = this.parseLocalDateTime(schedule.schedule || schedule.Schedule);
-          alert(`Cannot generate QR code. Training has not started yet.\nStart time: ${startTime ? startTime.toLocaleString() : 'Unknown'}\nCurrent time: ${new Date().toLocaleString()}`);
+          showToast(`Cannot generate QR code. Training has not started yet.\nStart time: ${startTime ? startTime.toLocaleString() : 'Unknown'}\nCurrent time: ${new Date().toLocaleString()}`, "error");
         } else if (this.hasScheduleEnded(schedule)) {
           const endTime = this.parseLocalDateTime(schedule.end_time || schedule.endTime);
-          alert(`Cannot generate QR code. Training has already ended.\nEnd time: ${endTime ? endTime.toLocaleString() : 'Unknown'}\nCurrent time: ${new Date().toLocaleString()}`);
+          showToast(`Cannot generate QR code. Training has already ended.\nEnd time: ${endTime ? endTime.toLocaleString() : 'Unknown'}\nCurrent time: ${new Date().toLocaleString()}`, "error");
         }
         return;
       }
 
       if (!this.selectedTraining || !this.selectedTraining.trainingID) {
-        alert("Please select a training first.");
+        showToast("Please select a training first.", "error");
         return;
       }
 
@@ -2483,12 +2547,12 @@ export default {
           this.openQRModal(schedule);
         } else {
           console.error("QR generation failed:", result.error);
-          alert(result.error || "Failed to generate QR code. Please try again.");
+          showToast(result.error || "Failed to generate QR code. Please try again.", "error");
         }
       } catch (error) {
         console.error("Error generating QR for schedule:", error);
         const errorMessage = error.response?.data?.message || error.message || "Failed to generate QR code. Please try again.";
-        alert(errorMessage);
+        showToast(errorMessage, "error");
       }
     },
 
@@ -2563,7 +2627,7 @@ export default {
         }, 'image/png', 1.0);
       } catch (error) {
         console.error("Error downloading QR code:", error);
-        alert("Failed to download QR code. Please try again.");
+        showToast("Failed to download QR code. Please try again.", "error");
       }
     },
 
@@ -5194,6 +5258,32 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 .global-search-bar:focus {
   border-color: #44576d;
   box-shadow: 0 0 5px rgba(68, 87, 109, 0.2);
+}
+
+/* Character Counter Styles */
+.input-with-counter {
+  position: relative;
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+.char-counter {
+  font-size: 12px;
+  color: #6b7280;
+  text-align: right;
+  margin-top: 4px;
+  display: block;
+}
+
+.char-counter-search {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  font-size: 12px;
+  color: #6b7280;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 2px 4px;
+  border-radius: 4px;
 }
 
 /* QR Code Modal */

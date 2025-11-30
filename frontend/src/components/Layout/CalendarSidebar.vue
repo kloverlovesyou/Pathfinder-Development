@@ -995,9 +995,9 @@ function toISODate(d) {
           {{ selectedPost.organization || "Unknown Organization" }}
         </p>
 
-        <p>
+        <p v-if="selectedPost?.detailsAndInstructions">
           <strong>Details:</strong>
-          {{ selectedPost?.detailsAndInstructions || "N/A" }}
+          {{ selectedPost?.detailsAndInstructions }}
         </p>
         <p>
           <strong>Qualifications:</strong>
