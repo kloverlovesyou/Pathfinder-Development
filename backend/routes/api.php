@@ -74,6 +74,28 @@ Route::get('/regions', function () {
     }
 });
 
+Route::get('/provinces/{regionCode}', function ($regionCode) {
+    try {
+        $response = Http::get('https://psgc.gitlab.io/api/regions/'.$regionCode.'/provinces.json');
+        if ($response->successful()) {
+            return $response->json();
+        }
+
+        // fallback 1
+        $fallback = Http::get('https://raw.githubusercontent.com/.../provinces.json'); // optional
+        if ($fallback->successful()) {
+            return $fallback->json();
+        }
+
+        return response()->json([], 404);
+    } catch (\Exception $e) {
+        return response()->json([
+            "error" => "Failed to fetch provinces",
+            "message" => $e->getMessage()
+        ], 500);
+    }
+});
+
 // Careers with recommendations
 Route::get('/careers', [CareerRecommendationController::class, 'index']);
 Route::get('/careers/recommend/{careerID}', [CareerRecommendationController::class, 'recommendedCareers'])

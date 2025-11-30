@@ -986,7 +986,7 @@ async function onRegionChange() {
   
   loadingProvinces.value = true;
   try {
-    const response = await axios.get(`${PH_LOCATION_API_BASE}/provinces.json`);
+    const response = await axios.get(`/api/provinces/${form.value.region}`);
     const allProvinces = response.data || [];
     provinces.value = allProvinces
       .filter(p => {
