@@ -301,11 +301,17 @@ Route::middleware('auth.custom')->group(function () {
         ->withoutMiddleware('auth.custom');
     Route::get('/careers/total', [CareerController::class, 'total'])
         ->withoutMiddleware('auth.custom');
-    Route::get('/careers/counts-partial', [CareerController::class, 'countsPartial'])
+     Route::get('/careers/counts-partial', [CareerController::class, 'countsPartial'])
         ->withoutMiddleware('auth.custom');
+});
 
-     Route::post('/admin/logout', [AdminController::class, 'logout']);
-     Route::get('admin/details'); [AdminController::class, 'AdminInfo'];
+// ----------------------
+// Admin routes (Sanctum auth)
+// ----------------------
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/admin/details', [AdminController::class, 'AdminInfo']);
+    Route::put('/admin/update', [AdminController::class, 'update']);
+    Route::post('/admin/logout', [AdminController::class, 'logout']);
 });
 
 // ----------------------

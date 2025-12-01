@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import axios from "axios";
+import { getPDFUrl } from "@/lib/supabase";
 
 const organizations = ref([]);
 const selectedOrg = ref(null);
@@ -15,6 +16,10 @@ const rejectReason = ref("");
 const rejectOrgID = ref(null); // target organization being rejected
 const toastMessage = ref("");
 const toastType = ref("success"); // "success" or "error"
+// Requirement modal state
+const requirementModal = ref(false);
+const requirementUrl = ref(null);
+const requirementOrgName = ref("");
 
 // Open reject modal
 function openRejectModal(id) {
@@ -149,6 +154,48 @@ function formatDate(dateString) {
   });
 }
 
+// View requirement for organization
+function viewRequirement(organizationID) {
+  const org = organizations.value.find(o => o.organizationID === organizationID);
+  
+  if (!org) {
+    showToast("Organization not found.", "error");
+    return;
+  }
+
+  const requirementPath = org.registrationRequirements || org.RegistrationRequirements;
+  
+  if (!requirementPath) {
+    showToast("No requirement file found for this organization.", "error");
+    return;
+  }
+
+  try {
+    // Generate PDF URL from Supabase
+    const pdfUrl = getPDFUrl(requirementPath, "Requirements");
+    
+    if (pdfUrl) {
+      requirementUrl.value = pdfUrl;
+      requirementOrgName.value = org.organizationName || org.name || "Organization";
+      requirementModal.value = true;
+    } else {
+      showToast("Failed to load requirement file. Please try again.", "error");
+    }
+  } catch (error) {
+    console.error("Error viewing requirement:", error);
+    showToast("Failed to view requirement. Please try again.", "error");
+  }
+}
+
+// Show toast message
+function showToast(message, type = "success") {
+  toastMessage.value = message;
+  toastType.value = type;
+  setTimeout(() => {
+    toastMessage.value = "";
+  }, 3000);
+}
+
 onMounted(() => {
   loadPendingOrganizations();
   loadApprovedOrganizations();
@@ -264,7 +311,8 @@ onMounted(() => {
             <div
               v-for="org in approvedOrganizations"
               :key="org.organizationID"
-              class="p-3 border rounded-lg bg-green-50 flex justify-between items-center"
+              @click="openModal(org)"
+              class="p-3 border rounded-lg bg-green-50 flex justify-between items-center cursor-pointer hover:bg-green-100 transition"
             >
               <div>
                 <h3 class="font-semibold">{{ org.name }}</h3>
@@ -313,7 +361,8 @@ onMounted(() => {
       <div
         v-for="org in rejectedOrganizations"
         :key="org.organizationID"
-        class="p-3 border rounded-lg bg-red-50 flex justify-between"
+        @click="openModal(org)"
+        class="p-3 border rounded-lg bg-red-50 flex justify-between cursor-pointer hover:bg-red-100 transition"
       >
         <div>
           <h3 class="font-semibold">{{ org.name }}</h3>
@@ -336,7 +385,8 @@ onMounted(() => {
     <!-- Modal -->
     <div
       v-if="selectedOrg"
-      class="fixed inset-0 flex items-center justify-center z-50"
+      class="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-md"
+      @click.self="selectedOrg = null"
     >
       <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
         <button
@@ -362,9 +412,30 @@ onMounted(() => {
             </a>
           </p>
           <p><strong>Email:</strong> {{ selectedOrg.emailAddress }}</p>
+          <p v-if="selectedOrg.phoneNumber"><strong>Phone:</strong> {{ selectedOrg.phoneNumber }}</p>
+          <p v-if="selectedOrg.statusDate">
+            <strong>Status Date:</strong> {{ formatDate(selectedOrg.statusDate) }}
+          </p>
+          <p v-if="selectedOrg.status">
+            <strong>Status:</strong> 
+            <span 
+              :class="{
+                'text-green-600 font-semibold': selectedOrg.status === 'approved',
+                'text-red-600 font-semibold': selectedOrg.status === 'rejected',
+                'text-yellow-600 font-semibold': selectedOrg.status === 'pending'
+              }"
+            >
+              {{ selectedOrg.status.charAt(0).toUpperCase() + selectedOrg.status.slice(1) }}
+            </span>
+          </p>
+          <div v-if="selectedOrg.rejectionReason" class="mt-3 p-3 bg-red-50 rounded-lg">
+            <p class="text-sm font-semibold text-red-800 mb-1">Rejection Reason:</p>
+            <p class="text-sm text-red-700">{{ selectedOrg.rejectionReason }}</p>
+          </div>
         </div>
 
-        <div class="mt-6 flex justify-end space-x-2">
+        <!-- Show Accept/Reject buttons only for pending organizations -->
+        <div v-if="selectedOrg.status === 'pending'" class="mt-6 flex justify-end space-x-2">
           <button
             @click="openRejectModal(selectedOrg.organizationID)"
             class="px-4 py-2 text-black bg-gray-400 hover:bg-gray-500 rounded-lg"
@@ -419,6 +490,56 @@ onMounted(() => {
           >
             Submit
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Requirement View Modal -->
+    <div
+      v-if="requirementModal"
+      class="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md"
+      @click.self="requirementModal = false"
+    >
+      <div class="bg-white rounded-lg shadow-lg w-full max-w-4xl h-[90vh] flex flex-col relative">
+        <div class="flex justify-between items-center p-4 border-b">
+          <h2 class="text-xl font-semibold">
+            Requirements - {{ requirementOrgName }}
+          </h2>
+          <button
+            @click="requirementModal = false"
+            class="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+          >
+            ✕
+          </button>
+        </div>
+        
+        <div class="flex-1 overflow-hidden">
+          <iframe
+            v-if="requirementUrl"
+            :src="requirementUrl"
+            class="w-full h-full border-0"
+            frameborder="0"
+          ></iframe>
+          <div v-else class="flex items-center justify-center h-full">
+            <p class="text-gray-500">Loading requirement file...</p>
+          </div>
+        </div>
+
+        <div class="p-4 border-t flex justify-end">
+          <button
+            @click="requirementModal = false"
+            class="px-4 py-2 bg-gray-400 hover:bg-gray-500 text-black rounded-lg"
+          >
+            Close
+          </button>
+          <a
+            v-if="requirementUrl"
+            :href="requirementUrl"
+            target="_blank"
+            class="ml-2 px-4 py-2 bg-customButton hover:bg-dark-slate text-white rounded-lg"
+          >
+            Open in New Tab
+          </a>
         </div>
       </div>
     </div>

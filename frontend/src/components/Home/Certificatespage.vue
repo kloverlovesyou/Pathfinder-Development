@@ -1117,7 +1117,7 @@ const deselectAllCertificates = async () => {
           <!-- Modal -->
           <div
             v-if="isModalOpen"
-            class="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50"
+            class="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-md bg-black/30"
             @click.self="closeModal"
           >
             <div

@@ -75,6 +75,16 @@ async function loadApplicationEvents(applicantID, token) {
           interviewMode: app.interviewMode,
           interviewLink: app.interviewLink,
           interviewLocation: app.interviewLocation,
+          // Include application/career data for modal display
+          qualificationStandard: app.qualificationStandard,
+          qualifications: app.qualificationStandard, // Backward compatibility
+          requirement_directory: app.requirement_directory,
+          requirements: app.requirement_directory, // Backward compatibility
+          applicationLetterAddress: app.applicationLetterAddress,
+          deadlineOfSubmission: app.deadlineOfSubmission,
+          detailsAndInstructions: app.detailsAndInstructions || app.details,
+          details: app.details,
+          closingDate: app.closingDate,
         };
 
         console.log("✅ Created interview event:", {
@@ -203,11 +213,13 @@ async function openModal(post) {
     selectedTraining.value = post; // 🟦 training modal
     selectedPost.value = null;
   } else if (post.type === "career") {
+    // Fetch career details to get any missing fields
     const careerDetails = await fetchCareerDetails(post.careerID);
 
+    // Merge: post (application data) takes precedence, then career details as fallback
     const merged = {
-      ...post, // first object: date, mode, link
-      ...careerDetails, // second object: details, organization, deadline
+      ...careerDetails, // Base: career details
+      ...post, // Override with application data (has requirement_directory, etc.)
     };
 
     selectedPost.value = merged;
@@ -995,26 +1007,26 @@ function toISODate(d) {
           {{ selectedPost.organization || "Unknown Organization" }}
         </p>
 
-        <p v-if="selectedPost?.detailsAndInstructions">
+        <p v-if="selectedPost?.detailsAndInstructions || selectedPost?.details">
           <strong>Details:</strong>
-          {{ selectedPost?.detailsAndInstructions }}
+          {{ selectedPost?.detailsAndInstructions || selectedPost?.details }}
         </p>
         <p>
           <strong>Qualifications:</strong>
-          {{ selectedPost?.qualifications || "N/A" }}
+          {{ selectedPost?.qualificationStandard || selectedPost?.qualifications || "N/A" }}
         </p>
 
         <p>
           <strong>Requirements:</strong>
-          {{ selectedPost.requirements || "N/A" }}
+          {{ selectedPost.requirement_directory || selectedPost.requirements || "N/A" }}
         </p>
         <p>
           <strong>Application Address:</strong>
-          {{ selectedPost.applicationLetterAddress || "N/A" }}
+          {{ selectedPost.applicationLetterAddress || selectedPost.placeOfAssignment || "N/A" }}
         </p>
         <p>
           <strong>Deadline of Submission:</strong>
-          {{ formatDate(selectedPost.deadlineOfSubmission) || "N/A" }}
+          {{ formatDate(selectedPost.deadlineOfSubmission || selectedPost.closingDate) || "N/A" }}
         </p>
         <div class="divider"></div>
         <p v-if="selectedPost.interviewSchedule">
