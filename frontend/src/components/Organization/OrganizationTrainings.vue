@@ -268,48 +268,7 @@
         </button>
       </section>
 
-      <!-- ✅ All Trainings Section (from all organizations) -->
-      <section class="all-trainings">
-        <div class="flex items-center justify-between">
-          <h2 class="section-title flex items-center gap-1">
-            All Trainings
-            <span class="count-badge">{{ sortedAllTrainings.length }}</span>
-          </h2>
-        </div>
-
-        <!-- ✅ Grid Layout -->
-        <div class="trainings-grid">
-          <div v-for="training in visibleFilteredAllTrainings" :key="training.trainingID" class="training-card"
-            @click="openTrainingDetails(training)">
-            <div class="training-right" @click="openTrainingDetails(training)">
-              <h3 class="training-title">{{ training.title }}</h3>
-              <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
-              <p v-if="training.organization" class="training-org" style="font-size: 0.85rem; color: #666; margin-top: 4px;">
-                by {{ training.organization.name || training.organization.OrganizationName }}
-              </p>
-            </div>
-
-            <!-- Menu (only show for own trainings) -->
-            <div class="menu" v-if="isTrainingOwnedByCurrentOrg(training)">
-              <div class="menu-icon" @click.stop="toggleAllTrainingsMenu(training.trainingID)">
-                ⋮
-              </div>
-              <div v-if="openAllTrainingsMenu === training.trainingID" class="dropdown-menu" @click.stop>
-                <ul>
-                  <li @click="deleteTraining(training.trainingID)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Delete Training</li>
-                  <li @click="updateTraining(training.trainingID)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Update Training</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Show More Button -->
-        <button v-if="sortedAllTrainings.length > 4" class="show-more-btn"
-          @click="showAllTrainings = !showAllTrainings">
-          {{ showAllTrainings ? 'Show Less' : 'Show More' }}
-        </button>
-      </section>
+      <!-- All Trainings section removed as requested -->
 
       <!-- Training Details Modal -->
       <div v-if="showTrainingDetailsModal" class="modal-overlay" @click.self="closeTrainingDetails">
@@ -1818,17 +1777,17 @@ export default {
           newTrainings = data;
         }
 
-        newTrainings.forEach(training => {
+        const normalizedList = Array.isArray(newTrainings) ? newTrainings : [];
+
+        // Rebuild local list from fresh API data so UI always reflects latest trainings
+        this.upcomingtrainings = [];
+
+        normalizedList.forEach(training => {
           const normalizedTraining = {
             ...training
           };
-          const existingIndex = this.upcomingtrainings.findIndex(t => t.trainingID === training.trainingID);
 
-          if (existingIndex > -1) {
-            this.upcomingtrainings[existingIndex] = { ...this.upcomingtrainings[existingIndex], ...normalizedTraining };
-          } else {
-            this.upcomingtrainings.push(normalizedTraining);
-          }
+          this.upcomingtrainings.push(normalizedTraining);
 
           // ✅ Schedule QR using composable
           scheduleQR(training);
