@@ -317,28 +317,11 @@
           <button class="modal-close-btn" @click="closeTrainingDetails">✕</button>
 
           <div class="training-details-body">
-            <!-- Training Name + Org Choice Toggle -->
+            <!-- Training Name -->
             <div class="modal-title-row">
               <h3 class="modal-title">
                 {{ selectedTraining.title }}
               </h3>
-
-              <div
-                v-if="selectedTraining && selectedTraining.trainingID"
-                class="org-choice-toggle"
-                @click.stop
-              >
-                <label class="org-choice-switch">
-                  <input
-                    type="checkbox"
-                    :checked="Boolean(selectedTraining.isOrganizationChoice)"
-                    :disabled="isOrgChoiceLoading(selectedTraining.trainingID) || !isOrganizationVerified"
-                    @change="handleOrganizationChoiceToggle(selectedTraining, $event.target.checked)"
-                  />
-                  <span class="org-choice-slider"></span>
-                </label>
-                <span class="org-choice-label">Organization Choice</span>
-              </div>
             </div>
 
             <!-- Tags -->
@@ -707,13 +690,6 @@
               <span class="char-counter">{{ (newTraining.description || '').length }}/1000</span>
             </div>
 
-            <div class="org-choice-toggle popup-toggle" @click.stop>
-              <label class="org-choice-switch">
-                <input type="checkbox" v-model="newTraining.isOrganizationChoice" :disabled="!isOrganizationVerified" />
-                <span class="org-choice-slider"></span>
-              </label>
-              <span class="org-choice-label">Mark as Organization Choice</span>
-            </div>
 
             <!-- Schedule - Multiple Dates -->
             <div class="popup-form-group schedule-group">
@@ -1069,8 +1045,7 @@ export default {
         title: "",
         description: "",
         schedules: [], // Array of { date, startTime, endTime, mode, location, trainingLink }
-        Tags: [],
-        isOrganizationChoice: false
+        Tags: []
       },
       tempDateInput: "", // Temporary date input for adding new dates
 
@@ -1079,8 +1054,6 @@ export default {
       activeTrainingId: null, // which training shows the QR
       tagOptions: [],
       newTagName: '',
-      originalChoiceValue: false,
-      orgChoiceLoading: {}
     };
   },
 
@@ -1759,8 +1732,7 @@ export default {
     ========================== */
     openTrainingDetails(training) {
       this.selectedTraining = {
-        ...training,
-        isOrganizationChoice: Boolean(training.isOrganizationChoice)
+        ...training
       };
       this.showTrainingDetailsModal = true;
       this.closeAllMenus();
@@ -1824,100 +1796,6 @@ export default {
       }
     },
 
-    isOrgChoiceLoading(trainingID) {
-      if (!trainingID) return false;
-      return Boolean(this.orgChoiceLoading[trainingID]);
-    },
-
-    setOrgChoiceLoading(trainingID, status) {
-      if (!trainingID) return;
-      this.orgChoiceLoading = { ...this.orgChoiceLoading, [trainingID]: status };
-    },
-
-    setChoiceStateLocally(trainingID, value) {
-      const applyToList = (list) => {
-        const idx = list.findIndex(t => t.trainingID === trainingID);
-        if (idx > -1) {
-          list[idx] = { ...list[idx], isOrganizationChoice: value };
-        }
-      };
-      applyToList(this.upcomingtrainings);
-      applyToList(this.completedtrainings);
-
-      if (this.selectedTraining && this.selectedTraining.trainingID === trainingID) {
-        this.selectedTraining = { ...this.selectedTraining, isOrganizationChoice: value };
-      }
-    },
-
-    async handleOrganizationChoiceToggle(training, shouldEnable) {
-      // Check if organization is verified
-      if (!this.isOrganizationVerified) {
-        showToast("Your organization account is not yet verified by the admin. Please wait for admin approval before performing this action.", "error");
-        return;
-      }
-
-      if (!training || !training.trainingID) return;
-      if (this.isOrgChoiceLoading(training.trainingID)) return;
-
-      const previousValue = Boolean(training.isOrganizationChoice);
-      if (previousValue === shouldEnable) return;
-
-      // Optimistic update
-      this.setChoiceStateLocally(training.trainingID, shouldEnable);
-
-      try {
-        await this.persistOrganizationChoice(training.trainingID, shouldEnable);
-        showToast(shouldEnable
-          ? "Training marked as an Organization Choice."
-          : "Training removed from Organization Choices.", "success");
-      } catch (error) {
-        console.error("Failed to update organization choice:", error);
-        this.setChoiceStateLocally(training.trainingID, previousValue);
-        showToast(error.response?.data?.message || "Failed to update Organization Choice. Please try again.", "error");
-      }
-    },
-
-    async persistOrganizationChoice(trainingID, shouldEnable) {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Please log in to continue.");
-      }
-
-      this.setOrgChoiceLoading(trainingID, true);
-      try {
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-        if (shouldEnable) {
-          await axios.post(
-            `${import.meta.env.VITE_API_BASE_URL}/organization/choices`,
-            { trainingID },
-            config
-          );
-        } else {
-          await axios.delete(
-            `${import.meta.env.VITE_API_BASE_URL}/organization/choices/${trainingID}`,
-            config
-          );
-        }
-      } finally {
-        this.setOrgChoiceLoading(trainingID, false);
-      }
-    },
-
-    async syncOrganizationChoiceAfterSave(trainingID, desiredValue, previousValue = false) {
-      if (!trainingID || desiredValue === previousValue) {
-        return;
-      }
-      try {
-        await this.persistOrganizationChoice(trainingID, desiredValue);
-      } catch (error) {
-        console.error("Failed to apply organization choice preference:", error);
-        showToast(
-          error.response?.data?.message ||
-          "Training saved, but updating the Organization Choice flag failed. Please toggle it manually from the training list.",
-          "error"
-        );
-      }
-    },
     async fetchTrainings() {
       try {
         const storedUser = localStorage.getItem("user");
@@ -1942,8 +1820,7 @@ export default {
 
         newTrainings.forEach(training => {
           const normalizedTraining = {
-            ...training,
-            isOrganizationChoice: Boolean(training.isOrganizationChoice)
+            ...training
           };
           const existingIndex = this.upcomingtrainings.findIndex(t => t.trainingID === training.trainingID);
 
@@ -2060,21 +1937,17 @@ export default {
           schedules: schedules,
           Tags: training.Tags
             ? training.Tags.map(tag => Number(tag.TagID ?? tag.tagID ?? tag.id))
-            : [],
-          isOrganizationChoice: Boolean(training.isOrganizationChoice)
+            : []
         };
-        this.originalChoiceValue = Boolean(training.isOrganizationChoice);
       } else {
         this.isEditMode = false;
         this.newTraining = {
           title: "",
           description: "",
           schedules: [],
-          Tags: [],
-          isOrganizationChoice: false
+          Tags: []
         };
         this.tempDateInput = "";
-        this.originalChoiceValue = false;
       }
 
       if (!Array.isArray(this.newTraining.Tags)) {
@@ -2093,12 +1966,10 @@ export default {
         title: "",
         description: "",
         schedules: [],
-        Tags: [],
-        isOrganizationChoice: false
+        Tags: []
       };
       this.tempDateInput = "";
       this.newTagName = ""; // optional: clear the tag input too
-      this.originalChoiceValue = false;
     },
 
     async updateTraining(trainingID) {
@@ -2149,9 +2020,6 @@ export default {
 
         const token = localStorage.getItem("token");
 
-        const desiredChoice = Boolean(this.newTraining.isOrganizationChoice);
-        const previousChoice = Boolean(this.originalChoiceValue);
-
         if (this.isEditMode && this.trainingToEditId) {
           // For edit mode, update the training with all schedules
           const schedules = this.newTraining.schedules.map(schedule => {
@@ -2179,7 +2047,6 @@ export default {
             payload,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          await this.syncOrganizationChoiceAfterSave(this.trainingToEditId, desiredChoice, previousChoice);
           showToast("✅ TRAINING UPDATED SUCCESSFULLY!", "success");
         } else {
           // For create mode, create ONE training with MULTIPLE schedules
@@ -2210,8 +2077,6 @@ export default {
             { headers: { Authorization: `Bearer ${token}` } }
           );
 
-          const newTrainingId = response?.data?.data?.trainingID;
-          await this.syncOrganizationChoiceAfterSave(newTrainingId, desiredChoice, false);
           showToast(`✅ TRAINING WITH ${this.newTraining.schedules.length} SCHEDULE(S) POSTED SUCCESSFULLY!`, "success");
         }
 
@@ -3275,10 +3140,6 @@ const logout = () => {
   margin: 0;
 }
 
-.modal-title-row .org-choice-toggle {
-  margin: 0;
-}
-
 .modal-tag-list {
   display: flex;
   flex-wrap: wrap;
@@ -3292,65 +3153,6 @@ const logout = () => {
   font-size: 0.85rem;
   padding: 4px 10px;
   border-radius: 999px;
-}
-
-.org-choice-toggle {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 10px 0;
-}
-
-.org-choice-switch {
-  position: relative;
-  display: inline-block;
-  width: 44px;
-  height: 24px;
-}
-
-.org-choice-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.org-choice-slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #cbd5e0;
-  transition: 0.2s;
-  border-radius: 24px;
-}
-
-.org-choice-slider:before {
-  position: absolute;
-  content: "";
-  height: 18px;
-  width: 18px;
-  left: 3px;
-  bottom: 3px;
-  background-color: white;
-  transition: 0.2s;
-  border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.org-choice-switch input:checked + .org-choice-slider {
-  background-color: #44576d;
-}
-
-.org-choice-switch input:checked + .org-choice-slider:before {
-  transform: translateX(20px);
-}
-
-.org-choice-label {
-  font-weight: 500;
-  color: #2d3748;
-  font-size: 0.9rem;
 }
 
 /* Optional fade animation */

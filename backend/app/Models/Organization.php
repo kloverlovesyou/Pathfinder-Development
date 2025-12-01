@@ -25,7 +25,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $emailAddress (database column: emailAddress or EmailAddress)
  * @property string $Password
  * @property string $password (database column: password or Password)
- * @property string|null $RegistrationRequirements (pdf)
+	 * @property string|null $registrationRequirements (pdf)
  * @property string|null $RegistrationStatus (Registered, In Review, Verified/Declined)
  * @property int|null $adminID
  * @property string|null $api_token
@@ -63,7 +63,8 @@ class Organization extends Model
 		'emailAddress', // backward compatibility
 		'Password',
 		'password', // backward compatibility
-		'RegistrationRequirements',
+		'registrationRequirements',
+		'RegistrationRequirements', // backward compatibility
 		'RegistrationStatus',
 		'status', // backward compatibility - map status to RegistrationStatus
 		'phoneNumber',

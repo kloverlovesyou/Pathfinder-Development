@@ -818,7 +818,7 @@ const form = ref({
   password: "",
   confirmPassword: "",
   logoPath: "",
-  RegistrationRequirements: "",
+  registrationRequirements: "",
 });
 
 // Philippines Location API data
@@ -928,7 +928,7 @@ const removeRequirement = () => {
   if (requirementInput.value) {
     requirementInput.value.value = "";
   }
-  form.value.RegistrationRequirements = "";
+  form.value.registrationRequirements = "";
 };
 
 const handleSubmit = async () => {
@@ -977,7 +977,7 @@ const handleSubmit = async () => {
     try {
       const requirementPath = await uploadOrgRequirement(requirementFile.value);
       if (requirementPath) {
-        form.value.RegistrationRequirements = requirementPath;
+        form.value.registrationRequirements = requirementPath;
       } else {
         requirementError.value =
           "Failed to upload PDF requirement. Please try again.";
@@ -1064,7 +1064,7 @@ const handleSubmit = async () => {
       password: "",
       confirmPassword: "",
       logoPath: "",
-      RegistrationRequirements: "",
+      registrationRequirements: "",
     };
     regions.value = [];
     provinces.value = [];
@@ -1104,7 +1104,7 @@ const handleSubmit = async () => {
         password: "",
         confirmPassword: "",
         logoPath: "",
-        RegistrationRequirements: "",
+        registrationRequirements: "",
       };
       regions.value = [];
       provinces.value = [];
