@@ -131,16 +131,41 @@ async function fetchMyRegistrations() {
 // ------------------ MODALS ------------------
 async function openCareerModal(career) {
   try {
+    // Validate career object
+    if (!career) {
+      addToast("Invalid career data.", "error");
+      return;
+    }
+
+    // Validate and parse careerID
+    const careerID = career.careerID;
+    if (careerID === undefined || careerID === null) {
+      addToast("Career ID is missing.", "error");
+      return;
+    }
+
+    const parsedCareerID = parseInt(careerID, 10);
+    if (isNaN(parsedCareerID)) {
+      addToast("Invalid career ID format.", "error");
+      return;
+    }
+
     console.log('Career Object:', career);
+    console.log('Parsed Career ID:', parsedCareerID);
 
-    const careerID = parseInt(career.careerID, 10);
-    console.log('Parsed Career ID:', careerID);
+    // Make API request
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + `/careers/${parsedCareerID}/details`);
 
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + `/careers/${careerID}/details`);
+    // Check if career exists in response
+    if (!res.data || !res.data.career) {
+      addToast("Career details not found.", "error");
+      return;
+    }
 
-    //store main career + recommended trainings
-    selectedCareerDetails.value = normalizeCareerDetails(res.data?.career);
+    // Store main career + recommended trainings
+    selectedCareerDetails.value = normalizeCareerDetails(res.data.career);
     const rawTrainings = res.data.recommended_trainings || [];
+    
     // Debug: Check what the API is returning
     console.log("API Response - recommended_trainings:", rawTrainings);
     rawTrainings.forEach((t, idx) => {
@@ -152,14 +177,34 @@ async function openCareerModal(career) {
     });
     recommendedTrainings.value = aggregateRecommendedTrainings(rawTrainings);
     console.log("After aggregation:", recommendedTrainings.value);
+    
     if (!selectedCareerDetails.value) {
-      addToast("Career details not found.", "accent");
+      addToast("Career details not found.", "error");
       return;
     }
+    
     showCareerPopup.value = true;
   } catch (error) {
     console.error("Error loading career details:", error);
-    alert("Failed to load career details.");
+    
+    // Provide more specific error messages
+    if (error.response) {
+      // Server responded with error status
+      const status = error.response.status;
+      if (status === 404) {
+        addToast("Career not found.", "error");
+      } else if (status === 500) {
+        addToast("Server error. Please try again later.", "error");
+      } else {
+        addToast(`Failed to load career details (${status}).`, "error");
+      }
+    } else if (error.request) {
+      // Request was made but no response received
+      addToast("Network error. Please check your connection.", "error");
+    } else {
+      // Something else happened
+      addToast("Failed to load career details.", "error");
+    }
   }
 }
 function closeCareerModal() {
