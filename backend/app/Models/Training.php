@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Models\OrganizationsChoice;
 
 class Training extends Model
 {
@@ -55,13 +54,5 @@ class Training extends Model
     public function tags()
     {
         return $this->belongsToMany(Tag::class, 'training_tag', 'trainingID', 'TagID');
-    }
-
-    /**
-     * A training can have many organization choice mappings.
-     */
-    public function organizationChoices(): HasMany
-    {
-        return $this->hasMany(OrganizationsChoice::class, 'trainingID', 'trainingID');
     }
 }
