@@ -214,7 +214,6 @@ async function openCareerModal(career) {
 }
 
 async function handleCardClick(career, index) {
-  // give each card a unique loading ID in case careerID repeats
   const uniqueId = career.careerID + '-' + index;
   loadingCardId.value = uniqueId;
 
@@ -989,31 +988,32 @@ onMounted(async () => {
           </div>
 
           <!-- Career posts -->
-          <div v-else v-for="(post, index) in posts" :key="post.careerID + '-' + index"
-            class="relative p-4 bg-blue-gray rounded-lg cursor-pointer hover:bg-gray-300 transition"
-            :class="{'opacity-50': loadingCardId === post.uniqueLoadingId}" 
-            @click="handleCardClick(post, index)"
-          >
-            <div class="flex items-center justify-between z-10 relative">
-              <div class="flex-1">
-                <h3 class="font-semibold text-lg">{{ post.position }}</h3>
-                <p class="text-gray-600 text-sm">
-                  {{ post.organization || "Unknown Organization" }}
-                </p>
+            <div
+              v-else
+              v-for="(post, index) in posts"
+              :key="post.careerID + '-' + index"
+              class="relative p-4 bg-blue-gray rounded-lg cursor-pointer hover:bg-gray-300 transition"
+              :class="{ 'opacity-50': loadingCardId === (post.careerID + '-' + index) }"
+              @click="handleCardClick(post, index)"
+            >
+              <div class="flex items-center justify-between z-10 relative">
+                <div class="flex-1">
+                  <h3 class="font-semibold text-lg">{{ post.position }}</h3>
+                  <p class="text-gray-600 text-sm">{{ post.organization || 'Unknown Organization' }}</p>
+                </div>
+                <span v-if="post.careerID === selectedCareerId" class="ml-2 px-2 py-1 text-xs bg-blue-500 text-white rounded-full">
+                  Target
+                </span>
               </div>
-              <span v-if="post.careerID === selectedCareerId" class="ml-2 px-2 py-1 text-xs bg-blue-500 text-white rounded-full">
-                Target
-              </span>
-            </div>
 
-            <!-- Spinner overlay -->
-            <div v-if="loadingCardId === post.uniqueLoadingId" class="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center rounded-lg z-0">
-              <svg class="animate-spin h-6 w-6 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"></path>
-              </svg>
+              <!-- Spinner overlay -->
+              <div v-if="loadingCardId === (post.careerID + '-' + index)" class="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center rounded-lg z-0">
+                <svg class="animate-spin h-6 w-6 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"></path>
+                </svg>
+              </div>
             </div>
-          </div>
         </div>
       </main>
     </div>
