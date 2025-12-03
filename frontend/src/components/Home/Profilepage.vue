@@ -18,8 +18,6 @@ const selectedTraining = ref(null);
 const expandedCard = ref(null);
 const expandedRow = ref(null);
 const activeTab = ref("career"); // default tab
-const tabLoading = ref(false);
-const activeTabClicked = ref(null);
 
 const careerActivities = ref([]);
 const trainingActivities = ref([]);
@@ -857,27 +855,6 @@ async function fetchActivitiesDirectly() {
   }
 }
 
-async function switchTab(tab) {
-  if (activeTab.value === tab) return; // Already on this tab
-
-  tabLoading.value = true;
-  activeTabClicked.value = tab;
-
-  try {
-    // If you want to fetch data every tab switch, uncomment:
-    // await fetchActivitiesDirectly();
-
-    // Otherwise, just switch the tab (data already fetched)
-    activeTab.value = tab;
-  } catch (error) {
-    console.error("Error switching tab:", error);
-    addToast("Failed to load activities. Please try again.", "accent");
-  } finally {
-    tabLoading.value = false;
-    activeTabClicked.value = null;
-  }
-}
-
 // ✅ Manual counter adjuster
 function updateCounters(type, increase = true) {
   if (type === "upcoming") {
@@ -1442,51 +1419,365 @@ onBeforeUnmount(() => {
     </div>
 
     <!--Large screen-->
-    <div class="flex border-b border-gray-200 mb-4">
-    <!-- Career Tab -->
-    <button
-      class="px-4 py-2 -mb-px font-semibold text-gray-700 border-b-2 flex items-center gap-2"
-      :class="{
-        'border-blue-500 text-blue-500': activeTab === 'career',
-        'border-transparent hover:text-blue-500': activeTab !== 'career',
-      }"
-      @click="switchTab('career')"
-      :disabled="tabLoading"
-    >
-      <span v-if="!(tabLoading && activeTabClicked === 'career')">Career</span>
-      <span v-else class="flex items-center gap-2">
-        <svg class="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none"
-            viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor"
-                d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path>
-        </svg>
-        Loading
-      </span>
-    </button>
+    <div class="min-h-screen px-3 pb-6 pt-3 font-poppins hidden lg:flex flex-col gap-4 max-w-6xl mx-auto">
+      <!-- My Activity Container -->
+      <div class="bg-white rounded-lg shadow p-6 flex-1">
+        <h3 class="text-2xl font-semibold mb-4">My Activity</h3>
 
-    <!-- Training Tab -->
-    <button
-      class="px-4 py-2 -mb-px font-semibold text-gray-700 border-b-2 flex items-center gap-2"
-      :class="{
-        'border-blue-500 text-blue-500': activeTab === 'training',
-        'border-transparent hover:text-blue-500': activeTab !== 'training',
-      }"
-      @click="switchTab('training')"
-      :disabled="tabLoading"
-    >
-      <span v-if="!(tabLoading && activeTabClicked === 'training')">Training</span>
-      <span v-else class="flex items-center gap-2">
-        <svg class="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none"
-            viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor"
-                d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path>
-        </svg>
-        Loading
-      </span>
-    </button>
-    
+        <!-- Tabs -->
+        <div class="flex border-b border-gray-200 mb-4">
+          <button
+            class="px-4 py-2 -mb-px font-semibold text-gray-700 border-b-2"
+            :class="{
+              'border-blue-500 text-blue-500': activeTab === 'career',
+              'border-transparent hover:text-blue-500': activeTab !== 'career',
+            }"
+            @click="activeTab = 'career'"
+          >
+            Career
+          </button>
+          <button
+            class="px-4 py-2 -mb-px font-semibold text-gray-700 border-b-2"
+            :class="{
+              'border-blue-500 text-blue-500': activeTab === 'training',
+              'border-transparent hover:text-blue-500':
+                activeTab !== 'training',
+            }"
+            @click="activeTab = 'training'"
+          >
+            Training
+          </button>
+        </div>
+
+        <!-- Table Content -->
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th
+                  class="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider"
+                >
+                  Title
+                </th>
+                <th
+                  v-for="step in currentSteps"
+                  :key="`head-${step.key}`"
+                  class="px-4 py-3 text-center text-sm font-medium text-gray-700 uppercase tracking-wider"
+                >
+                  {{ step.label }}
+                </th>
+                <th class="w-10"></th>
+              </tr>
+            </thead>
+
+            <tbody class="bg-white divide-y divide-gray-200">
+              <template
+                v-for="activity in filteredActivities"
+                :key="activity.title || activity.registrationID || activity.applicationID"
+              >
+                <!-- MAIN ROW -->
+                <tr
+                  class="hover:bg-gray-100 cursor-pointer"
+                  @click="toggleRow(activity)"
+                >
+                  <td class="px-6 py-4 text-sm text-gray-900">
+                    <div class="font-semibold">
+                      {{ activity.title }}
+                    </div>
+                    <div
+                      v-if="activity.type === 'career'"
+                      class="mt-1 text-xs text-gray-500 space-y-0.5"
+                    >
+                      <p>
+                        <span class="font-semibold">Posting:</span>
+                        {{ formatDateOnly(activity.postingDate) }}
+                      </p>
+                      <p>
+                        <span class="font-semibold">Closing:</span>
+                        {{ formatDateOnly(activity.closingDate) }}
+                      </p>
+                     
+                    </div>
+                    <div
+                      v-else
+                      class="mt-1 text-xs text-gray-500 space-y-0.5"
+                    >
+                      <p class="font-semibold">Schedule:</p>
+                      <template v-if="getScheduleList(activity).length">
+                        <div class="pl-3 space-y-1">
+                          <p
+                            v-for="schedule in getScheduleList(activity)"
+                            :key="`table-sched-${activity.registrationID || activity.trainingID}-${schedule.id}`"
+                          >
+                            {{ formatScheduleDateRange(schedule) }}
+                          </p>
+                        </div>
+                      </template>
+                      <p v-else class="pl-3">
+                        {{ formatDateOnly(getTrainingDate(activity)) }}
+                      </p>
+                    </div>
+                  </td>
+
+                  <td
+                    v-for="(step, index) in currentSteps"
+                    :key="`${activity.title}-${step.key}`"
+                    class="px-4 py-4 text-sm text-gray-700 align-top text-center"
+                  >
+                    <div class="flex flex-col items-center gap-1">
+                      <span
+                        class="inline-flex w-4 h-4 rounded-full border-2"
+                        :class="{
+                          'border-blue-500 bg-blue-500': isStepActive(
+                            activity,
+                            step,
+                            index
+                          ),
+                          'border-gray-300 bg-white': !isStepActive(
+                            activity,
+                            step,
+                            index
+                          ),
+                        }"
+                      ></span>
+                      <span class="text-[11px] text-gray-500">
+                        {{
+                          getStepDate(activity, step)
+                            ? formatDateOnly(getStepDate(activity, step))
+                            : "—"
+                        }}
+                      </span>
+                    </div>
+                  </td>
+                  <td class="px-2 py-4 text-right text-gray-400">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-4 w-4 inline"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </td>
+                </tr>
+
+                <!-- ▼ DROPDOWN DETAILS -->
+                <tr v-if="expandedRow === activity" class="bg-gray-50">
+                  <td :colspan="currentSteps.length + 2" class="px-6 py-4">
+                    <!-- CAREER DETAILS -->
+                    <div v-if="activity.type === 'career'">
+                      <h3 class="text-lg font-bold mb-1">
+                        {{ activity.title || activity.career?.position }}
+                      </h3>
+
+                      <p class="text-sm text-gray-600 mb-1">
+                        <strong>Organization:</strong>
+                        {{ activity.organizationName || activity.organization }}
+                      </p>
+
+                      <p v-if="activity.details || activity.career?.details" class="career-text-inline">
+                        <strong>Details:</strong>
+                        <span class="career-text-value">{{ activity.details || activity.career?.details }}</span>
+                      </p>
+
+                      <p>
+                        <strong>Place of Assignment:</strong>
+                        {{
+                          activity.placeOfAssignment ||
+                          activity.career?.placeOfAssignment ||
+                          "Not specified"
+                        }}
+                      </p>
+
+                      <p v-if="activity.qualificationStandard || activity.career?.qualificationStandard" class="career-text-inline">
+                        <strong>Qualification Standard:</strong>
+                        <span class="career-text-value">{{
+                          activity.qualificationStandard ||
+                          activity.career?.qualificationStandard
+                        }}</span>
+                      </p>
+
+                      <p v-if="activity.pdf_directory">
+                    
+                        <a
+                          :href="resolvePDFUrl(activity.pdf_directory)"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="text-blue-500 underline"
+                        >
+                          Attachments
+                        </a>
+                      </p>
+
+                      <p>
+                        <strong>Posting Date:</strong>
+                        {{
+                          formatDateTime(activity.postingDate || activity.career?.postingDate)
+                        }}
+                      </p>
+
+                      <p>
+                        <strong>Closing Date:</strong>
+                        {{
+                          formatDateTime(activity.closingDate || activity.career?.closingDate)
+                        }}
+                      </p>
+
+                      <div class="mt-4 flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          :class="[
+                            'px-3 py-1 rounded text-white',
+                            activity.requirement_directory || activity.applicationID
+                              ? 'bg-blue-500 hover:bg-blue-600'
+                              : 'bg-gray-300 cursor-not-allowed',
+                          ]"
+                          @click.stop="downloadRequirement(activity, $event)"
+                        >
+                          View Requirement
+                        </button>
+                      </div>
+
+                      <div
+                        v-if="
+                          activity.interviewSchedule ||
+                          activity.interviewMode ||
+                          activity.interviewLink ||
+                          activity.interviewLocation
+                        "
+                      >
+                        <p v-if="activity.interviewSchedule">
+                          <strong>Interview Schedule:</strong>
+                          {{ formatDateTime(activity.interviewSchedule) }}
+                        </p>
+
+                        <p v-if="activity.interviewMode">
+                          <strong>Mode:</strong> {{ activity.interviewMode }}
+                        </p>
+
+                        <p v-if="activity.interviewLink">
+                          <strong>Link:</strong>
+                          <a
+                            :href="activity.interviewLink"
+                            target="_blank"
+                            class="text-blue-500 underline"
+                          >
+                            {{ activity.interviewLink }}
+                          </a>
+                        </p>
+
+                        <p v-if="activity.interviewLocation">
+                          <strong>Location:</strong>
+                          {{ activity.interviewLocation }}
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- TRAINING DETAILS -->
+                    <div v-else>
+                      <h3 class="text-lg font-bold mb-1">
+                        {{ activity.title }}
+                      </h3>
+
+                      <p class="text-sm text-gray-600 mb-1">
+                        <strong>Organization:</strong>
+                        {{ activity.organizationName }}
+                      </p>
+
+                      <p>
+                        <strong>Details:</strong> {{ activity.description }}
+                      </p>
+
+                      <div class="mt-3">
+                        <p class="text-sm font-semibold text-gray-700">
+                          Schedules
+                        </p>
+
+                        <div
+                          v-if="getScheduleList(activity).length"
+                          class="mt-2 grid gap-3 md:grid-cols-2"
+                        >
+                          <div
+                            v-for="(schedule, idx) in getScheduleList(activity)"
+                            :key="`desktop-detail-sched-${activity.registrationID || activity.trainingID}-${schedule.id}`"
+                            class="border border-gray-200 rounded-lg p-3 bg-white shadow-inner"
+                          >
+                            <p class="text-sm font-semibold">
+                              Session {{ idx + 1 }}
+                            </p>
+                            <p class="text-sm text-gray-700">
+                              {{ formatScheduleRange(schedule) }}
+                            </p>
+                            <p class="text-xs text-gray-500" v-if="schedule.mode">
+                              Mode: {{ schedule.mode }}
+                            </p>
+                            <p class="text-xs text-gray-500" v-if="schedule.location">
+                              Location: {{ schedule.location }}
+                            </p>
+                            <p class="text-xs text-gray-500" v-if="schedule.trainingLink">
+                              Link:
+                              <a
+                                :href="schedule.trainingLink"
+                                target="_blank"
+                                class="text-blue-500 underline"
+                              >
+                                {{ schedule.trainingLink }}
+                              </a>
+                            </p>
+                          </div>
+                        </div>
+
+                        <div v-else class="mt-2 space-y-1 text-sm text-gray-600">
+                          <p>Schedule not available yet.</p>
+                          <p>
+                            <strong>Mode:</strong>
+                            {{ getTrainingMode(activity) || "—" }}
+                          </p>
+                          <p v-if="getTrainingLocation(activity)">
+                            <strong>Location:</strong>
+                            {{ getTrainingLocation(activity) }}
+                          </p>
+                          <p v-if="getTrainingLink(activity)">
+                            <strong>Link:</strong>
+                            <a
+                              :href="getTrainingLink(activity)"
+                              target="_blank"
+                              class="text-blue-500 underline"
+                            >
+                              {{ getTrainingLink(activity) }}
+                            </a>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div class="mt-4 flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          class="px-3 py-1 rounded text-white"
+                          :class="[
+                            hasCertificate(activity)
+                              ? 'bg-green-500 hover:bg-green-600'
+                              : 'bg-gray-300 cursor-not-allowed',
+                          ]"
+                          :disabled="!hasCertificate(activity)"
+                          @click.stop="downloadCertificate(activity, $event)"
+                        >
+                          {{
+                            hasCertificate(activity)
+                              ? "Download Certificate"
+                              : "Certificate Unavailable"
+                          }}
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <div class="fixed top-5 right-5 space-y-2 z-50">
