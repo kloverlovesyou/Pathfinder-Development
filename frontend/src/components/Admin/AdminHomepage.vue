@@ -10,6 +10,8 @@ const activeTab = ref("approved"); // "approved" or "rejected"
 const rejectedOrganizations = ref([]); // to store rejected organizations
 const loadingApproved = ref(true);
 const loadingRejected = ref(true);
+const loadingPending = ref(true);
+
 // Reject modal state
 const rejectModal = ref(false);
 const rejectReason = ref("");
@@ -83,11 +85,14 @@ async function loadRejectedOrganizations() {
 
 // Fetch all pending organizations
 async function loadPendingOrganizations() {
+  loadingPending.value = true;
   try {
     const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/admin/pending-organizations");
     organizations.value = res.data;
   } catch (err) {
     console.error("Error loading organizations:", err);
+  } finally {
+    loadingPending.value = false;
   }
 }
 
@@ -215,8 +220,30 @@ onMounted(() => {
       </header>
 
       <section class="mt-4">
-        <!-- List of organizations waiting to be verified -->
-        <div v-if="organizations.length" class="space-y-4">
+        <div v-if="loadingPending" class="flex flex-col items-center justify-center space-y-2 py-10">
+          <svg
+            class="animate-spin h-10 w-10 text-blue-600"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8H4z"
+            ></path>
+          </svg>
+          <p class="text-gray-500">Loading organizations...</p>
+        </div>
+        <div v-else-if="organizations.length" class="space-y-4">
           <div
             v-for="org in organizations"
             :key="org.organizationID"
@@ -236,14 +263,15 @@ onMounted(() => {
               >
                 Accept
               </button>
-              <button
-              @click.stop="openRejectModal(org.organizationID)"
-              class="px-4 py-2 text-black bg-gray-400 hover:bg-gray-500 rounded-lg transition"
-            >
-              Reject
-            </button>
 
-            <button
+              <button
+                @click.stop="openRejectModal(org.organizationID)"
+                class="px-4 py-2 text-black bg-gray-400 hover:bg-gray-500 rounded-lg transition"
+              >
+                Reject
+              </button>
+
+              <button
                 @click.stop="viewRequirement(org.organizationID)"
                 class="px-4 py-2 text-white bg-customButton hover:bg-dark-slate rounded-lg transition"
               >
@@ -253,9 +281,11 @@ onMounted(() => {
           </div>
         </div>
 
+        <!-- Empty state -->
         <p v-else class="text-gray-500 italic">
           No organizations waiting for verification.
         </p>
+
       </section>
 
       <section class="mt-10">
