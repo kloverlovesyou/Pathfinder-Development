@@ -31,7 +31,9 @@ const myRegistrationsData = ref([]); // Store full registration data
 const toasts = ref([]);
 const loadingCardId = ref(null); // store the careerID of the card being clicked
 const isSubmitting = ref(false);
+const isCancelling = ref(false);
 
+// ------------------ FETCH DATA ------------------
 const events = ref({});
 const selectedDate = ref("");
 const dayEvents = ref([]);
@@ -557,6 +559,46 @@ async function submitApplication() {
     }
   } finally {
     isSubmitting.value = false; // stop loading
+  }
+}
+
+async function unapplyApplication() {
+  if (!props.career) return;
+  const token = localStorage.getItem("token");
+  if (!token) {
+    addToast("PLEASE LOG IN FIRST", "accent");
+    return;
+  }
+
+  const careerId = getCareerId();
+  if (!careerId) {
+    addToast("INVALID CAREER DATA", "accent");
+    return;
+  }
+
+  if (unapplyLoading.value) return;
+  unapplyLoading.value = true;
+
+  try {
+    await axios.delete(
+      `${API_BASE_URL}/applications/career/${careerId}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    addToast("APPLICATION WITHDRAWN", "success");
+    const updatedSet = new Set(props.myApplications ?? []);
+    updatedSet.delete(careerId);
+    emits("update-applications", updatedSet);
+    emits("close");
+  } catch (error) {
+    const errorMsg =
+      error.response?.data?.message || "FAILED TO WITHDRAW APPLICATION";
+    addToast(errorMsg, "accent");
+    console.error("Application withdrawal error:", error.response?.data || error);
+  } finally {
+    unapplyLoading.value = false;
   }
 }
 
@@ -1577,11 +1619,25 @@ onMounted(async () => {
             <input type="file" accept="application/pdf" @change="handleFileUpload" required
               class="file-input file-input-bordered w-full" />
           </div>
+        <div class="flex justify-end gap-2">
+          <button
+            type="button"
+            class="btn btn-outline btn-sm flex items-center justify-center gap-2"
+            :disabled="unapplyLoading"
+            @click="unapplyApplication"
+          >
+            <span v-if="!unapplyLoading">Cancel</span>
+            <span v-else class="flex items-center gap-2">
+              <svg class="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+                  viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path>
+              </svg>
+              Withdrawing
+            </span>
+          </button>
 
-          <div class="flex justify-end gap-2">
-            <button type="button" class="btn btn-outline btn-sm" @click="closeApplyModal">
-              Cancel
-            </button>
           <button
             type="submit"
             class="btn bg-customButton hover:bg-dark-slate text-white btn-sm flex items-center justify-center gap-2"
@@ -1598,7 +1654,7 @@ onMounted(async () => {
               Processing
             </span>
           </button>
-          </div>
+        </div>
         </form>
       </div>
     </dialog>
