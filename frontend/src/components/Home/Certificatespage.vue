@@ -16,7 +16,7 @@ const selectedImage = ref(null);
 const selectedTitle = ref(null);
 let certificateRefreshInterval = null;
 const loading = ref(true);
-
+const loadingUploads = ref([]); // Array to track loading state per certificate
 
 // ➤ Add a new upload entry
 function addCertificate() {
@@ -25,7 +25,6 @@ function addCertificate() {
     image: null,
     file: null,
   });
-  loadingUploads.value.push(false); // Add corresponding loading flag
 }
 
 function ensureCertificateSlot() {
@@ -39,7 +38,6 @@ ensureCertificateSlot();
 // ➤ Remove an upload entry
 function removeCertificate(index) {
   certificates.value.splice(index, 1);
-  loadingUploads.value.splice(index, 1); // Remove corresponding loading flag
   ensureCertificateSlot();
 }
 
