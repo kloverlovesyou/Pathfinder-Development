@@ -13,6 +13,7 @@ const registeredPosts = reactive({});
 const appliedPosts = ref({});
 const selectedCareerDetails = ref(null);
 const recommendedTrainings = ref([]);
+const loadingCareers = ref(false); // <-- new
 const allCareers = ref([]);
 const selectedCareerId = ref(null);
 const showCareerPopup = ref(false);
@@ -41,6 +42,9 @@ const showConflictDialog = ref(false);
 const conflictTraining = ref(null);
 const conflictingTrainings = ref([]);
 const pendingRegistration = ref(null);
+const loadingPosts = ref(false);
+
+
 
 const filteredCareers = computed(() => {
   const query = careerSearch.value.trim().toLowerCase();
@@ -543,6 +547,7 @@ async function fetchRecommendedCareers() {
     return;
   }
 
+  loadingPosts.value = true; // start loading
   try {
     const res = await axios.get(
       import.meta.env.VITE_API_BASE_URL +
@@ -556,21 +561,32 @@ async function fetchRecommendedCareers() {
     console.error("Error fetching recommended careers:", err);
     posts.value = [];
     addToast("Failed to load recommended careers", "error");
+  } finally {
+    loadingPosts.value = false; // stop loading
   }
 }
 
 function openCareerDropdown() {
   careerDropdownOpen.value = true;
+  handleCareerInput(); // optional: fetch/filter immediately on focus
 }
 
 function closeCareerDropdown() {
-  setTimeout(() => {
+  setTimeout(() => { // small delay to allow click selection
     careerDropdownOpen.value = false;
-  }, 150);
+  }, 100);
 }
 
 function handleCareerInput() {
-  openCareerDropdown();
+  loadingCareers.value = true;
+
+  // Simulate API call or filtering delay
+  setTimeout(() => {
+    filteredCareers.value = allCareers.value.filter(career =>
+      career.position.toLowerCase().includes(careerSearch.value.toLowerCase())
+    );
+    loadingCareers.value = false;
+  }, 500); // 500ms delay to simulate loading
 }
 
 function selectCareer(career) {
@@ -871,25 +887,36 @@ onMounted(async () => {
           <h2 class="text-2xl font-bold mb-2">Matching Engine</h2>
 
           <div class="mt-4 mb-4">
-            <label for="career-select" class="block text-sm font-medium text-gray-700 mb-2">
-              Select Your Target Career
-            </label>
-            <div class="relative">
-              <input
-                id="career-select"
-                type="text"
-                v-model="careerSearch"
-                @focus="openCareerDropdown"
-                @input="handleCareerInput"
-                @blur="closeCareerDropdown"
-                placeholder="Type to search careers"
-                class="block w-full px-4 py-2 text-base border border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-gray-300"
-                autocomplete="off"
-              />
-              <div
-                v-if="careerDropdownOpen"
-                class="absolute mt-1 w-full max-h-60 overflow-auto bg-white border border-gray-200 rounded-md shadow-lg z-20"
-              >
+          <label for="career-select" class="block text-sm font-medium text-gray-700 mb-2">
+            Select Your Target Career
+          </label>
+          <div class="relative">
+            <input
+              id="career-select"
+              type="text"
+              v-model="careerSearch"
+              @focus="openCareerDropdown"
+              @input="handleCareerInput"
+              @blur="closeCareerDropdown"
+              placeholder="Type to search careers"
+              class="block w-full px-4 py-2 text-base border border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-gray-300"
+              autocomplete="off"
+            />
+            <div
+              v-if="careerDropdownOpen"
+              class="absolute mt-1 w-full max-h-60 overflow-auto bg-white border border-gray-200 rounded-md shadow-lg z-20"
+            >
+              <!-- Loading state -->
+              <div v-if="loadingCareers" class="flex justify-center items-center p-4">
+                <svg class="animate-spin h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"></path>
+                </svg>
+                <span class="ml-2 text-gray-500 text-sm">Loading...</span>
+              </div>
+
+              <!-- Career options -->
+              <template v-else>
                 <button
                   v-for="career in filteredCareers"
                   :key="career.careerID"
@@ -902,29 +929,40 @@ onMounted(async () => {
                     {{ career.organization || "Unknown Organization" }}
                   </p>
                 </button>
-                <p
-                  v-if="filteredCareers.length === 0"
-                  class="px-4 py-2 text-sm text-gray-500"
-                >
+
+                <p v-if="filteredCareers.length === 0" class="px-4 py-2 text-sm text-gray-500">
                   No careers found.
                 </p>
-              </div>
+              </template>
             </div>
           </div>
+        </div>
         </div>
 
         <!-- Scrollable Posts -->
         <div class="flex-1 overflow-y-auto space-y-4 pb-4 pt-4">
-          <div v-if="posts.length === 0 && selectedCareerId" class="text-center text-gray-500 py-8">
+          <!-- Loading State -->
+          <div v-if="loadingPosts" class="flex justify-center items-center py-8">
+            <svg class="animate-spin h-6 w-6 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"></path>
+            </svg>
+            <span class="ml-2 text-gray-500 text-sm">Loading recommended careers...</span>
+          </div>
+
+          <!-- No posts messages -->
+          <div v-else-if="posts.length === 0 && selectedCareerId" class="text-center text-gray-500 py-8">
             No recommended careers found.
           </div>
           <div v-else-if="posts.length === 0" class="text-center text-gray-500 py-8">
             Please select a target career to see recommendations.
           </div>
-          <div v-for="post in posts" :key="post.careerID"
-            class="p-4 bg-blue-gray rounded-lg relative cursor-pointer hover:bg-gray-300 transition" :class="{
-              '': post.careerID === selectedCareerId,
-            }" @click="openCareerModal(post)">
+
+          <!-- Career posts -->
+          <div v-else v-for="post in posts" :key="post.careerID"
+            class="p-4 bg-blue-gray rounded-lg relative cursor-pointer hover:bg-gray-300 transition" 
+            :class="{'': post.careerID === selectedCareerId}" 
+            @click="openCareerModal(post)">
             <div class="flex items-center justify-between">
               <div class="flex-1">
                 <h3 class="font-semibold text-lg">{{ post.position }}</h3>
@@ -932,9 +970,7 @@ onMounted(async () => {
                   {{ post.organization || "Unknown Organization" }}
                 </p>
               </div>
-              <!-- ✅ Show indicator for target career -->
-              <span v-if="post.careerID === selectedCareerId"
-                class="ml-2 px-2 py-1 text-xs bg-blue-500 text-white rounded-full">
+              <span v-if="post.careerID === selectedCareerId" class="ml-2 px-2 py-1 text-xs bg-blue-500 text-white rounded-full">
                 Target
               </span>
             </div>
