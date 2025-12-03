@@ -16,7 +16,7 @@ const selectedImage = ref(null);
 const selectedTitle = ref(null);
 let certificateRefreshInterval = null;
 const loading = ref(true);
-const loadingUploads = ref([]); // Array to track loading state per certificate
+
 
 // ➤ Add a new upload entry
 function addCertificate() {
