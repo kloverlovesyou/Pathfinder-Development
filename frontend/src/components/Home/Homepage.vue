@@ -28,6 +28,7 @@ const myRegistrations = ref(new Set());
 const myRegistrationsData = ref([]); // Store full registration data
 const toasts = ref([]);
 const loadingCardId = ref(null); // store the careerID of the card being clicked
+const isSubmitting = ref(false);
 
 const events = ref({});
 const selectedDate = ref("");
@@ -501,6 +502,61 @@ async function unregisterFromTraining(training) {
   }
 }
 
+async function submitApplication() {
+  if (!selectedPost.value) return;
+
+  const token = localStorage.getItem("token");
+  if (!token) {
+    addToast("PLEASE LOG IN FIRST", "accent");
+    return;
+  }
+
+  if (!uploadedFile.value) {
+    addToast("PLEASE ATTACH YOUR REQUIREMENTS PDF", "accent");
+    return;
+  }
+
+  if (uploadedFile.value.size > 5 * 1024 * 1024) {
+    addToast("PDF SIZE EXCEEDS 5MB LIMIT. PLEASE UPLOAD A SMALLER FILE", "accent");
+    return;
+  }
+
+  if (uploadedFile.value.type !== "application/pdf") {
+    addToast("PLEASE UPLOAD A PDF FILE", "accent");
+    return;
+  }
+
+  isSubmitting.value = true; // start loading
+
+  try {
+    const formData = new FormData();
+    formData.append("careerID", selectedPost.value.careerID ?? selectedPost.value.id);
+    formData.append("requirement_directory", uploadedFile.value);
+
+    await axios.post(`${API_BASE_URL}/applications`, formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    addToast("APPLICATION SUBMITTED SUCCESSFULLY", "success");
+    myApplications.value.add(selectedPost.value.careerID ?? selectedPost.value.id);
+
+    closeApplyModal();
+  } catch (error) {
+    if (error.response?.status === 409) {
+      addToast("YOU ALREADY APPLIED TO THIS CAREER", "accent");
+    } else if (error.response?.status === 401) {
+      addToast("UNAUTHORIZED. PLEASE LOG IN AGAIN", "accent");
+    } else {
+      addToast(error.response?.data?.message || "FAILED TO SUBMIT APPLICATION", "accent");
+      console.error("Application submission error:", error.response?.data || error);
+    }
+  } finally {
+    isSubmitting.value = false; // stop loading
+  }
+}
 
 function openModal(post) {
   selectedPost.value = post;
@@ -1524,8 +1580,21 @@ onMounted(async () => {
             <button type="button" class="btn btn-outline btn-sm" @click="closeApplyModal">
               Cancel
             </button>
-            <button type="submit" class="btn bg-customButton hover:bg-dark-slate text-white btn-sm">
-              Submit
+           <button
+              type="submit"
+              class="btn bg-customButton hover:bg-dark-slate text-white btn-sm flex items-center justify-center gap-2"
+              :disabled="isSubmitting"
+            >
+              <span v-if="!isSubmitting">Submit</span>
+              <span v-else>
+                <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path>
+                </svg>
+                Loading...
+              </span>
             </button>
           </div>
         </form>
