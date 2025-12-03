@@ -915,10 +915,11 @@ onMounted(async () => {
               class="block w-full px-4 py-2 text-base border border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-gray-300"
               autocomplete="off"
             />
-            <div
-              v-if="careerDropdownOpen"
-              class="absolute mt-1 w-full max-h-60 overflow-auto bg-white border border-gray-200 rounded-md shadow-lg z-20"
-            >
+              <div
+                v-if="careerDropdownOpen"
+                class="absolute mt-1 w-full max-h-60 overflow-auto bg-white border border-gray-200 
+                      rounded-md shadow-lg z-20 pointer-events-auto"
+              >
               <!-- Loading state -->
               <div v-if="loadingCareers" class="flex justify-center items-center p-4">
                 <svg class="animate-spin h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -953,7 +954,10 @@ onMounted(async () => {
         </div>
 
         <!-- Scrollable Posts -->
-        <div class="flex-1 overflow-y-auto space-y-4 pb-4 pt-4">
+        <div
+            class="flex-1 overflow-y-auto space-y-4 pb-4 pt-4"
+            :class="{ 'pointer-events-none': careerDropdownOpen }"
+          >
           <!-- Loading State -->
           <div v-if="loadingPosts" class="flex justify-center items-center py-8">
             <svg
@@ -988,32 +992,35 @@ onMounted(async () => {
           </div>
 
           <!-- Career posts -->
-            <div
-              v-else
-              v-for="(post, index) in posts"
-              :key="post.careerID + '-' + index"
-              class="relative p-4 bg-blue-gray rounded-lg cursor-pointer hover:bg-gray-300 transition"
-              :class="{ 'opacity-50': loadingCardId === (post.careerID + '-' + index) }"
-              @click="handleCardClick(post, index)"
-            >
-              <div class="flex items-center justify-between z-10 relative">
-                <div class="flex-1">
-                  <h3 class="font-semibold text-lg">{{ post.position }}</h3>
-                  <p class="text-gray-600 text-sm">{{ post.organization || 'Unknown Organization' }}</p>
-                </div>
-                <span v-if="post.careerID === selectedCareerId" class="ml-2 px-2 py-1 text-xs bg-blue-500 text-white rounded-full">
-                  Target
-                </span>
+          <div
+            v-else
+            v-for="(post, index) in posts"
+            :key="post.careerID + '-' + index"
+            class="relative p-4 rounded-lg cursor-pointer transition"
+            :class="[
+              careerDropdownOpen ? 'bg-blue-gray' : 'bg-blue-gray hover:bg-gray-300',
+              loadingCardId === (post.careerID + '-' + index) ? 'opacity-50' : ''
+            ]"
+            @click="handleCardClick(post, index)"
+          >
+            <div class="flex items-center justify-between z-10 relative">
+              <div class="flex-1">
+                <h3 class="font-semibold text-lg">{{ post.position }}</h3>
+                <p class="text-gray-600 text-sm">{{ post.organization || 'Unknown Organization' }}</p>
               </div>
-
-              <!-- Spinner overlay -->
-              <div v-if="loadingCardId === (post.careerID + '-' + index)" class="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center rounded-lg z-0">
-                <svg class="animate-spin h-6 w-6 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"></path>
-                </svg>
-              </div>
+              <span v-if="post.careerID === selectedCareerId" class="ml-2 px-2 py-1 text-xs bg-blue-500 text-white rounded-full">
+                Target
+              </span>
             </div>
+
+            <!-- Spinner overlay -->
+            <div v-if="loadingCardId === (post.careerID + '-' + index)" class="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center rounded-lg z-0">
+              <svg class="animate-spin h-6 w-6 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"></path>
+              </svg>
+            </div>
+          </div>
         </div>
       </main>
     </div>
