@@ -916,10 +916,9 @@ onMounted(async () => {
               autocomplete="off"
             />
               <div
-                v-if="careerDropdownOpen"
-                class="absolute mt-1 w-full max-h-60 overflow-auto bg-white border border-gray-200 
-                      rounded-md shadow-lg z-20 pointer-events-auto"
-              >
+                  v-if="careerDropdownOpen"
+                  class="absolute mt-1 w-full max-h-60 overflow-auto bg-white border border-gray-200 rounded-md shadow-lg z-50"
+                >
               <!-- Loading state -->
               <div v-if="loadingCareers" class="flex justify-center items-center p-4">
                 <svg class="animate-spin h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -955,7 +954,7 @@ onMounted(async () => {
 
         <!-- Scrollable Posts -->
         <div
-            class="flex-1 overflow-y-auto space-y-4 pb-4 pt-4"
+            class="flex-1 overflow-y-auto space-y-4 pb-4 pt-4 relative z-0"
             :class="{ 'pointer-events-none': careerDropdownOpen }"
           >
           <!-- Loading State -->
