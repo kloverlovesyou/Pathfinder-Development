@@ -5,6 +5,8 @@ import axios from "axios";
 import CalendarSidebar from "@/components/Layout/CalendarSidebar.vue";
 import { getPDFUrl } from "../../lib/supabase.js";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL; // <-- add this
+
 // ------------------ STATES ------------------
 const calendarOpen = ref(false);
 const isSidebarOpen = ref(false);
