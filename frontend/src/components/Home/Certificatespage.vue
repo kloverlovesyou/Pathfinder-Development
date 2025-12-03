@@ -282,7 +282,7 @@ async function fetchCertificates(applicantID) {
 }
 
 // ➤ Upload a new certificate
-async function uploadCertificate(cert) {
+async function uploadCertificate(cert, index) {
   const token = localStorage.getItem("token");
   const savedUser = localStorage.getItem("user");
   const user = savedUser ? JSON.parse(savedUser) : null;
@@ -298,13 +298,15 @@ async function uploadCertificate(cert) {
     return;
   }
 
+  // Validate file type (jpeg, png, jpg)
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
   if (!allowedTypes.includes(cert.file.type)) {
     showToast("Please upload a JPEG or PNG image file.", "error");
     return;
   }
 
-  const maxSize = 4 * 1024 * 1024; // 4MB
+  // Validate file size (max 4MB = 4096 KB)
+  const maxSize = 4 * 1024 * 1024; // 4MB in bytes
   if (cert.file.size > maxSize) {
     showToast("File size must be less than 4MB.", "error");
     return;
@@ -315,6 +317,8 @@ async function uploadCertificate(cert) {
     showToast("Please enter a certificate title.", "error");
     return;
   }
+
+  // Validate title length (max 255 characters as per database schema)
   if (trimmedTitle.length > 255) {
     showToast("Certificate title must be 255 characters or less.", "error");
     return;
@@ -326,26 +330,29 @@ async function uploadCertificate(cert) {
   formData.append("IsSelected", "1");
   formData.append("certificate", cert.file);
 
-  // ✅ Set loading state for this certificate
-  loadingUploads.value[cert.id] = true;
+  // Set loading state for this certificate
+  cert.isUploading = true;
 
   try {
     const response = await axios.post(
       import.meta.env.VITE_API_BASE_URL + "/certificates",
       formData,
-      { headers: { Authorization: `Bearer ${token}` } }
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
     );
 
     // Remove the uploaded certificate from pending list
-    const index = certificates.value.findIndex(c => c.id === cert.id);
-    if (index !== -1) certificates.value.splice(index, 1);
+    certificates.value.splice(index, 1);
     ensureCertificateSlot();
 
+    // Refresh the certificates list
     await fetchCertificates(user.applicantID);
 
     showToast(`Certificate "${trimmedTitle}" uploaded successfully!`, "success");
   } catch (error) {
     console.error("❌ Upload error:", error.response?.data || error);
+
     let message = "Failed to upload certificate";
 
     if (error.response?.status === 422) {
@@ -371,8 +378,8 @@ async function uploadCertificate(cert) {
 
     showToast(message, "error");
   } finally {
-    // ✅ Reset loading state
-    loadingUploads.value[cert.id] = false;
+    // Reset loading state
+    cert.isUploading = false;
   }
 }
 
@@ -994,11 +1001,8 @@ const deselectAllCertificates = async () => {
             </div>
 
             <div class="flex justify-end mt-2">
-              <button 
-                :disabled="loadingUploads[cert.id]"
-                @click="uploadCertificate(cert)"
-              >
-                <span v-if="loadingUploads[cert.id]">Uploading...</span>
+              <button :disabled="loadingUploads[index]" @click="uploadCertificate(cert, index)">
+                <span v-if="loadingUploads[index]">Uploading...</span>
                 <span v-else>Upload</span>
               </button>
             </div>
