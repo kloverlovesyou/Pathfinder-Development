@@ -10,6 +10,7 @@ const regStore = useRegistrationStore();
 const organizations = ref([]);
 const selectedTraining = ref(null);
 const toasts = ref([]);
+const loadingTrainings = ref(true);
 
 // ✅ Only include trainings whose schedule is not past
 const upcomingTrainings = computed(() => {
@@ -138,11 +139,15 @@ function handleTrainingRegisterEvent(payload) {
 // Lifecycle
 // ---------------------------
 onMounted(async () => {
+  loadingTrainings.value = true;
+
   await trainingStore.fetchTrainings();
   console.log("Trainings loaded:", trainingStore.trainings);
   console.log("Upcoming trainings:", upcomingTrainings.value);
   await fetchOrganizations();
   await regStore.fetchMyRegistrations();
+
+    loadingTrainings.value = false;
 });
 
 const calendarOpen = ref(false);
@@ -166,14 +171,40 @@ const showModal = ref(false);
       </div>
       <!-- Training Cards -->
       <div class="space-y-4">
-        <div v-if="trainingsToShow.length > 0">
+
+        <!-- ⏳ Loading State -->
+        <div v-if="loadingTrainings" class="flex flex-col items-center justify-center py-10 space-y-3">
+          <svg
+            class="animate-spin h-10 w-10 text-blue-600"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8H4z"
+            ></path>
+          </svg>
+          <p class="text-gray-600">Loading trainings...</p>
+        </div>
+
+        <!-- ✅ Trainings loaded -->
+        <div v-else-if="trainingsToShow.length > 0">
           <div
             v-for="training in trainingsToShow"
             :key="training.trainingID"
             class="p-4 mb-2 bg-blue-gray rounded-lg hover:bg-gray-300 transition cursor-pointer flex justify-between items-center"
             @click="openTrainingModal(training)"
           >
-            <!-- Left: Training info -->
             <div>
               <h3 class="font-semibold">{{ training.title }}</h3>
               <p class="text-gray-700">
@@ -183,13 +214,11 @@ const showModal = ref(false);
           </div>
         </div>
 
-        <!-- 🚫 Nothing available -->
-        <div
-          v-else
-          class="p-6 text-center text-gray-600 bg-gray-100 rounded-lg"
-        >
+        <!-- 🚫 No trainings -->
+        <div v-else class="p-6 text-center text-gray-600 bg-gray-100 rounded-lg">
           No available trainings at the moment.
         </div>
+
       </div>
     </div>
 
