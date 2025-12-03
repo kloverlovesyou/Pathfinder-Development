@@ -16,6 +16,7 @@ const selectedImage = ref(null);
 const selectedTitle = ref(null);
 let certificateRefreshInterval = null;
 const loading = ref(true);
+const loadingUploads = ref({}); // key = certificate ID, value = boolean
 
 
 // ➤ Add a new upload entry
@@ -25,6 +26,7 @@ function addCertificate() {
     image: null,
     file: null,
   });
+  loadingUploads.value.push(false); // Add corresponding loading flag
 }
 
 function ensureCertificateSlot() {
@@ -38,6 +40,7 @@ ensureCertificateSlot();
 // ➤ Remove an upload entry
 function removeCertificate(index) {
   certificates.value.splice(index, 1);
+  loadingUploads.value.splice(index, 1); // Remove corresponding loading flag
   ensureCertificateSlot();
 }
 
@@ -279,7 +282,7 @@ async function fetchCertificates(applicantID) {
 }
 
 // ➤ Upload a new certificate
-async function uploadCertificate(cert, index) {
+async function uploadCertificate(cert) {
   const token = localStorage.getItem("token");
   const savedUser = localStorage.getItem("user");
   const user = savedUser ? JSON.parse(savedUser) : null;
@@ -295,15 +298,13 @@ async function uploadCertificate(cert, index) {
     return;
   }
 
-  // Validate file type (jpeg, png, jpg)
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
   if (!allowedTypes.includes(cert.file.type)) {
     showToast("Please upload a JPEG or PNG image file.", "error");
     return;
   }
 
-  // Validate file size (max 4MB = 4096 KB)
-  const maxSize = 4 * 1024 * 1024; // 4MB in bytes
+  const maxSize = 4 * 1024 * 1024; // 4MB
   if (cert.file.size > maxSize) {
     showToast("File size must be less than 4MB.", "error");
     return;
@@ -314,8 +315,6 @@ async function uploadCertificate(cert, index) {
     showToast("Please enter a certificate title.", "error");
     return;
   }
-
-  // Validate title length (max 255 characters as per database schema)
   if (trimmedTitle.length > 255) {
     showToast("Certificate title must be 255 characters or less.", "error");
     return;
@@ -327,34 +326,29 @@ async function uploadCertificate(cert, index) {
   formData.append("IsSelected", "1");
   formData.append("certificate", cert.file);
 
+  // ✅ Set loading state for this certificate
+  loadingUploads.value[cert.id] = true;
+
   try {
     const response = await axios.post(
       import.meta.env.VITE_API_BASE_URL + "/certificates",
       formData,
-      {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          // Don't set Content-Type manually - axios will set it with boundary for FormData
-        },
-      }
+      { headers: { Authorization: `Bearer ${token}` } }
     );
 
     // Remove the uploaded certificate from pending list
-    certificates.value.splice(index, 1);
+    const index = certificates.value.findIndex(c => c.id === cert.id);
+    if (index !== -1) certificates.value.splice(index, 1);
     ensureCertificateSlot();
-    
-    // Refresh the certificates list
+
     await fetchCertificates(user.applicantID);
-    
+
     showToast(`Certificate "${trimmedTitle}" uploaded successfully!`, "success");
   } catch (error) {
     console.error("❌ Upload error:", error.response?.data || error);
-    
-    // Handle specific error cases
     let message = "Failed to upload certificate";
-    
+
     if (error.response?.status === 422) {
-      // Validation errors
       const errors = error.response.data?.errors;
       if (errors) {
         const firstError = Object.values(errors)[0];
@@ -374,8 +368,11 @@ async function uploadCertificate(cert, index) {
     } else if (error.message) {
       message = error.message;
     }
-    
+
     showToast(message, "error");
+  } finally {
+    // ✅ Reset loading state
+    loadingUploads.value[cert.id] = false;
   }
 }
 
@@ -997,12 +994,12 @@ const deselectAllCertificates = async () => {
             </div>
 
             <div class="flex justify-end mt-2">
-              <button
-                type="button"
-                @click="uploadCertificate(cert, index)"
-                class="px-4 py-2 bg-customButton text-white rounded hover:bg-dark-slate"
+              <button 
+                :disabled="loadingUploads[cert.id]"
+                @click="uploadCertificate(cert)"
               >
-                Upload
+                <span v-if="loadingUploads[cert.id]">Uploading...</span>
+                <span v-else>Upload</span>
               </button>
             </div>
           </div>
