@@ -16,7 +16,7 @@ const selectedImage = ref(null);
 const selectedTitle = ref(null);
 let certificateRefreshInterval = null;
 const loading = ref(true);
-const loadingUploads = ref({}); // key = certificate ID, value = boolean
+const loadingUploads = ref([]); // Array to track loading state per certificate
 
 
 // ➤ Add a new upload entry
@@ -330,32 +330,34 @@ async function uploadCertificate(cert, index) {
   formData.append("IsSelected", "1");
   formData.append("certificate", cert.file);
 
-  // Set loading state for this certificate
-  cert.isUploading = true;
-
   try {
     const response = await axios.post(
       import.meta.env.VITE_API_BASE_URL + "/certificates",
       formData,
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          // Don't set Content-Type manually - axios will set it with boundary for FormData
+        },
       }
     );
 
     // Remove the uploaded certificate from pending list
     certificates.value.splice(index, 1);
     ensureCertificateSlot();
-
+    
     // Refresh the certificates list
     await fetchCertificates(user.applicantID);
-
+    
     showToast(`Certificate "${trimmedTitle}" uploaded successfully!`, "success");
   } catch (error) {
     console.error("❌ Upload error:", error.response?.data || error);
-
+    
+    // Handle specific error cases
     let message = "Failed to upload certificate";
-
+    
     if (error.response?.status === 422) {
+      // Validation errors
       const errors = error.response.data?.errors;
       if (errors) {
         const firstError = Object.values(errors)[0];
@@ -375,11 +377,8 @@ async function uploadCertificate(cert, index) {
     } else if (error.message) {
       message = error.message;
     }
-
+    
     showToast(message, "error");
-  } finally {
-    // Reset loading state
-    cert.isUploading = false;
   }
 }
 
@@ -1001,9 +1000,12 @@ const deselectAllCertificates = async () => {
             </div>
 
             <div class="flex justify-end mt-2">
-              <button :disabled="loadingUploads[index]" @click="uploadCertificate(cert, index)">
-                <span v-if="loadingUploads[index]">Uploading...</span>
-                <span v-else>Upload</span>
+              <button
+                type="button"
+                @click="uploadCertificate(cert, index)"
+                class="px-4 py-2 bg-customButton text-white rounded hover:bg-dark-slate"
+              >
+                Upload
               </button>
             </div>
           </div>
