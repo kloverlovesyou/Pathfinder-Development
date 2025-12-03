@@ -646,52 +646,40 @@ async function handleResultClick(item) {
           class="relative w-full max-w-md ml-4 font-poppins"
         >
           <!-- Search Input -->
-          <label
-            class="bg-white input w-full flex items-center gap-2 border-none rounded-full px-3 py-2 cursor-text relative"
-            @click="showDropdown = true"
+        <label
+          class="bg-white input w-full flex items-center gap-2 border-none rounded-full px-3 py-2 cursor-text relative"
+          @click="showDropdown = true"
+        >
+          <!-- Search Icon -->
+          <svg
+            class="h-5 w-5 text-gray-500 flex-shrink-0"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
           >
-            <!-- Search Icon -->
-            <svg
-              class="h-5 w-5 text-gray-500 flex-shrink-0"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-            >
-              <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2.5" fill="none" stroke="darkslategray">
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="m21 21-4.3-4.3"></path>
-              </g>
-            </svg>
+            <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2.5" fill="none" stroke="darkslategray">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.3-4.3"></path>
+            </g>
+          </svg>
 
-            <input
-              type="search"
-              placeholder="Search"
-              v-model="searchInput"
-              class="flex-grow bg-transparent outline-none font-poppins"
-              @focus="showDropdown = true"
-            />
+          <input
+            type="search"
+            placeholder="Search"
+            v-model="searchInput"
+            class="flex-grow bg-transparent outline-none font-poppins"
+            @focus="showDropdown = true"
+          />
 
-            <!-- Clear Button -->
-            <button
-              v-if="searchInput && !isSearching"
-              type="button"
-              @click="searchInput = ''"
-              class="absolute right-2 text-gray-400 hover:text-black"
-            >
-              ✕
-            </button>
-
-            <!-- Loading Spinner -->
-            <svg
-              v-if="isSearching"
-              class="absolute right-2 h-4 w-4 animate-spin text-gray-500"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 018 8h-4l3 3-3 3h4a8 8 0 01-8 8v-4l-3 3 3 3v-4a8 8 0 01-8-8z"></path>
-            </svg>
-          </label>
+          <!-- Clear Button -->
+          <button
+            v-if="searchInput && !isSearching"
+            type="button"
+            @click="searchInput = ''"
+            class="absolute right-2 text-gray-400 hover:text-black"
+          >
+            ✕
+          </button>
+        </label>
 
           <!-- Dropdown -->
           <div
@@ -735,8 +723,32 @@ async function handleResultClick(item) {
               </button>
             </div>
 
+            <!-- Loading Spinner -->
+            <div v-if="isSearching" class="flex items-center justify-center py-4">
+              <svg
+                class="animate-spin h-6 w-6 text-gray-500"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                ></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                ></path>
+              </svg>
+            </div>
+
             <!-- Search Results -->
-            <div v-if="results.length" class="mt-2 max-h-60 overflow-y-auto">
+            <div v-else-if="results.length" class="mt-2 max-h-60 overflow-y-auto">
               <div
                 v-for="(item, index) in results"
                 :key="index"
@@ -752,8 +764,9 @@ async function handleResultClick(item) {
               </div>
             </div>
 
+            <!-- No results -->
             <div
-              v-else-if="searchInput && activeMains.length"
+              v-else-if="searchInput && activeMains.length && !isSearching"
               class="text-center text-gray-500 text-sm mt-2"
             >
               No results found.
