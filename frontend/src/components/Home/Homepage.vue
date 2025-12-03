@@ -955,7 +955,6 @@ onMounted(async () => {
         <!-- Scrollable Posts -->
         <div
             class="flex-1 overflow-y-auto space-y-4 pb-4 pt-4 relative z-0"
-            :class="{ 'pointer-events-none': careerDropdownOpen }"
           >
           <!-- Loading State -->
           <div v-if="loadingPosts" class="flex justify-center items-center py-8">
