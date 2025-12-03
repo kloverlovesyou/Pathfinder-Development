@@ -12,6 +12,8 @@ function openModalCalendar(event) {
 
 const toasts = ref([]);
 const myApplications = ref(new Set());
+const loadingCareers = ref(true);
+
 
 function addToast(message, type = "info") {
   const id = Date.now();
@@ -22,6 +24,7 @@ function addToast(message, type = "info") {
 }
 
 onMounted(async () => {
+  loadingCareers.value = true;
   try {
     const response = await axios.get(
       import.meta.env.VITE_API_BASE_URL + "/careers"
@@ -32,6 +35,8 @@ onMounted(async () => {
   }
 
   await fetchMyApplications();
+
+  loadingCareers.value = false;
 });
 
 // Merge careers with organization name
@@ -171,7 +176,37 @@ async function fetchMyApplications() {
       </div>
       <!-- Career Cards -->
       <div class="space-y-4">
-        <div v-if="upcomingCareers.length > 0">
+
+        <!-- ⏳ Loading State -->
+        <div
+          v-if="loadingCareers"
+          class="flex flex-col items-center justify-center py-10 space-y-3"
+        >
+          <svg
+            class="animate-spin h-10 w-10 text-blue-600"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8H4z"
+            ></path>
+          </svg>
+          <p class="text-gray-600">Loading careers...</p>
+        </div>
+
+        <!-- 🧾 Career list -->
+        <div v-else-if="upcomingCareers.length > 0">
           <div
             v-for="career in upcomingCareers"
             :key="career.careerID"
@@ -179,16 +214,17 @@ async function fetchMyApplications() {
             @click="openModal(career)"
           >
             <h3 class="font-semibold">{{ career.position }}</h3>
-            <p class="text-gray-700">{{ career.organizationName || career.organization || 'Unknown' }}</p>
+            <p class="text-gray-700">
+              {{ career.organizationName || career.organization || 'Unknown' }}
+            </p>
           </div>
         </div>
 
-        <div
-          v-else
-          class="p-6 text-center text-gray-600 bg-gray-100 rounded-lg"
-        >
+        <!-- 🚫 No careers -->
+        <div v-else class="p-6 text-center text-gray-600 bg-gray-100 rounded-lg">
           No available career postings at the moment.
         </div>
+
       </div>
     </div>
 
