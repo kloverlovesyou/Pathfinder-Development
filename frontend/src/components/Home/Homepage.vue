@@ -213,12 +213,15 @@ async function openCareerModal(career) {
   }
 }
 
-async function handleCardClick(career) {
-  loadingCardId.value = career.careerID; // start spinner
+async function handleCardClick(career, index) {
+  // give each card a unique loading ID in case careerID repeats
+  const uniqueId = career.careerID + '-' + index;
+  loadingCardId.value = uniqueId;
+
   try {
-    await openCareerModal(career); // your existing function
+    await openCareerModal(career);
   } finally {
-    loadingCardId.value = null; // stop spinner after API finishes
+    loadingCardId.value = null;
   }
 }
 
@@ -986,12 +989,12 @@ onMounted(async () => {
           </div>
 
           <!-- Career posts -->
-          <div v-else v-for="post in posts" :key="post.careerID"
+          <div v-else v-for="(post, index) in posts" :key="post.careerID + '-' + index"
             class="relative p-4 bg-blue-gray rounded-lg cursor-pointer hover:bg-gray-300 transition"
-            :class="{'opacity-50 pointer-events-none': loadingCardId === post.careerID}" 
-            @click="handleCardClick(post)"
+            :class="{'opacity-50': loadingCardId === post.uniqueLoadingId}" 
+            @click="handleCardClick(post, index)"
           >
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between z-10 relative">
               <div class="flex-1">
                 <h3 class="font-semibold text-lg">{{ post.position }}</h3>
                 <p class="text-gray-600 text-sm">
@@ -1004,7 +1007,7 @@ onMounted(async () => {
             </div>
 
             <!-- Spinner overlay -->
-            <div v-if="loadingCardId === post.careerID" class="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center rounded-lg">
+            <div v-if="loadingCardId === post.uniqueLoadingId" class="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center rounded-lg z-0">
               <svg class="animate-spin h-6 w-6 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"></path>
