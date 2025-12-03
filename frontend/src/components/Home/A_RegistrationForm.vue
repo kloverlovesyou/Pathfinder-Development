@@ -270,8 +270,8 @@
           <!-- 👁 Toggle Button -->
           <button
             type="button"
-            class="absolute right-2 top-1/3 -translate-y-1/2 text-gray-500"
-            aria-label="Toggle confirm password visibility"
+            class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
+            aria-label="Toggle password visibility"
             @click="showPassword = !showPassword"
           >
             <span v-if="showPassword"

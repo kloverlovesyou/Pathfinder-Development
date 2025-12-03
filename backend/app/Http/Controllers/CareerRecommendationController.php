@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\OrganizationsChoiceController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -148,18 +147,15 @@ class CareerRecommendationController extends Controller
              return $training;
          })->all(); // Use all() instead of toArray() to preserve objects
          
-         // Use OrganizationsChoiceController to mark trainings with organization choice flag
-         $trainingsWithOrg = OrganizationsChoiceController::markTrainingsWithOrganizationChoiceFlag($trainingsWithOrg);
-         
-         // Convert to array for JSON response (after marking with flag)
+         // Convert to array for JSON response
          $trainingsWithOrg = array_map(function($training) {
              return (array) $training; // Convert stdClass to array for JSON encoding
          }, $trainingsWithOrg);
- 
+
          // Return the results as JSON
          return response()->json($trainingsWithOrg);
      }
- 
+
      // Fetch career details and recommended trainings
      public function careerDetails($careerID)
      {
@@ -214,14 +210,11 @@ class CareerRecommendationController extends Controller
              return $training;
          })->all(); // Use all() instead of toArray() to preserve objects
          
-         // Use OrganizationsChoiceController to mark trainings with organization choice flag
-         $trainingsWithOrg = OrganizationsChoiceController::markTrainingsWithOrganizationChoiceFlag($trainingsWithOrg);
-         
-         // Convert to array for JSON response (after marking with flag)
+         // Convert to array for JSON response
          $trainingsWithOrg = array_map(function($training) {
              return (array) $training; // Convert stdClass to array for JSON encoding
          }, $trainingsWithOrg);
- 
+
          // Return the results as JSON
          return response()->json([
              'career' => $career,

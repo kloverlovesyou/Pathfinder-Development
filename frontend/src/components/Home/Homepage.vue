@@ -52,10 +52,6 @@ const filteredCareers = computed(() => {
   );
 });
 
-// Computed property for organization choice progress
-const orgChoiceProgress = computed(() => {
-  return calculateOrgChoicePercentage();
-});
 
 const selectedTrainingRegistered = computed(() =>
   isTrainingRegistered(selectedTraining.value)
@@ -135,37 +131,80 @@ async function fetchMyRegistrations() {
 // ------------------ MODALS ------------------
 async function openCareerModal(career) {
   try {
+    // Validate career object
+    if (!career) {
+      addToast("Invalid career data.", "error");
+      return;
+    }
+
+    // Validate and parse careerID
+    const careerID = career.careerID;
+    if (careerID === undefined || careerID === null) {
+      addToast("Career ID is missing.", "error");
+      return;
+    }
+
+    const parsedCareerID = parseInt(careerID, 10);
+    if (isNaN(parsedCareerID)) {
+      addToast("Invalid career ID format.", "error");
+      return;
+    }
+
     console.log('Career Object:', career);
+    console.log('Parsed Career ID:', parsedCareerID);
 
-    const careerID = parseInt(career.careerID, 10);
-    console.log('Parsed Career ID:', careerID);
+    // Make API request
+    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + `/careers/${parsedCareerID}/details`);
 
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + `/careers/${careerID}/details`);
+    // Check if career exists in response
+    if (!res.data || !res.data.career) {
+      addToast("Career details not found.", "error");
+      return;
+    }
 
-    //store main career + recommended trainings
-    selectedCareerDetails.value = normalizeCareerDetails(res.data?.career);
+    // Store main career + recommended trainings
+    selectedCareerDetails.value = normalizeCareerDetails(res.data.career);
     const rawTrainings = res.data.recommended_trainings || [];
+    
     // Debug: Check what the API is returning
     console.log("API Response - recommended_trainings:", rawTrainings);
     rawTrainings.forEach((t, idx) => {
       console.log(`Training ${idx}:`, {
         title: t.title || t.trainingTitle,
         trainingID: t.trainingID || t.TrainingID,
-        isOrganizationChoice: t.isOrganizationChoice,
-        IsOrganizationChoice: t.IsOrganizationChoice,
         allKeys: Object.keys(t)
       });
     });
     recommendedTrainings.value = aggregateRecommendedTrainings(rawTrainings);
     console.log("After aggregation:", recommendedTrainings.value);
+    
     if (!selectedCareerDetails.value) {
-      addToast("Career details not found.", "accent");
+      addToast("Career details not found.", "error");
       return;
     }
+    
     showCareerPopup.value = true;
   } catch (error) {
     console.error("Error loading career details:", error);
-    alert("Failed to load career details.");
+    
+    // Provide more specific error messages
+    if (error.response) {
+      // Server responded with error status
+      const status = error.response.status;
+      if (status === 404) {
+        addToast("Career not found.", "error");
+      } else if (status === 500) {
+        addToast("Server error. Please try again later.", "error");
+      } else {
+        addToast(`Failed to load career details (${status}).`, "error");
+      }
+    } else if (error.request) {
+      // Request was made but no response received
+      addToast("Network error. Please check your connection.", "error");
+    } else {
+      // Something else happened
+      addToast("Failed to load career details.", "error");
+    }
   }
 }
 function closeCareerModal() {
@@ -618,71 +657,6 @@ function isTrainingRegistered(training) {
   );
 }
 
-// Check if a training is in the orgschoice table
-// The backend CareerRecommendationController already sets isOrganizationChoice flag
-// by checking if the training ID exists in the organizationschoice table
-function isTrainingOrgChoice(training) {
-  if (!training) return false;
-  // Use the flag set by the backend, matching OrganizationTrainings.vue approach
-  // Handle both case variations and ensure boolean conversion
-  const result = Boolean(training.isOrganizationChoice || training.IsOrganizationChoice);
-  // Debug: Log when checking
-  if (result) {
-    console.log("✅ Training IS org choice:", training.title, training.trainingID, training.isOrganizationChoice);
-  }
-  return result;
-}
-
-// Calculate organization choice percentage for a career
-function calculateOrgChoicePercentage() {
-  if (!recommendedTrainings.value || recommendedTrainings.value.length === 0) {
-    return null;
-  }
-
-  // Get all organization choice trainings for this career
-  const orgChoiceTrainings = recommendedTrainings.value.filter((training) => 
-    isTrainingOrgChoice(training)
-  );
-
-  if (orgChoiceTrainings.length === 0) {
-    return null;
-  }
-
-  // Count completed org choice trainings
-  // A training is considered completed if the user has registered and attended it
-  const completedOrgChoiceTrainings = orgChoiceTrainings.filter((training) => {
-    const trainingID = resolveTrainingId(training);
-    if (!trainingID) return false;
-
-    // Find registration for this training
-    const registration = myRegistrationsData.value.find(
-      (reg) => Number(reg.trainingID) === Number(trainingID)
-    );
-
-    if (!registration) return false;
-
-    // Check if training is completed (attended status or has certificate)
-    const status = (registration.registrationStatus || "").toLowerCase();
-    const hasCertificate = Boolean(
-      registration.certificatePath || 
-      registration.certGivenDate || 
-      registration.certifiedDate
-    );
-
-    return status.includes("attended") || hasCertificate;
-  });
-
-  // Calculate percentage
-  const percentage = Math.round(
-    (completedOrgChoiceTrainings.length / orgChoiceTrainings.length) * 100
-  );
-
-  return {
-    completed: completedOrgChoiceTrainings.length,
-    total: orgChoiceTrainings.length,
-    percentage: percentage
-  };
-}
 
 function formatScheduleFull(schedule) {
   if (!schedule) return "No schedule set";
@@ -765,13 +739,6 @@ function aggregateRecommendedTrainings(trainings) {
 
     let entry = map.get(id);
     if (!entry) {
-      // Backend already sets isOrganizationChoice by checking organizationschoice table
-      // Preserve it BEFORE spreading item to ensure it's not overwritten
-      const orgChoiceFlag = Boolean(
-        item.isOrganizationChoice !== undefined 
-          ? item.isOrganizationChoice 
-          : (item.IsOrganizationChoice !== undefined ? item.IsOrganizationChoice : false)
-      );
       entry = {
         ...item,
         trainingID: resolveTrainingId(item) ?? id,
@@ -784,10 +751,7 @@ function aggregateRecommendedTrainings(trainings) {
           "",
         provider: item.provider || item.organizationName || item.organization || "",
         schedules: Array.isArray(item.schedules) ? [...item.schedules] : [],
-        // Explicitly set the flag AFTER spread to ensure it's preserved
-        isOrganizationChoice: orgChoiceFlag,
       };
-      console.log("Created entry for training:", entry.title, "isOrganizationChoice:", entry.isOrganizationChoice, "from item:", item.isOrganizationChoice);
       map.set(id, entry);
     } else {
       entry.description = entry.description || item.description || "";
@@ -798,15 +762,6 @@ function aggregateRecommendedTrainings(trainings) {
         item.provider ||
         "";
       entry.provider = entry.provider || item.provider;
-      // Preserve isOrganizationChoice flag - if any item has it as true, keep it true
-      // Backend sets this flag by checking if training ID exists in organizationschoice table
-      // Check both possible case variations and handle truthy values (1, true, "1", etc.)
-      const itemIsOrgChoice = item.isOrganizationChoice !== undefined 
-        ? Boolean(item.isOrganizationChoice) 
-        : (item.IsOrganizationChoice !== undefined ? Boolean(item.IsOrganizationChoice) : false);
-      if (itemIsOrgChoice) {
-        entry.isOrganizationChoice = true;
-      }
       if (Array.isArray(item.schedules)) {
         item.schedules.forEach((sched) => {
           if (!entry.schedules.some((existing) => existing.trainingScheduleID === sched.trainingScheduleID)) {
@@ -1352,11 +1307,6 @@ onMounted(async () => {
               <strong>Training Match:</strong>
               {{ selectedCareerDetails.trainingsAttendedPercentage }}%
             </p>
-            <p v-if="orgChoiceProgress" class="text-green-600">
-              <strong class="text-green-600">Organization Choice Training Progress:</strong>
-              {{ orgChoiceProgress.completed }}/{{ orgChoiceProgress.total }} 
-              ({{ orgChoiceProgress.percentage }}%)
-            </p>
             <p v-if="selectedCareerDetails.pdf_directory">
               <button class="text-blue-400 underline hover:text-blue-200" @click.prevent="viewCareerPDF">
                 Attachments
@@ -1393,12 +1343,6 @@ onMounted(async () => {
                   <h4 class="font-semibold text-sm leading-snug">
                     {{ training.title }}
                   </h4>
-                  <span
-                    v-if="isTrainingOrgChoice(training)"
-                    class="text-[10px] text-green-600 font-semibold px-2 py-0.5 bg-green-100 rounded whitespace-nowrap"
-                  >
-                    Org's choice
-                  </span>
                 </div>
                 <p class="text-[11px] text-gray-600 truncate">
                   {{

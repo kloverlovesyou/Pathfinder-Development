@@ -1527,11 +1527,8 @@ export default {
           }
         );
 
-        // Remove from local array
-        const index = this.upcomingCareers.findIndex(
-          (c) => (c.careerID || c.id) === careerId
-        );
-        if (index !== -1) this.upcomingCareers.splice(index, 1);
+        // Refresh from backend so all sections (open/closed) stay in sync
+        await this.fetchCareers();
 
         showToast("✅ Career deleted successfully!");
       } catch (error) {
@@ -1659,7 +1656,10 @@ export default {
     async fetchCareers() {
       try {
         const response = await api.get("/organization/careers");
-        const newCareers = response.data;
+        const newCareers = Array.isArray(response.data) ? response.data : [];
+
+        // Rebuild the local list from fresh API data to avoid stale or duplicate entries
+        this.upcomingCareers = [];
 
         newCareers.forEach((career) => {
           const normalizedCareer = this.normalizeCareer(career);

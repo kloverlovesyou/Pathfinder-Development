@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Training;
 use App\Models\TrainingSchedule;
 use App\Models\Registration;
-use App\Models\OrganizationsChoice;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -256,7 +255,7 @@ class TrainingController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Training::with(['organization', 'tags', 'schedules', 'organizationChoices']);
+        $query = Training::with(['organization', 'tags', 'schedules']);
 
         $user = $request->user();
         if ($user && isset($user->organizationID)) {
@@ -287,7 +286,7 @@ class TrainingController extends Controller
             return response()->json(['message' => 'Unauthorized - Organization access required'], 401);
         }
 
-        $trainings = Training::with(['organization', 'tags', 'schedules', 'organizationChoices'])
+        $trainings = Training::with(['organization', 'tags', 'schedules'])
             ->where('organizationID', $user->organizationID)
             ->get();
 
@@ -311,16 +310,6 @@ class TrainingController extends Controller
         if ($firstSchedule && $firstSchedule->attendance_key) {
             $attendanceLink = env('FRONTEND_URL') . '/attendance/checkin?trainingID='
                 . $training->trainingID . '&key=' . $firstSchedule->attendance_key;
-        }
-
-        $hasChoice = false;
-        if ($training->relationLoaded('organizationChoices')) {
-            $hasChoice = $training->organizationChoices
-                ->contains(fn ($choice) => (int) $choice->organizationID === (int) $training->organizationID);
-        } else {
-            $hasChoice = OrganizationsChoice::where('trainingID', $training->trainingID)
-                ->where('organizationID', $training->organizationID)
-                ->exists();
         }
 
         return [
@@ -359,7 +348,6 @@ class TrainingController extends Controller
                     'tagName' => $tag->TagName ?? '',
                 ];
             }),
-            'isOrganizationChoice' => $hasChoice,
         ];
     }
     /**

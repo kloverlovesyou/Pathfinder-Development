@@ -369,6 +369,7 @@ async function handleResultClick(item) {
   }
 
   if (type.includes("organization")) {
+    // Base info from the search result
     selectedOrg.value = {
       ...item,
       careers: [],
@@ -377,19 +378,122 @@ async function handleResultClick(item) {
     isOrgModalOpen.value = true;
 
     try {
-      const response = await axios.get(
-        `/api/search?search=${encodeURIComponent(
-          item.Title
-        )}&filterType=organization`
-      );
-      const results = response.data.results || [];
+      // Try to use the organizationID from search result if available
+      const orgID =
+        item.organizationID ||
+        item.OrganizationID ||
+        item.ID ||
+        item.id ||
+        null;
 
-      selectedOrg.value.careers = results.filter((r) =>
-        r.Type.includes("Career")
-      );
-      selectedOrg.value.trainings = results.filter((r) =>
-        r.Type.includes("Training")
-      );
+      // 1) Try to fetch the full organization (with relations) if we have an ID
+      if (orgID) {
+        try {
+          const orgRes = await axios.get(
+            import.meta.env.VITE_API_BASE_URL + `/organizations/${orgID}`
+          );
+          const org = orgRes.data;
+
+          selectedOrg.value = {
+            ...selectedOrg.value,
+            Title: org.name || org.Name || selectedOrg.value.Title,
+            OrganizationName:
+              org.name || org.Name || selectedOrg.value.OrganizationName,
+            Description:
+              org.location ||
+              org.Location ||
+              selectedOrg.value.Description,
+            OrganizationLocation:
+              org.location ||
+              org.Location ||
+              selectedOrg.value.OrganizationLocation,
+            Website:
+              org.websiteURL ||
+              org.WebsiteURL ||
+              selectedOrg.value.Website,
+            Logo:
+              org.logoPath ||
+              org.logo_directory ||
+              selectedOrg.value.Logo,
+            careers: Array.isArray(org.careers) ? org.careers : [],
+            trainings: Array.isArray(org.trainings) ? org.trainings : [],
+          };
+        } catch (orgError) {
+          console.warn("Could not fetch organization details via API:", orgError.response?.data || orgError.message);
+          // Continue to use search API as fallback
+        }
+      }
+
+      // 2) Use the search endpoint to gather all posts by organization name
+      const orgName =
+        selectedOrg.value.Title ||
+        selectedOrg.value.OrganizationName ||
+        item.Name ||
+        item.OrganizationName ||
+        item.Title ||
+        "";
+
+      if (orgName) {
+        try {
+          // Search for all content (not just organization) to get careers and trainings
+          const searchRes = await axios.get(
+            import.meta.env.VITE_API_BASE_URL +
+              `/search?search=${encodeURIComponent(orgName)}&filterType=all`
+          );
+
+          const searchResults = searchRes.data.results || [];
+
+          // Filter careers that belong to this organization
+          const careersFromSearch = searchResults.filter((r) => {
+            const t = (r.Type || r.type || "").toLowerCase();
+            const orgMatch = 
+              (r.OrganizationName || "").toLowerCase() === orgName.toLowerCase() ||
+              (r.organizationName || "").toLowerCase() === orgName.toLowerCase();
+            return t.includes("career") && orgMatch;
+          });
+
+          // Filter trainings that belong to this organization
+          const trainingsFromSearch = searchResults.filter((r) => {
+            const t = (r.Type || r.type || "").toLowerCase();
+            const orgMatch = 
+              (r.OrganizationName || "").toLowerCase() === orgName.toLowerCase() ||
+              (r.organizationName || "").toLowerCase() === orgName.toLowerCase();
+            return t.includes("training") && orgMatch;
+          });
+
+        // Merge API careers/trainings with search-based ones (avoid duplicates by ID)
+        const byId = (list, idKeys) => {
+          const map = new Map();
+          for (const item of list) {
+            const id =
+              item.careerID ||
+              item.CareerID ||
+              item.trainingID ||
+              item.TrainingID ||
+              item.ID ||
+              item.id;
+            if (!id) continue;
+            if (!map.has(id)) map.set(id, item);
+          }
+          return Array.from(map.values());
+        };
+
+          const mergedCareers = byId(
+            [...(selectedOrg.value.careers || []), ...careersFromSearch],
+            ["careerID", "CareerID", "ID", "id"]
+          );
+
+          const mergedTrainings = byId(
+            [...(selectedOrg.value.trainings || []), ...trainingsFromSearch],
+            ["trainingID", "TrainingID", "ID", "id"]
+          );
+
+          selectedOrg.value.careers = mergedCareers;
+          selectedOrg.value.trainings = mergedTrainings;
+        } catch (searchError) {
+          console.warn("Could not fetch careers/trainings via search:", searchError.response?.data || searchError.message);
+        }
+      }
     } catch (error) {
       console.error("Error fetching organization posts:", error);
     }
@@ -726,18 +830,26 @@ async function handleResultClick(item) {
           >
             <div
               v-for="career in selectedOrg.careers"
-              :key="career.ID"
+              :key="career.careerID || career.ID || career.id"
               class="snap-start w-[180px] flex-shrink-0 p-3 bg-blue-gray rounded-lg cursor-pointer hover:bg-gray-200 transition shadow-sm"
-              @click="handleResultClick(career)"
+              @click="handleResultClick({
+                ...career,
+                Type: 'Career',
+                Title: career.position || career.Position || career.Title,
+                ID: career.careerID || career.ID || career.id
+              })"
             >
               <h4 class="font-semibold text-sm leading-snug mb-1">
-                {{ career.Title }}
+                {{ career.position || career.Position || career.Title || "Career Position" }}
               </h4>
               <p class="text-[11px] text-gray-600 truncate">
-                Deadline: {{ career.DeadlineOfSubmission || "N/A" }}
+                Deadline: {{ career.closingDate || career.DeadlineOfSubmission || career.closing_date || "N/A" }}
               </p>
             </div>
           </div>
+        </div>
+        <div v-else-if="selectedOrg.careers && selectedOrg.careers.length === 0" class="mt-4">
+          <p class="text-sm text-gray-500 italic">No career posts available.</p>
         </div>
 
         <!--  Training Posts -->
@@ -752,18 +864,26 @@ async function handleResultClick(item) {
           >
             <div
               v-for="training in selectedOrg.trainings"
-              :key="training.ID"
+              :key="training.trainingID || training.ID || training.id"
               class="snap-start w-[180px] flex-shrink-0 p-3 bg-blue-gray rounded-lg cursor-pointer hover:bg-gray-200 transition shadow-sm"
-              @click="handleResultClick(training)"
+              @click="handleResultClick({
+                ...training,
+                Type: 'Training',
+                Title: training.title || training.Title,
+                ID: training.trainingID || training.ID || training.id
+              })"
             >
               <h4 class="font-semibold text-sm leading-snug mb-1">
-                {{ training.Title }}
+                {{ training.title || training.Title || "Training" }}
               </h4>
               <p class="text-[11px] text-gray-600 truncate">
-                Schedule: {{ training.Schedule || "Not specified" }}
+                Schedule: {{ training.schedule || training.Schedule || "Not specified" }}
               </p>
             </div>
           </div>
+        </div>
+        <div v-else-if="selectedOrg.trainings && selectedOrg.trainings.length === 0" class="mt-6">
+          <p class="text-sm text-gray-500 italic">No training posts available.</p>
         </div>
       </div>
     </dialog>

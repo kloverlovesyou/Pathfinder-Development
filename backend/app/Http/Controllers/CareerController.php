@@ -153,16 +153,20 @@ public function countsPartial()
             'careerID' => $career->careerID,
             'position' => $career->position,
             'placeOfAssignment' => $career->placeOfAssignment,
+            'applicationLetterAddress' => $career->placeOfAssignment, // Backward compatibility
             'details' => $career->details,
             'qualificationStandard' => $career->qualificationStandard,
+            'qualifications' => $career->qualificationStandard, // Backward compatibility
             'pdf_directory' => $career->pdf_directory,
             'postingDate' => $career->postingDate,
             'closingDate' => $career->closingDate,
+            'deadlineOfSubmission' => $career->closingDate, // Backward compatibility
+            'detailsAndInstructions' => $career->details, // Backward compatibility
             'trainingsAttendedPercentage' => $career->trainingsAttendedPercentage,
             'organizationID' => $career->organizationID,
             'organization' => $career->organization->name ?? 'Unknown',
         ]);
-}
+    }
  public function update(Request $request, $id)
     {
         $career = Career::find($id);

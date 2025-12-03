@@ -86,4 +86,57 @@ class AdminController extends Controller
             'message' => 'Logged out successfully.'
         ]);
     }
+
+    /**
+     * Update Admin Password
+     */
+    public function update(Request $request)
+    {
+        $admin = $request->user();
+
+        // Validate request
+        $validator = Validator::make($request->all(), [
+            'currentPassword' => 'required',
+            'newPassword' => 'nullable|string|min:8',
+            'confirmPassword' => 'nullable|same:newPassword',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Verify current password
+        if (!Hash::check($request->currentPassword, $admin->password)) {
+            return response()->json([
+                'message' => 'Current password is incorrect.'
+            ], 401);
+        }
+
+        // Update password if new password is provided
+        if ($request->newPassword) {
+            if ($request->newPassword !== $request->confirmPassword) {
+                return response()->json([
+                    'message' => 'New password and confirm password do not match.'
+                ], 422);
+            }
+
+            $admin->password = Hash::make($request->newPassword);
+            $admin->save();
+        }
+
+        return response()->json([
+            'message' => 'Password updated successfully.',
+            'admin' => [
+                'adminID' => $admin->adminID,
+                'name' => $admin->name,
+                'location' => $admin->location,
+                'websiteURL' => $admin->websiteURL,
+                'emailAddress' => $admin->emailAddress,
+                'role' => 'admin'
+            ]
+        ]);
+    }
 }

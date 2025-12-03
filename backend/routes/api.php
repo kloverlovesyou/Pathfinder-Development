@@ -19,7 +19,6 @@ use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\CareerRecommendationController;
 use App\Http\Controllers\ApplicationFileController;
-use App\Http\Controllers\OrganizationsChoiceController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\MyActivityController;
 use App\Http\Controllers\EventController;
@@ -302,11 +301,17 @@ Route::middleware('auth.custom')->group(function () {
         ->withoutMiddleware('auth.custom');
     Route::get('/careers/total', [CareerController::class, 'total'])
         ->withoutMiddleware('auth.custom');
-    Route::get('/careers/counts-partial', [CareerController::class, 'countsPartial'])
+     Route::get('/careers/counts-partial', [CareerController::class, 'countsPartial'])
         ->withoutMiddleware('auth.custom');
+});
 
-     Route::post('/admin/logout', [AdminController::class, 'logout']);
-     Route::get('admin/details'); [AdminController::class, 'AdminInfo'];
+// ----------------------
+// Admin routes (Sanctum auth)
+// ----------------------
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/admin/details', [AdminController::class, 'AdminInfo']);
+    Route::put('/admin/update', [AdminController::class, 'update']);
+    Route::post('/admin/logout', [AdminController::class, 'logout']);
 });
 
 // ----------------------
@@ -320,11 +325,6 @@ Route::middleware('auth.custom')->group(function () {
     Route::post('/trainings', [TrainingController::class, 'store'])->middleware('require.verified.org');
     Route::put('/trainings/{id}', [TrainingController::class, 'update'])->middleware('require.verified.org');
     Route::delete('/trainings/{id}', [TrainingController::class, 'destroy'])->middleware('require.verified.org');
-    
-    // Organization Choices
-    Route::get('/organization/choices', [OrganizationsChoiceController::class, 'index']);
-    Route::post('/organization/choices', [OrganizationsChoiceController::class, 'store'])->middleware('require.verified.org');
-    Route::delete('/organization/choices/{trainingID}', [OrganizationsChoiceController::class, 'destroy'])->middleware('require.verified.org');
     
   
     Route::get('/trainings/{trainingID}', [TrainingController::class, 'show']);
