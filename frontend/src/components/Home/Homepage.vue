@@ -27,6 +27,7 @@ const myApplications = ref(new Set());
 const myRegistrations = ref(new Set());
 const myRegistrationsData = ref([]); // Store full registration data
 const toasts = ref([]);
+const loadingCardId = ref(null); // store the careerID of the card being clicked
 
 const events = ref({});
 const selectedDate = ref("");
@@ -211,6 +212,16 @@ async function openCareerModal(career) {
     }
   }
 }
+
+async function handleCardClick(career) {
+  loadingCardId.value = career.careerID; // start spinner
+  try {
+    await openCareerModal(career); // your existing function
+  } finally {
+    loadingCardId.value = null; // stop spinner after API finishes
+  }
+}
+
 function closeCareerModal() {
   showCareerPopup.value = false;
   selectedCareerDetails.value = null;
@@ -976,9 +987,10 @@ onMounted(async () => {
 
           <!-- Career posts -->
           <div v-else v-for="post in posts" :key="post.careerID"
-            class="p-4 bg-blue-gray rounded-lg relative cursor-pointer hover:bg-gray-300 transition" 
-            :class="{'': post.careerID === selectedCareerId}" 
-            @click="openCareerModal(post)">
+            class="relative p-4 bg-blue-gray rounded-lg cursor-pointer hover:bg-gray-300 transition"
+            :class="{'opacity-50 pointer-events-none': loadingCardId === post.careerID}" 
+            @click="handleCardClick(post)"
+          >
             <div class="flex items-center justify-between">
               <div class="flex-1">
                 <h3 class="font-semibold text-lg">{{ post.position }}</h3>
@@ -989,6 +1001,14 @@ onMounted(async () => {
               <span v-if="post.careerID === selectedCareerId" class="ml-2 px-2 py-1 text-xs bg-blue-500 text-white rounded-full">
                 Target
               </span>
+            </div>
+
+            <!-- Spinner overlay -->
+            <div v-if="loadingCardId === post.careerID" class="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center rounded-lg">
+              <svg class="animate-spin h-6 w-6 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"></path>
+              </svg>
             </div>
           </div>
         </div>
