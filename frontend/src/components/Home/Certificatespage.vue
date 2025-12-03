@@ -15,6 +15,8 @@ const isModalOpen = ref(false);
 const selectedImage = ref(null);
 const selectedTitle = ref(null);
 let certificateRefreshInterval = null;
+const loading = ref(true);
+
 
 // ➤ Add a new upload entry
 function addCertificate() {
@@ -634,22 +636,23 @@ function logout() {
 
 // Load user info and fetch certificates
 onMounted(async () => {
+  loading.value = true; // ⏳ Start loading
+
   const savedUser = localStorage.getItem("user");
   const token = localStorage.getItem("token");
-  
-  // Check if we have both user and token
+
   if (!token) {
     console.error("❌ No token found - redirecting to login");
     showToast("Please log in to view certificates", "error");
-    setTimeout(() => {
-      router.push({ name: "Login" });
-    }, 2000);
+    setTimeout(() => router.push({ name: "Login" }), 2000);
+    loading.value = false;
     return;
   }
-  
+
   if (savedUser) {
     try {
       const user = JSON.parse(savedUser);
+
       userName.value =
         user.firstName && user.lastName
           ? `${user.firstName} ${user.lastName}`
@@ -657,34 +660,34 @@ onMounted(async () => {
 
       if (user.applicantID) {
         await fetchCertificates(user.applicantID);
-        startCertificateRefresh(); // Start automatic refresh for organization certificates
+        startCertificateRefresh(); 
       } else {
         console.warn("⚠️ No applicantID found in user data");
         showToast("User data incomplete. Please log in again.", "error");
-        setTimeout(() => {
-          router.push({ name: "Login" });
-        }, 2000);
+        setTimeout(() => router.push({ name: "Login" }), 2000);
+        loading.value = false;
+        return;
       }
     } catch (error) {
       console.error("❌ Error parsing user data:", error);
       localStorage.removeItem("user");
       localStorage.removeItem("token");
       showToast("Session data corrupted. Please log in again.", "error");
-      setTimeout(() => {
-        router.push({ name: "Login" });
-      }, 2000);
+      setTimeout(() => router.push({ name: "Login" }), 2000);
+      loading.value = false;
       return;
     }
   } else {
     console.error("❌ No user data found - redirecting to login");
     showToast("Please log in to view certificates", "error");
-    setTimeout(() => {
-      router.push({ name: "Login" });
-    }, 2000);
+    setTimeout(() => router.push({ name: "Login" }), 2000);
+    loading.value = false;
     return;
   }
-  
+
   await activityStore.fetchCounts();
+
+  loading.value = false; // ✅ Stop loading
 });
 
 // Clean up intervals on unmount
@@ -1005,8 +1008,33 @@ const deselectAllCertificates = async () => {
           </div>
         </div>
 
+        <!-- Loading State -->
+        <div v-if="loading" class="flex flex-col items-center justify-center py-10 space-y-3">
+          <svg
+            class="animate-spin h-10 w-10 text-blue-600"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8H4z"
+            ></path>
+          </svg>
+          <p class="text-gray-600 text-sm">Loading certificates...</p>
+        </div>
+
         <!-- Uploaded certificates display -->
-        <div class="bg-white rounded-lg shadow p-6 flex-1">
+        <div v-else class="bg-white rounded-lg shadow p-6 flex-1">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div class="text-gray-500">
               Select certificates to appear in the resume.
@@ -1038,17 +1066,17 @@ const deselectAllCertificates = async () => {
                 </button>
               </div>
             </div>
+
             <div
               v-for="(cert, index) in uploadedCertificates"
               :key="'uploaded-' + index"
               class="flex flex-col bg-white shadow rounded-lg overflow-hidden relative"
             >
-              <!-- 🖼️ Certificate Image -->
+              <!-- Certificate Image -->
               <div
                 class="w-full h-48 bg-gray-200 flex items-center justify-center cursor-pointer hover:opacity-90 transition overflow-hidden"
                 @click="openModal(cert.image, cert.certificationName)"
               >
-                <!-- Image Display -->
                 <img
                   v-if="cert.image"
                   :src="cert.image"
@@ -1059,21 +1087,14 @@ const deselectAllCertificates = async () => {
                 <span v-else class="text-gray-500">No Certificate</span>
               </div>
 
-              <!-- 🏷️ Bottom section -->
+              <!-- Bottom section -->
               <div class="flex justify-between items-center px-4 py-3">
-                <!-- ✏️ Editable Certificate Name -->
-                <!-- Certificate Name (read-only) -->
                 <p class="text-gray-800 font-medium truncate w-2/3">
                   {{ cert.certificationName }}
                 </p>
 
-                <!-- ✅ Right side buttons -->
                 <div class="flex items-center gap-3">
-                  <!-- Checkbox (Show on Resume) -->
-                  <div
-                    class="flex items-center justify-center"
-                    title="Show on Resume"
-                  >
+                  <div class="flex items-center justify-center" title="Show on Resume">
                     <input
                       type="checkbox"
                       :checked="cert.IsSelected"
@@ -1082,7 +1103,6 @@ const deselectAllCertificates = async () => {
                     />
                   </div>
 
-                  <!-- Delete Button (only for manually uploaded certificates) -->
                   <button
                     v-if="cert.source !== 'organization' && !cert.certificationID?.toString().startsWith('REG_')"
                     @click.stop="confirmDeleteCertificate(cert)"
@@ -1101,7 +1121,7 @@ const deselectAllCertificates = async () => {
                       />
                     </svg>
                   </button>
-                  <!-- Organization-issued badge -->
+
                   <span
                     v-if="cert.source === 'organization' || cert.certificationID?.toString().startsWith('REG_')"
                     class="text-xs text-green-600 font-semibold px-2 py-1 bg-green-100 rounded"
@@ -1110,96 +1130,6 @@ const deselectAllCertificates = async () => {
                     ✓ Issued
                   </span>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Modal -->
-          <div
-            v-if="isModalOpen"
-            class="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-md bg-black/30"
-            @click.self="closeModal"
-          >
-            <div
-              class="bg-white rounded-lg shadow-lg max-w-5xl w-full mx-4 relative flex flex-col"
-              style="max-height: 90vh;"
-            >
-              <div class="flex justify-between items-center p-4 border-b">
-                <h3 class="text-lg font-semibold">{{ selectedTitle }}</h3>
-                <button
-                  class="text-gray-500 hover:text-gray-800 text-2xl font-bold"
-                  @click="closeModal"
-                >
-                  ✕
-                </button>
-              </div>
-              <div class="flex-1 overflow-auto p-4">
-                <!-- Image Display in Modal -->
-                <div v-if="selectedImage" class="flex justify-center items-center min-h-[70vh]">
-                  <img
-                    :src="selectedImage"
-                    :alt="selectedTitle"
-                    class="max-h-[80vh] max-w-full w-auto rounded shadow-lg"
-                    @error="handleImageError($event)"
-                  />
-                </div>
-                <div v-else class="flex items-center justify-center h-64 text-gray-500">
-                  <div class="text-center">
-                    <p class="mb-2">No certificate to display</p>
-                    <p class="text-sm text-gray-400">Image data is missing</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Toast notifications -->
-          <div class="fixed top-5 right-5 space-y-2 z-50">
-            <div
-              v-for="toast in toasts"
-              :key="toast.id"
-              :class="[
-                'px-4 py-2 rounded shadow ',
-                toast.type === 'success'
-                  ? 'bg-white text-black'
-                  : toast.type === 'error'
-                  ? 'bg-red-500 text-white'
-                  : 'bg-gray-500',
-              ]"
-            >
-              {{ toast.message }}
-            </div>
-          </div>
-          <!-- Delete Confirmation Modal -->
-          <div
-            v-if="showDeleteModal"
-            class="fixed inset-0 flex items-center justify-center z-50"
-          >
-            <div class="bg-white p-6 rounded-xl shadow-xl w-80 text-center">
-              <h3 class="text-lg font-semibold mb-3 text-gray-800">
-                Delete Certificate?
-              </h3>
-              <p class="text-sm text-gray-600 mb-5">
-                Are you sure you want to delete
-                <strong>{{
-                  certToDelete?.certificationName || certToDelete?.title
-                }}</strong
-                >? This action cannot be undone.
-              </p>
-
-              <div class="flex justify-center gap-3">
-                <button
-                  @click="showDeleteModal = false"
-                  class="px-4 py-2 bg-gray-300 rounded-lg text-gray-800 hover:bg-gray-400"
-                >
-                  Cancel
-                </button>
-                <button
-                  @click="deleteCertificateConfirmed"
-                  class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                >
-                  Delete
-                </button>
               </div>
             </div>
           </div>
