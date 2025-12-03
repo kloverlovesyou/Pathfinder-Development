@@ -9,6 +9,7 @@ import CareerModal from "@/components/Layout/careermodal.vue";
 const route = useRoute();
 const toasts = ref([]);
 const regStore = useRegistrationStore(); // ✅ Pinia store
+const isSearching = ref(false);
 
 function showToast(message, type = "info") {
   toasts.value.push({ message, type });
@@ -105,6 +106,8 @@ async function performSearch() {
   }
 
   try {
+    isSearching.value = true; // ✅ start loading
+
     const response = await axios.get(
       import.meta.env.VITE_API_BASE_URL + "/search",
       {
@@ -122,8 +125,11 @@ async function performSearch() {
   } catch (error) {
     console.error("Search failed:", error);
     results.value = [];
+  } finally {
+    isSearching.value = false; // ✅ stop loading
   }
 }
+
 watch(
   [searchInput, activeMains, activeSubs],
   () => {
@@ -641,7 +647,7 @@ async function handleResultClick(item) {
         >
           <!-- Search Input -->
           <label
-            class="bg-white input w-full flex items-center gap-2 border-none rounded-full px-3 py-2 cursor-text"
+            class="bg-white input w-full flex items-center gap-2 border-none rounded-full px-3 py-2 cursor-text relative"
             @click="showDropdown = true"
           >
             <!-- Search Icon -->
@@ -650,13 +656,7 @@ async function handleResultClick(item) {
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
             >
-              <g
-                stroke-linejoin="round"
-                stroke-linecap="round"
-                stroke-width="2.5"
-                fill="none"
-                stroke="darkslategray"
-              >
+              <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2.5" fill="none" stroke="darkslategray">
                 <circle cx="11" cy="11" r="8"></circle>
                 <path d="m21 21-4.3-4.3"></path>
               </g>
@@ -669,14 +669,28 @@ async function handleResultClick(item) {
               class="flex-grow bg-transparent outline-none font-poppins"
               @focus="showDropdown = true"
             />
+
+            <!-- Clear Button -->
             <button
-              v-if="searchInput"
+              v-if="searchInput && !isSearching"
               type="button"
               @click="searchInput = ''"
               class="absolute right-2 text-gray-400 hover:text-black"
             >
               ✕
             </button>
+
+            <!-- Loading Spinner -->
+            <svg
+              v-if="isSearching"
+              class="absolute right-2 h-4 w-4 animate-spin text-gray-500"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 018 8h-4l3 3-3 3h4a8 8 0 01-8 8v-4l-3 3 3 3v-4a8 8 0 01-8-8z"></path>
+            </svg>
           </label>
 
           <!-- Dropdown -->
