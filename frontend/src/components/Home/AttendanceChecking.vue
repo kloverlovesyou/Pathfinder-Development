@@ -141,7 +141,7 @@ function formatToPHT(dateStr) {
 
 async function submitAttendance() {
   // Basic required fields validation
-  if (!first_name.value || !last_name.value || !email.value || !phone.value) {
+  if (!first_name.value || !last_name.value || !email.value) {
     message.value = "⚠️ All fields are required.";
     submittedSuccess.value = false;
     submitted.value = true;
