@@ -669,13 +669,6 @@
           >
             Go to Login
           </button>
-          <button
-            v-if="registrationResponse?.verification_url"
-            class="btn btn-secondary w-full bg-gray-200 text-gray-700 text-xs"
-            @click="copyVerificationLink"
-          >
-            Copy Verification Link
-          </button>
         </div>
       </div>
     </div>
