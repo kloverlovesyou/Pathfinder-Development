@@ -146,7 +146,6 @@
         </div>
       </section>
 
-      <!-- ✅ Upcoming Trainings Section -->
       <section class="upcoming">
         <div class="flex items-center justify-between">
           <h2 class="section-title flex items-center gap-1">
@@ -154,28 +153,39 @@
             <span class="count-badge">{{ sortedUpcomingTrainings.length }}</span>
           </h2>
 
-          <button class="plus-btn-text" @click="openTrainingPopup()" :disabled="!isOrganizationVerified" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">+</button>
+          <button class="plus-btn-text" @click="openTrainingPopup()" :disabled="!isOrganizationVerified"
+            :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">+</button>
+        </div>
+
+        <!-- ✅ Loader -->
+        <div v-if="isLoading" class="flex justify-center py-8">
+          <div class="loader"></div>
         </div>
 
         <!-- ✅ Grid Layout -->
-        <div class="trainings-grid">
+        <div v-else class="trainings-grid">
           <div v-for="training in visibleFilteredUpcoming" :key="training.trainingID" class="training-card"
             @click="openTrainingDetails(training)">
-            <div class="training-right" @click="openTrainingDetails(training)">
+            <div class="training-right">
               <h3 class="training-title">{{ training.title }}</h3>
               <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
-
             </div>
 
             <!-- Menu -->
             <div class="menu">
-              <div class="menu-icon" @click.stop="toggleUpcomingMenu(training.trainingID)">
-                ⋮
-              </div>
+              <div class="menu-icon" @click.stop="toggleUpcomingMenu(training.trainingID)">⋮</div>
               <div v-if="openUpcomingMenu === training.trainingID" class="dropdown-menu" @click.stop>
                 <ul>
-                  <li @click="deleteTraining(training.trainingID)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Delete Training</li>
-                  <li @click="updateTraining(training.trainingID)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Update Training</li>
+                  <li @click="deleteTraining(training.trainingID)"
+                      :class="{ 'disabled-action': !isOrganizationVerified }"
+                      :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
+                    Delete Training
+                  </li>
+                  <li @click="updateTraining(training.trainingID)"
+                      :class="{ 'disabled-action': !isOrganizationVerified }"
+                      :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
+                    Update Training
+                  </li>
                 </ul>
               </div>
             </div>
@@ -183,7 +193,7 @@
         </div>
 
         <!-- Show More Button -->
-        <button v-if="sortedUpcomingTrainings.length > 4" class="show-more-btn"
+        <button v-if="sortedUpcomingTrainings.length > 4 && !isLoading" class="show-more-btn"
           @click="showAllUpcoming = !showAllUpcoming">
           {{ showAllUpcoming ? 'Show Less' : 'Show More' }}
         </button>
@@ -191,43 +201,55 @@
 
       <!-- ✅ On-going Trainings Section -->
       <section class="ongoing">
-        <div class="flex items-center justify-between">
-          <h2 class="section-title flex items-center gap-1">
-            On-going Trainings
-            <span class="count-badge">{{ sortedOngoingTrainings.length }}</span>
-          </h2>
-        </div>
+      <div class="flex items-center justify-between">
+        <h2 class="section-title flex items-center gap-1">
+          On-going Trainings
+          <span class="count-badge">{{ sortedOngoingTrainings.length }}</span>
+        </h2>
+      </div>
 
-        <!-- ✅ Grid Layout -->
-        <div class="trainings-grid">
-          <div v-for="training in visibleFilteredOngoing" :key="training.trainingID" class="training-card"
-            @click="openTrainingDetails(training)">
-            <div class="training-right" @click="openTrainingDetails(training)">
-              <h3 class="training-title">{{ training.title }}</h3>
-              <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
-            </div>
+      <!-- ✅ Loader -->
+      <div v-if="isLoading" class="flex justify-center py-8">
+        <div class="loader"></div>
+      </div>
 
-            <!-- Menu -->
-            <div class="menu">
-              <div class="menu-icon" @click.stop="toggleOngoingMenu(training.trainingID)">
-                ⋮
-              </div>
-              <div v-if="openOngoingMenu === training.trainingID" class="dropdown-menu" @click.stop>
-                <ul>
-                  <li @click="deleteTraining(training.trainingID)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Delete Training</li>
-                  <li @click="updateTraining(training.trainingID)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Update Training</li>
-                </ul>
-              </div>
+      <!-- ✅ Grid Layout -->
+      <div v-else class="trainings-grid">
+        <div v-for="training in visibleFilteredOngoing" :key="training.trainingID" class="training-card"
+          @click="openTrainingDetails(training)">
+          <div class="training-right">
+            <h3 class="training-title">{{ training.title }}</h3>
+            <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
+            <span v-if="isTrainingOngoing(training)" class="badge-ongoing">Ongoing</span>
+          </div>
+
+          <!-- Menu -->
+          <div class="menu">
+            <div class="menu-icon" @click.stop="toggleOngoingMenu(training.trainingID)">⋮</div>
+            <div v-if="openOngoingMenu === training.trainingID" class="dropdown-menu" @click.stop>
+              <ul>
+                <li @click="deleteTraining(training.trainingID)"
+                    :class="{ 'disabled-action': !isOrganizationVerified }"
+                    :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
+                  Delete Training
+                </li>
+                <li @click="updateTraining(training.trainingID)"
+                    :class="{ 'disabled-action': !isOrganizationVerified }"
+                    :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
+                  Update Training
+                </li>
+              </ul>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Show More Button -->
-        <button v-if="sortedOngoingTrainings.length > 4" class="show-more-btn"
-          @click="showAllOngoing = !showAllOngoing">
-          {{ showAllOngoing ? 'Show Less' : 'Show More' }}
-        </button>
-      </section>
+      <!-- Show More Button -->
+      <button v-if="sortedOngoingTrainings.length > 4 && !isLoading" class="show-more-btn"
+        @click="showAllOngoing = !showAllOngoing">
+        {{ showAllOngoing ? 'Show Less' : 'Show More' }}
+      </button>
+    </section>
 
       <!-- ✅ Conducted Trainings Section -->
       <section class="completed">
@@ -238,23 +260,30 @@
           </h2>
         </div>
 
-        <!-- ✅ Grid Layout -->
-        <div class="trainings-grid">
+        <!-- Loader -->
+        <div v-if="isLoading" class="flex justify-center py-8">
+          <div class="loader"></div>
+        </div>
+
+        <!-- Trainings Grid -->
+        <div v-else class="trainings-grid">
           <div v-for="training in visibleFilteredCompleted" :key="training.trainingID" class="training-card"
             @click="openTrainingDetails(training)">
-            <div class="training-right" @click="openTrainingDetails(training)">
+            <div class="training-right">
               <h3 class="training-title">{{ training.title }}</h3>
               <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
             </div>
 
             <!-- Menu -->
             <div class="menu">
-              <div class="menu-icon" @click.stop="toggleCompletedMenu(training.trainingID)">
-                ⋮
-              </div>
+              <div class="menu-icon" @click.stop="toggleCompletedMenu(training.trainingID)">⋮</div>
               <div v-if="openCompletedMenu === training.trainingID" class="dropdown-menu" @click.stop>
                 <ul>
-                  <li @click="deleteTraining(training.trainingID)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Delete Training</li>
+                  <li @click="deleteTraining(training.trainingID)"
+                      :class="{ 'disabled-action': !isOrganizationVerified }"
+                      :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
+                    Delete Training
+                  </li>
                 </ul>
               </div>
             </div>
@@ -262,7 +291,7 @@
         </div>
 
         <!-- Show More Button -->
-        <button v-if="sortedCompletedTrainings.length > 4" class="show-more-btn"
+        <button v-if="sortedCompletedTrainings.length > 4 && !isLoading" class="show-more-btn"
           @click="showAllCompleted = !showAllCompleted">
           {{ showAllCompleted ? 'Show Less' : 'Show More' }}
         </button>
@@ -949,7 +978,9 @@ export default {
       qrExpiresAt: null,
       activeTrainingId: null, // which training shows the QR
       selectAll: false,
-
+      isLoading: false, // ✅ loading state
+      isOngoingLoading: false, // ✅ loading state for ongoing trainings
+      
       showBulkCertModal: false,
       certificateData: {
         certTrackingID: '',
@@ -1755,47 +1786,46 @@ export default {
       }
     },
 
-    async fetchTrainings() {
+async fetchTrainings() {
+    this.isLoading = true; // start loading
+    try {
+      const storedUser = localStorage.getItem("user");
+      const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+      const organizationID = parsedUser?.organizationID ?? parsedUser?.organization?.organizationID ?? null;
+
+      let newTrainings = [];
       try {
+        const { data } = await api.get("/organization/trainings");
+        newTrainings = data;
+      } catch (err) {
+        console.warn("Org trainings endpoint unavailable, falling back:", err?.response?.status);
         const storedUser = localStorage.getItem("user");
         const parsedUser = storedUser ? JSON.parse(storedUser) : null;
         const organizationID = parsedUser?.organizationID ?? parsedUser?.organization?.organizationID ?? null;
 
-        let newTrainings = [];
-        try {
-          const { data } = await api.get("/organization/trainings");
-          newTrainings = data;
-        } catch (err) {
-          console.warn("Org trainings endpoint unavailable, falling back:", err?.response?.status);
-          const storedUser = localStorage.getItem("user");
-          const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-          const organizationID = parsedUser?.organizationID ?? parsedUser?.organization?.organizationID ?? null;
-
-          const { data } = await api.get("/trainings", {
-            params: organizationID ? { organizationID } : {},
-          });
-          newTrainings = data;
-        }
-
-        const normalizedList = Array.isArray(newTrainings) ? newTrainings : [];
-
-        // Rebuild local list from fresh API data so UI always reflects latest trainings
-        this.upcomingtrainings = [];
-
-        normalizedList.forEach(training => {
-          const normalizedTraining = {
-            ...training
-          };
-
-          this.upcomingtrainings.push(normalizedTraining);
-
-          // ✅ Schedule QR using composable
-          scheduleQR(training);
+        const { data } = await api.get("/trainings", {
+          params: organizationID ? { organizationID } : {},
         });
-      } catch (error) {
-        console.error("Error fetching trainings:", error);
+        newTrainings = data;
       }
-    },
+
+      const normalizedList = Array.isArray(newTrainings) ? newTrainings : [];
+
+      // Rebuild local list from fresh API data
+      this.upcomingtrainings = [];
+      normalizedList.forEach(training => {
+        const normalizedTraining = { ...training };
+        this.upcomingtrainings.push(normalizedTraining);
+
+        // ✅ Schedule QR using composable
+        scheduleQR(training);
+      });
+    } catch (error) {
+      console.error("Error fetching trainings:", error);
+    } finally {
+      this.isLoading = false; // stop loading
+    }
+  },
 
     async fetchAllTrainings() {
       try {
@@ -5206,5 +5236,18 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 
 .qr-modal-download-btn:hover {
   background-color: #1f2937;
+}
+
+.loader {
+  border: 4px solid rgba(0,0,0,0.1);
+  border-left-color: #4f46e5; /* Tailwind indigo-600 */
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>
