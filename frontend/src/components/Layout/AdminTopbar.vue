@@ -64,7 +64,7 @@ const openApplicantModal = async (applicant = null) => {
 async function deleteApplicant(id) {
   try {
     const res = await fetch(
-      import.meta.env.VITE_API_BASE_URL + `admin/applicants/${id}`,
+      import.meta.env.VITE_API_BASE_URL + `/admin/applicants/${id}`,
       {
         method: "DELETE",
       }
