@@ -95,7 +95,6 @@ class TrainingController extends Controller
             'firstName' => 'required|string',
             'lastName' => 'required|string',
             'emailAddress' => 'required|email',
-            'phoneNumber' => 'required|string',
         ]);
 
         // Find the training by trainingID

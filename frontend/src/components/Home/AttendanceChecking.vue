@@ -56,12 +56,6 @@
                required />
       </div>
 
-      <div class="form-control">
-        <input v-model="phone" type="text" placeholder="Phone Number"
-               class="input w-full bg-gray-100 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-               required />
-      </div>
-
       <button type="submit"
               class="btn w-full bg-customButton hover:bg-dark-slate text-white rounded-lg py-2"
               :disabled="loading">
@@ -161,7 +155,6 @@ async function submitAttendance() {
       firstName: first_name.value,
       lastName: last_name.value,
       emailAddress: email.value,
-      phoneNumber: phone.value,
     };
 
     console.log("Submitting attendance payload:", payload);
