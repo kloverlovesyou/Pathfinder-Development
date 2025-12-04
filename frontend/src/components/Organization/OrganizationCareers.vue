@@ -37,6 +37,8 @@ export default {
       showScheduleModal: false,
       showStatusEmailModal: false,
       selectedPerson: null,
+      isLoading : false,
+
 
       showAllUpcoming: false,
       showAllCompleted: false,
@@ -1654,6 +1656,7 @@ export default {
     },
 
     async fetchCareers() {
+      this.isLoading = true; // start loading
       try {
         const response = await api.get("/organization/careers");
         const newCareers = Array.isArray(response.data) ? response.data : [];
@@ -1678,6 +1681,8 @@ export default {
         });
       } catch (error) {
         console.error("ERROR FETCHING CAREERS:", error);
+      } finally {
+      this.isLoading = false; // stop loading
       }
     },
     formatDateForInput(dateString) {
@@ -2478,6 +2483,30 @@ async function viewRequirement(id) {
           <button class="plus-btn-text" @click="openCareerPopup()" :disabled="!isOrganizationVerified" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">+</button>
         </div>
 
+        <!-- Loader -->
+      <div v-if="isLoading" class="flex justify-center py-8">
+        <svg
+          class="animate-spin h-10 w-10 text-blue-600"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          ></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v8H4z"
+          ></path>
+        </svg>
+      </div>
+
         <div class="career-grid">
           <div
             class="career-card"
@@ -2530,6 +2559,30 @@ async function viewRequirement(id) {
             <span class="count-badge">{{ sortedCompletedCareers.length }}</span>
           </h2>
         </div>
+
+        <!-- Loader -->
+      <div v-if="isLoading" class="flex justify-center py-8">
+        <svg
+          class="animate-spin h-10 w-10 text-blue-600"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          ></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v8H4z"
+          ></path>
+        </svg>
+      </div>
 
         <div class="career-grid">
           <div
