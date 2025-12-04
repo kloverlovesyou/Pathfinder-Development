@@ -135,46 +135,46 @@
         </div>
       </header>
 
-      <!-- ✅ GLOBAL SEARCH -->
-      <section class="global-search-section">
-        <div class="flex justify-center my-6 px-4">
-          <div class="relative w-full sm:w-3/4 md:w-1/2 lg:w-1/3">
-            <input type="text" v-model="globalSearchQuery" placeholder="Search trainings..."
-              class="global-search-bar text-black px-4 py-2 border rounded-lg w-full" maxlength="100" />
-            <span class="char-counter-search">{{ (globalSearchQuery || '').length }}/100</span>
+      <!-- 🔥 GLOBAL LOADING WRAPPER -->
+          <div>
+      <div v-if="isLoading" class="flex flex-col items-center justify-center py-16">
+        <!-- Loader SVG -->
+        <svg
+          class="animate-spin h-12 w-12 text-blue-600"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          ></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v8H4z"
+          ></path>
+        </svg>
+      </div>
+
+      <div v-else>
+        <!-- ✅ GLOBAL SEARCH -->
+        <section class="global-search-section">
+          <div class="flex justify-center my-6 px-4">
+            <div class="relative w-full sm:w-3/4 md:w-1/2 lg:w-1/3">
+              <input type="text" v-model="globalSearchQuery" placeholder="Search trainings..."
+                class="global-search-bar text-black px-4 py-2 border rounded-lg w-full" maxlength="100" />
+              <span class="char-counter-search">{{ (globalSearchQuery || '').length }}/100</span>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
       <!-- 🔹 Trainings Wrapper -->
       <div class="trainings-wrapper relative">
-
-        <!-- 🔥 Global Loader -->
-        <div v-if="isLoading" class="flex justify-center items-center py-16">
-          <svg
-            class="animate-spin h-12 w-12 text-blue-600"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            ></circle>
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v8H4z"
-            ></path>
-          </svg>
-        </div>
-
-        <!-- 🔹 Sections -->
-        <div v-else>
           <!-- Upcoming Trainings -->
           <section class="upcoming">
             <div class="flex items-center justify-between">
@@ -305,6 +305,7 @@
             </button>
           </section>
         </div>
+  </div>
       </div>
 
       <!-- All Trainings section removed as requested -->
