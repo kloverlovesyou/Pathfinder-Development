@@ -123,40 +123,40 @@
 
           <div class="card-actions justify-center">
             <button
-              type="submit"
-              class="btn btn-primary w-3/4 bg-dark-slate text-white flex items-center justify-center gap-2 disabled:opacity-60"
-              :disabled="isLoading"
-            >
-              <!-- 🔥 IF LOADING -->
-              <span v-if="isLoading" class="flex items-center gap-2">
-                <svg
-                  class="animate-spin h-4 w-4 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                  ></circle>
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
-                  ></path>
-                </svg>
-                Logging in...
-              </span>
+                type="submit"
+                class="btn btn-primary w-3/4 bg-dark-slate text-white flex items-center justify-center gap-2 disabled:opacity-60"
+                :disabled="isLoading"
+              >
+                <!-- 🔥 IF LOADING -->
+                <span v-if="isLoading" class="flex items-center gap-2">
+                  <svg
+                    class="animate-spin h-4 w-4 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
+                    ></path>
+                  </svg>
+                  Logging in...
+                </span>
 
-              <!-- 🔥 IF NOT LOADING -->
-              <span v-else>
-                Log in
-              </span>
-            </button>
+                <!-- 🔥 IF NOT LOADING -->
+                <span v-else>
+                  Log in
+                </span>
+              </button>
           </div>
         </form>
 
@@ -324,15 +324,63 @@ const handleLogin = async () => {
       }
     );
 
-    // ... your existing login logic ...
+    const userData = response.data.user || response.data.organization;
+    const token = response.data.token;
+    const role =
+      userData.role || (userData.adminID ? "organization" : "applicant");
 
+    // Handle rejected status with reason
+    if (role === "organization" && userData.status === "rejected") {
+      const reason = response.data.reason;
+      showToast(`Your registration was rejected. Reason: ${reason}`);
+      return;
+    }
+
+    let displayName = "";
+    if (role === "organization") {
+      displayName =
+        userData.organizationName || userData.name || "Organization";
+    } else if (role === "admin") {
+      displayName = userData.name || "Admin";
+    } else {
+      displayName = `${userData.firstName} ${userData.lastName}`;
+    }
+
+    // Save token + user
+    localStorage.setItem("token", token);
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ ...userData, role, displayName })
+    );
+
+    await regStore.fetchMyRegistrations();
+
+    // Redirect
+    if (role === "organization") {
+      router.push("/organization");
+    } else if (role === "admin") {
+      router.push("/admin");
+    } else {
+      router.push("/app");
+    }
   } catch (err) {
-    console.error(err);
-    showToast("Invalid credentials. Please try again.");
+    console.error("FULL ERROR RESPONSE:", err);
+
+    if (err.response?.status === 403) {
+      let data = err.response.data;
+      const reason = data && typeof data === "object" ? data.reason : undefined;
+      const msg = reason
+        ? `Your registration was rejected. Reason: ${reason}`
+        : data.message || "Your registration is not approved.";
+      showToast(msg);
+    } else {
+      showToast("Invalid credentials. Please try again.");
+    }
   } finally {
-    isLoading.value = false; // 🔥 always stop loading
+    isLoading.value = false; // ✅ stop loading in all cases
   }
 };
+
 </script>
 
 <style>

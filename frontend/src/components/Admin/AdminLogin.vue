@@ -156,6 +156,8 @@ const showPassword = ref(false);
 const emailError = ref(false);
 const loginError = ref("");
 const toastMessage = ref("");
+const isLoading = ref(false);
+
 
 // Email validator
 const validateEmail = (emailVal) =>
