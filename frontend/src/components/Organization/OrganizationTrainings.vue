@@ -146,21 +146,13 @@
         </div>
       </section>
 
-      <section class="upcoming">
-        <div class="flex items-center justify-between">
-          <h2 class="section-title flex items-center gap-1">
-            Upcoming Trainings
-            <span class="count-badge">{{ sortedUpcomingTrainings.length }}</span>
-          </h2>
+      <!-- 🔹 Trainings Wrapper -->
+      <div class="trainings-wrapper relative">
 
-          <button class="plus-btn-text" @click="openTrainingPopup()" :disabled="!isOrganizationVerified"
-            :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">+</button>
-        </div>
-
-        <!-- ✅ Loader -->
-        <div v-if="isLoading" class="flex justify-center py-8">
+        <!-- 🔥 Global Loader -->
+        <div v-if="isLoading" class="flex justify-center items-center py-16">
           <svg
-            class="animate-spin h-10 w-10 text-blue-600"
+            class="animate-spin h-12 w-12 text-blue-600"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -181,178 +173,139 @@
           </svg>
         </div>
 
-        <!-- ✅ Grid Layout -->
-        <div v-else class="trainings-grid">
-          <div v-for="training in visibleFilteredUpcoming" :key="training.trainingID" class="training-card"
-            @click="openTrainingDetails(training)">
-            <div class="training-right">
-              <h3 class="training-title">{{ training.title }}</h3>
-              <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
+        <!-- 🔹 Sections -->
+        <div v-else>
+          <!-- Upcoming Trainings -->
+          <section class="upcoming">
+            <div class="flex items-center justify-between">
+              <h2 class="section-title flex items-center gap-1">
+                Upcoming Trainings
+                <span class="count-badge">{{ sortedUpcomingTrainings.length }}</span>
+              </h2>
+              <button class="plus-btn-text" @click="openTrainingPopup()" :disabled="!isOrganizationVerified"
+                :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">+</button>
             </div>
 
-            <!-- Menu -->
-            <div class="menu">
-              <div class="menu-icon" @click.stop="toggleUpcomingMenu(training.trainingID)">⋮</div>
-              <div v-if="openUpcomingMenu === training.trainingID" class="dropdown-menu" @click.stop>
-                <ul>
-                  <li @click="deleteTraining(training.trainingID)"
-                      :class="{ 'disabled-action': !isOrganizationVerified }"
-                      :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
-                    Delete Training
-                  </li>
-                  <li @click="updateTraining(training.trainingID)"
-                      :class="{ 'disabled-action': !isOrganizationVerified }"
-                      :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
-                    Update Training
-                  </li>
-                </ul>
+            <div class="trainings-grid">
+              <div v-for="training in visibleFilteredUpcoming" :key="training.trainingID" class="training-card"
+                @click="openTrainingDetails(training)">
+                <div class="training-right">
+                  <h3 class="training-title">{{ training.title }}</h3>
+                  <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
+                </div>
+
+                <!-- Menu -->
+                <div class="menu">
+                  <div class="menu-icon" @click.stop="toggleUpcomingMenu(training.trainingID)">⋮</div>
+                  <div v-if="openUpcomingMenu === training.trainingID" class="dropdown-menu" @click.stop>
+                    <ul>
+                      <li @click="deleteTraining(training.trainingID)"
+                          :class="{ 'disabled-action': !isOrganizationVerified }"
+                          :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
+                        Delete Training
+                      </li>
+                      <li @click="updateTraining(training.trainingID)"
+                          :class="{ 'disabled-action': !isOrganizationVerified }"
+                          :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
+                        Update Training
+                      </li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <!-- Show More Button -->
-        <button v-if="sortedUpcomingTrainings.length > 4 && !isLoading" class="show-more-btn"
-          @click="showAllUpcoming = !showAllUpcoming">
-          {{ showAllUpcoming ? 'Show Less' : 'Show More' }}
-        </button>
-      </section>
+            <button v-if="sortedUpcomingTrainings.length > 4" class="show-more-btn"
+              @click="showAllUpcoming = !showAllUpcoming">
+              {{ showAllUpcoming ? 'Show Less' : 'Show More' }}
+            </button>
+          </section>
 
-      <!-- ✅ On-going Trainings Section -->
-      <section class="ongoing">
-        <div class="flex items-center justify-between">
-          <h2 class="section-title flex items-center gap-1">
-            On-going Trainings
-            <span class="count-badge">{{ sortedOngoingTrainings.length }}</span>
-          </h2>
-        </div>
-
-        <!-- ✅ Loader -->
-        <div v-if="isLoading" class="flex justify-center py-8">
-          <svg
-            class="animate-spin h-10 w-10 text-blue-600"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            ></circle>
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v8H4z"
-            ></path>
-          </svg>
-        </div>
-
-        <!-- ✅ Grid Layout -->
-        <div v-else class="trainings-grid">
-          <div v-for="training in visibleFilteredOngoing" :key="training.trainingID" class="training-card"
-            @click="openTrainingDetails(training)">
-            <div class="training-right">
-              <h3 class="training-title">{{ training.title }}</h3>
-              <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
-              <span v-if="isTrainingOngoing(training)" class="badge-ongoing">Ongoing</span>
+          <!-- Ongoing Trainings -->
+          <section class="ongoing mt-8">
+            <div class="flex items-center justify-between">
+              <h2 class="section-title flex items-center gap-1">
+                On-going Trainings
+                <span class="count-badge">{{ sortedOngoingTrainings.length }}</span>
+              </h2>
             </div>
 
-            <!-- Menu -->
-            <div class="menu">
-              <div class="menu-icon" @click.stop="toggleOngoingMenu(training.trainingID)">⋮</div>
-              <div v-if="openOngoingMenu === training.trainingID" class="dropdown-menu" @click.stop>
-                <ul>
-                  <li @click="deleteTraining(training.trainingID)"
-                      :class="{ 'disabled-action': !isOrganizationVerified }"
-                      :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
-                    Delete Training
-                  </li>
-                  <li @click="updateTraining(training.trainingID)"
-                      :class="{ 'disabled-action': !isOrganizationVerified }"
-                      :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
-                    Update Training
-                  </li>
-                </ul>
+            <div class="trainings-grid">
+              <div v-for="training in visibleFilteredOngoing" :key="training.trainingID" class="training-card"
+                @click="openTrainingDetails(training)">
+                <div class="training-right">
+                  <h3 class="training-title">{{ training.title }}</h3>
+                  <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
+                  <span v-if="isTrainingOngoing(training)" class="badge-ongoing">Ongoing</span>
+                </div>
+
+                <!-- Menu -->
+                <div class="menu">
+                  <div class="menu-icon" @click.stop="toggleOngoingMenu(training.trainingID)">⋮</div>
+                  <div v-if="openOngoingMenu === training.trainingID" class="dropdown-menu" @click.stop>
+                    <ul>
+                      <li @click="deleteTraining(training.trainingID)"
+                          :class="{ 'disabled-action': !isOrganizationVerified }"
+                          :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
+                        Delete Training
+                      </li>
+                      <li @click="updateTraining(training.trainingID)"
+                          :class="{ 'disabled-action': !isOrganizationVerified }"
+                          :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
+                        Update Training
+                      </li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <!-- Show More Button -->
-        <button v-if="sortedOngoingTrainings.length > 4 && !isLoading" class="show-more-btn"
-          @click="showAllOngoing = !showAllOngoing">
-          {{ showAllOngoing ? 'Show Less' : 'Show More' }}
-        </button>
-      </section>
+            <button v-if="sortedOngoingTrainings.length > 4" class="show-more-btn"
+              @click="showAllOngoing = !showAllOngoing">
+              {{ showAllOngoing ? 'Show Less' : 'Show More' }}
+            </button>
+          </section>
 
-    <!-- ✅ Conducted Trainings Section -->
-    <section class="completed">
-      <div class="flex items-center justify-between">
-        <h2 class="section-title flex items-center gap-1">
-          Conducted Trainings
-          <span class="count-badge">{{ sortedCompletedTrainings.length }}</span>
-        </h2>
-      </div>
-
-      <!-- Loader -->
-      <div v-if="isLoading" class="flex justify-center py-8">
-        <svg
-          class="animate-spin h-10 w-10 text-blue-600"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            class="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            stroke-width="4"
-          ></circle>
-          <path
-            class="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8v8H4z"
-          ></path>
-        </svg>
-      </div>
-
-      <!-- Trainings Grid -->
-      <div v-else class="trainings-grid">
-        <div v-for="training in visibleFilteredCompleted" :key="training.trainingID" class="training-card"
-          @click="openTrainingDetails(training)">
-          <div class="training-right">
-            <h3 class="training-title">{{ training.title }}</h3>
-            <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
-          </div>
-
-          <!-- Menu -->
-          <div class="menu">
-            <div class="menu-icon" @click.stop="toggleCompletedMenu(training.trainingID)">⋮</div>
-            <div v-if="openCompletedMenu === training.trainingID" class="dropdown-menu" @click.stop>
-              <ul>
-                <li @click="deleteTraining(training.trainingID)"
-                    :class="{ 'disabled-action': !isOrganizationVerified }"
-                    :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
-                  Delete Training
-                </li>
-              </ul>
+          <!-- Completed Trainings -->
+          <section class="completed mt-8">
+            <div class="flex items-center justify-between">
+              <h2 class="section-title flex items-center gap-1">
+                Conducted Trainings
+                <span class="count-badge">{{ sortedCompletedTrainings.length }}</span>
+              </h2>
             </div>
-          </div>
+
+            <div class="trainings-grid">
+              <div v-for="training in visibleFilteredCompleted" :key="training.trainingID" class="training-card"
+                @click="openTrainingDetails(training)">
+                <div class="training-right">
+                  <h3 class="training-title">{{ training.title }}</h3>
+                  <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
+                </div>
+
+                <!-- Menu -->
+                <div class="menu">
+                  <div class="menu-icon" @click.stop="toggleCompletedMenu(training.trainingID)">⋮</div>
+                  <div v-if="openCompletedMenu === training.trainingID" class="dropdown-menu" @click.stop>
+                    <ul>
+                      <li @click="deleteTraining(training.trainingID)"
+                          :class="{ 'disabled-action': !isOrganizationVerified }"
+                          :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
+                        Delete Training
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button v-if="sortedCompletedTrainings.length > 4" class="show-more-btn"
+              @click="showAllCompleted = !showAllCompleted">
+              {{ showAllCompleted ? 'Show Less' : 'Show More' }}
+            </button>
+          </section>
         </div>
       </div>
-
-      <!-- Show More Button -->
-      <button v-if="sortedCompletedTrainings.length > 4 && !isLoading" class="show-more-btn"
-        @click="showAllCompleted = !showAllCompleted">
-        {{ showAllCompleted ? 'Show Less' : 'Show More' }}
-      </button>
-    </section>
 
       <!-- All Trainings section removed as requested -->
 
