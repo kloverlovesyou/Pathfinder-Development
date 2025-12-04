@@ -594,9 +594,34 @@
         <div class="card-actions justify-end pt-4 pb-20">
           <button
             type="submit"
-            class="btn w-2/4 bg-customButton hover:bg-dark-slate text-white"
+            class="btn w-2/4 bg-customButton hover:bg-dark-slate text-white flex items-center justify-center"
+            :disabled="isSubmitting"
           >
-            Register
+            <span v-if="!isSubmitting">Register</span>
+            <span v-else class="flex items-center gap-2">
+              <!-- 🔹 Spinner placeholder -->
+                  <svg
+                    class="animate-spin h-4 w-4 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
+                    ></path>
+                  </svg>
+              <span>Registering...</span>
+            </span>
           </button>
         </div>
       </form>
@@ -661,6 +686,8 @@
 import { ref, computed, onMounted } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
+
+const isSubmitting = ref(false);
 
 const router = useRouter();
 const form = ref({
@@ -944,22 +971,20 @@ const handleSubmit = async () => {
     return;
   }
 
-  // Validate address fields
   if (!apiFailed.value) {
     if (!form.value.region || !form.value.province || !form.value.city || !form.value.barangay) {
       alert("Please complete all address fields (Region, Province, City/Municipality, and Barangay).");
       return;
     }
-    // Construct full address from selected fields
     form.value.address = constructAddress();
   } else {
-    // If API failed, use manual address input
     if (!form.value.address || form.value.address.trim() === "") {
       alert("Please enter your complete address.");
       return;
     }
   }
 
+  isSubmitting.value = true; // ✅ Start loading
   try {
     const response = await axios.post(
       import.meta.env.VITE_API_BASE_URL + "/applicants",
@@ -968,11 +993,8 @@ const handleSubmit = async () => {
       }
     );
 
-    // Store registration response
     registrationResponse.value = response.data;
     registeredEmail.value = form.value.emailAddress;
-
-    // ✅ Show email verification modal
     showSuccessModal.value = true;
   } catch (error) {
     if (error.response && error.response.data.errors) {
@@ -981,6 +1003,8 @@ const handleSubmit = async () => {
     } else {
       alert("Registration failed. Please try again.");
     }
+  } finally {
+    isSubmitting.value = false; // ✅ Stop loading
   }
 };
 
