@@ -18,6 +18,8 @@ const selectedTraining = ref(null);
 const expandedCard = ref(null);
 const expandedRow = ref(null);
 const activeTab = ref("career"); // default tab
+const tabLoading = ref(false);
+const activeTabClicked = ref(null);
 
 const careerActivities = ref([]);
 const trainingActivities = ref([]);
@@ -1096,6 +1098,20 @@ const downloadCertificate = async (activity, event) => {
   }
 };
 
+function handleTabClick(tab) {
+  if (activeTab.value === tab) return; // already active
+
+  tabLoading.value = true;
+  activeTabClicked.value = tab;
+
+  // simulate minimal delay or actual fetch if needed
+  setTimeout(() => {
+    activeTab.value = tab;
+    tabLoading.value = false;
+    activeTabClicked.value = null;
+  }, 300); // 0.3s delay to show spinner
+}
+
 onMounted(() => {
   window.addEventListener("profile-avatar-updated", handleAvatarEvent);
   fetchActivitiesDirectly();
@@ -1426,27 +1442,46 @@ onBeforeUnmount(() => {
 
         <!-- Tabs -->
         <div class="flex border-b border-gray-200 mb-4">
-          <button
-            class="px-4 py-2 -mb-px font-semibold text-gray-700 border-b-2"
-            :class="{
-              'border-blue-500 text-blue-500': activeTab === 'career',
-              'border-transparent hover:text-blue-500': activeTab !== 'career',
-            }"
-            @click="activeTab = 'career'"
-          >
-            Career
-          </button>
-          <button
-            class="px-4 py-2 -mb-px font-semibold text-gray-700 border-b-2"
-            :class="{
-              'border-blue-500 text-blue-500': activeTab === 'training',
-              'border-transparent hover:text-blue-500':
-                activeTab !== 'training',
-            }"
-            @click="activeTab = 'training'"
-          >
-            Training
-          </button>
+
+        <!-- Career Tab -->
+        <button
+          class="px-4 py-2 -mb-px font-semibold text-gray-700 border-b-2 flex items-center gap-2"
+          :class="{
+            'border-blue-500 text-blue-500': activeTab === 'career',
+            'border-transparent hover:text-blue-500': activeTab !== 'career',
+          }"
+          @click="handleTabClick('career')"
+          :disabled="tabLoading"
+        >
+          <span v-if="!(tabLoading && activeTabClicked === 'career')">Career</span>
+          <span v-else class="flex items-center gap-2">
+            <svg class="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path>
+            </svg>
+            Loading
+          </span>
+        </button>
+
+          <!-- Training Tab -->
+        <button
+          class="px-4 py-2 -mb-px font-semibold text-gray-700 border-b-2 flex items-center gap-2"
+          :class="{
+            'border-blue-500 text-blue-500': activeTab === 'training',
+            'border-transparent hover:text-blue-500': activeTab !== 'training',
+          }"
+          @click="handleTabClick('training')"
+          :disabled="tabLoading"
+        >
+          <span v-if="!(tabLoading && activeTabClicked === 'training')">Training</span>
+          <span v-else class="flex items-center gap-2">
+            <svg class="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path>
+            </svg>
+            Loading
+          </span>
+        </button>
         </div>
 
         <!-- Table Content -->
