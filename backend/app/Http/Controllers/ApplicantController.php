@@ -11,18 +11,20 @@ use App\Jobs\SendVerificationEmailJob;
 class ApplicantController extends Controller
 {
 
-    public function a_register(Request $request)
-    {
-        $validator = \Validator::make($request->all(), [
+public function a_register(Request $request)
+{
+    // Validation
+    $validator = \Validator::make($request->all(), [
         'firstName'    => 'required|string|max:255',
         'lastName'     => 'required|string|max:255',
+        'middleName'   => 'nullable|string|max:255',
         'address'      => 'required|string|max:255',
         'emailAddress' => [
             'required',
             'email',
-            'unique:applicant,emailAddress', // existing in applicant table
+            'unique:applicant,EmailAddress', // exact column in applicant table
             function ($attribute, $value, $fail) {
-                if (\App\Models\Organization::where('emailAddress', $value)->exists()) {
+                if (\App\Models\Organization::where('EmailAddress', $value)->exists()) {
                     $fail('The email has already been taken by an organization.');
                 }
             },
@@ -31,64 +33,71 @@ class ApplicantController extends Controller
         'password'     => 'required|string|min:8',
     ]);
 
-        // Generate verification token
-        $verificationToken = Str::random(64);
+    // Return validation errors immediately
+    if ($validator->fails()) {
+        return response()->json([
+            'status' => 'error',
+            'errors' => $validator->errors(),
+        ], 422);
+    }
 
-        $applicant = Applicant::create([
-            'firstName'    => $request->firstName,
-            'middleName'   => $request->middleName,
-            'lastName'     => $request->lastName,
-            'address'      => $request->address,
-            'emailAddress' => $request->emailAddress,
-            'phoneNumber'  => $request->phoneNumber,
-            'password'     => bcrypt($request->password),
-            'api_token'    => Str::random(60),
-            'email_verification_token' => $verificationToken,
-            'email_verified_at' => null,
+    // Generate verification token
+    $verificationToken = Str::random(64);
+
+    // Create applicant
+    $applicant = Applicant::create([
+        'firstName'    => $request->firstName,
+        'middleName'   => $request->middleName,
+        'lastName'     => $request->lastName,
+        'address'      => $request->address,
+        'EmailAddress' => $request->emailAddress, // exact DB column
+        'phoneNumber'  => $request->phoneNumber,
+        'password'     => bcrypt($request->password),
+        'api_token'    => Str::random(60),
+        'email_verification_token' => $verificationToken,
+        'email_verified_at' => null,
+    ]);
+
+    // Prepare verification URL and user info
+    $verificationUrl = url('/api/verify-email?token=' . $verificationToken . '&type=applicant');
+    $userName = $request->firstName . ' ' . $request->lastName;
+    $userEmail = $request->emailAddress;
+
+    // Return response immediately
+    $response = response()->json([
+        'status'  => 'success',
+        'message' => 'Registration successful! Please check your email to verify your account.',
+        'user'    => $applicant,
+        'email_sent' => true, // Assume it will be sent
+        'verification_url' => $verificationUrl, // Include for manual verification
+        'verification_token' => $verificationToken,
+    ], 201);
+
+    // Send email asynchronously (after response is sent)
+    if (function_exists('fastcgi_finish_request')) {
+        fastcgi_finish_request();
+    }
+
+    try {
+        \Log::info('Queueing verification email (Applicant)', [
+            'email' => $userEmail,
         ]);
 
-        // Prepare verification URL and user info
-        $verificationUrl = url('/api/verify-email?token=' . $verificationToken . '&type=applicant');
-        $userName = $request->firstName . ' ' . $request->lastName;
-        $userEmail = $request->emailAddress;
-        
-        // Return response immediately (same as organization registration)
-        $response = response()->json([
-            'status'  => 'success',
-            'message' => 'Registration successful! Please check your email to verify your account.',
-            'user'    => $applicant,
-            'email_sent' => true, // Assume it will be sent
-            'verification_url' => $verificationUrl, // Always include for manual verification
-            'verification_token' => $verificationToken,
-        ], 201);
-        
-        // Send email asynchronously (after response is sent) - EXACTLY like organization
-        // Use fastcgi_finish_request() if available to send response immediately
-        if (function_exists('fastcgi_finish_request')) {
-            fastcgi_finish_request();
-        }
-        
-        // Send email in background (won't block response)
-        try {
-            \Log::info('Queueing verification email (Applicant)', [
-                'email' => $userEmail,
-            ]);
-
-            SendVerificationEmailJob::dispatch(
-                $userEmail,
-                $verificationUrl,
-                $userName,
-                'applicant'
-            )->afterResponse();
-        } catch (\Throwable $e) {
-            \Log::error('Failed to dispatch verification email job', [
-                'email' => $userEmail,
-                'error' => $e->getMessage(),
-            ]);
-        }
-        
-        return $response;
+        SendVerificationEmailJob::dispatch(
+            $userEmail,
+            $verificationUrl,
+            $userName,
+            'applicant'
+        )->afterResponse();
+    } catch (\Throwable $e) {
+        \Log::error('Failed to dispatch verification email job', [
+            'email' => $userEmail,
+            'error' => $e->getMessage(),
+        ]);
     }
+
+    return $response;
+}
 
 public function login(Request $request)
 {
