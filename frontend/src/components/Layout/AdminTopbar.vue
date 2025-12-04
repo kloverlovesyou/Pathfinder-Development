@@ -64,17 +64,29 @@ const openApplicantModal = async (applicant = null) => {
 async function deleteApplicant(id) {
   try {
     const res = await fetch(
-      import.meta.env.VITE_API_BASE_URL + `/admin/applicants/${id}`,
+      `${import.meta.env.VITE_API_BASE_URL}/admin/applicants/${id}`,
       {
         method: "DELETE",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // IMPORTANT for Sanctum / Auth
       }
     );
 
-    if (!res.ok) throw new Error("Failed to delete applicant");
+    // Log full backend error for debugging
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("DELETE FAILED:", res.status, errorText);
+      throw new Error(errorText || "Failed to delete applicant");
+    }
 
+    // Remove applicant locally
     allApplicants.value = allApplicants.value.filter((a) => a.id !== id);
-    showDeleteModal.value = false; // close modal
-    applicantToDelete.value = null; // reset
+    showDeleteModal.value = false;
+    applicantToDelete.value = null;
+
   } catch (err) {
     console.error("Error deleting applicant:", err);
   }
