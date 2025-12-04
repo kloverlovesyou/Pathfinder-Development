@@ -589,17 +589,18 @@ function formatScheduleTime(schedule) {
           </p>
         </div>
 
-        <div class="flex justify-end gap-2 mt-4">
+        <div class="flex justify-end gap-3 mt-6 w-full">
           <button
             type="button"
-            class="btn btn-outline btn-sm"
+            class="btn btn-outline btn-sm px-4"
             @click="cancelConflictRegistration"
           >
             Cancel
           </button>
+
           <button
             type="button"
-            class="btn bg-customButton hover:bg-dark-slate text-white btn-sm"
+            class="btn bg-customButton hover:bg-dark-slate text-white btn-sm px-4"
             @click="confirmConflictRegistration"
           >
             Yes, Register Anyway
