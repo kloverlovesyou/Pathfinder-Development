@@ -428,6 +428,7 @@ Route::get('/admin/applicants', [ApplicantController::class, 'index']);
 Route::delete('/admin/applicants/{id}', [ApplicantController::class, 'destroyById']);
 Route::get('/admin/organizations', [OrganizationController::class, 'index']);
 Route::delete('/admin/organizations/{id}', [OrganizationController::class, 'destroyById']);
+Route::delete('/admin/applicants/{id}', [ApplicantController::class, 'destroy']);
 
 // Admin – Organization approval system
 Route::get('/admin/pending-organizations', [OrganizationController::class, 'pending']);
