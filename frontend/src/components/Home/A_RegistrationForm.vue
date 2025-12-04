@@ -669,6 +669,13 @@
           >
             Go to Login
           </button>
+          <button
+            v-if="registrationResponse?.verification_url"
+            class="btn btn-secondary w-full bg-gray-200 text-gray-700 text-xs"
+            @click="copyVerificationLink"
+          >
+            Copy Verification Link
+          </button>
         </div>
       </div>
     </div>
@@ -964,13 +971,16 @@ const handleSubmit = async () => {
     return;
   }
 
+  // Validate address fields
   if (!apiFailed.value) {
     if (!form.value.region || !form.value.province || !form.value.city || !form.value.barangay) {
       alert("Please complete all address fields (Region, Province, City/Municipality, and Barangay).");
       return;
     }
+    // Construct full address from selected fields
     form.value.address = constructAddress();
   } else {
+    // If API failed, use manual address input
     if (!form.value.address || form.value.address.trim() === "") {
       alert("Please enter your complete address.");
       return;
@@ -978,16 +988,18 @@ const handleSubmit = async () => {
   }
 
   isSubmitting.value = true; // ✅ Start loading
+
   try {
     const response = await axios.post(
       import.meta.env.VITE_API_BASE_URL + "/applicants",
-      {
-        ...form.value,
-      }
+      { ...form.value }
     );
 
+    // Store registration response
     registrationResponse.value = response.data;
     registeredEmail.value = form.value.emailAddress;
+
+    // ✅ Show email verification modal
     showSuccessModal.value = true;
   } catch (error) {
     if (error.response && error.response.data.errors) {
