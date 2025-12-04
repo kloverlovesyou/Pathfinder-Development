@@ -247,6 +247,13 @@ public function login(Request $request)
             return response()->json(['message' => 'Applicant not found'], 404);
         }
 
+        // 🔥 1. Delete child tables FIRST (avoid FK constraint errors)
+        $applicant->applications()->delete();
+        $applicant->certifications()->delete();
+        $applicant->registrations()->delete();
+        $applicant->resumes()->delete();
+
+        // 🔥 2. Now delete applicant (safe)
         $applicant->delete();
 
         return response()->json(['message' => 'Applicant deleted successfully']);
