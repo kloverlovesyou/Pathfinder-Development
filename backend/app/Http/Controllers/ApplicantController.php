@@ -24,7 +24,7 @@ public function a_register(Request $request)
             'email',
             'unique:applicant,emailAddress', // exact column in applicant table
             function ($attribute, $value, $fail) {
-                if (\App\Models\Organization::where('EmailAddress', $value)->exists()) {
+                if (\App\Models\Organization::where('emailAddress', $value)->exists()) {
                     $fail('The email has already been taken by an organization.');
                 }
             },
