@@ -16,35 +16,28 @@ const loadingTrainings = ref(true);
 const upcomingTrainings = computed(() => {
   const now = new Date();
 
-  return trainingStore.trainings.filter((t) => {
-    // Check if any schedule is upcoming
-    if (t.schedules && t.schedules.length > 0) {
-      // Check the latest schedule's end_time
-      const latestSchedule = t.schedules[t.schedules.length - 1];
-      if (latestSchedule && latestSchedule.end_time) {
+  return trainingStore.trainings.filter(t => {
+    if (t.schedules?.length) {
+      // If ANY schedule is upcoming → include training
+      return t.schedules.some(s => {
         try {
-          const end = new Date(latestSchedule.end_time);
-          return end >= now;
-        } catch (e) {
-          console.warn('Invalid end_time format:', latestSchedule.end_time);
-          return true; // Show training if date parsing fails
+          return new Date(s.end_time) >= now;
+        } catch {
+          return true; // in case of invalid date
         }
-      }
-      // If schedules exist but no end_time, show the training
-      return true;
+      });
     }
-    // Fallback to first schedule or end_time for backward compatibility
-    const endTime = t.end_time || t.endDate || t.date;
-    if (endTime) {
+
+    // Fallback for trainings without schedules
+    if (t.end_time) {
       try {
-        const end = new Date(endTime);
-        return end >= now;
-      } catch (e) {
-        console.warn('Invalid end_time format:', endTime);
-        return true; // Show training if date parsing fails
+        return new Date(t.end_time) >= now;
+      } catch {
+        return true;
       }
     }
-    // If no schedule info, show the training (might be newly created)
+
+    // If no date info, assume upcoming
     return true;
   });
 });
