@@ -50,7 +50,7 @@ public function a_register(Request $request)
         'middleName'   => $request->middleName,
         'lastName'     => $request->lastName,
         'address'      => $request->address,
-        'EmailAddress' => $request->emailAddress, // exact DB column
+        'emailAddress' => $request->emailAddress, // exact DB column
         'phoneNumber'  => $request->phoneNumber,
         'password'     => bcrypt($request->password),
         'api_token'    => Str::random(60),
