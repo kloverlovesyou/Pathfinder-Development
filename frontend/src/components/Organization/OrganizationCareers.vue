@@ -2461,173 +2461,175 @@ async function viewRequirement(id) {
         </div>
       </header>
 
-      <!-- ✅ GLOBAL SEARCH -->
-      <section class="global-search-section">
-        <div class="flex justify-center my-6 px-4">
-          <input
-            type="text"
-            v-model="globalSearchQuery"
-            placeholder=" Search careers..."
-            class="global-search-bar text-black px-4 py-2 rounded-lg w-full sm:w-3/4 md:w-1/2 lg:w-1/3"
-          />
-        </div>
-      </section>
-
-      <!-- UPCOMING CAREERS -->
-      <section class="upcoming">
-        <div class="flex items-center justify-between">
-          <h2 class="section-title flex items-center gap-1">
-            Open Careers
-            <span class="count-badge">{{ sortedUpcomingCareers.length }}</span>
-          </h2>
-          <button class="plus-btn-text" @click="openCareerPopup()" :disabled="!isOrganizationVerified" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">+</button>
-        </div>
-
-        <!-- Loader -->
-      <div v-if="isLoading" class="flex justify-center py-8">
-        <svg
-          class="animate-spin h-10 w-10 text-blue-600"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            class="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            stroke-width="4"
-          ></circle>
-          <path
-            class="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8v8H4z"
-          ></path>
-        </svg>
-      </div>
-
-        <div class="career-grid">
-          <div
-            class="career-card"
-            v-for="career in visibleFilteredUpcoming"
-            :key="career.careerID || career.id"
-            @click="openCareerDetails(career)"
+      <div>
+        <!-- 🔥 Global Loader -->
+        <div v-if="isLoading" class="flex flex-col items-center justify-center py-16">
+          <svg
+            class="animate-spin h-12 w-12 text-blue-600"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
           >
-            <div class="career-right">
-              <h3 class="career-title">{{ career.position }}</h3>
-              <p class="career-deadline">
-                Closing: {{ formatdeadline(career.closingDate || career.deadlineOfSubmission) }}
-              </p>
-            </div>
-
-            <div class="menu">
-              <div
-                class="menu-icon"
-                @click.stop="toggleUpcomingMenu(career.careerID || career.id)"
-              >
-                ⋮
-              </div>
-              <div
-                v-if="openUpcomingMenu === (career.careerID || career.id)"
-                class="dropdown-menu"
-                @click.stop
-              >
-                <ul>
-                  <li @click="deleteCareer(career)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Delete Career</li>
-                  <li @click="openCareerPopup(career)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Update Career</li>
-                </ul>
-              </div>
-            </div>
-          </div>
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8H4z"
+            ></path>
+          </svg>
         </div>
 
-        <button
-          v-if="sortedUpcomingCareers.length > 4"
-          class="show-more-btn"
-          @click="showAllUpcoming = !showAllUpcoming"
-        >
-          {{ showAllUpcoming ? "Show Less" : "Show More" }}
-        </button>
-      </section>
+        <!-- ✅ Search & Careers Sections -->
+        <div v-else>
+          <!-- ✅ GLOBAL SEARCH -->
+          <section class="global-search-section">
+            <div class="flex justify-center my-6 px-4">
+              <input
+                type="text"
+                v-model="globalSearchQuery"
+                placeholder=" Search careers..."
+                class="global-search-bar text-black px-4 py-2 rounded-lg w-full sm:w-3/4 md:w-1/2 lg:w-1/3"
+              />
+            </div>
+          </section>
 
-      <!-- COMPLETED CAREERS -->
-      <section class="completed">
-        <div class="flex items-center justify-between">
-          <h2 class="section-title flex items-center gap-1">
-            Closed Careers
-            <span class="count-badge">{{ sortedCompletedCareers.length }}</span>
-          </h2>
+          <!-- UPCOMING CAREERS -->
+          <section class="upcoming">
+            <div class="flex items-center justify-between">
+              <h2 class="section-title flex items-center gap-1">
+                Open Careers
+                <span class="count-badge">{{ sortedUpcomingCareers.length }}</span>
+              </h2>
+              <button
+                class="plus-btn-text"
+                @click="openCareerPopup()"
+                :disabled="!isOrganizationVerified"
+                :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''"
+              >+</button>
+            </div>
+
+            <div class="career-grid">
+              <div
+                class="career-card"
+                v-for="career in visibleFilteredUpcoming"
+                :key="career.careerID || career.id"
+                @click="openCareerDetails(career)"
+              >
+                <div class="career-right">
+                  <h3 class="career-title">{{ career.position }}</h3>
+                  <p class="career-deadline">
+                    Closing: {{ formatdeadline(career.closingDate || career.deadlineOfSubmission) }}
+                  </p>
+                </div>
+
+                <div class="menu">
+                  <div
+                    class="menu-icon"
+                    @click.stop="toggleUpcomingMenu(career.careerID || career.id)"
+                  >
+                    ⋮
+                  </div>
+                  <div
+                    v-if="openUpcomingMenu === (career.careerID || career.id)"
+                    class="dropdown-menu"
+                    @click.stop
+                  >
+                    <ul>
+                      <li
+                        @click="deleteCareer(career)"
+                        :class="{ 'disabled-action': !isOrganizationVerified }"
+                        :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''"
+                      >
+                        Delete Career
+                      </li>
+                      <li
+                        @click="openCareerPopup(career)"
+                        :class="{ 'disabled-action': !isOrganizationVerified }"
+                        :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''"
+                      >
+                        Update Career
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button
+              v-if="sortedUpcomingCareers.length > 4"
+              class="show-more-btn"
+              @click="showAllUpcoming = !showAllUpcoming"
+            >
+              {{ showAllUpcoming ? "Show Less" : "Show More" }}
+            </button>
+          </section>
+
+          <!-- COMPLETED CAREERS -->
+          <section class="completed mt-8">
+            <div class="flex items-center justify-between">
+              <h2 class="section-title flex items-center gap-1">
+                Closed Careers
+                <span class="count-badge">{{ sortedCompletedCareers.length }}</span>
+              </h2>
+            </div>
+
+            <div class="career-grid">
+              <div
+                class="career-card"
+                v-for="career in visibleFilteredCompleted"
+                :key="career.careerID || career.id"
+                @click="openCareerDetails(career)"
+              >
+                <div class="career-right">
+                  <h3 class="career-title">{{ career.title || career.position }}</h3>
+                  <p class="career-deadline">
+                    Closed: {{ formatdeadline(career.closingDate || career.deadlineOfSubmission) }}
+                  </p>
+                </div>
+
+                <div class="menu">
+                  <div
+                    class="menu-icon"
+                    @click.stop="toggleCompletedMenu(career.careerID || career.id)"
+                  >
+                    ⋮
+                  </div>
+                  <div
+                    v-if="openCompletedMenu === (career.careerID || career.id)"
+                    class="dropdown-menu"
+                    @click.stop
+                  >
+                    <ul>
+                      <li
+                        @click="deleteCareer(career)"
+                        :class="{ 'disabled-action': !isOrganizationVerified }"
+                        :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''"
+                      >
+                        Delete Career
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button
+              v-if="sortedCompletedCareers.length > 4"
+              class="show-more-btn"
+              @click="showAllCompleted = !showAllCompleted"
+            >
+              {{ showAllCompleted ? "Show Less" : "Show More" }}
+            </button>
+          </section>
         </div>
-
-        <!-- Loader -->
-      <div v-if="isLoading" class="flex justify-center py-8">
-        <svg
-          class="animate-spin h-10 w-10 text-blue-600"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            class="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            stroke-width="4"
-          ></circle>
-          <path
-            class="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8v8H4z"
-          ></path>
-        </svg>
       </div>
-
-        <div class="career-grid">
-          <div
-            class="career-card"
-            v-for="career in visibleFilteredCompleted"
-            :key="career.careerID || career.id"
-            @click="openCareerDetails(career)"
-          >
-            <div class="career-right">
-              <h3 class="career-title">
-                {{ career.title || career.position }}
-              </h3>
-              <p class="career-deadline">
-                Closed: {{ formatdeadline(career.closingDate || career.deadlineOfSubmission) }}
-              </p>
-            </div>
-
-            <div class="menu">
-              <div
-                class="menu-icon"
-                @click.stop="toggleCompletedMenu(career.careerID || career.id)"
-              >
-                ⋮
-              </div>
-              <div
-                v-if="openCompletedMenu === (career.careerID || career.id)"
-                class="dropdown-menu"
-                @click.stop
-              >
-                <ul>
-                  <li @click="deleteCareer(career)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Delete Career</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <button
-          v-if="sortedCompletedCareers.length > 4"
-          class="show-more-btn"
-          @click="showAllCompleted = !showAllCompleted"
-        >
-          {{ showAllCompleted ? "Show Less" : "Show More" }}
-        </button>
-      </section>
 
       <!-- Schedule Modal -->
       <div v-if="showScheduleModal" class="modal-overlay schedule-modal-overlay" @click.self="closeScheduleModal">
