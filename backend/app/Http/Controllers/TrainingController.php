@@ -95,6 +95,7 @@ class TrainingController extends Controller
             'firstName' => 'required|string',
             'lastName' => 'required|string',
             'emailAddress' => 'required|email',
+            'phoneNumber' => 'required|string',
         ]);
 
         // Find the training by trainingID
@@ -147,13 +148,6 @@ class TrainingController extends Controller
         if ($registrationData->firstName !== $request->firstName || $registrationData->lastName !== $request->lastName) {
             return response()->json([
                 'message' => '⚠️ Verification Failed: Name does not match the registered applicant\'s information. Please use the same name you used when registering for this training.'
-            ], 400);
-        }
-
-        // ✅ Step 3: Verify phone number matches registered applicant
-        if ($registrationData->phoneNumber !== $request->phoneNumber) {
-            return response()->json([
-                'message' => '⚠️ Verification Failed: Phone number does not match the registered applicant\'s information. Please use the same phone number you used when registering for this training.'
             ], 400);
         }
 
