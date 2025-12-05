@@ -13,7 +13,6 @@ class ApplicantController extends Controller
 
 public function a_register(Request $request)
 {
-    // Validation
     $validator = \Validator::make($request->all(), [
         'firstName'    => 'required|string|max:255',
         'lastName'     => 'required|string|max:255',
@@ -32,19 +31,13 @@ public function a_register(Request $request)
         'phoneNumber'  => 'required|string|max:11',
         'password'     => 'required|string|min:8',
     ]);
-
-    // Return validation errors immediately
     if ($validator->fails()) {
         return response()->json([
             'status' => 'error',
             'errors' => $validator->errors(),
         ], 422);
     }
-
-    // Generate verification token
     $verificationToken = Str::random(64);
-
-    // Create applicant
     $applicant = Applicant::create([
         'firstName'    => $request->firstName,
         'middleName'   => $request->middleName,
@@ -57,13 +50,9 @@ public function a_register(Request $request)
         'email_verification_token' => $verificationToken,
         'email_verified_at' => null,
     ]);
-
-    // Prepare verification URL and user info
     $verificationUrl = url('/api/verify-email?token=' . $verificationToken . '&type=applicant');
     $userName = $request->firstName . ' ' . $request->lastName;
     $userEmail = $request->emailAddress;
-
-    // Return response immediately
     $response = response()->json([
         'status'  => 'success',
         'message' => 'Registration successful! Please check your email to verify your account.',
@@ -72,17 +61,13 @@ public function a_register(Request $request)
         'verification_url' => $verificationUrl, // Include for manual verification
         'verification_token' => $verificationToken,
     ], 201);
-
-    // Send email asynchronously (after response is sent)
     if (function_exists('fastcgi_finish_request')) {
         fastcgi_finish_request();
     }
-
     try {
         \Log::info('Queueing verification email (Applicant)', [
             'email' => $userEmail,
         ]);
-
         SendVerificationEmailJob::dispatch(
             $userEmail,
             $verificationUrl,
@@ -95,12 +80,12 @@ public function a_register(Request $request)
             'error' => $e->getMessage(),
         ]);
     }
-
     return $response;
 }
 
 public function login(Request $request)
 {
+    
     $request->validate([
         'emailAddress' => 'required|email',
         'password' => 'required|string|min:8',
@@ -120,7 +105,6 @@ public function login(Request $request)
         ], 403);
     }
 
-    // ✅ Only generate if missing
     if (!$applicant->api_token) {
         $applicant->api_token = Str::random(60);
         $applicant->save();

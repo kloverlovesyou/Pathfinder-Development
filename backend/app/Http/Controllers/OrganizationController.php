@@ -136,9 +136,7 @@ class OrganizationController extends Controller
         return $response;
     }
 
-    // ----------------------
-    // Login organization
-    // ----------------------
+
     public function login(Request $request)
     {
         $request->validate([
