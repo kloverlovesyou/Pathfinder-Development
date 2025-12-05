@@ -135,6 +135,33 @@
         </div>
       </header>
 
+                <div>
+      <div v-if="isLoading" class="flex flex-col items-center justify-center py-16">
+        <!-- Loader SVG -->
+        <svg
+          class="animate-spin h-12 w-12 text-blue-600"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          ></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v8H4z"
+          ></path>
+        </svg>
+      </div>
+
+      <div v-else>
+
       <!-- ✅ GLOBAL SEARCH -->
       <section class="global-search-section">
         <div class="flex justify-center my-6 px-4">
@@ -266,6 +293,8 @@
           {{ showAllCompleted ? 'Show Less' : 'Show More' }}
         </button>
       </section>
+      </div>
+    </div>
 
       <!-- All Trainings section removed as requested -->
 
@@ -1092,6 +1121,7 @@ export default {
       qrExpiresAt: null,
       activeTrainingId: null, // which training shows the QR
       selectAll: false,
+         isLoading: false, // ✅ loading state
 
       showBulkCertModal: false,
       certificateData: {
@@ -1877,6 +1907,7 @@ export default {
     },
 
     async fetchTrainings() {
+      this.isLoading = true; // start loading
       try {
         const storedUser = localStorage.getItem("user");
         const parsedUser = storedUser ? JSON.parse(storedUser) : null;
@@ -1915,7 +1946,9 @@ export default {
         });
       } catch (error) {
         console.error("Error fetching trainings:", error);
-      }
+      } finally {
+      this.isLoading = false; // stop loading
+    }
     },
 
     async fetchAllTrainings() {
