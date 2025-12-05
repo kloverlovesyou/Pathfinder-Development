@@ -3,6 +3,11 @@ import { useRouter } from "vue-router";
 import axios from "axios";
 import { ref, onMounted, onUnmounted } from "vue";
 import { useActivityStore } from "@/stores/activityStore";
+import jsPDF from "jspdf";
+import * as pdfjsLib from "pdfjs-dist";
+
+// Configure pdfjs worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 const toasts = ref([]);
 const router = useRouter();
@@ -201,7 +206,7 @@ async function fetchCertificates(applicantID) {
           const trainingTitle = registration.title || 
                                registration.training?.title || 
                                `Training #${registration.trainingID || 'Unknown'}`;
-          const certificationName = `${trainingTitle} - Certificate of Completion`;
+          const certificationName = trainingTitle;
           
           // Check if this certificate exists in API response (has Certification entry)
           const existingCertFromAPI = apiOrganizationCertificates[certificatePath];
@@ -619,13 +624,200 @@ function handleImageError(event) {
   }
 }
 
+// Helper function to check if URL is a PDF
+function isPDF(url) {
+  if (!url) return false;
+  const urlLower = url.toLowerCase();
+  return urlLower.includes('.pdf') || urlLower.includes('/pdf') || urlLower.endsWith('pdf');
+}
+
+// Convert PDF to image blob
+async function convertPDFToImage(pdfUrl, format = 'png') {
+  try {
+    const response = await fetch(pdfUrl);
+    const data = await response.arrayBuffer();
+
+    const pdf = await pdfjsLib.getDocument({ data }).promise;
+    const page = await pdf.getPage(1);
+
+    const scale = 2;
+    const viewport = page.getViewport({ scale });
+
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+
+    await page.render({
+      canvasContext: context,
+      viewport: viewport
+    }).promise;
+
+    return new Promise((resolve, reject) => {
+      const mimeType = format === 'jpeg' || format === 'jpg' ? 'image/jpeg' : 'image/png';
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error("Failed to convert canvas to blob"));
+        }
+      }, mimeType, 0.95);
+    });
+  } catch (error) {
+    console.error("Error converting PDF to image:", error);
+    throw error;
+  }
+}
+
+// Convert image to PDF
+async function convertImageToPDF(imageUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    // Only set crossOrigin for non-data URLs to avoid CORS issues
+    if (!imageUrl.startsWith('data:')) {
+      img.crossOrigin = 'anonymous';
+    }
+    
+    img.onload = function() {
+      try {
+        const pdf = new jsPDF({
+          orientation: img.width > img.height ? 'landscape' : 'portrait',
+          unit: 'px',
+          format: [img.width, img.height]
+        });
+
+        pdf.addImage(img, 'PNG', 0, 0, img.width, img.height);
+        const pdfBlob = pdf.output('blob');
+        resolve(pdfBlob);
+      } catch (error) {
+        console.error("Error converting image to PDF:", error);
+        reject(error);
+      }
+    };
+
+    img.onerror = function() {
+      reject(new Error("Failed to load image"));
+    };
+
+    img.src = imageUrl;
+  });
+}
+
+// Convert image to different format (PNG/JPEG)
+async function convertImageFormat(imageUrl, format = 'png') {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    // Only set crossOrigin for non-data URLs to avoid CORS issues
+    if (!imageUrl.startsWith('data:')) {
+      img.crossOrigin = 'anonymous';
+    }
+
+    img.onload = function() {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+
+      const mimeType = format === 'jpeg' || format === 'jpg' ? 'image/jpeg' : 'image/png';
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error("Failed to convert image"));
+        }
+      }, mimeType, 0.95);
+    };
+
+    img.onerror = function() {
+      reject(new Error("Failed to load image"));
+    };
+
+    img.src = imageUrl;
+  });
+}
+
+// Download certificate in specified format
+async function downloadCertificate(format) {
+  if (!selectedImage.value) {
+    showToast("No certificate selected", "error");
+    return;
+  }
+
+  try {
+    let blob;
+    let fileName = (selectedTitle.value || 'certificate').replace(/[^a-z0-9]/gi, '_');
+    const isPdfSource = isPDF(selectedImage.value);
+
+    if (format === 'pdf') {
+      if (isPdfSource) {
+        // If source is PDF, download directly
+        blob = await fetch(selectedImage.value).then(r => r.blob());
+      } else {
+        // Convert image to PDF
+        blob = await convertImageToPDF(selectedImage.value);
+      }
+      fileName += '.pdf';
+    } else if (format === 'png') {
+      if (isPdfSource) {
+        // Convert PDF to PNG
+        blob = await convertPDFToImage(selectedImage.value, 'png');
+      } else {
+        // Convert image to PNG
+        blob = await convertImageFormat(selectedImage.value, 'png');
+      }
+      fileName += '.png';
+    } else if (format === 'jpeg' || format === 'jpg') {
+      if (isPdfSource) {
+        // Convert PDF to JPEG
+        blob = await convertPDFToImage(selectedImage.value, 'jpeg');
+      } else {
+        // Convert image to JPEG
+        blob = await convertImageFormat(selectedImage.value, 'jpeg');
+      }
+      fileName += '.jpg';
+    } else {
+      showToast("Unsupported format", "error");
+      return;
+    }
+
+    // Download the blob
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showToast(`Certificate downloaded as ${format.toUpperCase()}`, "success");
+  } catch (error) {
+    console.error("Error downloading certificate:", error);
+    showToast("Failed to download certificate. Please try again.", "error");
+  }
+}
+
 function openModal(image, title) {
   selectedImage.value = image;
   selectedTitle.value = title;
   isModalOpen.value = true;
+  // Prevent body scroll when modal is open
+  document.body.style.overflow = 'hidden';
 }
+
 function closeModal() {
   isModalOpen.value = false;
+  showDownloadMenu.value = false;
+  // Restore body scroll when modal is closed
+  document.body.style.overflow = '';
+}
+
+// Handle ESC key to close modal
+function handleKeyDown(event) {
+  if (event.key === 'Escape' && isModalOpen.value) {
+    closeModal();
+  }
 }
 
 // Logout
@@ -636,6 +828,9 @@ function logout() {
 
 // Load user info and fetch certificates
 onMounted(async () => {
+  // Add ESC key listener for modal
+  window.addEventListener('keydown', handleKeyDown);
+  
   loading.value = true; // ⏳ Start loading
 
   const savedUser = localStorage.getItem("user");
@@ -693,6 +888,9 @@ onMounted(async () => {
 // Clean up intervals on unmount
 onUnmounted(() => {
   stopCertificateRefresh();
+  window.removeEventListener('keydown', handleKeyDown);
+  // Ensure body scroll is restored on unmount
+  document.body.style.overflow = '';
 });
 
 // ➤ Toast helper
@@ -706,9 +904,14 @@ function showToast(message, type = "success", duration = 3000) {
 }
 
 const showManageMenu = ref(false);
+const showDownloadMenu = ref(false);
 
 const toggleManageMenu = () => {
   showManageMenu.value = !showManageMenu.value;
+};
+
+const toggleDownloadMenu = () => {
+  showDownloadMenu.value = !showDownloadMenu.value;
 };
 
 const selectAllCertificates = async () => {
@@ -1133,6 +1336,139 @@ const deselectAllCertificates = async () => {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Certificate View Modal -->
+    <div
+      v-if="isModalOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-lg"
+      @click.self="closeModal"
+    >
+      <div class="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col relative m-4">
+        <!-- Modal Header -->
+        <div class="flex justify-between items-center p-4 border-b" @click.stop>
+          <h2 class="text-xl font-semibold text-gray-800 truncate pr-8">
+            {{ selectedTitle || 'Certificate' }}
+          </h2>
+          <div class="flex items-center gap-2">
+            <!-- Download Button with Format Dropdown -->
+            <div class="relative" @click.stop>
+              <button
+                @click="toggleDownloadMenu"
+                class="px-4 py-2 bg-customButton hover:bg-dark-slate text-white text-sm rounded-md transition flex items-center gap-2"
+                title="Download Certificate"
+              >
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                  ></path>
+                </svg>
+                Download ▾
+              </button>
+
+              <!-- Download Format Dropdown -->
+              <div
+                v-if="showDownloadMenu"
+                class="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10"
+              >
+                <button
+                  @click="downloadCertificate('png'); showDownloadMenu = false"
+                  class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                >
+                  Download as PNG
+                </button>
+                <button
+                  @click="downloadCertificate('jpeg'); showDownloadMenu = false"
+                  class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                >
+                  Download as JPEG
+                </button>
+                <button
+                  @click="downloadCertificate('pdf'); showDownloadMenu = false"
+                  class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                >
+                  Download as PDF
+                </button>
+              </div>
+            </div>
+
+            <button
+              @click="closeModal"
+              class="text-gray-400 hover:text-gray-600 text-2xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition"
+              title="Close"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+        
+        <!-- Modal Content -->
+        <div class="flex-1 overflow-auto p-4 flex items-center justify-center bg-gray-50" @click="showDownloadMenu = false">
+          <div v-if="selectedImage" class="w-full h-full flex items-center justify-center">
+            <!-- Check if it's a PDF or image -->
+            <iframe
+              v-if="isPDF(selectedImage)"
+              :src="selectedImage"
+              class="w-full h-[70vh] border-0 rounded"
+              frameborder="0"
+            ></iframe>
+            <img
+              v-else
+              :src="selectedImage"
+              :alt="selectedTitle || 'Certificate'"
+              class="max-w-full max-h-[70vh] object-contain rounded shadow-lg"
+              @error="handleImageError($event)"
+            />
+          </div>
+          <div v-else class="text-gray-500 text-center">
+            <p>Certificate image not available</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div
+      v-if="showDeleteModal"
+      class="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md bg-black bg-opacity-50"
+      @click.self="showDeleteModal = false"
+    >
+      <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 relative">
+        <button
+          @click="showDeleteModal = false"
+          class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl font-bold"
+        >
+          ✕
+        </button>
+        <h3 class="text-xl font-semibold mb-4">Delete Certificate</h3>
+        <p class="text-gray-600 mb-6">
+          Are you sure you want to delete "{{ certToDelete?.certificationName }}"?
+          This action cannot be undone.
+        </p>
+        <div class="flex justify-end gap-3">
+          <button
+            @click="showDeleteModal = false"
+            class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg transition"
+          >
+            Cancel
+          </button>
+          <button
+            @click="deleteCertificateConfirmed"
+            class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
+          >
+            Delete
+          </button>
         </div>
       </div>
     </div>

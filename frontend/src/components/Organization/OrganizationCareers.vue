@@ -64,6 +64,9 @@ export default {
       pendingFormattedDate: "",
       sendingStatusEmail: false,
 
+      showRequirementsModal: false,
+      requirementsPdfUrl: null,
+
       applicantsList: [],
       applicantsLoading: false,
       applicantsError: "",
@@ -682,13 +685,6 @@ export default {
         }
       }
 
-      const openRequirementUrl = (url) => {
-        const win = window.open(url, "_blank", "noopener,noreferrer");
-        if (!win) {
-          showToast("Please allow pop-ups to view the requirements.");
-        }
-      };
-
       // If we have a file path, try to get PDF URL from Supabase
       if (filePath && typeof filePath === "string" && filePath.trim().length > 0) {
         console.log("👁️ Attempting to get PDF URL for path:", filePath.trim());
@@ -696,8 +692,9 @@ export default {
         console.log("👁️ Generated PDF URL:", pdfUrl);
 
         if (pdfUrl) {
-          openRequirementUrl(pdfUrl);
-          console.log("✅ Opening requirements in new tab:", pdfUrl);
+          this.requirementsPdfUrl = pdfUrl;
+          this.showRequirementsModal = true;
+          console.log("✅ Opening requirements in modal:", pdfUrl);
           return;
         } else {
           console.warn("⚠️ Could not generate PDF URL from file path");
@@ -1086,7 +1083,6 @@ export default {
           // Only include email fields if "Schedule and Email" is selected
           sendEmail: this.scheduleAction === "scheduleAndEmail",
           cc: this.scheduleAction === "scheduleAndEmail" ? (this.scheduleData.cc || null) : null,
-          body: this.scheduleAction === "scheduleAndEmail" ? (this.scheduleData.body || null) : null,
         };
 
         const conflict = this.findScheduleConflict(formattedDate);
@@ -1452,7 +1448,6 @@ export default {
           }
 
           this.scheduleData.cc = person.emailCc || "";
-          this.scheduleData.body = person.emailBody || "";
         } else {
           // Reset schedule data for new schedule
           this.scheduleData = {
@@ -1460,14 +1455,13 @@ export default {
             mode: "",
             detail: "",
             cc: "",
-            body: "",
           };
         }
       }
     },
     closeScheduleModal() {
       this.showScheduleModal = false;
-      this.scheduleData = { date: "", mode: "", detail: "", cc: "", body: "" };
+      this.scheduleData = { date: "", mode: "", detail: "", cc: "" };
       this.scheduleAction = "scheduleOnly";
       this.showScheduleDropdown = false;
       this.selectedPerson = null;
@@ -1797,6 +1791,10 @@ export default {
     closeCareerDetails() {
       this.showCareerDetailsModal = false;
       this.applicantSearchQuery = ""; // Clear search when closing modal
+    },
+    closeRequirementsModal() {
+      this.showRequirementsModal = false;
+      this.requirementsPdfUrl = null;
     },
     async saveCareer() {
       // Check if organization is verified
@@ -2736,16 +2734,6 @@ async function viewRequirement(id) {
               />
             </div>
 
-            <div class="input-group full-width">
-              <label>Email Body:</label>
-              <textarea
-                v-model="scheduleData.body"
-                rows="4"
-                placeholder="Include message details for the applicant"
-                class="schedule-textarea"
-              ></textarea>
-            </div>
-
             <div class="modal-actions">
               <div class="schedule-dropdown-wrapper">
                 <div class="schedule-dropdown-container">
@@ -2920,6 +2908,28 @@ async function viewRequirement(id) {
         </div>
       </div>
 
+      <!-- Requirements View Modal -->
+      <div v-if="showRequirementsModal" class="modal-overlay schedule-modal-overlay" @click.self="closeRequirementsModal">
+        <div class="modal-box requirements-modal-box">
+          <button class="modal-close-btn" @click="closeRequirementsModal">✕</button>
+          <h3>Application Requirements</h3>
+          <div class="requirements-viewer">
+            <iframe
+              v-if="requirementsPdfUrl"
+              :src="requirementsPdfUrl"
+              class="requirements-iframe"
+              frameborder="0"
+            ></iframe>
+            <p v-else class="requirements-error">Unable to load requirements PDF.</p>
+          </div>
+          <div class="modal-actions">
+            <button class="cancel-btn" @click="closeRequirementsModal">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Career Popup Modal -->
       <div v-if="showCareerPopup" class="career-popup-overlay">
         <div class="career-popup">
@@ -2936,23 +2946,27 @@ async function viewRequirement(id) {
           <form @submit.prevent="saveCareer" class="Career-popup-form">
             <!-- Inputs -->
             <div class="input-with-counter">
+              <label class="input-label">Position</label>
               <input v-model="newCareer.position" type="text" placeholder="Position" class="career-input" required maxlength="100" />
               <span class="char-counter">{{ (newCareer.position || '').length }}/100</span>
             </div>
             <div class="input-with-counter">
+              <label class="input-label">Place of Assignment</label>
               <input v-model="newCareer.placeOfAssignment" type="text" placeholder="Place of Assignment" class="career-input" required maxlength="100" />
               <span class="char-counter">{{ (newCareer.placeOfAssignment || '').length }}/100</span>
             </div>
             <div class="input-with-counter">
+              <label class="input-label">Details</label>
               <textarea v-model="newCareer.details" :placeholder="newCareer.pdfPath ? 'Details (optional if PDF uploaded)' : 'Details (required if no PDF)'" class="career-input" maxlength="1000"></textarea>
               <span class="char-counter">{{ (newCareer.details || '').length }}/1000</span>
             </div>
             <div class="input-with-counter">
+              <label class="input-label">Qualification Standard</label>
               <textarea v-model="newCareer.qualificationStandard" :placeholder="newCareer.pdfPath ? 'Qualification Standard (optional if PDF uploaded)' : 'Qualification Standard (required if no PDF)'" class="career-input" maxlength="1000"></textarea>
               <span class="char-counter">{{ (newCareer.qualificationStandard || '').length }}/1000</span>
             </div>
             <div class="career-upload-wrapper">
-              <label class="career-upload-label">Attach PDF (optional)</label>
+              <label class="input-label">Attach PDF (optional)</label>
               <input ref="careerPdfInput" type="file" accept="application/pdf" class="career-input"
                 @change="handleCareerPdfUpload" />
               <p class="upload-help-text">Accepted format: PDF up to 10MB.</p>
@@ -2969,7 +2983,7 @@ async function viewRequirement(id) {
 
             <!-- Posting Date -->
             <div class="deadline-input-wrapper">
-              <label class="career-upload-label">Posting Date</label>
+              <label class="input-label">Posting Date</label>
               <input
                 type="date"
                 v-model="newCareer.postingDate"
@@ -2982,7 +2996,7 @@ async function viewRequirement(id) {
 
             <!-- Closing Date -->
             <div class="deadline-input-wrapper">
-              <label class="career-upload-label">Closing Date</label>
+              <label class="input-label">Closing Date</label>
               <input
                 type="date"
                 v-model="newCareer.closingDate"
@@ -2994,14 +3008,16 @@ async function viewRequirement(id) {
             </div>
 
             <!-- Tags -->
-            <div class="relative mb-4">
-              <label class="block font-semibold text-gray-600 mb-2">Tags</label>
-              <input
-                v-model="newTagName"
-                type="text"
-                placeholder="Search or type a new tag..."
-                class="career-input mb-2"
-              />
+            <div class="relative tag-section-wrapper">
+              <div class="input-with-counter">
+                <label class="input-label">Search or Add Tag</label>
+                <input
+                  v-model="newTagName"
+                  type="text"
+                  placeholder="Search or type a new tag..."
+                  class="career-input"
+                />
+              </div>
               <div class="tag-list-wrapper">
                 <div class="tag-list">
                   <span
@@ -3035,9 +3051,7 @@ async function viewRequirement(id) {
                 </span>
               </div>
 
-              <button @click.prevent="addTag" class="career-save-btn mt-2">
-                Add Tag
-              </button>
+              <button @click.prevent="addTag" class="career-add-tag-btn">Add Tag</button>
             </div>
 
             <!-- Submit -->
@@ -3057,6 +3071,21 @@ async function viewRequirement(id) {
         <div class="career-details-modal">
           <button class="modal-close-btn" @click="closeCareerDetails">✕</button>
           <h3 class="modal-title">{{ selectedCareer.position }}</h3>
+          
+          <!-- Tags -->
+          <div
+            v-if="selectedCareer?.Tags?.length"
+            class="modal-tag-list"
+          >
+            <span
+              v-for="tag in selectedCareer.Tags"
+              :key="tag.TagID || tag.tagID || tag.id || tag"
+              class="modal-tag-chip"
+            >
+              {{ typeof tag === 'object' ? (tag.TagName || tag.tagName || getTagName(tag.TagID || tag.tagID || tag.id)) : getTagName(tag) }}
+            </span>
+          </div>
+          
           <p class="career-info">
             <span class="career-group">
               <strong>Position:</strong>
@@ -3120,8 +3149,7 @@ async function viewRequirement(id) {
             <div class="applicants-search-wrapper" v-if="applicantsList.length > 0 && !applicantsLoading">
               <div class="relative">
                 <input type="text" v-model="applicantSearchQuery" placeholder="Search by name or status..."
-                  class="applicants-search-input" maxlength="100" />
-                <span class="char-counter-search">{{ (applicantSearchQuery || '').length }}/100</span>
+                  class="applicants-search-input" />
               </div>
             </div>
 
@@ -4171,6 +4199,22 @@ async function viewRequirement(id) {
   background: #1f2937;
 }
 
+.career-add-tag-btn {
+  background: #374151;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.career-add-tag-btn:hover {
+  background: #1f2937;
+}
+
 .career-save-btn:disabled,
 .plus-btn-text:disabled {
   opacity: 0.5;
@@ -4188,7 +4232,7 @@ async function viewRequirement(id) {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  margin-bottom: 1rem;
+  margin-bottom: 15px;
 }
 
 .career-upload-label {
@@ -4393,12 +4437,35 @@ async function viewRequirement(id) {
   margin-bottom: 15px;
 }
 
+.input-with-counter .career-input {
+  margin-bottom: 0;
+}
+
+.input-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+  text-align: left;
+}
+
+/* Form Group Spacing - Consistent spacing for all form elements */
+.deadline-input-wrapper {
+  margin-bottom: 15px;
+}
+
+.tag-section-wrapper {
+  margin-bottom: 15px;
+}
+
 .char-counter {
   font-size: 12px;
   color: #6b7280;
   text-align: right;
-  margin-top: 4px;
+  margin-top: 0;
   display: block;
+  line-height: 1.2;
 }
 
 .char-counter-search {
@@ -5511,5 +5578,72 @@ input[type="text"] {
 .global-search-bar:focus {
   border-color: #44576d;
   box-shadow: 0 0 5px rgba(68, 87, 109, 0.2);
+}
+
+/* Tag Display Styles */
+.modal-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 16px;
+}
+
+.modal-tag-chip {
+  background-color: #d8e3f0;
+  color: #1f2a37;
+  font-size: 0.85rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+/* Requirements Modal Styles */
+.requirements-modal-box {
+  max-width: 90vw;
+  width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.requirements-viewer {
+  flex: 1;
+  min-height: 500px;
+  max-height: calc(90vh - 150px);
+  margin: 20px 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f9fafb;
+}
+
+.requirements-iframe {
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
+  border: none;
+  display: block;
+}
+
+.requirements-error {
+  padding: 40px;
+  text-align: center;
+  color: #dc2626;
+  font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+  .requirements-modal-box {
+    width: 95vw;
+    max-width: 95vw;
+  }
+  
+  .requirements-viewer {
+    min-height: 400px;
+    max-height: calc(85vh - 150px);
+  }
+  
+  .requirements-iframe {
+    min-height: 400px;
+  }
 }
 </style>

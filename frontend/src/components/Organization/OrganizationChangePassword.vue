@@ -140,29 +140,51 @@
             <div class="change-password-container">
                 <h2 class="change-password-title">Change Password</h2>
 
-                <form @submit.prevent="changePassword">
-                    <div class="input-group">
-                        <label>Current Password</label>
-                        <input type="password" v-model="form.currentPassword" placeholder="Enter current password" required maxlength="128" />
+                <form @submit.prevent="otpRequested ? changePassword() : requestOTP()">
+                    <div class="input-with-counter">
+                        <label class="input-label">Current Password</label>
+                        <input type="password" v-model="form.currentPassword" placeholder="Enter current password" required maxlength="128" :disabled="otpRequested" />
                         <span class="char-counter">{{ form.currentPassword.length }}/128</span>
                     </div>
 
-                    <div class="input-group">
-                        <label>New Password</label>
-                        <input type="password" v-model="form.newPassword" placeholder="Enter new password" required maxlength="128" />
+                    <div class="input-with-counter">
+                        <label class="input-label">New Password</label>
+                        <input type="password" v-model="form.newPassword" placeholder="Enter new password" required maxlength="128" :disabled="otpRequested" />
                         <span class="char-counter">{{ form.newPassword.length }}/128</span>
                     </div>
 
-                    <div class="input-group">
-                        <label>Confirm New Password</label>
-                        <input type="password" v-model="form.confirmPassword" placeholder="Confirm new password" required maxlength="128" />
+                    <div class="input-with-counter">
+                        <label class="input-label">Confirm New Password</label>
+                        <input type="password" v-model="form.confirmPassword" placeholder="Confirm new password" required maxlength="128" :disabled="otpRequested" />
                         <span class="char-counter">{{ form.confirmPassword.length }}/128</span>
                         <p v-if="showPasswordMismatch" class="error-message">
                             Passwords do not match.
                         </p>
                     </div>
+
+                    <!-- OTP Input (shown after OTP is requested) -->
+                    <div v-if="otpRequested" class="input-with-counter">
+                        <label class="input-label">Verification Code (OTP)</label>
+                        <input 
+                            type="text" 
+                            v-model="form.otp" 
+                            placeholder="Enter 6-digit code from email" 
+                            required 
+                            maxlength="6"
+                            pattern="[0-9]{6}"
+                            class="otp-input"
+                        />
+                        <p class="otp-info">
+                            A verification code has been sent to your email. Please enter it above.
+                        </p>
+                        <button type="button" @click="resendOTP" class="resend-otp-btn" :disabled="resendCooldown > 0">
+                            {{ resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP' }}
+                        </button>
+                    </div>
                     
-                    <button type="submit" class="save-btn">Change Password</button>
+                    <button type="submit" class="save-btn" :disabled="isLoading">
+                        {{ isLoading ? 'Processing...' : 'Save Password' }}
+                    </button>
                 </form>
             </div>
         </main>
@@ -222,7 +244,13 @@ const form = ref({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
+    otp: "",
 });
+
+// OTP state
+const otpRequested = ref(false);
+const isLoading = ref(false);
+const resendCooldown = ref(0);
 
 // Sidebar state
 const isSidebarOpen = ref(true);
@@ -264,8 +292,8 @@ const organizationStatusClass = computed(() => {
     return isOrganizationVerified.value ? "org-status-verified" : "org-status-unverified";
 });
 
-// Change password
-const changePassword = async () => {
+// Request OTP
+const requestOTP = async () => {
     const token = localStorage.getItem("token");
 
     if (!token) {
@@ -286,6 +314,85 @@ const changePassword = async () => {
         return;
     }
 
+    isLoading.value = true;
+
+    try {
+        const response = await axios.post(
+            import.meta.env.VITE_API_BASE_URL + "/organization/change-password/request-otp",
+            {
+                currentPassword: form.value.currentPassword,
+            },
+            {
+                headers: { 
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                }
+            }
+        );
+
+        if (response.data.message) {
+            showToast("Verification code sent to your email. Please check your inbox.", "success");
+            otpRequested.value = true;
+            startResendCooldown();
+        }
+
+    } catch (error) {
+        console.error("Error requesting OTP:", error);
+        const errorMessage = error.response?.data?.message || "Failed to request verification code. Please try again.";
+        showToast(errorMessage, "error");
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+// Resend OTP
+const resendOTP = async () => {
+    if (resendCooldown.value > 0) return;
+    
+    await requestOTP();
+};
+
+// Start resend cooldown timer
+const startResendCooldown = () => {
+    resendCooldown.value = 60; // 60 seconds cooldown
+    const interval = setInterval(() => {
+        resendCooldown.value--;
+        if (resendCooldown.value <= 0) {
+            clearInterval(interval);
+        }
+    }, 1000);
+};
+
+// Change password with OTP
+const changePassword = async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+        showToast("Please log in again.", "error");
+        router.push({ name: "OrgLogin" });
+        return;
+    }
+
+    // Validate OTP format
+    if (!form.value.otp || form.value.otp.length !== 6 || !/^\d{6}$/.test(form.value.otp)) {
+        showToast("Please enter a valid 6-digit verification code.", "error");
+        return;
+    }
+
+    // Validate passwords match
+    if (form.value.newPassword !== form.value.confirmPassword) {
+        showToast("New password and confirmation do not match.", "error");
+        return;
+    }
+
+    // Validate password length
+    if (form.value.newPassword.length < 8) {
+        showToast("New password must be at least 8 characters long.", "error");
+        return;
+    }
+
+    isLoading.value = true;
+
     try {
         const response = await axios.post(
             import.meta.env.VITE_API_BASE_URL + "/organization/change-password",
@@ -293,6 +400,7 @@ const changePassword = async () => {
                 currentPassword: form.value.currentPassword,
                 newPassword: form.value.newPassword,
                 newPassword_confirmation: form.value.confirmPassword,
+                otp: form.value.otp,
             },
             {
                 headers: { 
@@ -304,16 +412,21 @@ const changePassword = async () => {
 
         if (response.data.message) {
             showToast("Password changed successfully!", "success");
-            // Clear form
+            // Clear form and reset state
             form.value.currentPassword = "";
             form.value.newPassword = "";
             form.value.confirmPassword = "";
+            form.value.otp = "";
+            otpRequested.value = false;
+            resendCooldown.value = 0;
         }
 
     } catch (error) {
         console.error("Error changing password:", error);
-        const errorMessage = error.response?.data?.message || "Failed to change password. Please check your current password and try again.";
+        const errorMessage = error.response?.data?.message || "Failed to change password. Please check your verification code and try again.";
         showToast(errorMessage, "error");
+    } finally {
+        isLoading.value = false;
     }
 };
 
@@ -643,30 +756,38 @@ const logout = () => {
     margin-bottom: 20px;
 }
 
-.input-group {
+.input-with-counter {
+    position: relative;
+    width: 100%;
     margin-bottom: 15px;
-    display: flex;
-    flex-direction: column;
 }
 
-.input-group label {
-    color: #374151;
-    font-weight: 600;
-    margin-bottom: 5px;
-}
-
-.input-group input {
+.input-with-counter input {
     background: white;
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 6px;
+    margin-bottom: 0;
+    width: 100%;
+}
+
+.input-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+    text-align: left;
 }
 
 .char-counter {
     font-size: 12px;
     color: #6b7280;
     text-align: right;
-    margin-top: 4px;
+    margin-top: 0;
+    display: block;
+    line-height: 1.2;
+    background: transparent;
 }
 
 .error-message {
@@ -688,6 +809,47 @@ const logout = () => {
 
 .save-btn:hover {
     background: #3b4960;
+}
+
+.save-btn:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+.otp-input {
+    font-size: 24px;
+    letter-spacing: 8px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.otp-info {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin-top: 8px;
+    text-align: center;
+}
+
+.resend-otp-btn {
+    width: 100%;
+    padding: 8px;
+    background: transparent;
+    border: 1px solid #44576D;
+    color: #44576D;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+.resend-otp-btn:hover:not(:disabled) {
+    background: #f0f0f0;
+}
+
+.resend-otp-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 </style>
 

@@ -67,6 +67,10 @@ class Applicant extends Model
 		'api_token',
 		'email_verification_token',
 		'email_verified_at',
+		'password_reset_token',
+		'password_reset_expires_at',
+		'password_change_otp',
+		'password_change_otp_expires_at',
 	];
 
 	/**

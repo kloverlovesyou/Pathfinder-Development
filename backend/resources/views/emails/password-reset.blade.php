@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Verification</title>
+    <title>Password Reset</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -67,18 +67,18 @@
         <div class="content">
             <p>Hello {{ $userName }},</p>
             
-            <p>Thank you for registering with Pathfinder! Please verify your email address by clicking the button below:</p>
+            <p>We received a request to reset your password for your Pathfinder account. Click the button below to reset your password:</p>
             
             <div style="text-align: center;">
-                <a href="{{ $verificationUrl }}" class="button">Verify Email Address</a>
+                <a href="{{ $resetUrl }}" class="button">Reset Password</a>
             </div>
             
             <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-            <p class="link">{{ $verificationUrl }}</p>
+            <p class="link">{{ $resetUrl }}</p>
             
-            <p>This verification link will expire in 24 hours.</p>
+            <p>This password reset link will expire in 1 hour.</p>
             
-            <p>If you didn't create an account with Pathfinder, please ignore this email.</p>
+            <p>If you didn't request a password reset, please ignore this email. Your password will remain unchanged.</p>
         </div>
         
         <div class="footer">

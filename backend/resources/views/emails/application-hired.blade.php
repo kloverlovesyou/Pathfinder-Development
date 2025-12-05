@@ -134,6 +134,7 @@
         
         <div class="footer">
             <p>&copy; {{ date('Y') }} Pathfinder. All rights reserved.</p>
+            <p style="margin-top: 10px; color: #999; font-size: 11px;">This is a no-reply email. Please do not reply to this message.</p>
         </div>
     </div>
 </body>

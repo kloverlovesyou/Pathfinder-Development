@@ -61,13 +61,6 @@
         .schedule-value {
             color: #333;
         }
-        .custom-message {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #fff;
-            border-left: 3px solid #44576D;
-            white-space: pre-wrap;
-        }
         .footer {
             text-align: center;
             color: #666;
@@ -125,12 +118,6 @@
                 @endif
             </div>
             
-            @if($customBody)
-            <div class="custom-message">
-                {{ $customBody }}
-            </div>
-            @endif
-            
             <p>Please confirm your attendance and let us know if you have any questions or need to reschedule.</p>
             
             <p>We look forward to meeting you!</p>
@@ -140,6 +127,7 @@
         
         <div class="footer">
             <p>&copy; {{ date('Y') }} Pathfinder. All rights reserved.</p>
+            <p style="margin-top: 10px; color: #999; font-size: 11px;">This is a no-reply email. Please do not reply to this message.</p>
         </div>
     </div>
 </body>

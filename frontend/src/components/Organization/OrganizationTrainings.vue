@@ -135,178 +135,137 @@
         </div>
       </header>
 
-      <!-- 🔥 GLOBAL LOADING WRAPPER -->
-          <div>
-      <div v-if="isLoading" class="flex flex-col items-center justify-center py-16">
-        <!-- Loader SVG -->
-        <svg
-          class="animate-spin h-12 w-12 text-blue-600"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            class="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            stroke-width="4"
-          ></circle>
-          <path
-            class="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8v8H4z"
-          ></path>
-        </svg>
-      </div>
+      <!-- ✅ GLOBAL SEARCH -->
+      <section class="global-search-section">
+        <div class="flex justify-center my-6 px-4">
+          <div class="relative w-full sm:w-3/4 md:w-1/2 lg:w-1/3">
+            <input type="text" v-model="globalSearchQuery" placeholder="Search trainings..."
+              class="global-search-bar text-black px-4 py-2 border rounded-lg w-full" />
+          </div>
+        </div>
+      </section>
 
-      <div v-else>
-        <!-- ✅ GLOBAL SEARCH -->
-        <section class="global-search-section">
-          <div class="flex justify-center my-6 px-4">
-            <div class="relative w-full sm:w-3/4 md:w-1/2 lg:w-1/3">
-              <input type="text" v-model="globalSearchQuery" placeholder="Search trainings..."
-                class="global-search-bar text-black px-4 py-2 border rounded-lg w-full" maxlength="100" />
-              <span class="char-counter-search">{{ (globalSearchQuery || '').length }}/100</span>
+      <!-- ✅ Upcoming Trainings Section -->
+      <section class="upcoming">
+        <div class="flex items-center justify-between">
+          <h2 class="section-title flex items-center gap-1">
+            Upcoming Trainings
+            <span class="count-badge">{{ sortedUpcomingTrainings.length }}</span>
+          </h2>
+
+          <button class="plus-btn-text" @click="openTrainingPopup()" :disabled="!isOrganizationVerified" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">+</button>
+        </div>
+
+        <!-- ✅ Grid Layout -->
+        <div class="trainings-grid">
+          <div v-for="training in visibleFilteredUpcoming" :key="training.trainingID" class="training-card"
+            @click="openTrainingDetails(training)">
+            <div class="training-right" @click="openTrainingDetails(training)">
+              <h3 class="training-title">{{ training.title }}</h3>
+              <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
+
+            </div>
+
+            <!-- Menu -->
+            <div class="menu">
+              <div class="menu-icon" @click.stop="toggleUpcomingMenu(training.trainingID)">
+                ⋮
+              </div>
+              <div v-if="openUpcomingMenu === training.trainingID" class="dropdown-menu" @click.stop>
+                <ul>
+                  <li @click="deleteTraining(training.trainingID)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Delete Training</li>
+                  <li @click="updateTraining(training.trainingID)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Update Training</li>
+                </ul>
+              </div>
             </div>
           </div>
-        </section>
-
-      <!-- 🔹 Trainings Wrapper -->
-      <div class="trainings-wrapper relative">
-          <!-- Upcoming Trainings -->
-          <section class="upcoming">
-            <div class="flex items-center justify-between">
-              <h2 class="section-title flex items-center gap-1">
-                Upcoming Trainings
-                <span class="count-badge">{{ sortedUpcomingTrainings.length }}</span>
-              </h2>
-              <button class="plus-btn-text" @click="openTrainingPopup()" :disabled="!isOrganizationVerified"
-                :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">+</button>
-            </div>
-
-            <div class="trainings-grid">
-              <div v-for="training in visibleFilteredUpcoming" :key="training.trainingID" class="training-card"
-                @click="openTrainingDetails(training)">
-                <div class="training-right">
-                  <h3 class="training-title">{{ training.title }}</h3>
-                  <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
-                </div>
-
-                <!-- Menu -->
-                <div class="menu">
-                  <div class="menu-icon" @click.stop="toggleUpcomingMenu(training.trainingID)">⋮</div>
-                  <div v-if="openUpcomingMenu === training.trainingID" class="dropdown-menu" @click.stop>
-                    <ul>
-                      <li @click="deleteTraining(training.trainingID)"
-                          :class="{ 'disabled-action': !isOrganizationVerified }"
-                          :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
-                        Delete Training
-                      </li>
-                      <li @click="updateTraining(training.trainingID)"
-                          :class="{ 'disabled-action': !isOrganizationVerified }"
-                          :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
-                        Update Training
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <button v-if="sortedUpcomingTrainings.length > 4" class="show-more-btn"
-              @click="showAllUpcoming = !showAllUpcoming">
-              {{ showAllUpcoming ? 'Show Less' : 'Show More' }}
-            </button>
-          </section>
-
-          <!-- Ongoing Trainings -->
-          <section class="ongoing mt-8">
-            <div class="flex items-center justify-between">
-              <h2 class="section-title flex items-center gap-1">
-                On-going Trainings
-                <span class="count-badge">{{ sortedOngoingTrainings.length }}</span>
-              </h2>
-            </div>
-
-            <div class="trainings-grid">
-              <div v-for="training in visibleFilteredOngoing" :key="training.trainingID" class="training-card"
-                @click="openTrainingDetails(training)">
-                <div class="training-right">
-                  <h3 class="training-title">{{ training.title }}</h3>
-                  <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
-                  <span v-if="isTrainingOngoing(training)" class="badge-ongoing">Ongoing</span>
-                </div>
-
-                <!-- Menu -->
-                <div class="menu">
-                  <div class="menu-icon" @click.stop="toggleOngoingMenu(training.trainingID)">⋮</div>
-                  <div v-if="openOngoingMenu === training.trainingID" class="dropdown-menu" @click.stop>
-                    <ul>
-                      <li @click="deleteTraining(training.trainingID)"
-                          :class="{ 'disabled-action': !isOrganizationVerified }"
-                          :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
-                        Delete Training
-                      </li>
-                      <li @click="updateTraining(training.trainingID)"
-                          :class="{ 'disabled-action': !isOrganizationVerified }"
-                          :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
-                        Update Training
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <button v-if="sortedOngoingTrainings.length > 4" class="show-more-btn"
-              @click="showAllOngoing = !showAllOngoing">
-              {{ showAllOngoing ? 'Show Less' : 'Show More' }}
-            </button>
-          </section>
-
-          <!-- Completed Trainings -->
-          <section class="completed mt-8">
-            <div class="flex items-center justify-between">
-              <h2 class="section-title flex items-center gap-1">
-                Conducted Trainings
-                <span class="count-badge">{{ sortedCompletedTrainings.length }}</span>
-              </h2>
-            </div>
-
-            <div class="trainings-grid">
-              <div v-for="training in visibleFilteredCompleted" :key="training.trainingID" class="training-card"
-                @click="openTrainingDetails(training)">
-                <div class="training-right">
-                  <h3 class="training-title">{{ training.title }}</h3>
-                  <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
-                </div>
-
-                <!-- Menu -->
-                <div class="menu">
-                  <div class="menu-icon" @click.stop="toggleCompletedMenu(training.trainingID)">⋮</div>
-                  <div v-if="openCompletedMenu === training.trainingID" class="dropdown-menu" @click.stop>
-                    <ul>
-                      <li @click="deleteTraining(training.trainingID)"
-                          :class="{ 'disabled-action': !isOrganizationVerified }"
-                          :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">
-                        Delete Training
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <button v-if="sortedCompletedTrainings.length > 4" class="show-more-btn"
-              @click="showAllCompleted = !showAllCompleted">
-              {{ showAllCompleted ? 'Show Less' : 'Show More' }}
-            </button>
-          </section>
         </div>
-  </div>
-      </div>
+
+        <!-- Show More Button -->
+        <button v-if="sortedUpcomingTrainings.length > 4" class="show-more-btn"
+          @click="showAllUpcoming = !showAllUpcoming">
+          {{ showAllUpcoming ? 'Show Less' : 'Show More' }}
+        </button>
+      </section>
+
+      <!-- ✅ On-going Trainings Section -->
+      <section class="ongoing">
+        <div class="flex items-center justify-between">
+          <h2 class="section-title flex items-center gap-1">
+            On-going Trainings
+            <span class="count-badge">{{ sortedOngoingTrainings.length }}</span>
+          </h2>
+        </div>
+
+        <!-- ✅ Grid Layout -->
+        <div class="trainings-grid">
+          <div v-for="training in visibleFilteredOngoing" :key="training.trainingID" class="training-card"
+            @click="openTrainingDetails(training)">
+            <div class="training-right" @click="openTrainingDetails(training)">
+              <h3 class="training-title">{{ training.title }}</h3>
+              <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
+            </div>
+
+            <!-- Menu -->
+            <div class="menu">
+              <div class="menu-icon" @click.stop="toggleOngoingMenu(training.trainingID)">
+                ⋮
+              </div>
+              <div v-if="openOngoingMenu === training.trainingID" class="dropdown-menu" @click.stop>
+                <ul>
+                  <li @click="deleteTraining(training.trainingID)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Delete Training</li>
+                  <li @click="updateTraining(training.trainingID)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Update Training</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Show More Button -->
+        <button v-if="sortedOngoingTrainings.length > 4" class="show-more-btn"
+          @click="showAllOngoing = !showAllOngoing">
+          {{ showAllOngoing ? 'Show Less' : 'Show More' }}
+        </button>
+      </section>
+
+      <!-- ✅ Conducted Trainings Section -->
+      <section class="completed">
+        <div class="flex items-center justify-between">
+          <h2 class="section-title flex items-center gap-1">
+            Conducted Trainings
+            <span class="count-badge">{{ sortedCompletedTrainings.length }}</span>
+          </h2>
+        </div>
+
+        <!-- ✅ Grid Layout -->
+        <div class="trainings-grid">
+          <div v-for="training in visibleFilteredCompleted" :key="training.trainingID" class="training-card"
+            @click="openTrainingDetails(training)">
+            <div class="training-right" @click="openTrainingDetails(training)">
+              <h3 class="training-title">{{ training.title }}</h3>
+              <p class="training-date">{{ formatSchedule(training.schedule) }}</p>
+            </div>
+
+            <!-- Menu -->
+            <div class="menu">
+              <div class="menu-icon" @click.stop="toggleCompletedMenu(training.trainingID)">
+                ⋮
+              </div>
+              <div v-if="openCompletedMenu === training.trainingID" class="dropdown-menu" @click.stop>
+                <ul>
+                  <li @click="deleteTraining(training.trainingID)" :class="{ 'disabled-action': !isOrganizationVerified }" :title="!isOrganizationVerified ? 'Your organization account is not yet verified by the admin.' : ''">Delete Training</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Show More Button -->
+        <button v-if="sortedCompletedTrainings.length > 4" class="show-more-btn"
+          @click="showAllCompleted = !showAllCompleted">
+          {{ showAllCompleted ? 'Show Less' : 'Show More' }}
+        </button>
+      </section>
 
       <!-- All Trainings section removed as requested -->
 
@@ -681,10 +640,12 @@
           <!-- Form -->
           <form @submit.prevent="saveTraining" class="training-popup-form">
             <div class="input-with-counter">
+              <label class="input-label">Title</label>
               <input v-model="newTraining.title" type="text" placeholder="Title" class="training-input" maxlength="100" />
               <span class="char-counter">{{ (newTraining.title || '').length }}/100</span>
             </div>
             <div class="input-with-counter">
+              <label class="input-label">Description</label>
               <textarea v-model="newTraining.description" placeholder="Description" class="training-input" maxlength="1000"></textarea>
               <span class="char-counter">{{ (newTraining.description || '').length }}/1000</span>
             </div>
@@ -692,7 +653,7 @@
 
             <!-- Schedule - Multiple Dates -->
             <div class="popup-form-group schedule-group">
-              <label for="schedule">Select Dates</label>
+              <label for="schedule" class="input-label">Select Dates</label>
               <div class="schedule-input-wrapper">
                 <!-- Date input with calendar icon for adding dates -->
                 <div class="date-input-wrapper">
@@ -778,12 +739,14 @@
 
                     <!-- Conditional fields based on mode -->
                     <div v-if="schedule.mode === 'On-Site'" class="input-with-counter">
+                      <label class="input-label">Location</label>
                       <input v-model="schedule.location" type="text"
                         placeholder="Location" class="training-input" maxlength="100" />
                       <span class="char-counter">{{ (schedule.location || '').length }}/100</span>
                     </div>
 
                     <div v-else-if="schedule.mode === 'Online'" class="input-with-counter">
+                      <label class="input-label">Training Link</label>
                       <input v-model="schedule.trainingLink" type="url"
                         placeholder="Training Link" class="training-input" maxlength="100" />
                       <span class="char-counter">{{ (schedule.trainingLink || '').length }}/100</span>
@@ -794,10 +757,10 @@
             </div>
 
             <!-- Tag selection -->
-            <div class="relative mb-4">
-              <label class="block font-semibold text-gray-600 mb-2">Tags</label>
+            <div class="relative tag-section-wrapper">
               <!-- Search/Input for New Tag -->
-              <div class="input-with-counter mb-2">
+              <div class="input-with-counter">
+                <label class="input-label">Search or Add Tag</label>
                 <input v-model="newTagName" type="text" placeholder="Search or type a new tag..."
                   class="training-input" maxlength="50" />
                 <span class="char-counter">{{ (newTagName || '').length }}/50</span>
@@ -868,6 +831,31 @@
           </div>
         </div>
       </div>
+
+      <!-- Certificate View Modal -->
+      <div v-if="showCertificateModal" class="certificate-view-modal-overlay" @click.self="closeCertificateModal">
+        <div class="certificate-view-modal">
+          <button class="certificate-view-modal-close" @click="closeCertificateModal">✕</button>
+          
+          <div class="certificate-view-modal-content">
+            <h2 class="certificate-view-modal-title">Certificate</h2>
+            
+            <div class="certificate-image-wrapper">
+              <img 
+                v-if="certificateImageUrl" 
+                :src="certificateImageUrl" 
+                alt="Certificate" 
+                class="certificate-image"
+                @error="handleCertificateImageError"
+              />
+              <div v-else class="certificate-loading">
+                <p>Loading certificate...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="fixed top-5 right-5 space-y-2 z-50">
         <div
           v-for="toast in toasts"
@@ -965,6 +953,121 @@ async function convertPDFToImage(pdfBlobOrArrayBuffer) {
   }
 }
 
+// Helper function to generate styled certificate with decorative design
+function generateStyledCertificate(doc, personName, trainingTitle, trackingID, dateIssued) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  
+  // Color palette from tailwind.config.js
+  const colors = {
+    darkSlate: [68, 87, 109],      // #44576D
+    customBlue: [89, 112, 140],     // #59708C
+    customDarkBlue: [65, 83, 103],  // #415367
+    customButton: [102, 130, 163],  // #6682A3
+    black: [0, 0, 0],
+    white: [255, 255, 255]
+  };
+
+  // Set white background
+  doc.setFillColor(...colors.white);
+  doc.rect(0, 0, pageWidth, pageHeight, 'F');
+
+  // Draw border (thin black line)
+  const borderMargin = 20;
+  doc.setDrawColor(...colors.black);
+  doc.setLineWidth(1);
+  doc.rect(borderMargin, borderMargin, pageWidth - 2 * borderMargin, pageHeight - 2 * borderMargin);
+
+  // Draw decorative corner elements
+  const cornerSize = 80;
+  const cornerOffset = borderMargin + 10;
+
+  // Top-left corner - solid geometric shapes
+  doc.setFillColor(...colors.customBlue);
+  doc.rect(cornerOffset, cornerOffset, 30, 20, 'F');
+  doc.setFillColor(...colors.customDarkBlue);
+  doc.rect(cornerOffset + 5, cornerOffset + 15, 25, 15, 'F');
+  doc.setFillColor(...colors.customButton);
+  doc.rect(cornerOffset + 10, cornerOffset + 25, 20, 12, 'F');
+  
+  // Top-right corner - interconnected geometric pattern
+  doc.setFillColor(...colors.customBlue);
+  doc.rect(pageWidth - cornerOffset - 40, cornerOffset, 15, 15, 'F');
+  doc.setFillColor(...colors.customDarkBlue);
+  doc.rect(pageWidth - cornerOffset - 25, cornerOffset + 10, 15, 15, 'F');
+  doc.setFillColor(...colors.customButton);
+  doc.rect(pageWidth - cornerOffset - 35, cornerOffset + 20, 20, 12, 'F');
+  doc.setFillColor(...colors.customBlue);
+  doc.rect(pageWidth - cornerOffset - 20, cornerOffset + 25, 12, 12, 'F');
+  
+  // Bottom-left corner - interconnected geometric pattern
+  doc.setFillColor(...colors.customBlue);
+  doc.rect(cornerOffset, pageHeight - cornerOffset - 40, 15, 15, 'F');
+  doc.setFillColor(...colors.customDarkBlue);
+  doc.rect(cornerOffset + 10, pageHeight - cornerOffset - 25, 15, 15, 'F');
+  doc.setFillColor(...colors.customButton);
+  doc.rect(cornerOffset + 5, pageHeight - cornerOffset - 35, 20, 12, 'F');
+  doc.setFillColor(...colors.customBlue);
+  doc.rect(cornerOffset + 20, pageHeight - cornerOffset - 20, 12, 12, 'F');
+  
+  // Bottom-right corner - solid geometric shapes
+  doc.setFillColor(...colors.customBlue);
+  doc.rect(pageWidth - cornerOffset - 30, pageHeight - cornerOffset - 20, 30, 20, 'F');
+  doc.setFillColor(...colors.customDarkBlue);
+  doc.rect(pageWidth - cornerOffset - 25, pageHeight - cornerOffset - 35, 25, 15, 'F');
+  doc.setFillColor(...colors.customButton);
+  doc.rect(pageWidth - cornerOffset - 20, pageHeight - cornerOffset - 48, 20, 12, 'F');
+
+  // Header: "CERTIFICATE" in large, bold, dark blue
+  doc.setTextColor(...colors.customDarkBlue);
+  doc.setFontSize(36);
+  doc.setFont("helvetica", "bold");
+  doc.text("CERTIFICATE", pageWidth / 2, 120, null, null, "center");
+
+  // Subtitle: "OF COMPLETION" in smaller, custom blue
+  doc.setTextColor(...colors.customBlue);
+  doc.setFontSize(20);
+  doc.setFont("helvetica", "normal");
+  doc.text("OF COMPLETION", pageWidth / 2, 150, null, null, "center");
+
+  // "This is to certify that" in small, dark gray
+  doc.setTextColor(...colors.darkSlate);
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "normal");
+  doc.text("THIS IS TO CERTIFY THAT", pageWidth / 2, 220, null, null, "center");
+
+  // Recipient name in large, bold, black (simulating script font with italic)
+  doc.setTextColor(...colors.black);
+  doc.setFontSize(32);
+  doc.setFont("helvetica", "bolditalic");
+  doc.text(personName, pageWidth / 2, 270, null, null, "center");
+
+  // Training completion text in custom blue
+  doc.setTextColor(...colors.customBlue);
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "normal");
+  const trainingText = `has completed the training: ${trainingTitle}`;
+  doc.text(trainingText, pageWidth / 2, 320, null, null, "center");
+
+  // Certificate Tracking ID and Date in dark slate
+  doc.setTextColor(...colors.darkSlate);
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Certificate Tracking ID: ${trackingID}`, pageWidth / 2, 360, null, null, "center");
+  doc.text(`Date Issued: ${dateIssued}`, pageWidth / 2, 380, null, null, "center");
+
+  // Signature line area (optional - can be customized)
+  const signatureY = pageHeight - 100;
+  doc.setDrawColor(...colors.darkSlate);
+  doc.setLineWidth(0.5);
+  // Dotted line for signature (simulated with small dashes)
+  for (let x = pageWidth / 2 - 60; x < pageWidth / 2 + 60; x += 3) {
+    doc.line(x, signatureY, x + 1.5, signatureY);
+  }
+
+  return doc;
+}
+
 
 export default {
   components: { QrcodeVue }, // ✅ register component
@@ -989,9 +1092,7 @@ export default {
       qrExpiresAt: null,
       activeTrainingId: null, // which training shows the QR
       selectAll: false,
-      isLoading: false, // ✅ loading state
-      isOngoingLoading: false, // ✅ loading state for ongoing trainings
-      
+
       showBulkCertModal: false,
       certificateData: {
         certTrackingID: '',
@@ -1019,6 +1120,8 @@ export default {
       selectedTraining: {},
       showQRModal: false,
       activeScheduleForQR: null, // Store which schedule has active QR
+      showCertificateModal: false,
+      certificateImageUrl: null,
 
       registrantsList: [], // removed hardcoded list, fetch from DB
       registrantsLoading: false,
@@ -1060,20 +1163,37 @@ export default {
 
   methods: {
 
-    viewCertificate(certificatePath) {
-      if (!certificatePath) {
+    viewCertificate(certificatePathOrUrl) {
+      if (!certificatePathOrUrl) {
         showToast("Certificate not found.", "error");
         return;
       }
 
-      // Get public URL from Supabase
-      const publicUrl = getPDFUrl(certificatePath);
-      if (!publicUrl) {
-        showToast("Unable to generate certificate URL.", "error");
-        return;
+      // Check if it's already a full URL (starts with http:// or https://)
+      let publicUrl = certificatePathOrUrl;
+      if (!certificatePathOrUrl.startsWith('http://') && !certificatePathOrUrl.startsWith('https://')) {
+        // It's a file path, convert it to a URL
+        publicUrl = getPDFUrl(certificatePathOrUrl);
+        if (!publicUrl) {
+          showToast("Unable to generate certificate URL.", "error");
+          return;
+        }
       }
 
-      window.open(publicUrl, "_blank"); // Open in new tab
+      // Open modal instead of new tab
+      this.certificateImageUrl = publicUrl;
+      this.showCertificateModal = true;
+    },
+
+    closeCertificateModal() {
+      this.showCertificateModal = false;
+      this.certificateImageUrl = null;
+    },
+
+    handleCertificateImageError(event) {
+      console.error("Error loading certificate image:", event);
+      showToast("Failed to load certificate image.", "error");
+      this.closeCertificateModal();
     },
 
     handleIssueCertificate(person) {
@@ -1099,23 +1219,13 @@ export default {
         const givenDate = new Date().toISOString().split("T")[0];
 
         const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-
-        const lines = [
-          { text: "Certificate of Completion", size: 28 },
-          { text: `This is to certify that ${person.name}`, size: 22 },
-          { text: `has completed the training: ${this.selectedTraining.title}`, size: 18 },
-          { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
-          { text: `Date Issued: ${givenDate}`, size: 14 }
-        ];
-
-        let startY = (pageHeight - lines.reduce((sum, line) => sum + line.size + 10, 0)) / 2;
-        lines.forEach(line => {
-          doc.setFontSize(line.size);
-          doc.text(line.text, pageWidth / 2, startY, null, null, "center");
-          startY += line.size + 10;
-        });
+        generateStyledCertificate(
+          doc,
+          person.name,
+          this.selectedTraining.title,
+          person.id,
+          givenDate
+        );
 
         const pdfBlob = doc.output("blob");
         const safeName = person.name.replace(/[/\\?%*:|"<>]/g, "_");
@@ -1178,23 +1288,13 @@ export default {
         // Issue certificates one by one (backend converts PDF to image)
         for (const person of selectedRegistrants) {
           const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-          const pageWidth = doc.internal.pageSize.getWidth();
-          const pageHeight = doc.internal.pageSize.getHeight();
-
-          const lines = [
-            { text: "Certificate of Completion", size: 28 },
-            { text: `This is to certify that ${person.name}`, size: 22 },
-            { text: `has completed the training: ${this.selectedTraining.title}`, size: 18 },
-            { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
-            { text: `Date Issued: ${givenDate}`, size: 14 }
-          ];
-
-          let startY = (pageHeight - lines.reduce((sum, line) => sum + line.size + 10, 0)) / 2;
-          lines.forEach(line => {
-            doc.setFontSize(line.size);
-            doc.text(line.text, pageWidth / 2, startY, null, null, "center");
-            startY += line.size + 10;
-          });
+          generateStyledCertificate(
+            doc,
+            person.name,
+            this.selectedTraining.title,
+            person.id,
+            givenDate
+          );
 
           const pdfBlob = doc.output("blob");
 
@@ -1240,23 +1340,13 @@ export default {
         // Issue certificates one by one (backend converts PDF to image)
         for (const person of selectedPeople) {
           const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-          const pageWidth = doc.internal.pageSize.getWidth();
-          const pageHeight = doc.internal.pageSize.getHeight();
-
-          const lines = [
-            { text: "Certificate of Completion", size: 28 },
-            { text: `This is to certify that ${person.name}`, size: 22 },
-            { text: `has completed the training: ${this.selectedTraining.title}`, size: 18 },
-            { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
-            { text: `Date Issued: ${certGivenDate}`, size: 14 }
-          ];
-
-          let startY = (pageHeight - lines.reduce((sum, line) => sum + line.size + 10, 0)) / 2;
-          lines.forEach(line => {
-            doc.setFontSize(line.size);
-            doc.text(line.text, pageWidth / 2, startY, null, null, "center");
-            startY += line.size + 10;
-          });
+          generateStyledCertificate(
+            doc,
+            person.name,
+            this.selectedTraining.title,
+            person.id,
+            certGivenDate
+          );
 
           const pdfBlob = doc.output("blob");
 
@@ -1617,24 +1707,13 @@ export default {
 
         // Generate PDF
         const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-
-        const lines = [
-          { text: "Certificate of Completion", size: 28 },
-          { text: `This is to certify that ${person.name}`, size: 22 },
-          { text: `has completed the training: ${this.selectedTraining.title}`, size: 18 },
-          { text: `Certificate Tracking ID: ${person.id}`, size: 14 },
-          { text: `Date Issued: ${givenDate}`, size: 14 }
-        ];
-
-        let startY = (pageHeight - lines.reduce((sum, l) => sum + l.size + 10, 0)) / 2;
-
-        lines.forEach(line => {
-          doc.setFontSize(line.size);
-          doc.text(line.text, pageWidth / 2, startY, null, null, "center");
-          startY += line.size + 10;
-        });
+        generateStyledCertificate(
+          doc,
+          person.name,
+          this.selectedTraining.title,
+          person.id,
+          givenDate
+        );
 
         const pdfBlob = doc.output("blob");
         const safeName = person.name.replace(/[/\\?%*:|"<>]/g, "_");
@@ -1797,46 +1876,47 @@ export default {
       }
     },
 
-async fetchTrainings() {
-    this.isLoading = true; // start loading
-    try {
-      const storedUser = localStorage.getItem("user");
-      const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-      const organizationID = parsedUser?.organizationID ?? parsedUser?.organization?.organizationID ?? null;
-
-      let newTrainings = [];
+    async fetchTrainings() {
       try {
-        const { data } = await api.get("/organization/trainings");
-        newTrainings = data;
-      } catch (err) {
-        console.warn("Org trainings endpoint unavailable, falling back:", err?.response?.status);
         const storedUser = localStorage.getItem("user");
         const parsedUser = storedUser ? JSON.parse(storedUser) : null;
         const organizationID = parsedUser?.organizationID ?? parsedUser?.organization?.organizationID ?? null;
 
-        const { data } = await api.get("/trainings", {
-          params: organizationID ? { organizationID } : {},
+        let newTrainings = [];
+        try {
+          const { data } = await api.get("/organization/trainings");
+          newTrainings = data;
+        } catch (err) {
+          console.warn("Org trainings endpoint unavailable, falling back:", err?.response?.status);
+          const storedUser = localStorage.getItem("user");
+          const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+          const organizationID = parsedUser?.organizationID ?? parsedUser?.organization?.organizationID ?? null;
+
+          const { data } = await api.get("/trainings", {
+            params: organizationID ? { organizationID } : {},
+          });
+          newTrainings = data;
+        }
+
+        const normalizedList = Array.isArray(newTrainings) ? newTrainings : [];
+
+        // Rebuild local list from fresh API data so UI always reflects latest trainings
+        this.upcomingtrainings = [];
+
+        normalizedList.forEach(training => {
+          const normalizedTraining = {
+            ...training
+          };
+
+          this.upcomingtrainings.push(normalizedTraining);
+
+          // ✅ Schedule QR using composable
+          scheduleQR(training);
         });
-        newTrainings = data;
+      } catch (error) {
+        console.error("Error fetching trainings:", error);
       }
-
-      const normalizedList = Array.isArray(newTrainings) ? newTrainings : [];
-
-      // Rebuild local list from fresh API data
-      this.upcomingtrainings = [];
-      normalizedList.forEach(training => {
-        const normalizedTraining = { ...training };
-        this.upcomingtrainings.push(normalizedTraining);
-
-        // ✅ Schedule QR using composable
-        scheduleQR(training);
-      });
-    } catch (error) {
-      console.error("Error fetching trainings:", error);
-    } finally {
-      this.isLoading = false; // stop loading
-    }
-  },
+    },
 
     async fetchAllTrainings() {
       try {
@@ -5069,12 +5149,36 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   margin-bottom: 15px;
 }
 
+.input-with-counter .training-input {
+  margin-bottom: 0;
+}
+
+.input-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+  text-align: left;
+}
+
+/* Form Group Spacing - Consistent spacing for all form elements */
+.popup-form-group,
+.schedule-group {
+  margin-bottom: 15px;
+}
+
+.tag-section-wrapper {
+  margin-bottom: 15px;
+}
+
 .char-counter {
   font-size: 12px;
   color: #6b7280;
   text-align: right;
-  margin-top: 4px;
+  margin-top: 0;
   display: block;
+  line-height: 1.2;
 }
 
 .char-counter-search {
@@ -5249,16 +5353,114 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   background-color: #1f2937;
 }
 
-.loader {
-  border: 4px solid rgba(0,0,0,0.1);
-  border-left-color: #4f46e5; /* Tailwind indigo-600 */
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 1s linear infinite;
+/* Certificate View Modal */
+.certificate-view-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.certificate-view-modal {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  width: min(95vw, 900px);
+  max-width: 900px;
+  max-height: 95vh;
+  position: relative;
+  animation: fadeIn 0.25s ease;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.certificate-view-modal-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.certificate-view-modal-close:hover {
+  background: #f3f4f6;
+  color: #000;
+  transform: scale(1.1);
+}
+
+.certificate-view-modal-content {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  overflow-y: auto;
+  max-height: calc(95vh - 4rem);
+}
+
+.certificate-view-modal-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+  text-align: center;
+  margin: 0;
+  padding-right: 2rem; /* Space for close button */
+}
+
+.certificate-image-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  padding: 1rem;
+  min-height: 400px;
+}
+
+.certificate-image {
+  max-width: 100%;
+  max-height: calc(95vh - 200px);
+  height: auto;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  object-fit: contain;
+}
+
+.certificate-loading {
+  padding: 3rem;
+  text-align: center;
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 </style>
