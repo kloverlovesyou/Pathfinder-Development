@@ -92,6 +92,10 @@ function handleClickOutside(event) {
   if (searchContainer.value && !searchContainer.value.contains(event.target)) {
     showDropdown.value = false;
   }
+  // Close mobile admin menu when clicking outside
+  if (showMobileAdminMenu.value && !event.target.closest('.mobile-admin-menu-container')) {
+    showMobileAdminMenu.value = false;
+  }
 }
 onMounted(() => document.addEventListener("click", handleClickOutside));
 onBeforeUnmount(() =>
@@ -160,8 +164,14 @@ function resetModals() {
 const isTrainingModalOpen = ref(false);
 const isCareerModalOpen = ref(false);
 const isOrgModalOpen = ref(false);
+const showMobileAdminMenu = ref(false);
 
 const selectedOrg = ref({});
+
+function logout() {
+  localStorage.removeItem("token");
+  window.location.href = "/login";
+}
 
 function closeTrainingModal() {
   isTrainingModalOpen.value = false;
@@ -508,15 +518,35 @@ async function handleResultClick(item) {
 </script>
 
 <template>
-  <div class="flex-grow flex items-center justify-between p-4">
-    <div class="flex items-center justify-between p-4 w-full">
+  <div class="flex-grow flex items-center justify-between">
+    <div class="flex items-center justify-between w-full">
       <!-- LEFT: Logo -->
       <button
-        class="text-xl font-bold font-poppins text-darkslategray whitespace-nowrap"
+        class="text-lg sm:text-xl md:text-2xl font-bold font-poppins text-darkslategray whitespace-nowrap flex-shrink-0"
         @click="$router.push({ name: 'Homepage' })"
       >
         Pathfinder
       </button>
+
+      <!-- Mobile Admin Menu Button -->
+      <div
+        v-if="
+          (route.path === '/admin' ||
+          route.path === '/admin/adminhomepage' ||
+          route.name === 'AdminUpdateDelete')
+        "
+        class="mobile-admin-menu-container sm:hidden"
+      >
+        <button
+          @click="showMobileAdminMenu = !showMobileAdminMenu"
+          class="p-2 text-dark-slate hover:bg-gray-100 rounded-lg transition-colors"
+          title="Menu"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
 
       <!-- CENTER: Admin Buttons (only on AdminHomePage) -->
       <div
@@ -525,7 +555,7 @@ async function handleResultClick(item) {
           route.path === '/admin/adminhomepage' ||
           route.name === 'AdminUpdateDelete'
         "
-        class="flex items-center justify-center gap-8 flex-grow font-poppins pt-4 pb-3"
+        class="hidden sm:flex items-center justify-center gap-4 md:gap-8 flex-grow font-poppins pt-4 pb-3"
       >
         <!-- Home Button -->
         <button
@@ -539,7 +569,7 @@ async function handleResultClick(item) {
           title="Account Verification"
         >
           <svg
-            class="w-8 h-8 mb-1"
+            class="w-6 h-6 sm:w-8 sm:h-8 mb-1"
             viewBox="0 0 24 24"
             fill="currentColor"
             xmlns="http://www.w3.org/2000/svg"
@@ -550,9 +580,9 @@ async function handleResultClick(item) {
             />
             <path
               d="M11.1 8H6.9C3.4 8 2 9.4 2 12.9V17.1C2 20.6 3.4 22 6.9 22H11.1C14.6 22 16 20.6 16 17.1V12.9C16 9.4 14.6 8 11.1 8ZM12.29 13.65L8.58 17.36C8.44 17.5 8.26 17.57 8.07 17.57C7.88 17.57 7.7 17.5 7.56 17.36L5.7 15.5C5.42 15.22 5.42 14.77 5.7 14.49C5.98 14.21 6.43 14.21 6.71 14.49L8.06 15.84L11.27 12.63C11.55 12.35 12 12.35 12.28 12.63C12.56 12.91 12.57 13.37 12.29 13.65Z"
-            />
+              />
           </svg>
-          <span class="text-xs">Account Verification</span>
+          <span class="text-[10px] sm:text-xs">Account Verification</span>
         </button>
 
         <!-- Account Settings Button -->
@@ -567,7 +597,7 @@ async function handleResultClick(item) {
           title="Account Settings"
         >
           <svg
-            class="w-8 h-8 mb-1"
+            class="w-6 h-6 sm:w-8 sm:h-8 mb-1"
             viewBox="0 0 24 24"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -577,7 +607,7 @@ async function handleResultClick(item) {
               fill="currentColor"
             />
           </svg>
-          <span class="text-xs">Account Setting</span>
+          <span class="text-[10px] sm:text-xs">Account Setting</span>
         </button>
       </div>
 
@@ -588,7 +618,7 @@ async function handleResultClick(item) {
           route.path === '/admin/adminhomepage' ||
           route.name === 'AdminUpdateDelete'
         "
-        class="absolute top-2 right-6"
+        class="flex-shrink-0 ml-2"
       >
         <button
           @click="logout"
@@ -601,7 +631,7 @@ async function handleResultClick(item) {
           title="Logout"
         >
           <svg
-            class="w-8 h-8 mb-1"
+            class="w-6 h-6 sm:w-8 sm:h-8 mb-1"
             viewBox="0 0 24 24"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -635,24 +665,24 @@ async function handleResultClick(item) {
               stroke-linejoin="round"
             />
           </svg>
-          <span class="text-xs">Logout</span>
+          <span class="text-[10px] sm:text-xs">Logout</span>
         </button>
       </div>
 
       <!-- RIGHT: Search bar (non-admin pages) -->
-      <div v-else class="flex justify-end w-full">
+      <div v-else class="flex justify-end w-full ml-2 sm:ml-4">
         <div
           ref="searchContainer"
-          class="relative w-full max-w-md ml-4 font-poppins"
+          class="relative w-full max-w-xs sm:max-w-md font-poppins"
         >
           <!-- Search Input -->
         <label
-          class="bg-white input w-full flex items-center gap-2 border-none rounded-full px-3 py-2 cursor-text relative"
+          class="bg-white input w-full flex items-center gap-1 sm:gap-2 border-none rounded-full px-2 sm:px-3 py-1.5 sm:py-2 cursor-text relative"
           @click="showDropdown = true"
         >
           <!-- Search Icon -->
           <svg
-            class="h-5 w-5 text-gray-500 flex-shrink-0"
+            class="h-4 w-4 sm:h-5 sm:w-5 text-gray-500 flex-shrink-0"
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
           >
@@ -666,7 +696,7 @@ async function handleResultClick(item) {
             type="search"
             placeholder="Search"
             v-model="searchInput"
-            class="flex-grow bg-transparent outline-none font-poppins"
+            class="flex-grow bg-transparent outline-none font-poppins text-sm sm:text-base"
             @focus="showDropdown = true"
           />
 
@@ -675,7 +705,7 @@ async function handleResultClick(item) {
             v-if="searchInput && !isSearching"
             type="button"
             @click="searchInput = ''"
-            class="absolute right-2 text-gray-400 hover:text-black"
+            class="absolute right-2 text-gray-400 hover:text-black text-sm sm:text-base"
           >
             ✕
           </button>
@@ -684,16 +714,16 @@ async function handleResultClick(item) {
           <!-- Dropdown -->
           <div
             v-if="showDropdown"
-            class="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-md z-50 p-3 flex flex-col gap-3"
+            class="absolute top-full left-0 right-0 mt-2 w-full sm:w-auto bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-2 sm:p-3 flex flex-col gap-2 sm:gap-3 max-h-[80vh] overflow-y-auto"
           >
             <!-- Main Filters -->
-            <div class="flex flex-wrap gap-2 justify-start">
+            <div class="flex flex-wrap gap-1.5 sm:gap-2 justify-start">
               <button
                 v-for="main in mainFilters"
                 :key="main"
                 @mousedown.prevent="toggleMainFilter(main)"
                 :class="[
-                  'px-4 py-1 rounded-full text-sm font-medium border transition-colors',
+                  'px-3 sm:px-4 py-1 rounded-full text-xs sm:text-sm font-medium border transition-colors',
                   activeMains.includes(main)
                     ? 'bg-dark-slate text-white border-dark-slate'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300',
@@ -706,14 +736,14 @@ async function handleResultClick(item) {
             <!-- Subfilters -->
             <div
               v-if="activeMains.includes('Training')"
-              class="flex flex-wrap gap-2 justify-start"
+              class="flex flex-wrap gap-1.5 sm:gap-2 justify-start"
             >
               <button
                 v-for="sub in ['Online', 'On-site']"
                 :key="sub"
                 @mousedown.prevent="toggleExclusiveSub(sub)"
                 :class="[
-                  'px-4 py-1 rounded-full text-sm font-medium border transition-colors',
+                  'px-3 sm:px-4 py-1 rounded-full text-xs sm:text-sm font-medium border transition-colors',
                   activeSubs.includes(sub)
                     ? 'bg-dark-slate text-white border-dark-slate'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300',
@@ -748,17 +778,17 @@ async function handleResultClick(item) {
             </div>
 
             <!-- Search Results -->
-            <div v-else-if="results.length" class="mt-2 max-h-60 overflow-y-auto">
+            <div v-else-if="results.length" class="mt-1 sm:mt-2 max-h-48 sm:max-h-60 overflow-y-auto">
               <div
                 v-for="(item, index) in results"
                 :key="index"
                 class="p-2 hover:bg-gray-100 rounded cursor-pointer"
                 @click="handleResultClick(item)"
               >
-                <div class="font-semibold text-gray-800">
+                <div class="font-semibold text-sm sm:text-base text-gray-800 line-clamp-1">
                   {{ item.Title || item.Position || item.Name }}
                 </div>
-                <div class="text-sm text-gray-500">
+                <div class="text-xs sm:text-sm text-gray-500 line-clamp-1">
                   {{ item.OrganizationName || item.location || "" }}
                 </div>
               </div>
@@ -767,12 +797,114 @@ async function handleResultClick(item) {
             <!-- No results -->
             <div
               v-else-if="searchInput && activeMains.length && !isSearching"
-              class="text-center text-gray-500 text-sm mt-2"
+              class="text-center text-gray-500 text-xs sm:text-sm mt-2"
             >
               No results found.
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Mobile Admin Menu Dropdown -->
+    <div
+      v-if="showMobileAdminMenu && (route.path === '/admin' || route.path === '/admin/adminhomepage' || route.name === 'AdminUpdateDelete')"
+      class="mobile-admin-menu-container sm:hidden absolute top-full left-0 right-0 mt-2 mx-4 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-3"
+    >
+      <div class="flex flex-col gap-3">
+        <!-- Home Button -->
+        <button
+          @click="$router.push({ name: 'AdminHomePage' }); showMobileAdminMenu = false"
+          :class="[
+            'flex items-center gap-3 p-3 rounded-lg transition-all duration-200',
+            route.name === 'AdminHomePage'
+              ? 'bg-dark-slate text-white'
+              : 'text-gray-700 hover:bg-gray-100',
+          ]"
+        >
+          <svg
+            class="w-6 h-6 flex-shrink-0"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect width="24" height="24" fill="white" />
+            <path
+              d="M17.1 2H12.9C9.81693 2 8.37099 3.09409 8.06975 5.73901C8.00673 6.29235 8.465 6.75 9.02191 6.75H11.1C15.3 6.75 17.25 8.7 17.25 12.9V14.9781C17.25 15.535 17.7077 15.9933 18.261 15.9303C20.9059 15.629 22 14.1831 22 11.1V6.9C22 3.4 20.6 2 17.1 2Z"
+            />
+            <path
+              d="M11.1 8H6.9C3.4 8 2 9.4 2 12.9V17.1C2 20.6 3.4 22 6.9 22H11.1C14.6 22 16 20.6 16 17.1V12.9C16 9.4 14.6 8 11.1 8ZM12.29 13.65L8.58 17.36C8.44 17.5 8.26 17.57 8.07 17.57C7.88 17.57 7.7 17.5 7.56 17.36L5.7 15.5C5.42 15.22 5.42 14.77 5.7 14.49C5.98 14.21 6.43 14.21 6.71 14.49L8.06 15.84L11.27 12.63C11.55 12.35 12 12.35 12.28 12.63C12.56 12.91 12.57 13.37 12.29 13.65Z"
+            />
+          </svg>
+          <span class="text-sm font-medium">Account Verification</span>
+        </button>
+
+        <!-- Account Settings Button -->
+        <button
+          @click="$router.push({ name: 'AdminUpdateDelete' }); showMobileAdminMenu = false"
+          :class="[
+            'flex items-center gap-3 p-3 rounded-lg transition-all duration-200',
+            route.name === 'AdminUpdateDelete'
+              ? 'bg-dark-slate text-white'
+              : 'text-gray-700 hover:bg-gray-100',
+          ]"
+        >
+          <svg
+            class="w-6 h-6 flex-shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M20.1 9.21994C18.29 9.21994 17.55 7.93994 18.45 6.36994C18.97 5.45994 18.66 4.29994 17.75 3.77994L16.02 2.78994C15.23 2.31994 14.21 2.59994 13.74 3.38994L13.63 3.57994C12.73 5.14994 11.25 5.14994 10.34 3.57994L10.23 3.38994C9.78 2.59994 8.76 2.31994 7.97 2.78994L6.24 3.77994C5.33 4.29994 5.02 5.46994 5.54 6.37994C6.45 7.93994 5.71 9.21994 3.9 9.21994C2.86 9.21994 2 10.0699 2 11.1199V12.8799C2 13.9199 2.85 14.7799 3.9 14.7799C5.71 14.7799 6.45 16.0599 5.54 17.6299C5.02 18.5399 5.33 19.6999 6.24 20.2199L7.97 21.2099C8.76 21.6799 9.78 21.3999 10.25 20.6099L10.36 20.4199C11.26 18.8499 12.74 18.8499 13.65 20.4199L13.76 20.6099C14.23 21.3999 15.25 21.6799 16.04 21.2099L17.77 20.2199C18.68 19.6999 18.99 18.5299 18.47 17.6299C17.56 16.0599 18.3 14.7799 20.11 14.7799C21.15 14.7799 22.01 13.9299 22.01 12.8799V11.1199C22 10.0799 21.15 9.21994 20.1 9.21994ZM12 15.2499C10.21 15.2499 8.75 13.7899 8.75 11.9999C8.75 10.2099 10.21 8.74994 12 8.74994C13.79 8.74994 15.25 10.2099 15.25 11.9999C15.25 13.7899 13.79 15.2499 12 15.2499Z"
+              fill="currentColor"
+            />
+          </svg>
+          <span class="text-sm font-medium">Account Settings</span>
+        </button>
+
+        <!-- Logout Button -->
+        <button
+          @click="logout; showMobileAdminMenu = false"
+          class="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
+        >
+          <svg
+            class="w-6 h-6 flex-shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M21.4999 13V15.26C21.4999 19.73 19.7099 21.52 15.2399 21.52H15.1099C11.0899 21.52 9.23991 20.07 8.90991 16.53"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M8.8999 7.55999C9.2099 3.95999 11.0599 2.48999 15.1099 2.48999H15.2399C19.7099 2.48999 21.4999 4.27999 21.4999 8.74999"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M15.0001 12H3.62012"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M5.85 8.65002L2.5 12L5.85 15.35"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span class="text-sm font-medium">Logout</span>
+        </button>
       </div>
     </div>
 
