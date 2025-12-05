@@ -2678,38 +2678,41 @@ export default {
   },
 
 
-  mounted() {
-    // Get organization logo from localStorage
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      try {
-        const user = JSON.parse(storedUser);
-        if (user.organization) {
-          this.organizationLogo = user.organization;
-          this.organizationStatus = user.organization.status || user.organization.Status || null;
-        } else if (user.logo_directory || user.Logo_directory || user.logoPath) {
-          this.organizationLogo = user;
-        }
-        if (!this.organizationStatus) {
-          this.organizationStatus = user.status || user.Status || null;
-        }
-        this.isOrganizationVerified = ["approved", "verified"].includes(
-          (this.organizationStatus || "").toString().toLowerCase()
-        );
-      } catch (error) {
-        console.error("Error parsing user from localStorage:", error);
+async mounted() {
+  // Get organization logo from localStorage
+  const storedUser = localStorage.getItem("user");
+  if (storedUser) {
+    try {
+      const user = JSON.parse(storedUser);
+      if (user.organization) {
+        this.organizationLogo = user.organization;
+        this.organizationStatus = user.organization.status || user.organization.Status || null;
+      } else if (user.logo_directory || user.Logo_directory || user.logoPath) {
+        this.organizationLogo = user;
       }
+      if (!this.organizationStatus) {
+        this.organizationStatus = user.status || user.Status || null;
+      }
+      this.isOrganizationVerified = ["approved", "verified"].includes(
+        (this.organizationStatus || "").toString().toLowerCase()
+      );
+    } catch (error) {
+      console.error("Error parsing user from localStorage:", error);
     }
+  }
+
+  // ⛔ FIX IS HERE
+  await this.fetchTrainings();
+  await this.fetchAllTrainings();
+
+  document.addEventListener("click", this.handleOutsideClick);
+
+  // Poll every 30 seconds to update trainings
+  this.trainingPollInterval = setInterval(() => {
     this.fetchTrainings();
     this.fetchAllTrainings();
-    document.addEventListener("click", this.handleOutsideClick);
-
-    // Poll every 30 seconds to update trainings
-    this.trainingPollInterval = setInterval(() => {
-      this.fetchTrainings();
-      this.fetchAllTrainings();
-    }, 30000);
-  },
+  }, 30000);
+},
 
   beforeUnmount() {
     document.removeEventListener("click", this.handleOutsideClick);
