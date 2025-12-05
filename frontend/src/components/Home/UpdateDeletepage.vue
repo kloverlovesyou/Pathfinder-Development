@@ -5,6 +5,8 @@ import { useRouter } from "vue-router";
 import { useActivityStore } from "@/stores/activityStore";
 import {
   getImageUrl,
+  uploadImage,
+  deleteStorageFile,
 } from "@/lib/supabase";
 
 const router = useRouter();
@@ -20,7 +22,12 @@ const form = ref({
   newPassword: "",
   confirmPassword: "",
   currentPassword: "",
+  otp: "",
 });
+
+const otpRequested = ref(false);
+const resendCooldown = ref(0);
+const isLoading = ref(false);
 
 const userName = ref("");
 
@@ -57,6 +64,12 @@ const showPasswordFields = reactive({
 
 const profilePreview = ref("");
 const profileImagePath = ref("");
+const displayPictureFile = ref(null);
+const displayPictureError = ref("");
+const displayPictureInput = ref(null);
+const displayPictureUploading = ref(false);
+const currentDisplayPicturePath = ref("");
+const shouldRemoveDisplayPicture = ref(false);
 
 const AVATAR_BUCKET = "Requirements";
 
@@ -112,6 +125,7 @@ function applyUserAvatar(user) {
 
   if (path) {
     profileImagePath.value = path;
+    currentDisplayPicturePath.value = path;
     const urlFromPath = resolveAvatarUrl(path);
     if (urlFromPath) {
       profilePreview.value = urlFromPath;
@@ -125,6 +139,58 @@ function applyUserAvatar(user) {
     updateLocalAvatarStorage({ url: directUrl });
   }
 }
+
+const handleDisplayPictureSelect = (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  displayPictureError.value = "";
+
+  // Validate file type
+  const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+  if (!validImageTypes.includes(file.type)) {
+    displayPictureError.value = "Please upload a valid image file (JPEG, PNG, GIF, or WebP).";
+    event.target.value = "";
+    return;
+  }
+
+  // Validate file size (max 5MB)
+  const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+  if (file.size > MAX_SIZE) {
+    displayPictureError.value = "Image file is too large. Maximum size is 5MB.";
+    event.target.value = "";
+    return;
+  }
+
+  displayPictureFile.value = file;
+
+  // Create preview
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    profilePreview.value = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+const removeDisplayPicture = () => {
+  displayPictureFile.value = null;
+  displayPictureError.value = "";
+  const input = document.getElementById('display-picture-upload');
+  if (input) {
+    input.value = "";
+  }
+  // Reset preview to current image or fallback
+  if (currentDisplayPicturePath.value) {
+    const urlFromPath = resolveAvatarUrl(currentDisplayPicturePath.value);
+    if (urlFromPath) {
+      profilePreview.value = urlFromPath;
+    } else {
+      profilePreview.value = fallbackAvatar.value;
+    }
+  } else {
+    profilePreview.value = fallbackAvatar.value;
+  }
+};
 
 
 onMounted(async () => {
@@ -183,7 +249,8 @@ onMounted(async () => {
   }
 });
 
-const handleUpdate = async () => {
+// Request OTP for password change
+const requestOTP = async () => {
   let token = localStorage.getItem("token");
 
   if (!token) {
@@ -196,55 +263,111 @@ const handleUpdate = async () => {
     return;
   }
 
-  // 🔐 Re-authenticate to verify the current password
-  try {
-    const { data } = await axios.post(import.meta.env.VITE_API_BASE_URL + "/login", {
-      emailAddress: form.value.emailAddress,
-      password: form.value.currentPassword,
-    });
-
-    if (data?.token) {
-      token = data.token;
-      localStorage.setItem("token", token);
-    }
-
-    if (data?.user) {
-      localStorage.setItem("user", JSON.stringify(data.user));
-    }
-  } catch (error) {
-    showToast(
-      error.response?.data?.message || "Current password is incorrect.",
-      "error"
-    );
-    return;
-  }
-
-  if (
-    (form.value.newPassword || form.value.confirmPassword) &&
-    form.value.newPassword !== form.value.confirmPassword
-  ) {
+  // Validate passwords match
+  if (form.value.newPassword !== form.value.confirmPassword) {
     showToast("New password and confirmation do not match.", "error");
     return;
   }
 
+  // Validate password length
+  if (form.value.newPassword.length < 8) {
+    showToast("New password must be at least 8 characters long.", "error");
+    return;
+  }
+
+  isLoading.value = true;
+
   try {
-    // --- 1️⃣ Update user profile ---
-    await axios.put(
-      import.meta.env.VITE_API_BASE_URL + "/user",
-      form.value,
+    const response = await axios.post(
+      import.meta.env.VITE_API_BASE_URL + "/user/change-password/request-otp",
       {
-        headers: { Authorization: `Bearer ${token}` },
+        currentPassword: form.value.currentPassword,
+      },
+      {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
       }
     );
 
-    // --- 2️⃣ Update password only if fields are filled ---
-    if (form.value.newPassword && form.value.confirmPassword) {
+    if (response.data.message) {
+      showToast("Verification code sent to your email. Please check your inbox.", "success");
+      otpRequested.value = true;
+      startResendCooldown();
+    }
+  } catch (error) {
+    console.error("Error requesting OTP:", error);
+    const errorMessage = error.response?.data?.message || "Failed to request verification code. Please try again.";
+    showToast(errorMessage, "error");
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// Resend OTP
+const resendOTP = async () => {
+  if (resendCooldown.value > 0) return;
+  await requestOTP();
+};
+
+// Start resend cooldown timer
+const startResendCooldown = () => {
+  resendCooldown.value = 60; // 60 seconds cooldown
+  const interval = setInterval(() => {
+    resendCooldown.value--;
+    if (resendCooldown.value <= 0) {
+      clearInterval(interval);
+    }
+  }, 1000);
+};
+
+const handleUpdate = async () => {
+  let token = localStorage.getItem("token");
+
+  if (!token) {
+    showToast("You are not logged in.", "error");
+    return;
+  }
+
+  // Check if password is being changed
+  const isChangingPassword = form.value.newPassword || form.value.confirmPassword;
+
+  if (isChangingPassword) {
+    // Password change flow with OTP
+    if (!otpRequested.value) {
+      // First step: Request OTP
+      await requestOTP();
+      return;
+    }
+
+    // Second step: Verify OTP and change password
+    if (!form.value.otp || form.value.otp.length !== 6 || !/^\d{6}$/.test(form.value.otp)) {
+      showToast("Please enter a valid 6-digit verification code.", "error");
+      return;
+    }
+
+    if (form.value.newPassword !== form.value.confirmPassword) {
+      showToast("New password and confirmation do not match.", "error");
+      return;
+    }
+
+    if (form.value.newPassword.length < 8) {
+      showToast("New password must be at least 8 characters long.", "error");
+      return;
+    }
+
+    isLoading.value = true;
+
+    try {
+      // Update password with OTP
       await axios.post(
         import.meta.env.VITE_API_BASE_URL + "/update-password",
         {
           currentPassword: form.value.currentPassword,
           newPassword: form.value.newPassword,
           newPassword_confirmation: form.value.confirmPassword,
+          otp: form.value.otp,
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -252,17 +375,181 @@ const handleUpdate = async () => {
       );
 
       showToast("Password updated successfully!");
-      // ✅ Clear password fields
+      // Clear password fields and OTP
       form.value.newPassword = "";
       form.value.confirmPassword = "";
+      form.value.otp = "";
+      form.value.currentPassword = "";
+      otpRequested.value = false;
+      resendCooldown.value = 0;
+    } catch (error) {
+      console.error("Error updating password:", error);
+      showToast(error.response?.data?.message || "Password update failed.", "error");
+      isLoading.value = false;
+      return;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // Update profile (always try to update profile, even if password was changed)
+  // If not changing password, current password is required for profile update
+  if (!isChangingPassword && !form.value.currentPassword?.trim()) {
+    showToast("Please enter your current password to update profile.", "error");
+    return;
+  }
+
+  // If not changing password, verify current password first
+  if (!isChangingPassword) {
+    try {
+      const { data } = await axios.post(import.meta.env.VITE_API_BASE_URL + "/login", {
+        emailAddress: form.value.emailAddress,
+        password: form.value.currentPassword,
+      });
+
+      if (data?.token) {
+        token = data.token;
+        localStorage.setItem("token", token);
+      }
+
+      if (data?.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+      }
+    } catch (error) {
+      showToast(
+        error.response?.data?.message || "Current password is incorrect.",
+        "error"
+      );
+      return;
+    }
+  }
+
+  try {
+    let displayPicturePath = null;
+
+    // Upload display picture if a new one is selected
+    if (displayPictureFile.value) {
+      displayPictureUploading.value = true;
+      displayPictureError.value = "";
+      
+      try {
+        // Delete old display picture if it exists
+        if (currentDisplayPicturePath.value) {
+          await deleteStorageFile(currentDisplayPicturePath.value, AVATAR_BUCKET);
+        }
+
+        // Upload new display picture
+        displayPicturePath = await uploadImage(
+          displayPictureFile.value,
+          AVATAR_BUCKET,
+          "applicant_display_picture_directory"
+        );
+
+        if (!displayPicturePath) {
+          displayPictureError.value = "Failed to upload display picture. Please try again.";
+          displayPictureUploading.value = false;
+          return;
+        }
+      } catch (error) {
+        console.error("Error uploading display picture:", error);
+        displayPictureError.value = "Failed to upload display picture. Please try again.";
+        displayPictureUploading.value = false;
+        return;
+      } finally {
+        displayPictureUploading.value = false;
+      }
     }
 
-    showToast("Profile updated successfully!");
-    form.value.currentPassword = "";
+    // Prepare update payload
+    const updatePayload = {
+      firstName: form.value.firstName,
+      middleName: form.value.middleName,
+      lastName: form.value.lastName,
+      address: form.value.address,
+      phoneNumber: form.value.phoneNumber,
+    };
+
+    // Handle display picture: upload new, remove existing, or keep current
+    if (displayPicturePath) {
+      // New picture uploaded
+      updatePayload.displayPicture_directory = displayPicturePath;
+      shouldRemoveDisplayPicture.value = false;
+    } else if (shouldRemoveDisplayPicture.value) {
+      // User wants to remove the picture
+      const pathToDelete = currentDisplayPicturePath.value || profileImagePath.value;
+      if (pathToDelete) {
+        await deleteStorageFile(pathToDelete, AVATAR_BUCKET);
+      }
+      updatePayload.displayPicture_directory = null;
+      shouldRemoveDisplayPicture.value = false;
+    }
+    // If neither condition is met, displayPicture_directory won't be in payload, so it stays unchanged
+
+    // --- Update user profile ---
+    const response = await axios.put(
+      import.meta.env.VITE_API_BASE_URL + "/user",
+      updatePayload,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    // Update local state if display picture was uploaded or removed
+    if (response.data?.user) {
+      if (displayPicturePath) {
+        // New picture uploaded
+        currentDisplayPicturePath.value = displayPicturePath;
+        profileImagePath.value = displayPicturePath;
+        const urlFromPath = resolveAvatarUrl(displayPicturePath);
+        if (urlFromPath) {
+          profilePreview.value = urlFromPath;
+          updateLocalAvatarStorage({ url: urlFromPath, path: displayPicturePath });
+        }
+        displayPictureFile.value = null;
+        const input = document.getElementById('display-picture-upload');
+        if (input) {
+          input.value = "";
+        }
+      } else if (shouldRemoveDisplayPicture.value) {
+        // Picture was removed
+        currentDisplayPicturePath.value = "";
+        profileImagePath.value = "";
+        profilePreview.value = fallbackAvatar.value;
+        updateLocalAvatarStorage({ url: "", path: "" });
+      }
+    }
+
+    // Apply updated user avatar
+    if (response.data?.user) {
+      applyUserAvatar(response.data.user);
+    }
+
+    if (!isChangingPassword) {
+      showToast("Profile updated successfully!");
+      form.value.currentPassword = "";
+    }
   } catch (error) {
     console.error("Error during update:", error);
     showToast(error.response?.data?.message || "Update failed.", "error");
   }
+};
+
+const handleRemoveDisplayPicture = () => {
+  if (!currentDisplayPicturePath.value && !profileImagePath.value) {
+    showToast("No display picture to remove.", "error");
+    return;
+  }
+
+  // Mark for removal - will be handled in handleUpdate
+  shouldRemoveDisplayPicture.value = true;
+  displayPictureFile.value = null;
+  profilePreview.value = fallbackAvatar.value;
+  const input = document.getElementById('display-picture-upload');
+  if (input) {
+    input.value = "";
+  }
+  
+  showToast("Display picture will be removed when you save changes.", "success");
 };
 
 const logout = () => {
@@ -430,7 +717,7 @@ const logout = () => {
           <!-- FORM -->
           <form @submit.prevent="handleUpdate" class="space-y-4 pt-4">
 
-            <!-- Profile Avatar (Read-only) -->
+            <!-- Profile Avatar (Editable) -->
             <div class="flex justify-center mb-6 lg:mb-12">
               <div class="flex flex-col items-center gap-3">
                 <div class="relative">
@@ -440,6 +727,66 @@ const logout = () => {
                     class="w-28 h-28 rounded-full object-cover border-4 border-white shadow"
                     @error="profilePreview = fallbackAvatar"
                   />
+                </div>
+                <div class="flex flex-col items-center gap-2">
+                  <input
+                    type="file"
+                    ref="displayPictureInput"
+                    accept="image/*"
+                    @change="handleDisplayPictureSelect"
+                    class="hidden"
+                    id="display-picture-upload"
+                  />
+                  <label
+                    for="display-picture-upload"
+                    class="cursor-pointer inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  >
+                    <svg
+                      class="h-4 w-4 mr-1.5 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                      />
+                    </svg>
+                    {{ displayPictureFile ? "Change Picture" : "Upload Picture" }}
+                  </label>
+                  <button
+                    v-if="(currentDisplayPicturePath || profileImagePath) && !shouldRemoveDisplayPicture"
+                    type="button"
+                    @click="handleRemoveDisplayPicture"
+                    class="text-xs text-red-600 hover:text-red-800"
+                  >
+                    Remove Picture
+                  </button>
+                  <button
+                    v-if="shouldRemoveDisplayPicture"
+                    type="button"
+                    @click="() => { 
+                      shouldRemoveDisplayPicture = false; 
+                      const path = currentDisplayPicturePath || profileImagePath;
+                      if (path) {
+                        const urlFromPath = resolveAvatarUrl(path);
+                        if (urlFromPath) {
+                          profilePreview.value = urlFromPath;
+                        }
+                      }
+                    }"
+                    class="text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    Cancel Remove
+                  </button>
+                  <p v-if="displayPictureError" class="text-red-500 text-xs mt-1 text-center">
+                    {{ displayPictureError }}
+                  </p>
+                  <p v-if="displayPictureUploading" class="text-gray-500 text-xs">
+                    Uploading...
+                  </p>
                 </div>
               </div>
             </div>
@@ -496,6 +843,103 @@ const logout = () => {
               />
             </div>
 
+            <!-- Current Password -->
+            <div>
+              <div class="relative">
+                <input
+                  :type="showPasswordFields.current ? 'text' : 'password'"
+                  class="border border-gray-300 input w-full pr-10"
+                  placeholder="Current Password"
+                  v-model="form.currentPassword"
+                  :disabled="otpRequested && (form.newPassword || form.confirmPassword)"
+                  required
+                />
+                <button
+                  type="button"
+                  class="absolute right-3 top-3 text-gray-500"
+                  aria-label="Toggle current password visibility"
+                  @click="showPasswordFields.current = !showPasswordFields.current"
+                >
+                  <span v-if="showPasswordFields.current">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M15.5799 11.9999C15.5799 13.9799 13.9799 15.5799 11.9999 15.5799C10.0199 15.5799 8.41992 13.9799 8.41992 11.9999C8.41992 10.0199 10.0199 8.41992 11.9999 8.41992C13.9799 8.41992 15.5799 10.0199 15.5799 11.9999Z"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M12.0001 20.27C15.5301 20.27 18.8201 18.19 21.1101 14.59C22.0101 13.18 22.0101 10.81 21.1101 9.39997C18.8201 5.79997 15.5301 3.71997 12.0001 3.71997C8.47009 3.71997 5.18009 5.79997 2.89009 9.39997C1.99009 10.81 1.99009 13.18 2.89009 14.59C5.18009 18.19 8.47009 20.27 12.0001 20.27Z"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  <span v-else>
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M14.5299 9.46992L9.46992 14.5299C8.81992 13.8799 8.41992 12.9899 8.41992 11.9999C8.41992 10.0199 10.0199 8.41992 11.9999 8.41992C12.9899 8.41992 13.8799 8.81992 14.5299 9.46992Z"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M17.8201 5.76998C16.0701 4.44998 14.0701 3.72998 12.0001 3.72998C8.47009 3.72998 5.18009 5.80998 2.89009 9.40998C1.99009 10.82 1.99009 13.19 2.89009 14.6C3.68009 15.84 4.60009 16.91 5.60009 17.77"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M8.41992 19.5299C9.55992 20.0099 10.7699 20.2699 11.9999 20.2699C15.5299 20.2699 18.8199 18.1899 21.1099 14.5899C22.0099 13.1799 22.0099 10.8099 21.1099 9.39993C20.7799 8.87993 20.4199 8.38993 20.0499 7.92993"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M15.5099 12.7C15.2499 14.11 14.0999 15.26 12.6899 15.52"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M9.47 14.53L2 22"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M22 2L14.53 9.47"
+                        stroke="#292D32"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </span>
+                </button>
+              </div>
+            </div>
+
             <!-- New & Confirm Password -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <!-- New Password -->
@@ -505,6 +949,7 @@ const logout = () => {
                   class="border border-gray-300 input w-full pr-10"
                   placeholder="New Password (optional)"
                   v-model="form.newPassword"
+                  :disabled="otpRequested && (form.newPassword || form.confirmPassword)"
                 />
                 <button
                   type="button"
@@ -600,6 +1045,7 @@ const logout = () => {
                     :class="passwordMatchClass"
                     placeholder="Confirm New Password"
                     v-model="form.confirmPassword"
+                    :disabled="otpRequested && (form.newPassword || form.confirmPassword)"
                   />
                   <button
                     type="button"
@@ -696,99 +1142,33 @@ const logout = () => {
               </div>
             </div>
 
-            <div>
-              <div class="relative">
+            <!-- OTP Input (shown after OTP is requested for password change) -->
+            <div v-if="otpRequested && (form.newPassword || form.confirmPassword)" class="space-y-2">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Verification Code (OTP)
+                </label>
                 <input
-                  :type="showPasswordFields.current ? 'text' : 'password'"
-                  class="border border-gray-300 input w-full pr-10"
-                  placeholder="Current Password"
-                  v-model="form.currentPassword"
+                  type="text"
+                  v-model="form.otp"
+                  placeholder="Enter 6-digit code from email"
                   required
+                  maxlength="6"
+                  pattern="[0-9]{6}"
+                  class="border border-gray-300 input w-full"
                 />
-                <button
-                  type="button"
-                  class="absolute right-3 top-3 text-gray-500"
-                  aria-label="Toggle current password visibility"
-                  @click="showPasswordFields.current = !showPasswordFields.current"
-                >
-                  <span v-if="showPasswordFields.current">
-                    <svg
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M15.5799 11.9999C15.5799 13.9799 13.9799 15.5799 11.9999 15.5799C10.0199 15.5799 8.41992 13.9799 8.41992 11.9999C8.41992 10.0199 10.0199 8.41992 11.9999 8.41992C13.9799 8.41992 15.5799 10.0199 15.5799 11.9999Z"
-                        stroke="#292D32"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                      <path
-                        d="M12.0001 20.27C15.5301 20.27 18.8201 18.19 21.1101 14.59C22.0101 13.18 22.0101 10.81 21.1101 9.39997C18.8201 5.79997 15.5301 3.71997 12.0001 3.71997C8.47009 3.71997 5.18009 5.79997 2.89009 9.39997C1.99009 10.81 1.99009 13.18 2.89009 14.59C5.18009 18.19 8.47009 20.27 12.0001 20.27Z"
-                        stroke="#292D32"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </span>
-                  <span v-else>
-                    <svg
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M14.5299 9.46992L9.46992 14.5299C8.81992 13.8799 8.41992 12.9899 8.41992 11.9999C8.41992 10.0199 10.0199 8.41992 11.9999 8.41992C12.9899 8.41992 13.8799 8.81992 14.5299 9.46992Z"
-                        stroke="#292D32"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                      <path
-                        d="M17.8201 5.76998C16.0701 4.44998 14.0701 3.72998 12.0001 3.72998C8.47009 3.72998 5.18009 5.80998 2.89009 9.40998C1.99009 10.82 1.99009 13.19 2.89009 14.6C3.68009 15.84 4.60009 16.91 5.60009 17.77"
-                        stroke="#292D32"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                      <path
-                        d="M8.41992 19.5299C9.55992 20.0099 10.7699 20.2699 11.9999 20.2699C15.5299 20.2699 18.8199 18.1899 21.1099 14.5899C22.0099 13.1799 22.0099 10.8099 21.1099 9.39993C20.7799 8.87993 20.4199 8.38993 20.0499 7.92993"
-                        stroke="#292D32"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                      <path
-                        d="M15.5099 12.7C15.2499 14.11 14.0999 15.26 12.6899 15.52"
-                        stroke="#292D32"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                      <path
-                        d="M9.47 14.53L2 22"
-                        stroke="#292D32"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                      <path
-                        d="M22 2L14.53 9.47"
-                        stroke="#292D32"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </span>
-                </button>
+                <p class="text-sm text-gray-600 mt-1">
+                  A verification code has been sent to your email. Please enter it above.
+                </p>
               </div>
+              <button
+                type="button"
+                @click="resendOTP"
+                class="text-sm text-customButton hover:underline"
+                :disabled="resendCooldown > 0"
+              >
+                {{ resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP' }}
+              </button>
             </div>
 
             <!-- Buttons -->
@@ -796,8 +1176,9 @@ const logout = () => {
               <button
                 type="submit"
                 class="btn bg-customButton hover:bg-dark-slate text-white w-full sm:w-auto"
+                :disabled="isLoading"
               >
-                Save Changes
+                {{ isLoading ? 'Processing...' : 'Save Changes' }}
               </button>
             </div>
           </form>

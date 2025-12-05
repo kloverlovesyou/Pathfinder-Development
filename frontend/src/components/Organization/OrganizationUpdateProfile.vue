@@ -141,42 +141,124 @@
                 <h2 class="update-title">Update Account</h2>
 
                 <form @submit.prevent="updateAccount">
-                    <div class="input-group">
-                        <label>Organization Name</label>
+                    <!-- Logo Upload Section -->
+                    <div class="logo-upload-section">
+                        <label class="input-label">Organization Logo</label>
+                        <div class="logo-preview-container">
+                            <div class="logo-preview">
+                                <img v-if="logoPreview" :src="logoPreview" alt="Logo Preview" class="logo-preview-img" />
+                                <div v-else-if="logoUrl" class="logo-preview-placeholder">
+                                    <img :src="logoUrl" alt="Current Logo" class="logo-preview-img" />
+                                </div>
+                                <div v-else class="logo-preview-placeholder">
+                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M20.59 22C20.59 18.13 16.74 15 12 15C7.26 15 3.41 18.13 3.41 22" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    <span>No logo</span>
+                                </div>
+                            </div>
+                            <div class="logo-upload-controls">
+                                <label for="logo-upload" class="logo-upload-btn" :class="{ disabled: otpRequested }" :style="{ pointerEvents: otpRequested ? 'none' : 'auto', opacity: otpRequested ? 0.6 : 1 }">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M17 8L12 3L7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M12 3V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    {{ logoFile ? 'Change Logo' : 'Upload Logo' }}
+                                </label>
+                                <input 
+                                    type="file" 
+                                    id="logo-upload" 
+                                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" 
+                                    @change="handleLogoSelect"
+                                    :disabled="otpRequested"
+                                    style="display: none;"
+                                />
+                                <button 
+                                    v-if="logoFile || logoUrl" 
+                                    type="button" 
+                                    @click="removeLogo" 
+                                    class="logo-remove-btn"
+                                    :disabled="otpRequested"
+                                    :style="{ opacity: otpRequested ? 0.6 : 1, pointerEvents: otpRequested ? 'none' : 'auto' }"
+                                >
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    Remove
+                                </button>
+                            </div>
+                        </div>
+                        <div v-if="logoError" class="logo-error">{{ logoError }}</div>
+                        <div v-if="logoUploading" class="logo-uploading">Uploading logo...</div>
+                        <p class="logo-hint">Recommended: Square image, max 5MB (JPEG, PNG, GIF, WebP)</p>
+                    </div>
+
+                    <div class="input-with-counter">
+                        <label class="input-label">Organization Name</label>
                         <input type="text" v-model="form.organizationName" placeholder="Enter organization name" 
-                            maxlength="100" />
+                            maxlength="100" :disabled="otpRequested" />
                         <span class="char-counter">{{ form.organizationName.length }}/100</span>
                     </div>
 
-                    <div class="input-group">
-                        <label>Location</label>
+                    <div class="input-with-counter">
+                        <label class="input-label">Location</label>
                         <input type="text" v-model="form.organizationLocation" placeholder="Enter location" 
-                            maxlength="100" />
+                            maxlength="100" :disabled="otpRequested" />
                         <span class="char-counter">{{ form.organizationLocation.length }}/100</span>
                     </div>
 
-                    <div class="input-group">
-                        <label>Website URL</label>
+                    <div class="input-with-counter">
+                        <label class="input-label">Website URL</label>
                         <input type="text" v-model="form.organizationWebsiteURL" placeholder="Enter website URL" 
-                            maxlength="100" />
+                            maxlength="100" :disabled="otpRequested" />
                         <span class="char-counter">{{ form.organizationWebsiteURL.length }}/100</span>
                     </div>
 
-                    <div class="input-group">
-                        <label>Phone Number</label>
+                    <div class="input-with-counter">
+                        <label class="input-label">Phone Number</label>
                         <input type="text" v-model="form.organizationPhoneNumber" placeholder="Enter phone number" 
-                            maxlength="11" />
+                            maxlength="11" :disabled="otpRequested" />
                         <span class="char-counter">{{ form.organizationPhoneNumber.length }}/11</span>
                     </div>
 
-                    <div class="input-group">
-                        <label>Confirm Password</label>
+                    <div class="input-with-counter">
+                        <label class="input-label">Confirm Password</label>
                         <input type="password" v-model="form.organizationConfirmPassword"
-                            placeholder="Enter your password to confirm changes" required maxlength="128" />
+                            placeholder="Enter your password to confirm changes" required maxlength="128" 
+                            :disabled="otpRequested" />
                         <span class="char-counter">{{ form.organizationConfirmPassword.length }}/128</span>
                     </div>
+
+                    <!-- OTP Input (shown after OTP is requested) -->
+                    <div v-if="otpRequested" class="input-with-counter">
+                        <label class="input-label">Verification Code (OTP)</label>
+                        <input
+                            type="text"
+                            v-model="form.otp"
+                            placeholder="Enter 6-digit code from email"
+                            required
+                            maxlength="6"
+                            pattern="[0-9]{6}"
+                        />
+                        <span class="char-counter">{{ form.otp.length }}/6</span>
+                        <p class="otp-info">
+                            A verification code has been sent to your email. Please enter it above.
+                        </p>
+                        <button
+                            type="button"
+                            @click="resendOTP"
+                            class="resend-otp-btn"
+                            :disabled="resendCooldown > 0"
+                        >
+                            {{ resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP' }}
+                        </button>
+                    </div>
                     
-                    <button type="submit" class="save-btn">Save Changes</button>
+                    <button type="submit" class="save-btn" :disabled="isLoading">
+                        {{ isLoading ? 'Processing...' : 'Save Changes' }}
+                    </button>
                 </form>
             </div>
         </main>
@@ -252,13 +334,21 @@ import { useRouter } from "vue-router";
 import axios from "axios";
 import { useOrganizationLogo } from "@/composables/useOrganizationLogo.js";
 import { useToast } from "@/composables/useToast.js";
+import { uploadImage, deleteStorageFile } from "@/lib/supabase.js";
 
 const { toasts, showToast } = useToast();
 
 // Get organization logo
-const { logoUrl } = useOrganizationLogo();
+const { logoUrl, organizationLogo } = useOrganizationLogo();
 
 const router = useRouter();
+
+// Logo upload state
+const logoFile = ref(null);
+const logoPreview = ref(null);
+const logoError = ref("");
+const logoUploading = ref(false);
+const currentLogoPath = ref(null);
 
 // Form data
 const form = ref({
@@ -267,7 +357,13 @@ const form = ref({
     organizationWebsiteURL: "",
     organizationPhoneNumber: "",
     organizationConfirmPassword: "", // Only for verification, not for updating password
+    otp: "",
 });
+
+// OTP state
+const otpRequested = ref(false);
+const resendCooldown = ref(0);
+const isLoading = ref(false);
 
 // Sidebar state
 const isSidebarOpen = ref(true);
@@ -331,6 +427,14 @@ const getOrgDetails = async () => {
         form.value.organizationWebsiteURL = org.websiteURL || "";
         form.value.organizationPhoneNumber = org.phoneNumber || "";
 
+        // Store current logo path if available (from API response or localStorage)
+        currentLogoPath.value = org.logo_directory || null;
+        
+        // Also update organizationLogo if available
+        if (organizationLogo.value && org.logo_directory) {
+            organizationLogo.value.logo_directory = org.logo_directory;
+        }
+
         // Leave confirm password field empty for security
         form.value.organizationConfirmPassword = "";
 
@@ -343,6 +447,113 @@ const getOrgDetails = async () => {
 // Navigation
 const navigateTo = (route) => {
     router.push(route);
+};
+
+// Handle logo file selection
+const handleLogoSelect = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    logoError.value = "";
+
+    // Validate file type
+    const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validImageTypes.includes(file.type)) {
+        logoError.value = "Please upload a valid image file (JPEG, PNG, GIF, or WebP).";
+        event.target.value = "";
+        return;
+    }
+
+    // Validate file size (max 5MB)
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+    if (file.size > MAX_SIZE) {
+        logoError.value = "Image file is too large. Maximum size is 5MB.";
+        event.target.value = "";
+        return;
+    }
+
+    logoFile.value = file;
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        logoPreview.value = e.target.result;
+    };
+    reader.readAsDataURL(file);
+};
+
+// Remove logo
+const removeLogo = () => {
+    logoFile.value = null;
+    logoPreview.value = null;
+    logoError.value = "";
+    const input = document.getElementById('logo-upload');
+    if (input) {
+        input.value = "";
+    }
+};
+
+// Request OTP for profile update
+const requestOTP = async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+        showToast("Please log in again.", "error");
+        router.push({ name: "OrgLogin" });
+        return;
+    }
+
+    // Verify confirm password is provided
+    if (!form.value.organizationConfirmPassword) {
+        showToast("Please enter your password to confirm changes.", "error");
+        return;
+    }
+
+    isLoading.value = true;
+
+    try {
+        const response = await axios.post(
+            import.meta.env.VITE_API_BASE_URL + "/organization/update/request-otp",
+            {
+                confirmPassword: form.value.organizationConfirmPassword,
+            },
+            {
+                headers: { 
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                }
+            }
+        );
+
+        if (response.data.message) {
+            showToast("Verification code sent to your email. Please check your inbox.", "success");
+            otpRequested.value = true;
+            startResendCooldown();
+        }
+    } catch (error) {
+        console.error("Error requesting OTP:", error);
+        const errorMessage = error.response?.data?.message || "Failed to request verification code. Please try again.";
+        showToast(errorMessage, "error");
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+// Resend OTP
+const resendOTP = async () => {
+    if (resendCooldown.value > 0) return;
+    await requestOTP();
+};
+
+// Start resend cooldown timer
+const startResendCooldown = () => {
+    resendCooldown.value = 60; // 60 seconds cooldown
+    const interval = setInterval(() => {
+        resendCooldown.value--;
+        if (resendCooldown.value <= 0) {
+            clearInterval(interval);
+        }
+    }, 1000);
 };
 
 // Update account
@@ -361,19 +572,72 @@ const updateAccount = async () => {
         return;
     }
 
+    // If OTP not requested yet, request it first
+    if (!otpRequested.value) {
+        await requestOTP();
+        return;
+    }
+
+    // Verify OTP is provided
+    if (!form.value.otp || form.value.otp.length !== 6 || !/^\d{6}$/.test(form.value.otp)) {
+        showToast("Please enter a valid 6-digit verification code.", "error");
+        return;
+    }
+
+    isLoading.value = true;
+
     try {
-        // First, verify the password by attempting to get organization details
-        // We'll verify the password by checking if the user is authenticated
-        // In a real scenario, you might want a separate endpoint to verify password
-        
-        // Prepare update payload (without password fields)
+        let logoPath = null;
+
+        // Upload logo if a new one is selected
+        if (logoFile.value) {
+            logoUploading.value = true;
+            logoError.value = "";
+            
+            try {
+                // Delete old logo if it exists
+                if (currentLogoPath.value) {
+                    await deleteStorageFile(currentLogoPath.value, "Requirements");
+                }
+
+                // Upload new logo
+                logoPath = await uploadImage(
+                    logoFile.value,
+                    "Requirements",
+                    "org_logo_directory"
+                );
+
+                if (!logoPath) {
+                    logoError.value = "Failed to upload logo. Please try again.";
+                    logoUploading.value = false;
+                    isLoading.value = false;
+                    return;
+                }
+            } catch (error) {
+                console.error("Error uploading logo:", error);
+                logoError.value = "Failed to upload logo. Please try again.";
+                logoUploading.value = false;
+                isLoading.value = false;
+                return;
+            } finally {
+                logoUploading.value = false;
+            }
+        }
+
+        // Prepare update payload
         const updatePayload = {
             organizationName: form.value.organizationName,
             location: form.value.organizationLocation,
             websiteURL: form.value.organizationWebsiteURL,
             phoneNumber: form.value.organizationPhoneNumber,
-            confirmPassword: form.value.organizationConfirmPassword, // Send for verification only
+            confirmPassword: form.value.organizationConfirmPassword,
+            otp: form.value.otp,
         };
+
+        // Add logo path if a new logo was uploaded
+        if (logoPath) {
+            updatePayload.logoPath = logoPath;
+        }
 
         // Update organization profile
         const response = await axios.put(
@@ -389,16 +653,47 @@ const updateAccount = async () => {
 
         if (response.data.message) {
             showToast("Profile updated successfully!", "success");
-            // Clear confirm password field
+            
+            // Clear form fields
             form.value.organizationConfirmPassword = "";
-            // Refresh organization details
+            form.value.otp = "";
+            otpRequested.value = false;
+            resendCooldown.value = 0;
+            
+            // Clear logo file and preview
+            logoFile.value = null;
+            logoPreview.value = null;
+            
+            // Update current logo path if a new one was uploaded
+            if (logoPath) {
+                currentLogoPath.value = logoPath;
+            }
+            
+            // Update organization logo in localStorage
+            const stored = localStorage.getItem("user");
+            if (stored) {
+                const user = JSON.parse(stored);
+                if (response.data.organization && response.data.organization.logo_directory) {
+                    user.logo_directory = response.data.organization.logo_directory;
+                    localStorage.setItem("user", JSON.stringify(user));
+                }
+            }
+            
+            // Refresh organization details and logo
             await getOrgDetails();
+            
+            // Force logo refresh by updating the composable
+            if (organizationLogo.value && logoPath) {
+                organizationLogo.value.logo_directory = logoPath;
+            }
         }
 
     } catch (error) {
         console.error("Error updating profile:", error);
         const errorMessage = error.response?.data?.message || "Failed to update profile. Please check your password and try again.";
         showToast(errorMessage, "error");
+    } finally {
+        isLoading.value = false;
     }
 };
 
@@ -726,30 +1021,38 @@ const logout = () => {
     margin-bottom: 20px;
 }
 
-.input-group {
+.input-with-counter {
+    position: relative;
+    width: 100%;
     margin-bottom: 15px;
-    display: flex;
-    flex-direction: column;
 }
 
-.input-group label {
-    color: #374151;
-    font-weight: 600;
-    margin-bottom: 5px;
-}
-
-.input-group input {
+.input-with-counter input {
     background: white;
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 6px;
+    margin-bottom: 0;
+    width: 100%;
+}
+
+.input-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+    text-align: left;
 }
 
 .char-counter {
     font-size: 12px;
     color: #6b7280;
     text-align: right;
-    margin-top: 4px;
+    margin-top: 0;
+    display: block;
+    line-height: 1.2;
+    background: transparent;
 }
 
 .save-btn {
@@ -765,5 +1068,155 @@ const logout = () => {
 
 .save-btn:hover {
     background: #3b4960;
+}
+
+/* Logo Upload Styles */
+.logo-upload-section {
+    margin-bottom: 25px;
+}
+
+.logo-preview-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+}
+
+.logo-preview {
+    width: 150px;
+    height: 150px;
+    border-radius: 8px;
+    border: 2px dashed #d1d5db;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background-color: #f9fafb;
+}
+
+.logo-preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.logo-preview-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #6b7280;
+    font-size: 12px;
+}
+
+.logo-upload-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.logo-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #44576D;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background-color 0.2s ease;
+}
+
+.logo-upload-btn:hover {
+    background: #3b4960;
+}
+
+.logo-upload-btn svg {
+    flex-shrink: 0;
+}
+
+.logo-remove-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background-color 0.2s ease;
+}
+
+.logo-remove-btn:hover {
+    background: #dc2626;
+}
+
+.logo-remove-btn svg {
+    flex-shrink: 0;
+}
+
+.logo-error {
+    color: #ef4444;
+    font-size: 12px;
+    margin-top: 8px;
+    text-align: center;
+}
+
+.logo-uploading {
+    color: #44576D;
+    font-size: 12px;
+    margin-top: 8px;
+    text-align: center;
+    font-style: italic;
+}
+
+.logo-hint {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 8px;
+    text-align: center;
+}
+
+/* OTP Styles */
+.otp-info {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 6px;
+    text-align: left;
+}
+
+.resend-otp-btn {
+    margin-top: 8px;
+    padding: 6px 12px;
+    background: transparent;
+    color: #44576D;
+    border: 1px solid #44576D;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.resend-otp-btn:hover:not(:disabled) {
+    background: #44576D;
+    color: white;
+}
+
+.resend-otp-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.save-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 </style>

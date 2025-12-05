@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Verification</title>
+    <title>Password Reset</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -65,27 +65,27 @@
         </div>
         
         <div class="content">
-            <p>Hello {{ $userName }},</p>
+            <p>Hello <?php echo e($userName); ?>,</p>
             
-            <p>Thank you for registering with Pathfinder! Please verify your email address by clicking the button below:</p>
+            <p>We received a request to reset your password for your Pathfinder account. Click the button below to reset your password:</p>
             
             <div style="text-align: center;">
-                <a href="{{ $verificationUrl }}" class="button">Verify Email Address</a>
+                <a href="<?php echo e($resetUrl); ?>" class="button">Reset Password</a>
             </div>
             
             <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-            <p class="link">{{ $verificationUrl }}</p>
+            <p class="link"><?php echo e($resetUrl); ?></p>
             
-            <p>This verification link will expire in 24 hours.</p>
+            <p>This password reset link will expire in 1 hour.</p>
             
-            <p>If you didn't create an account with Pathfinder, please ignore this email.</p>
+            <p>If you didn't request a password reset, please ignore this email. Your password will remain unchanged.</p>
         </div>
         
         <div class="footer">
-            <p>&copy; {{ date('Y') }} Pathfinder. All rights reserved.</p>
-            <p style="margin-top: 10px; color: #999; font-size: 11px;">This is a no-reply email. Please do not reply to this message.</p>
+            <p>&copy; <?php echo e(date('Y')); ?> Pathfinder. All rights reserved.</p>
         </div>
     </div>
 </body>
 </html>
 
+<?php /**PATH C:\PathFinder\Pathfinder-Development\backend\resources\views/emails/password-reset.blade.php ENDPATH**/ ?>

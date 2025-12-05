@@ -712,7 +712,7 @@ public function viewRequirement(Request $request, $id)
                             $validated['interviewMode'],
                             $validated['interviewLocation'] ?? null,
                             $validated['interviewLink'] ?? null,
-                            $validated['body'] ?? null
+                            null // Email body removed - using template only
                         );
                         
                         // Try to send via Brevo API first, then fallback to SMTP
@@ -740,7 +740,7 @@ public function viewRequirement(Request $request, $id)
                                     'interviewMode' => $validated['interviewMode'],
                                     'interviewLocation' => $validated['interviewLocation'] ?? null,
                                     'interviewLink' => $validated['interviewLink'] ?? null,
-                                    'customBody' => $validated['body'] ?? null,
+                                    'customBody' => null, // Email body removed - using template only
                                 ])->render();
                                 
                                 // Send via Brevo with CC support

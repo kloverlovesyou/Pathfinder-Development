@@ -239,7 +239,7 @@ class RegistrationController extends Controller
         
         if (!$existingCertification) {
             // Create Certification entry using certificate_path (stored in Supabase)
-            $certificationName = $training->title . ' - Certificate of Completion';
+            $certificationName = $training->title;
             
             $newCertification = Certification::create([
                 'certificationName' => $certificationName,
@@ -430,7 +430,7 @@ class RegistrationController extends Controller
                     
                     // Create Certification entry using certificate_path (stored in Supabase)
                     $trainingTitle = $training->title ?? 'Training';
-                    $certificationName = $trainingTitle . ' - Certificate of Completion';
+                    $certificationName = $trainingTitle;
                     
                     try {
                         $newCertification = Certification::create([

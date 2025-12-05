@@ -252,6 +252,84 @@
           <p class="hidden validator-hint">Must be 11 digits</p>
         </div>
 
+        <!-- Display Picture Upload -->
+        <div class="form-control mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Display Picture (Optional)
+          </label>
+          <div class="flex items-center space-x-4">
+            <div v-if="displayPicturePreview" class="flex-shrink-0">
+              <img
+                :src="displayPicturePreview"
+                alt="Display picture preview"
+                class="h-20 w-20 object-cover rounded-lg border border-gray-300"
+              />
+            </div>
+            <div v-else class="flex-shrink-0">
+              <div
+                class="h-20 w-20 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50"
+              >
+                <svg
+                  class="h-8 w-8 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+            </div>
+            <div class="flex-1">
+              <input
+                type="file"
+                ref="displayPictureInput"
+                accept="image/*"
+                @change="handleDisplayPictureUpload"
+                class="hidden"
+                id="display-picture-upload"
+              />
+              <label
+                for="display-picture-upload"
+                class="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <svg
+                  class="h-5 w-5 mr-2 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  />
+                </svg>
+                {{ displayPictureFile ? displayPictureFile.name : "Choose Picture" }}
+              </label>
+              <button
+                v-if="displayPictureFile"
+                type="button"
+                @click="removeDisplayPicture"
+                class="ml-2 text-sm text-red-600 hover:text-red-800"
+              >
+                Remove
+              </button>
+              <p v-if="displayPictureError" class="text-red-500 text-xs mt-1">
+                {{ displayPictureError }}
+              </p>
+              <p class="text-gray-500 text-xs mt-1">
+                Accepted formats: JPEG, PNG, GIF, WebP (Max 5MB)
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div class="form-control mb-4 relative">
           <label class="label">
             <span class="label-text text-sm font-medium text-gray-700">Password*</span>
@@ -679,6 +757,7 @@
 import { ref, computed, onMounted } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
+import { uploadImage } from "../../lib/supabase.js";
 
 const isSubmitting = ref(false);
 
@@ -698,7 +777,15 @@ const form = ref({
   password: "",
   confirmPassword: "",
   message: "password does not match",
+  displayPicture_directory: "",
 });
+
+// Display picture upload state
+const displayPictureFile = ref(null);
+const displayPicturePreview = ref(null);
+const displayPictureError = ref("");
+const displayPictureInput = ref(null);
+const displayPictureUploading = ref(false);
 
 // Philippines Location API data
 const regions = ref([]);
@@ -953,6 +1040,55 @@ onMounted(async () => {
   await fetchRegions();
 });
 
+const handleDisplayPictureUpload = async (event) => {
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+
+  displayPictureError.value = "";
+
+  // Validate file type
+  const validImageTypes = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+  ];
+  if (!validImageTypes.includes(file.type)) {
+    displayPictureError.value =
+      "Please upload a valid image file (JPEG, PNG, GIF, or WebP).";
+    event.target.value = "";
+    return;
+  }
+
+  // Validate file size (5MB max)
+  const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+  if (file.size > MAX_SIZE) {
+    displayPictureError.value = "Image is too large. Maximum size is 5MB.";
+    event.target.value = "";
+    return;
+  }
+
+  displayPictureFile.value = file;
+
+  // Create preview
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    displayPicturePreview.value = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+const removeDisplayPicture = () => {
+  displayPictureFile.value = null;
+  displayPicturePreview.value = null;
+  displayPictureError.value = "";
+  if (displayPictureInput.value) {
+    displayPictureInput.value.value = "";
+  }
+  form.value.displayPicture_directory = "";
+};
+
 const handleSubmit = async () => {
   if (!termsAccepted.value) {
     alert("You must accept the terms and conditions.");
@@ -983,6 +1119,37 @@ const handleSubmit = async () => {
   isSubmitting.value = true; // ✅ Start loading
 
   try {
+    // Upload display picture if selected
+    if (displayPictureFile.value) {
+      displayPictureUploading.value = true;
+      displayPictureError.value = "";
+      
+      try {
+        const picturePath = await uploadImage(
+          displayPictureFile.value,
+          "Requirements",
+          "applicant_display_picture_directory"
+        );
+
+        if (!picturePath) {
+          displayPictureError.value = "Failed to upload display picture. Please try again.";
+          displayPictureUploading.value = false;
+          isSubmitting.value = false;
+          return;
+        }
+
+        form.value.displayPicture_directory = picturePath;
+      } catch (error) {
+        console.error("Error uploading display picture:", error);
+        displayPictureError.value = "Failed to upload display picture. Please try again.";
+        displayPictureUploading.value = false;
+        isSubmitting.value = false;
+        return;
+      } finally {
+        displayPictureUploading.value = false;
+      }
+    }
+
     const response = await axios.post(
       import.meta.env.VITE_API_BASE_URL + "/applicants",
       { ...form.value }

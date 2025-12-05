@@ -465,4 +465,135 @@ class AuthController extends Controller
             'email' => $email,
         ], 404);
     }
+
+    // Forgot Password - Send reset link
+    public function forgotPassword(Request $request)
+    {
+        $request->validate([
+            'emailAddress' => 'required|email',
+        ]);
+
+        $email = $request->input('emailAddress');
+
+        // Check applicant first
+        $applicant = Applicant::where('emailAddress', $email)->first();
+        $userType = null;
+        $userName = null;
+        $user = null;
+
+        if ($applicant) {
+            $userType = 'applicant';
+            $userName = $applicant->firstName . ' ' . $applicant->lastName;
+            $user = $applicant;
+        } else {
+            // Check organization
+            $organization = Organization::where('emailAddress', $email)->first();
+            if ($organization) {
+                $userType = 'organization';
+                $userName = $organization->name;
+                $user = $organization;
+            }
+        }
+
+        // Check if email exists in the system
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'This email address is not registered in our system. Please check your email and try again.',
+            ], 404);
+        }
+
+        // Generate reset token
+        $resetToken = Str::random(64);
+        $expiresAt = Carbon::now()->addHours(1); // Token expires in 1 hour
+
+        $user->password_reset_token = $resetToken;
+        $user->password_reset_expires_at = $expiresAt;
+        $user->save();
+
+        // Prepare reset URL
+        $resetUrl = url('/reset-password?token=' . $resetToken . '&type=' . $userType);
+
+        // Send password reset email
+        $emailResult = $this->verificationEmailSender->sendPasswordReset(
+            $email,
+            $resetUrl,
+            $userName,
+            $userType
+        );
+
+        if (!$emailResult['email_sent']) {
+            \Log::error('Failed to send password reset email', [
+                'email' => $email,
+                'error' => $emailResult['email_error'] ?? 'Unknown error',
+            ]);
+            // Still return success for security
+            return response()->json([
+                'status' => 'success',
+                'message' => 'If an account with that email exists, we have sent a password reset link.',
+            ]);
+        }
+
+        \Log::info('Password reset email sent', [
+            'email' => $email,
+            'user_type' => $userType,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'If an account with that email exists, we have sent a password reset link.',
+        ]);
+    }
+
+    // Reset Password - Update password with token
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'token' => 'required|string',
+            'type' => 'required|string|in:applicant,organization',
+            'password' => 'required|string|min:8',
+        ]);
+
+        $token = $request->input('token');
+        $type = $request->input('type');
+        $newPassword = $request->input('password');
+
+        // Find user by token and type
+        if ($type === 'applicant') {
+            $user = Applicant::where('password_reset_token', $token)->first();
+        } else {
+            $user = Organization::where('password_reset_token', $token)->first();
+        }
+
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid or expired reset token.',
+            ], 400);
+        }
+
+        // Check if token has expired
+        if ($user->password_reset_expires_at && Carbon::now()->gt($user->password_reset_expires_at)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'This password reset link has expired. Please request a new one.',
+            ], 400);
+        }
+
+        // Update password
+        $user->password = Hash::make($newPassword);
+        $user->password_reset_token = null;
+        $user->password_reset_expires_at = null;
+        $user->save();
+
+        \Log::info('Password reset successfully', [
+            'email' => $user->emailAddress,
+            'user_type' => $type,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Your password has been reset successfully. You can now log in with your new password.',
+        ]);
+    }
 }

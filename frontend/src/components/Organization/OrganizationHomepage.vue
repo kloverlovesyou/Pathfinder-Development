@@ -163,6 +163,10 @@
           <span class="cards-counter">{{ upcomingTrainings }}</span>
         </div>
         <div class="card">
+          <h4 class="cards-title">On-Going Trainings</h4>
+          <span class="cards-counter">{{ ongoingTrainings }}</span>
+        </div>
+        <div class="card">
           <h4 class="cards-title">Completed Trainings</h4>
           <span class="cards-counter">{{ completedTrainings }}</span>
         </div>
@@ -327,6 +331,7 @@ const organizationStatusClass = computed(() => {
 // ----------------------
 const totalTrainings = ref(0);
 const upcomingTrainings = ref(0);
+const ongoingTrainings = ref(0);
 const completedTrainings = ref(0);
 
 const totalCareers = ref(0);
@@ -337,6 +342,72 @@ const trainingsData = ref([]);
 const careersData = ref([]);
 const registrationsData = ref([]);
 const applicationsData = ref([]);
+
+// Helper function to parse local datetime (similar to OrganizationTrainings.vue)
+const parseLocalDateTime = (dateString) => {
+  if (!dateString) return null;
+  
+  try {
+    // Split by space or T to get date and time parts
+    const [datePart, timePart] = dateString.split(/[ T]/);
+    if (!datePart) return null;
+    
+    const [year, month, day] = datePart.split("-");
+    const timeStr = timePart || "00:00:00";
+    const [hour, minute, second] = timeStr.split(":");
+    
+    // Create date in local timezone (not UTC)
+    return new Date(
+      Number(year),
+      Number(month) - 1, // Month is 0-indexed
+      Number(day),
+      Number(hour || 0),
+      Number(minute || 0),
+      Number(second || 0)
+    );
+  } catch (error) {
+    console.error("Error parsing date:", dateString, error);
+    return null;
+  }
+};
+
+// Check if a training is currently ongoing
+const isTrainingOngoing = (training) => {
+  if (!training) return false;
+  
+  const now = new Date();
+  
+  // Check if training has multiple schedules
+  if (training.schedules && Array.isArray(training.schedules) && training.schedules.length > 0) {
+    // Check if any schedule is currently active
+    return training.schedules.some(schedule => {
+      const scheduleTime = schedule.schedule || schedule.Schedule;
+      const endTime = schedule.end_time || schedule.endTime;
+      
+      if (!scheduleTime || !endTime) return false;
+      
+      const startTime = parseLocalDateTime(scheduleTime);
+      const endTimeDate = parseLocalDateTime(endTime);
+      
+      if (!startTime || !endTimeDate) return false;
+      
+      return now >= startTime && now < endTimeDate;
+    });
+  }
+  
+  // Single schedule format (backward compatibility)
+  const scheduleTime = training.schedule || training.Schedule;
+  const endTime = training.end_time || training.endTime;
+  
+  if (!scheduleTime || !endTime) return false;
+  
+  const startTime = parseLocalDateTime(scheduleTime);
+  const endTimeDate = parseLocalDateTime(endTime);
+  
+  if (!startTime || !endTimeDate) return false;
+  
+  return now >= startTime && now < endTimeDate;
+};
 
 const fetchTrainingStats = async () => {
   try {
@@ -357,11 +428,35 @@ const fetchTrainingStats = async () => {
     const now = new Date();
 
     totalTrainings.value = trainingsData.value.length;
+    
+    // Count ongoing trainings (currently happening)
+    ongoingTrainings.value = trainingsData.value.filter(t => isTrainingOngoing(t)).length;
+    
+    // Count upcoming trainings (not started yet, not ongoing)
     upcomingTrainings.value = trainingsData.value.filter(t => {
-      const schedule = t.schedule ? new Date(t.schedule) : null;
-      return schedule && schedule > now;
+      // Exclude ongoing trainings
+      if (isTrainingOngoing(t)) return false;
+      
+      // Check if training has multiple schedules
+      if (t.schedules && Array.isArray(t.schedules) && t.schedules.length > 0) {
+        // Check if there's at least one schedule that hasn't started yet
+        return t.schedules.some(schedule => {
+          const scheduleTime = schedule.schedule || schedule.Schedule;
+          if (!scheduleTime) return false;
+          const startTime = parseLocalDateTime(scheduleTime);
+          return startTime && startTime.getTime() > now.getTime();
+        });
+      }
+      
+      // Single schedule format - check if it hasn't started yet
+      const scheduleTime = t.schedule || t.Schedule;
+      if (!scheduleTime) return false;
+      const startTime = parseLocalDateTime(scheduleTime);
+      return startTime && startTime.getTime() > now.getTime();
     }).length;
-    completedTrainings.value = totalTrainings.value - upcomingTrainings.value;
+    
+    // Completed trainings = total - ongoing - upcoming
+    completedTrainings.value = totalTrainings.value - ongoingTrainings.value - upcomingTrainings.value;
   } catch (err) {
     console.error("Failed to fetch training stats:", err);
     trainingsData.value = [];
@@ -372,12 +467,23 @@ const fetchCareerStats = async () => {
   try {
     const { data } = await api.get("/organization/careers");
     careersData.value = Array.isArray(data) ? data : [];
-    const now = new Date();
+    
+    // Normalize today to midnight for date-only comparison
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     totalCareers.value = careersData.value.length;
     ongoingCareers.value = careersData.value.filter(c => {
-      const deadline = c.deadlineOfSubmission ? new Date(c.deadlineOfSubmission) : null;
-      return deadline && deadline >= now;
+      // Check both closingDate and deadlineOfSubmission fields
+      const deadlineStr = c.closingDate || c.deadlineOfSubmission;
+      if (!deadlineStr) return true; // If no deadline, consider it open
+      
+      const deadline = new Date(deadlineStr);
+      if (isNaN(deadline.getTime())) return true; // Invalid date, consider it open
+      
+      // Normalize deadline to midnight for date-only comparison
+      deadline.setHours(0, 0, 0, 0);
+      return deadline >= today; // Career is open if deadline is today or in the future
     }).length;
     filledOutCareers.value = totalCareers.value - ongoingCareers.value;
   } catch (err) {
@@ -1496,9 +1602,8 @@ canvas {
   align-items: stretch;
   gap: 20px;
   margin: 20px;
-  flex-wrap: wrap;
-  margin-bottom: -15px;
-  /* responsive wrap for smaller screens */
+  flex-wrap: nowrap;
+  /* keep left/right alignment */
 }
 
 /* 🏷️ Titles & Text */
@@ -1506,23 +1611,23 @@ canvas {
   font-size: 14px;
   font-weight: 700;
   color: #2d3748;
+  margin: 0 0 12px 0;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.4;
 }
 
 .cards-counter {
   font-size: 30px;
   font-weight: 700;
   color: #2d3748;
-}
-
-.cards-container {
+  margin: 0;
   display: flex;
-  justify-content: space-between;
-  align-items: stretch;
-  /* 🔹 important for equal height */
-  margin: 20px;
-  gap: 20px;
-  flex-wrap: nowrap;
-  /* keep left/right alignment */
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
 }
 
 .card {
@@ -1532,6 +1637,10 @@ canvas {
   padding: 18px;
   text-align: center;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 120px;
 }
 
 

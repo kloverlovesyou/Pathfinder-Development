@@ -26,6 +26,7 @@ import AdminLayout from "@/components/Layout/AdminLayout.vue";
 import AdminApplicantsPage from "@/components/Admin/AdminApplicantsPage.vue";
 import AdminRejected from "@/components/Admin/AdminRejected.vue";
 import AdminLogin from "@/components/Admin/AdminLogin.vue";
+import ResetPassword from "@/components/Home/ResetPassword.vue";
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 
@@ -67,6 +68,12 @@ const router = createRouter({
           component: ORegistrationForms,
         },
       ],
+    },
+    // Password Reset (outside auth layout)
+    {
+      path: "/reset-password",
+      name: "ResetPassword",
+      component: ResetPassword,
     },
 
     // Main app pages (with sidebar + header)

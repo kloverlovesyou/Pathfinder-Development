@@ -642,12 +642,21 @@ async function generatePdf() {
   // Skills
   if (resume.skills.length) {
     y = sectionHeader("Skills", margin, y, pageWidth, margin);
-    y = addWrappedText(
-      resume.skills.map((s) => s.skillName || s).join(" • "),
-      margin,
-      y,
-      pageWidth - 2 * margin
-    );
+    doc.setFont("times", "regular");
+    doc.setFontSize(11);
+
+    resume.skills.forEach((skill) => {
+      if (y > pageHeight - margin - 20) {
+        doc.addPage();
+        y = margin;
+      }
+
+      const bullet = "•";
+      const skillName = skill.skillName || skill || "";
+      y = addWrappedText(`${bullet} ${skillName}`, margin, y, pageWidth - 2 * margin);
+      y += 2;
+    });
+    y += 4; // Add spacing after skills section
   }
 
   // Certificates

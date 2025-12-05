@@ -183,6 +183,10 @@ Route::get('/verify-email', [AuthController::class, 'verifyEmail']);
 Route::post('/resend-verification', [AuthController::class, 'resendVerification']);
 Route::post('/test-email', [AuthController::class, 'testEmail']); // For debugging email configuration
 
+// Password Reset routes
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+
 // Get verification link for testing (development only)
 Route::get('/get-verification-link/{email}', [AuthController::class, 'getVerificationLink']);
 
@@ -391,6 +395,10 @@ Route::middleware('auth.custom')->group(function () {
     Route::delete('/education/{id}', [EducationController::class, 'destroy']);
 
     Route::get('/organization/details', [OrganizationController::class, 'getOrgDetails']);
+    Route::put('/organization/update', [OrganizationController::class, 'update']);
+    Route::post('/organization/update/request-otp', [OrganizationController::class, 'requestProfileUpdateOTP']);
+    Route::post('/organization/change-password/request-otp', [OrganizationController::class, 'requestPasswordChangeOTP']);
+    Route::post('/organization/change-password', [OrganizationController::class, 'changePassword']);
 });
 
 // ----------------------
@@ -402,6 +410,7 @@ Route::delete('/skills/{id}', [SkillController::class, 'destroy']);
 
 Route::delete('/user', [ApplicantController::class, 'destroy']);
 Route::post('/update-password', [ApplicantController::class, 'updatePassword']);
+Route::post('/user/change-password/request-otp', [ApplicantController::class, 'requestPasswordChangeOTP']);
 Route::put('/user', [ApplicantController::class, 'update']);
 
 Route::get('/search', [SearchController::class, 'search']);

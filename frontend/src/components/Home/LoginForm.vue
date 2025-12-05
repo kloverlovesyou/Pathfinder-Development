@@ -166,12 +166,19 @@
         </p>
 
         <div class="text-center mt-4">
-          <p class="text-sm text-gray-600">
+          <p class="text-sm text-gray-600 mb-2">
             Don't have an account?
             <router-link to="/typeofaccount" class="text-primary">
               Register here.
             </router-link>
           </p>
+          <button
+            type="button"
+            @click="showForgotPasswordModal = true"
+            class="text-sm text-primary hover:underline"
+          >
+            Forgot Password?
+          </button>
         </div>
         <!-- Toast (bottom-right) -->
         <div class="toast toast-end toast-top z-50" v-if="toastMessage">
@@ -182,10 +189,88 @@
       </div>
     </div>
 
+    <!-- Forgot Password Modal -->
+    <div
+      v-if="showForgotPasswordModal"
+      class="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50"
+      @click.self="closeForgotPasswordModal"
+    >
+      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-semibold text-gray-800">Forgot Password</h3>
+          <button
+            @click="closeForgotPasswordModal"
+            class="text-gray-500 hover:text-gray-700"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
+            </svg>
+          </button>
+        </div>
+
+        <div class="mb-4">
+          <p class="text-gray-700 mb-4">
+            Enter your email address and we'll send you a link to reset your password.
+          </p>
+          <div class="form-control mb-4">
+            <input
+              v-model="forgotPasswordEmail"
+              class="input validator w-full"
+              type="email"
+              required
+              placeholder="Email"
+            />
+            <p class="validator-hint" v-if="forgotPasswordEmailError">
+              Invalid Email
+            </p>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <button
+            @click="handleForgotPassword"
+            :disabled="sendingResetEmail"
+            class="btn btn-primary w-full bg-dark-slate text-white disabled:opacity-50"
+          >
+            <span v-if="sendingResetEmail">Sending...</span>
+            <span v-else>Send Reset Link</span>
+          </button>
+          <button
+            @click="closeForgotPasswordModal"
+            class="btn btn-outline w-full"
+          >
+            Cancel
+          </button>
+        </div>
+
+        <div
+          v-if="forgotPasswordMessage"
+          class="mt-4 p-3 rounded"
+          :class="
+            forgotPasswordMessageType === 'success'
+              ? 'bg-green-100 text-green-700'
+              : 'bg-red-100 text-red-700'
+          "
+        >
+          <p class="text-sm">{{ forgotPasswordMessage }}</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Email Verification Modal -->
     <div
       v-if="showVerificationModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      class="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50"
       @click.self="closeVerificationModal"
     >
       <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
@@ -297,6 +382,14 @@ const resendMessage = ref("");
 const resendMessageType = ref(""); // 'success' or 'error'
 const userType = ref(""); // 'applicant' or 'organization'
 
+// Forgot Password
+const showForgotPasswordModal = ref(false);
+const forgotPasswordEmail = ref("");
+const forgotPasswordEmailError = ref(false);
+const sendingResetEmail = ref(false);
+const forgotPasswordMessage = ref("");
+const forgotPasswordMessageType = ref(""); // 'success' or 'error'
+
 const validateEmail = (emailVal) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
 const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);
 
@@ -378,6 +471,53 @@ const handleLogin = async () => {
     }
   } finally {
     isLoading.value = false; // ✅ stop loading in all cases
+  }
+};
+
+const closeForgotPasswordModal = () => {
+  showForgotPasswordModal.value = false;
+  forgotPasswordEmail.value = "";
+  forgotPasswordEmailError.value = false;
+  forgotPasswordMessage.value = "";
+  forgotPasswordMessageType.value = "";
+};
+
+const handleForgotPassword = async () => {
+  forgotPasswordEmailError.value = !validateEmail(forgotPasswordEmail.value);
+  if (forgotPasswordEmailError.value) return;
+
+  sendingResetEmail.value = true;
+  forgotPasswordMessage.value = "";
+  forgotPasswordMessageType.value = "";
+
+  try {
+    const response = await axios.post(
+      import.meta.env.VITE_API_BASE_URL + "/forgot-password",
+      {
+        emailAddress: forgotPasswordEmail.value,
+      }
+    );
+
+    if (response.data.status === "success") {
+      forgotPasswordMessage.value = response.data.message;
+      forgotPasswordMessageType.value = "success";
+      // Clear email after success
+      setTimeout(() => {
+        forgotPasswordEmail.value = "";
+      }, 2000);
+    } else if (response.data.status === "error") {
+      // Handle error response (e.g., email not found)
+      forgotPasswordMessage.value = response.data.message;
+      forgotPasswordMessageType.value = "error";
+    }
+  } catch (err) {
+    console.error("Forgot password error:", err);
+    forgotPasswordMessage.value =
+      err.response?.data?.message ||
+      "Failed to send reset email. Please try again.";
+    forgotPasswordMessageType.value = "error";
+  } finally {
+    sendingResetEmail.value = false;
   }
 };
 

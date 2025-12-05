@@ -73,6 +73,10 @@ class Organization extends Model
 		'email_verification_token',
 		'email_verified_at',
 		'statusDate',
+		'password_reset_token',
+		'password_reset_expires_at',
+		'password_change_otp',
+		'password_change_otp_expires_at',
 	];
 
 	public function admin()

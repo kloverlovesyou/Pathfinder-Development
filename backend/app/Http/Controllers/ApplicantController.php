@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Jobs\SendVerificationEmailJob;
+use Carbon\Carbon;
 class ApplicantController extends Controller
 {
 
@@ -30,6 +31,7 @@ public function a_register(Request $request)
         ],
         'phoneNumber'  => 'required|string|max:11',
         'password'     => 'required|string|min:8',
+        'displayPicture_directory' => 'nullable|string|max:255',
     ]);
     if ($validator->fails()) {
         return response()->json([
@@ -50,6 +52,12 @@ public function a_register(Request $request)
         'email_verification_token' => $verificationToken,
         'email_verified_at' => null,
     ]);
+    
+    // Handle display picture if provided
+    if ($request->displayPicture_directory) {
+        $applicant->setAttribute('displayPicture_directory', $request->displayPicture_directory);
+        $applicant->save();
+    }
     $verificationUrl = url('/api/verify-email?token=' . $verificationToken . '&type=applicant');
     $userName = $request->firstName . ' ' . $request->lastName;
     $userEmail = $request->emailAddress;
@@ -151,12 +159,14 @@ public function login(Request $request)
         ]);
 
         // Handle display picture - normalize to displayPicture_directory (camelCase)
-        $displayPicturePath = $request->input('displayPicture_directory') ??
-            $request->input('DisplayPicture_directory');
-        
-        if ($displayPicturePath !== null) {
+        // Check if the key exists in the request (even if null/empty) to allow removal
+        if ($request->has('displayPicture_directory') || $request->has('DisplayPicture_directory')) {
+            $displayPicturePath = $request->input('displayPicture_directory') ??
+                $request->input('DisplayPicture_directory');
+            
             // Use setAttribute directly with the exact database column name (camelCase)
             // This ensures Laravel uses the correct column name, not DisplayPicture_directory
+            // Allow null to remove the picture
             $applicant->setAttribute('displayPicture_directory', $displayPicturePath);
         }
 
@@ -188,33 +198,117 @@ public function login(Request $request)
     return response()->json(['message' => 'Account deleted successfully']);
 }
 
-   // 🧩 Update password separately
-    public function updatePassword(Request $request)
-    {
-        $token = $request->bearerToken();
-        $applicant = Applicant::where('api_token', $token)->first();
+   // ----------------------
+   // Request OTP for password change
+   // ----------------------
+   public function requestPasswordChangeOTP(Request $request)
+   {
+       $token = $request->bearerToken();
+       $applicant = Applicant::where('api_token', $token)->first();
 
-        if (!$applicant) {
-            return response()->json(['message' => 'Unauthorized'], 401);
-        }
+       if (!$applicant) {
+           return response()->json(['message' => 'Unauthorized'], 401);
+       }
 
-        // ✅ Validate fields
-        $validated = $request->validate([
-            'currentPassword' => 'required|string',
-            'newPassword' => 'required|string|min:8|confirmed',
-        ]);
+       // Verify current password
+       $validated = $request->validate([
+           'currentPassword' => 'required|string',
+       ]);
 
-        // ✅ Check if current password matches
-        if (!Hash::check($validated['currentPassword'], $applicant->password)) {
-            return response()->json(['message' => 'The current password is incorrect.'], 403);
-        }
+       if (!Hash::check($validated['currentPassword'], $applicant->password)) {
+           return response()->json(['message' => 'Invalid current password.'], 401);
+       }
 
-        // ✅ Update password
-        $applicant->password = Hash::make($validated['newPassword']);
-        $applicant->save();
+       // Generate 6-digit OTP
+       $otp = str_pad((string)rand(0, 999999), 6, '0', STR_PAD_LEFT);
+       $expiresAt = Carbon::now()->addMinutes(10); // OTP expires in 10 minutes
 
-        return response()->json(['message' => 'Password updated successfully']);
-    }
+       // Store OTP
+       $applicant->password_change_otp = $otp;
+       $applicant->password_change_otp_expires_at = $expiresAt;
+       $applicant->save();
+
+       // Send OTP email
+       try {
+           $brevoService = app(\App\Services\BrevoEmailService::class);
+           $applicantName = $applicant->firstName . ' ' . $applicant->lastName;
+           $brevoService->sendPasswordChangeOTP(
+               $applicant->emailAddress,
+               $applicantName,
+               $otp
+           );
+
+           \Log::info('Password change OTP sent', [
+               'email' => $applicant->emailAddress,
+               'applicant_id' => $applicant->applicantID,
+           ]);
+       } catch (\Exception $e) {
+           \Log::error('Failed to send password change OTP email', [
+               'email' => $applicant->emailAddress,
+               'error' => $e->getMessage(),
+           ]);
+           // Still return success for security (don't reveal if email failed)
+       }
+
+       return response()->json([
+           'message' => 'OTP has been sent to your email address. Please check your inbox.',
+           'otp_expires_in' => 10, // minutes
+       ]);
+   }
+
+   // ----------------------
+   // Change password with OTP verification
+   // ----------------------
+   public function updatePassword(Request $request)
+   {
+       $token = $request->bearerToken();
+       $applicant = Applicant::where('api_token', $token)->first();
+
+       if (!$applicant) {
+           return response()->json(['message' => 'Unauthorized'], 401);
+       }
+
+       $validated = $request->validate([
+           'currentPassword' => 'required|string',
+           'newPassword' => 'required|string|min:8|confirmed',
+           'otp' => 'required|string|size:6',
+       ]);
+
+       // Verify current password
+       if (!Hash::check($validated['currentPassword'], $applicant->password)) {
+           return response()->json(['message' => 'Invalid current password.'], 401);
+       }
+
+       // Verify OTP
+       if (!$applicant->password_change_otp || $applicant->password_change_otp !== $validated['otp']) {
+           return response()->json(['message' => 'Invalid or expired OTP. Please request a new one.'], 400);
+       }
+
+       // Check if OTP has expired
+       if ($applicant->password_change_otp_expires_at && Carbon::now()->gt($applicant->password_change_otp_expires_at)) {
+           return response()->json(['message' => 'OTP has expired. Please request a new one.'], 400);
+       }
+
+       // Check if new password is different from current password
+       if (Hash::check($validated['newPassword'], $applicant->password)) {
+           return response()->json(['message' => 'New password must be different from your current password.'], 400);
+       }
+
+       // Update password
+       $applicant->password = Hash::make($validated['newPassword']);
+       $applicant->password_change_otp = null;
+       $applicant->password_change_otp_expires_at = null;
+       $applicant->save();
+
+       \Log::info('Password changed successfully', [
+           'email' => $applicant->emailAddress,
+           'applicant_id' => $applicant->applicantID,
+       ]);
+
+       return response()->json([
+           'message' => 'Password changed successfully!',
+       ]);
+   }
 
       public function index()
     {

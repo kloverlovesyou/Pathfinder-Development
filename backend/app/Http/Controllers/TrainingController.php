@@ -10,6 +10,10 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
+use App\Mail\TrainingUpdated;
+use App\Services\BrevoEmailService;
 
 class TrainingController extends Controller
 {
@@ -543,10 +547,158 @@ public function total() {
             $training->tags()->sync($validated['Tags']);
         }
 
+        // Reload training with relationships
+        $training->load(['schedules', 'tags', 'organization']);
+
+        // Send email notifications to all registered users
+        $this->sendUpdateNotifications($training);
+
         return response()->json([
             'message' => 'Training updated successfully',
-            'data' => $this->formatTraining($training->load(['schedules', 'tags', 'organization'])),
+            'data' => $this->formatTraining($training),
         ]);
+    }
+
+    /**
+     * Send email notifications to all registered users when training is updated
+     */
+    private function sendUpdateNotifications(Training $training)
+    {
+        try {
+            // Get all registrations for this training with applicant details
+            $registrations = Registration::with('applicant')
+                ->where('trainingID', $training->trainingID)
+                ->where('registrationStatus', '!=', 'Cancelled')
+                ->get();
+
+            if ($registrations->isEmpty()) {
+                Log::info('No registrations found for training update notification', [
+                    'training_id' => $training->trainingID,
+                ]);
+                return;
+            }
+
+            // Format schedules for email
+            $schedulesData = $training->schedules->map(function ($schedule) {
+                return [
+                    'start_time' => $schedule->schedule ? $schedule->schedule->format('F d, Y h:i A') : 'N/A',
+                    'end_time' => $schedule->end_time ? $schedule->end_time->format('F d, Y h:i A') : 'N/A',
+                    'mode' => $schedule->mode ?? 'N/A',
+                    'location' => $schedule->location,
+                    'training_link' => $schedule->trainingLink,
+                ];
+            })->toArray();
+
+            $organizationName = $training->organization->name ?? 'Unknown Organization';
+            $trainingTitle = $training->title ?? $training->Title ?? 'Training';
+            $trainingDescription = $training->description ?? $training->Description ?? '';
+
+            // Get Brevo API key
+            $brevoApiKeyFromConfig = config('services.brevo.api_key');
+            $brevoApiKeyFromEnv = env('BREVO_API_KEY');
+            $brevoApiKey = trim($brevoApiKeyFromConfig ?: $brevoApiKeyFromEnv ?: '');
+
+            // Send email to each registered applicant
+            foreach ($registrations as $registration) {
+                $applicant = $registration->applicant;
+                
+                if (!$applicant) {
+                    Log::warning('Registration has no applicant', [
+                        'registration_id' => $registration->registrationID,
+                    ]);
+                    continue;
+                }
+
+                $applicantEmail = $applicant->emailAddress ?? $applicant->EmailAddress ?? null;
+                if (!$applicantEmail) {
+                    Log::warning('Applicant has no email address', [
+                        'applicant_id' => $applicant->applicantID,
+                    ]);
+                    continue;
+                }
+
+                $applicantName = trim(($applicant->firstName ?? $applicant->FirstName ?? '') . ' ' . ($applicant->lastName ?? $applicant->LastName ?? ''));
+
+                // Create mailable
+                $mailable = new TrainingUpdated(
+                    $applicantName,
+                    $trainingTitle,
+                    $trainingDescription,
+                    $organizationName,
+                    $schedulesData
+                );
+
+                $emailSent = false;
+                $emailError = null;
+                $brevoError = null;
+
+                // Try Brevo API first
+                if (!empty($brevoApiKey)) {
+                    try {
+                        $brevoService = app(BrevoEmailService::class);
+                        $htmlContent = view('emails.training-updated', [
+                            'applicantName' => $applicantName,
+                            'trainingTitle' => $trainingTitle,
+                            'trainingDescription' => $trainingDescription,
+                            'organizationName' => $organizationName,
+                            'schedules' => $schedulesData,
+                        ])->render();
+
+                        $brevoService->send(
+                            $applicantEmail,
+                            $mailable->envelope()->subject,
+                            $htmlContent
+                        );
+
+                        $emailSent = true;
+                        Log::info('Training update email sent via Brevo API', [
+                            'applicant_email' => $applicantEmail,
+                            'training_id' => $training->trainingID,
+                        ]);
+                    } catch (\Exception $brevoException) {
+                        $brevoError = $brevoException->getMessage();
+                        Log::error('Brevo API failed for training update email', [
+                            'error' => $brevoError,
+                            'applicant_email' => $applicantEmail,
+                            'training_id' => $training->trainingID,
+                        ]);
+                        // Fall through to SMTP
+                    }
+                }
+
+                // Fallback to SMTP if Brevo failed or not configured
+                if (!$emailSent) {
+                    try {
+                        Mail::to($applicantEmail)->send($mailable);
+                        $emailSent = true;
+                        Log::info('Training update email sent via SMTP', [
+                            'applicant_email' => $applicantEmail,
+                            'training_id' => $training->trainingID,
+                        ]);
+                    } catch (\Exception $smtpException) {
+                        $emailError = $smtpException->getMessage();
+                        Log::error('Failed to send training update email', [
+                            'error' => $emailError,
+                            'brevo_error' => $brevoError,
+                            'applicant_email' => $applicantEmail,
+                            'training_id' => $training->trainingID,
+                        ]);
+                    }
+                }
+            }
+
+            Log::info('Training update notification process completed', [
+                'training_id' => $training->trainingID,
+                'total_registrations' => $registrations->count(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error sending training update notifications', [
+                'error' => $e->getMessage(),
+                'training_id' => $training->trainingID,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            // Don't throw - we don't want to fail the update if email fails
+        }
     }
 
     public function destroy($id)

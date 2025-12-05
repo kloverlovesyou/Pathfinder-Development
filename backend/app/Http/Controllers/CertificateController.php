@@ -93,7 +93,7 @@ public function index($applicantID)
         
         // Get certificate name from training title
         $trainingTitle = $training ? $training->title : ('Training #' . ($registration->trainingID ?? 'Unknown'));
-        $certificationName = $trainingTitle . ' - Certificate of Completion';
+        $certificationName = $trainingTitle;
         
         // Check if this certificate already exists in certifications table
         $existingCert = Certification::where('applicantID', $applicantID)
