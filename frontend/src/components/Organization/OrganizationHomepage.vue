@@ -185,103 +185,61 @@
       </section>
 
       <!-- Chart Section -->
-      <!-- Chart Section -->
-      <section class="charts-container">
+      <section class="charts-container relative">
 
-        <!-- MAIN CHART -->
-        <div class="main-chart relative">
+      <!-- ONE GLOBAL LOADER -->
+      <div
+        v-if="isChartsLoading"
+        class="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-sm rounded-lg z-20"
+      >
+        <svg
+          class="animate-spin h-14 w-14 text-blue-600"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          ></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v8H4z"
+          ></path>
+        </svg>
+      </div>
 
-          <!-- Loader -->
-          <div
-            v-if="isChartLoading[activeChart.id]"
-            class="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-sm rounded-lg z-10"
-          >
-            <!-- Spinner -->
-            <svg
-              class="animate-spin h-12 w-12 text-blue-600"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              ></circle>
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v8H4z"
-              ></path>
-            </svg>
-          </div>
+      <!-- MAIN CHART -->
+      <div
+        class="main-chart"
+        :class="isChartsLoading ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'"
+      >
+        <canvas :id="activeChart.id"></canvas>
+        <h3>{{ activeChart.title }}</h3>
+      </div>
 
-          <!-- Chart Canvas -->
-          <canvas
-            :id="activeChart.id"
-            :class="{
-              'opacity-0': isChartLoading[activeChart.id],
-              'opacity-100 transition-opacity duration-300': !isChartLoading[activeChart.id]
-            }"
-          ></canvas>
-
-          <h3>{{ activeChart.title }}</h3>
+      <!-- SIDE CHARTS -->
+      <div
+        class="side-charts"
+        :class="isChartsLoading ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'"
+      >
+        <div
+          v-for="chart in sideCharts"
+          :key="chart.id"
+          class="side-chart cursor-pointer"
+          @click="swapChart(chart)"
+        >
+          <canvas :id="chart.id"></canvas>
+          <h4>{{ chart.title }}</h4>
         </div>
+      </div>
 
-        <!-- SIDE CHARTS -->
-        <div class="side-charts">
-          <div
-            v-for="chart in sideCharts"
-            :key="chart.id"
-            class="side-chart relative cursor-pointer"
-            @click="swapChart(chart)"
-          >
-
-            <!-- Loader -->
-            <div
-              v-if="isChartLoading[chart.id]"
-              class="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-sm rounded-lg z-10"
-            >
-              <!-- Spinner -->
-              <svg
-                class="animate-spin h-10 w-10 text-blue-600"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                ></circle>
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v8H4z"
-                ></path>
-              </svg>
-            </div>
-
-            <!-- Chart Canvas -->
-            <canvas
-              :id="chart.id"
-              :class="{
-                'opacity-0': isChartLoading[chart.id],
-                'opacity-100 transition-opacity duration-300': !isChartLoading[chart.id]
-              }"
-            ></canvas>
-
-            <h4>{{ chart.title }}</h4>
-          </div>
-        </div>
-
-      </section>
+    </section>
 
     </main>
   </div>
