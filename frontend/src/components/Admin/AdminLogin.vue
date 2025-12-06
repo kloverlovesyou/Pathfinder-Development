@@ -11,6 +11,9 @@
         <form @submit.prevent="handleAdminLogin">
           <!-- Email -->
           <div class="form-control mb-2">
+            <label class="label">
+              <span class="label-text text-sm font-medium text-gray-700">Email <span class="text-red-500">*</span></span>
+            </label>
             <input
               v-model="email"
               class="input validator w-full"
@@ -23,6 +26,9 @@
 
           <!-- Password -->
           <div class="form-control relative mb-4">
+            <label class="label">
+              <span class="label-text text-sm font-medium text-gray-700">Password <span class="text-red-500">*</span></span>
+            </label>
             <input
               :type="showPassword ? 'text' : 'password'"
               class="w-full border rounded-lg input pr-10"

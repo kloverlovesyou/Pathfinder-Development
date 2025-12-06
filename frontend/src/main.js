@@ -5,7 +5,7 @@ import App from "./App.vue";
 import router from "./Router/routes.js";
 import useAuth from "@/composables/useAuth";
 import { useAuthStore } from "@/stores/auth";
-import * as Cally from "cally";
+import "cally"; // Calendar library - import for side effects
 import axios from "axios";
 
 // Add this interceptor
@@ -22,7 +22,6 @@ const pinia = createPinia();
 
 app.use(router);
 app.use(pinia);
-app.use(Cally.default || Cally);
 
 const { attempt } = useAuth();
 

@@ -2,7 +2,7 @@ import Homepage from "@/components/Home/Homepage.vue";
 import ProfilePage from "@/components/Home/Profilepage.vue";
 import ARegistrationForms from "@/components/Home/A_RegistrationForm.vue";
 import ORegistrationForms from "@/components/Home/O_RegistrationForm.vue";
-import LoginForm from "@/components/Home/LoginForm.vue";
+import UnifiedAuthForm from "@/components/Home/UnifiedAuthForm.vue";
 import Trainingpage from "@/components/Home/Trainingpage.vue";
 import Careerpage from "@/components/Home/Careerpage.vue";
 import Organizationpage from "@/components/Home/Organizationpage.vue";
@@ -50,7 +50,7 @@ const router = createRouter({
       path: "/auth",
       component: AuthLayout,
       children: [
-        { path: "login", name: "Login", component: LoginForm },
+        { path: "login", name: "Login", component: UnifiedAuthForm },
         {
           path: "register",
           alias: "/typeofaccount", // 👈 Now /typeofaccount works too

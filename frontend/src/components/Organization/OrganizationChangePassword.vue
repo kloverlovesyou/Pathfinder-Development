@@ -142,19 +142,19 @@
 
                 <form @submit.prevent="otpRequested ? changePassword() : requestOTP()">
                     <div class="input-with-counter">
-                        <label class="input-label">Current Password</label>
+                        <label class="input-label">Current Password <span class="text-red-500">*</span></label>
                         <input type="password" v-model="form.currentPassword" placeholder="Enter current password" required maxlength="128" :disabled="otpRequested" />
                         <span class="char-counter">{{ form.currentPassword.length }}/128</span>
                     </div>
 
                     <div class="input-with-counter">
-                        <label class="input-label">New Password</label>
+                        <label class="input-label">New Password <span class="text-red-500">*</span></label>
                         <input type="password" v-model="form.newPassword" placeholder="Enter new password" required maxlength="128" :disabled="otpRequested" />
                         <span class="char-counter">{{ form.newPassword.length }}/128</span>
                     </div>
 
                     <div class="input-with-counter">
-                        <label class="input-label">Confirm New Password</label>
+                        <label class="input-label">Confirm New Password <span class="text-red-500">*</span></label>
                         <input type="password" v-model="form.confirmPassword" placeholder="Confirm new password" required maxlength="128" :disabled="otpRequested" />
                         <span class="char-counter">{{ form.confirmPassword.length }}/128</span>
                         <p v-if="showPasswordMismatch" class="error-message">
@@ -164,7 +164,7 @@
 
                     <!-- OTP Input (shown after OTP is requested) -->
                     <div v-if="otpRequested" class="input-with-counter">
-                        <label class="input-label">Verification Code (OTP)</label>
+                        <label class="input-label">Verification Code (OTP) <span class="text-red-500">*</span></label>
                         <input 
                             type="text" 
                             v-model="form.otp" 

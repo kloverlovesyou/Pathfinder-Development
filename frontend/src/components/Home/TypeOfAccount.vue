@@ -12,7 +12,7 @@ import organizationImage from "@/assets/images/org.jpg";
         <div class="pt-10 pb-2">
           <button
             class="btn btn-ghost text-dark-slate"
-            @click="$router.push('/loginform')"
+            @click="$router.push('/auth/login')"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

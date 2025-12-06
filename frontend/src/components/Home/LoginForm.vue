@@ -13,6 +13,9 @@
         <form @submit.prevent="handleLogin">
           <!-- Email -->
           <div class="form-control mb-2">
+            <label class="label">
+              <span class="label-text text-sm font-medium text-gray-700">Email <span class="text-red-500">*</span></span>
+            </label>
             <input
               v-model="email"
               class="input validator w-full"
@@ -25,6 +28,9 @@
 
           <!-- Password -->
           <div class="form-control relative mb-4">
+            <label class="label">
+              <span class="label-text text-sm font-medium text-gray-700">Password <span class="text-red-500">*</span></span>
+            </label>
             <input
               :type="showPassword ? 'text' : 'password'"
               class="w-full border rounded-lg input"
@@ -38,7 +44,7 @@
             <!-- 👁 Toggle Button -->
             <button
               type="button"
-              class="absolute right-3 top-3 text-gray-500"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
               aria-label="Toggle confirm password visibility"
               @click="showPassword = !showPassword"
             >
@@ -223,6 +229,9 @@
             Enter your email address and we'll send you a link to reset your password.
           </p>
           <div class="form-control mb-4">
+            <label class="label">
+              <span class="label-text text-sm font-medium text-gray-700">Email <span class="text-red-500">*</span></span>
+            </label>
             <input
               v-model="forgotPasswordEmail"
               class="input validator w-full"

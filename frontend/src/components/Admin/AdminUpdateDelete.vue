@@ -36,7 +36,7 @@
                 <input
                   :type="showNewPassword ? 'text' : 'password'"
                   class="border border-gray-300 input w-full pr-10"
-                  placeholder="New Password (optional)"
+                  placeholder="New Password"
                   v-model="form.newPassword"
                 />
                 <button

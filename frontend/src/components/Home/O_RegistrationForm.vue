@@ -4,28 +4,6 @@
   >
     <div>
       <div>
-        <div class="pt-10 pb-2">
-          <button
-            class="btn btn-ghost btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl text-dark-slate"
-            @click="$router.push('Login')"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M15 18l-6-6 6-6"
-              />
-            </svg>
-          </button>
-        </div>
-
         <h2 class="text-3xl font-semibold text-left mb-6 text-dark-slate pl-3">
           Create Account
         </h2>
@@ -34,7 +12,7 @@
         <!-- Logo Upload -->
         <div class="form-control mb-4">
           <label class="block text-sm font-medium text-gray-700 mb-2">
-            Organization Logo (Optional)
+            Organization Logo
           </label>
           <div class="flex items-center space-x-4">
             <div v-if="logoPreview" class="flex-shrink-0">
@@ -112,7 +90,7 @@
         <div class="form-control mb-4">
           <label class="label">
             <span class="label-text text-sm font-medium text-gray-700"
-              >Organization Name*</span
+              >Organization Name <span class="text-red-500">*</span></span
             >
           </label>
           <input
@@ -132,7 +110,7 @@
           <div class="form-control mb-4">
             <label class="label">
               <span class="label-text text-sm font-medium text-gray-700"
-                >Region*</span
+                >Region <span class="text-red-500">*</span></span
               >
             </label>
             <select
@@ -158,7 +136,7 @@
           <div class="form-control mb-4">
             <label class="label">
               <span class="label-text text-sm font-medium text-gray-700"
-                >Province*</span
+                >Province <span class="text-red-500">*</span></span
               >
             </label>
             <select
@@ -190,7 +168,7 @@
           <div class="form-control mb-4">
             <label class="label">
               <span class="label-text text-sm font-medium text-gray-700"
-                >City/Municipality*</span
+                >City/Municipality <span class="text-red-500">*</span></span
               >
             </label>
             <select
@@ -222,7 +200,7 @@
           <div class="form-control mb-4">
             <label class="label">
               <span class="label-text text-sm font-medium text-gray-700"
-                >Barangay*</span
+                >Barangay <span class="text-red-500">*</span></span
               >
             </label>
             <select
@@ -253,7 +231,7 @@
           <div class="form-control mb-4">
             <label class="label">
               <span class="label-text text-sm font-medium text-gray-700"
-                >Street Address (Optional)</span
+                >Street Address</span
               >
             </label>
             <input
@@ -273,7 +251,7 @@
         <div v-else class="form-control mb-4">
           <label class="label">
             <span class="label-text text-sm font-medium text-gray-700"
-              >Location*</span
+              >Location <span class="text-red-500">*</span></span
             >
           </label>
           <input
@@ -297,7 +275,7 @@
         <div class="form-control mb-4">
           <label class="label">
             <span class="label-text text-sm font-medium text-gray-700"
-              >Website URL (optional)</span
+              >Website URL</span
             >
           </label>
           <input
@@ -316,7 +294,7 @@
         <div class="form-control mb-4">
           <label class="label">
             <span class="label-text text-sm font-medium text-gray-700"
-              >Email*</span
+              >Email <span class="text-red-500">*</span></span
             >
           </label>
           <input
@@ -445,7 +423,7 @@
         <div class="form-control mb-4 relative">
           <label class="label">
             <span class="label-text text-sm font-medium text-gray-700"
-              >Password*</span
+              >Password <span class="text-red-500">*</span></span
             >
           </label>
           <input
@@ -556,7 +534,7 @@
         <div class="form-control mb-4">
           <label class="label">
             <span class="label-text text-sm font-medium text-gray-700"
-              >Confirm Password*</span
+              >Confirm Password <span class="text-red-500">*</span></span
             >
           </label>
           <!-- Input + toggle wrapper -->
@@ -1159,73 +1137,93 @@ const PH_LOCATION_API_BASE =
 // Fetch regions on mount
 async function fetchRegions() {
   loadingRegions.value = true;
-  try {
-    // Try primary source: iamkevinluke's repository
-    const response = await axios.get("/api/regions");
-    regions.value = (response.data || []).map((region) => ({
+  
+  // Helper function to fetch with smart error handling
+  const fetchWithLogging = async (url, isFallback = false) => {
+    try {
+      const response = await axios.get(url, {
+        validateStatus: (status) => status < 500 // Don't throw for 4xx errors
+      });
+      if (response.status === 200 && Array.isArray(response.data) && response.data.length > 0) {
+        return { success: true, data: response.data };
+      } else if (response.status === 404) {
+        // 404 is expected for fallback endpoints, only log if primary
+        if (!isFallback) {
+          console.warn(`[Org Regions API] Endpoint not found (404): ${url}`);
+        }
+        return { success: false, error: 'not_found' };
+      } else if (response.status >= 400) {
+        console.warn(`[Org Regions API] Client error (${response.status}): ${url}`);
+        return { success: false, error: 'client_error' };
+      }
+      return { success: false, error: 'invalid_response' };
+    } catch (error) {
+      // Network errors or server errors (5xx) - these are real problems
+      if (error.response?.status >= 500 || error.code === 'ERR_NETWORK') {
+        console.error(`[Org Regions API] Server/Network error: ${url}`, error.message);
+      } else if (!isFallback) {
+        // Only log unexpected errors for primary endpoint
+        console.warn(`[Org Regions API] Request failed: ${url}`, error.message);
+      }
+      return { success: false, error: error.response?.status >= 500 ? 'server_error' : 'network_error' };
+    }
+  };
+  
+  // Try primary source: iamkevinluke's repository
+  const primaryResult = await fetchWithLogging("/api/regions", false);
+  if (primaryResult.success) {
+    regions.value = primaryResult.data.map((region) => ({
       psgc_code:
         region.code || region.psgc_code || region.id || region.region_code,
       name: region.name || region.region_name || region.regionName,
     }));
-  } catch (error) {
-    console.error("Error fetching regions:", error);
-    // Fallback 1: Try alternative GitHub repository
-    try {
-      const fallbackResponse = await axios.get(
-        "https://raw.githubusercontent.com/simonbengtsson/jsondata/master/philippines/regions.json"
-      );
-      regions.value = (fallbackResponse.data || []).map((region) => ({
-        psgc_code: region.code || region.id,
-        name: region.name,
-      }));
-    } catch (fallbackError1) {
-      console.error("Error fetching regions from fallback 1:", fallbackError1);
-      // Fallback 2: Try PSGC API
-      try {
-        const fallbackResponse2 = await axios.get(
-          "https://psgc.gitlab.io/api/regions.json"
-        );
-        regions.value = (fallbackResponse2.data || []).map((region) => ({
-          psgc_code: region.code || region.psgc_code,
-          name: region.name,
-        }));
-      } catch (fallbackError2) {
-        console.error(
-          "Error fetching regions from all sources:",
-          fallbackError2
-        );
-        // Last resort: Use a minimal hardcoded list of major regions
-        regions.value = [
-          { psgc_code: "010000000", name: "Ilocos Region (Region I)" },
-          { psgc_code: "020000000", name: "Cagayan Valley (Region II)" },
-          { psgc_code: "030000000", name: "Central Luzon (Region III)" },
-          { psgc_code: "040000000", name: "CALABARZON (Region IV-A)" },
-          { psgc_code: "050000000", name: "MIMAROPA (Region IV-B)" },
-          { psgc_code: "060000000", name: "Bicol Region (Region V)" },
-          { psgc_code: "070000000", name: "Western Visayas (Region VI)" },
-          { psgc_code: "080000000", name: "Central Visayas (Region VII)" },
-          { psgc_code: "090000000", name: "Eastern Visayas (Region VIII)" },
-          { psgc_code: "100000000", name: "Zamboanga Peninsula (Region IX)" },
-          { psgc_code: "110000000", name: "Northern Mindanao (Region X)" },
-          { psgc_code: "120000000", name: "Davao Region (Region XI)" },
-          { psgc_code: "130000000", name: "SOCCSKSARGEN (Region XII)" },
-          { psgc_code: "140000000", name: "Caraga (Region XIII)" },
-          { psgc_code: "150000000", name: "Bangsamoro (BARMM)" },
-          {
-            psgc_code: "160000000",
-            name: "Cordillera Administrative Region (CAR)",
-          },
-          { psgc_code: "170000000", name: "National Capital Region (NCR)" },
-        ];
-        // If even hardcoded list fails to load, show manual input
-        if (regions.value.length === 0) {
-          apiFailed.value = true;
-        }
-      }
-    }
-  } finally {
     loadingRegions.value = false;
+    return; // Success, exit early
   }
+  
+  // Fallback: Try PSGC API (skip the known-broken simonbengtsson endpoint)
+  const psgcResult = await fetchWithLogging("https://psgc.gitlab.io/api/regions.json", true);
+  if (psgcResult.success) {
+    regions.value = psgcResult.data.map((region) => ({
+      psgc_code: region.code || region.psgc_code,
+      name: region.name,
+    }));
+    loadingRegions.value = false;
+    return; // Success, exit early
+  }
+  
+  // Last resort: Use a minimal hardcoded list of major regions
+  console.warn("[Org Regions API] All API endpoints failed, using hardcoded fallback list");
+  regions.value = [
+    { psgc_code: "010000000", name: "Ilocos Region (Region I)" },
+    { psgc_code: "020000000", name: "Cagayan Valley (Region II)" },
+    { psgc_code: "030000000", name: "Central Luzon (Region III)" },
+    { psgc_code: "040000000", name: "CALABARZON (Region IV-A)" },
+    { psgc_code: "050000000", name: "MIMAROPA (Region IV-B)" },
+    { psgc_code: "060000000", name: "Bicol Region (Region V)" },
+    { psgc_code: "070000000", name: "Western Visayas (Region VI)" },
+    { psgc_code: "080000000", name: "Central Visayas (Region VII)" },
+    { psgc_code: "090000000", name: "Eastern Visayas (Region VIII)" },
+    { psgc_code: "100000000", name: "Zamboanga Peninsula (Region IX)" },
+    { psgc_code: "110000000", name: "Northern Mindanao (Region X)" },
+    { psgc_code: "120000000", name: "Davao Region (Region XI)" },
+    { psgc_code: "130000000", name: "SOCCSKSARGEN (Region XII)" },
+    { psgc_code: "140000000", name: "Caraga (Region XIII)" },
+    { psgc_code: "150000000", name: "Bangsamoro (BARMM)" },
+    {
+      psgc_code: "160000000",
+      name: "Cordillera Administrative Region (CAR)",
+    },
+    { psgc_code: "170000000", name: "National Capital Region (NCR)" },
+  ];
+  
+  // If even hardcoded list fails to load, show manual input
+  if (regions.value.length === 0) {
+    console.error("[Org Regions API] Critical: Hardcoded fallback list is empty!");
+    apiFailed.value = true;
+  }
+  
+  loadingRegions.value = false;
 }
 
 // Fetch provinces based on selected region
@@ -1240,10 +1238,37 @@ async function onRegionChange() {
   barangays.value = [];
 
   loadingProvinces.value = true;
-  try {
-    const response = await axios.get(`/api/provinces/${form.value.region}`);
-    const allProvinces = response.data || [];
-    provinces.value = allProvinces
+  
+  // Helper function to fetch with smart error handling
+  const fetchWithLogging = async (url, isFallback = false) => {
+    try {
+      const response = await axios.get(url, {
+        validateStatus: (status) => status < 500
+      });
+      if (response.status === 200 && Array.isArray(response.data) && response.data.length > 0) {
+        return { success: true, data: response.data };
+      } else if (response.status === 404 && !isFallback) {
+        console.warn(`[Org Provinces API] Endpoint not found (404): ${url}`);
+        return { success: false, error: 'not_found' };
+      } else if (response.status >= 400 && !isFallback) {
+        console.warn(`[Org Provinces API] Client error (${response.status}): ${url}`);
+        return { success: false, error: 'client_error' };
+      }
+      return { success: false, error: 'invalid_response' };
+    } catch (error) {
+      if (error.response?.status >= 500 || error.code === 'ERR_NETWORK') {
+        console.error(`[Org Provinces API] Server/Network error: ${url}`, error.message);
+      } else if (!isFallback) {
+        console.warn(`[Org Provinces API] Request failed: ${url}`, error.message);
+      }
+      return { success: false, error: error.response?.status >= 500 ? 'server_error' : 'network_error' };
+    }
+  };
+  
+  // Try primary API
+  const primaryResult = await fetchWithLogging(`/api/provinces/${form.value.region}`, false);
+  if (primaryResult.success) {
+    provinces.value = primaryResult.data
       .filter((p) => {
         const regionCode =
           p.region_code ||
@@ -1266,25 +1291,28 @@ async function onRegionChange() {
         region_code:
           province.region_code || province.regionCode || province.region_id,
       }));
-  } catch (error) {
-    console.error("Error fetching provinces:", error);
-    // Fallback: Try PSGC API
-    try {
-      const fallbackResponse = await axios.get(
-        `https://psgc.gitlab.io/api/regions/${form.value.region}/provinces.json`
-      );
-      provinces.value = (fallbackResponse.data || []).map((province) => ({
-        psgc_code: province.code || province.psgc_code,
-        name: province.name,
-        region_code: province.region_code,
-      }));
-    } catch (fallbackError) {
-      console.error("Error fetching provinces from fallback:", fallbackError);
-      provinces.value = [];
-    }
-  } finally {
     loadingProvinces.value = false;
+    return;
   }
+  
+  // Fallback: Try PSGC API
+  const fallbackResult = await fetchWithLogging(`https://psgc.gitlab.io/api/regions/${form.value.region}/provinces.json`, true);
+  if (fallbackResult.success) {
+    provinces.value = fallbackResult.data.map((province) => ({
+      psgc_code: province.code || province.psgc_code,
+      name: province.name,
+      region_code: province.region_code,
+    }));
+    loadingProvinces.value = false;
+    return;
+  }
+  
+  // No fallback data available
+  if (!primaryResult.success && !fallbackResult.success) {
+    console.warn(`[Org Provinces API] All endpoints failed for region ${form.value.region}`);
+  }
+  provinces.value = [];
+  loadingProvinces.value = false;
 }
 
 // Fetch cities/municipalities based on selected province
@@ -1297,10 +1325,37 @@ async function onProvinceChange() {
   barangays.value = [];
 
   loadingCities.value = true;
-  try {
-    const response = await axios.get(`/api/cities/${form.value.province}`);
-    const allCities = response.data || [];
-    cities.value = allCities
+  
+  // Helper function to fetch with smart error handling
+  const fetchWithLogging = async (url, isFallback = false) => {
+    try {
+      const response = await axios.get(url, {
+        validateStatus: (status) => status < 500
+      });
+      if (response.status === 200 && Array.isArray(response.data) && response.data.length > 0) {
+        return { success: true, data: response.data };
+      } else if (response.status === 404 && !isFallback) {
+        console.warn(`[Org Cities API] Endpoint not found (404): ${url}`);
+        return { success: false, error: 'not_found' };
+      } else if (response.status >= 400 && !isFallback) {
+        console.warn(`[Org Cities API] Client error (${response.status}): ${url}`);
+        return { success: false, error: 'client_error' };
+      }
+      return { success: false, error: 'invalid_response' };
+    } catch (error) {
+      if (error.response?.status >= 500 || error.code === 'ERR_NETWORK') {
+        console.error(`[Org Cities API] Server/Network error: ${url}`, error.message);
+      } else if (!isFallback) {
+        console.warn(`[Org Cities API] Request failed: ${url}`, error.message);
+      }
+      return { success: false, error: error.response?.status >= 500 ? 'server_error' : 'network_error' };
+    }
+  };
+  
+  // Try primary API
+  const primaryResult = await fetchWithLogging(`/api/cities/${form.value.province}`, false);
+  if (primaryResult.success) {
+    cities.value = primaryResult.data
       .filter((c) => {
         const provinceCode =
           c.province_code ||
@@ -1319,25 +1374,28 @@ async function onProvinceChange() {
         province_code:
           city.province_code || city.provinceCode || city.province_id,
       }));
-  } catch (error) {
-    console.error("Error fetching cities:", error);
-    // Fallback: Try PSGC API
-    try {
-      const fallbackResponse = await axios.get(
-        `https://psgc.gitlab.io/api/provinces/${form.value.province}/cities-municipalities.json`
-      );
-      cities.value = (fallbackResponse.data || []).map((city) => ({
-        psgc_code: city.code || city.psgc_code,
-        name: city.name,
-        province_code: city.province_code,
-      }));
-    } catch (fallbackError) {
-      console.error("Error fetching cities from fallback:", fallbackError);
-      cities.value = [];
-    }
-  } finally {
     loadingCities.value = false;
+    return;
   }
+  
+  // Fallback: Try PSGC API
+  const fallbackResult = await fetchWithLogging(`https://psgc.gitlab.io/api/provinces/${form.value.province}/cities-municipalities.json`, true);
+  if (fallbackResult.success) {
+    cities.value = fallbackResult.data.map((city) => ({
+      psgc_code: city.code || city.psgc_code,
+      name: city.name,
+      province_code: city.province_code,
+    }));
+    loadingCities.value = false;
+    return;
+  }
+  
+  // No fallback data available
+  if (!primaryResult.success && !fallbackResult.success) {
+    console.warn(`[Org Cities API] All endpoints failed for province ${form.value.province}`);
+  }
+  cities.value = [];
+  loadingCities.value = false;
 }
 
 // Fetch barangays based on selected city

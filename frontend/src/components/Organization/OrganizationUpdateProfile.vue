@@ -224,7 +224,7 @@
                     </div>
 
                     <div class="input-with-counter">
-                        <label class="input-label">Confirm Password</label>
+                        <label class="input-label">Confirm Password <span class="text-red-500">*</span></label>
                         <input type="password" v-model="form.organizationConfirmPassword"
                             placeholder="Enter your password to confirm changes" required maxlength="128" 
                             :disabled="otpRequested" />
@@ -233,7 +233,7 @@
 
                     <!-- OTP Input (shown after OTP is requested) -->
                     <div v-if="otpRequested" class="input-with-counter">
-                        <label class="input-label">Verification Code (OTP)</label>
+                        <label class="input-label">Verification Code (OTP) <span class="text-red-500">*</span></label>
                         <input
                             type="text"
                             v-model="form.otp"

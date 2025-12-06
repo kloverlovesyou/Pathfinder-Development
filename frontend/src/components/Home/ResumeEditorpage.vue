@@ -865,7 +865,7 @@ onActivated(async () => {
               class="border p-3 rounded space-y-3 mt-3"
             >
               <div>
-                <label class="block font-medium mb-1">Job Title*</label>
+                <label class="block font-medium mb-1">Job Title <span class="text-red-500">*</span></label>
                 <input
                   v-model="newExperience.jobTitle"
                   type="text"
@@ -881,7 +881,7 @@ onActivated(async () => {
                 </p>
               </div>
               <div>
-                <label class="block font-medium mb-1">Company Name*</label>
+                <label class="block font-medium mb-1">Company Name <span class="text-red-500">*</span></label>
                 <input
                   v-model="newExperience.companyName"
                   type="text"
@@ -897,7 +897,7 @@ onActivated(async () => {
                 </p>
               </div>
               <div>
-                <label class="block font-medium mb-1">Company Address*</label>
+                <label class="block font-medium mb-1">Company Address <span class="text-red-500">*</span></label>
                 <input
                   v-model="newExperience.companyAddress"
                   type="text"
@@ -913,7 +913,7 @@ onActivated(async () => {
                 </p>
               </div>
               <div>
-                <label class="block font-medium mb-1">Start Year*</label>
+                <label class="block font-medium mb-1">Start Year <span class="text-red-500">*</span></label>
                 <input
                   v-model="newExperience.startYear"
                   type="number"
@@ -923,7 +923,7 @@ onActivated(async () => {
                 />
               </div>
               <div>
-                <label class="block font-medium mb-1">End Year*</label>
+                <label class="block font-medium mb-1">End Year <span class="text-red-500">*</span></label>
                 <input
                   v-model="newExperience.endYear"
                   type="number"
@@ -987,7 +987,7 @@ onActivated(async () => {
             >
               <!-- Education Level -->
               <div>
-                <label class="block font-medium mb-1">Education Level*</label>
+                <label class="block font-medium mb-1">Education Level <span class="text-red-500">*</span></label>
                 <select
                   v-model="newEducation.educationLevel"
                   class="input-field border rounded w-full p-2"
@@ -1024,7 +1024,7 @@ onActivated(async () => {
               </div>
               <!-- Major -->
               <div>
-                <label class="block font-medium mb-1">Major (Optional)</label>
+                <label class="block font-medium mb-1">Major</label>
                 <input
                   v-model="newEducation.major"
                   type="text"
@@ -1069,7 +1069,7 @@ onActivated(async () => {
               </div>
               <!-- Institution Name -->
               <div>
-                <label class="block font-medium mb-1">Institution Name*</label>
+                <label class="block font-medium mb-1">Institution Name <span class="text-red-500">*</span></label>
                 <input
                   v-model="newEducation.institutionName"
                   type="text"
@@ -1088,7 +1088,7 @@ onActivated(async () => {
               <!-- Institution Address -->
               <div>
                 <label class="block font-medium mb-1"
-                  >Institution Address*</label
+                  >Institution Address <span class="text-red-500">*</span></label
                 >
                 <input
                   v-model="newEducation.institutionAddress"
@@ -1107,7 +1107,7 @@ onActivated(async () => {
 
               <!-- Graduation Year -->
               <div>
-                <label class="block font-medium mb-1">Graduation Year*</label>
+                <label class="block font-medium mb-1">Graduation Year <span class="text-red-500">*</span></label>
                 <input
                   v-model.number="newEducation.graduationYear"
                   type="number"

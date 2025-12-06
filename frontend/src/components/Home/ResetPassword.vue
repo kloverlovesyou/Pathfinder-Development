@@ -18,6 +18,9 @@
         <form v-else @submit.prevent="handleResetPassword">
           <!-- New Password -->
           <div class="form-control relative mb-2">
+            <label class="label">
+              <span class="label-text text-sm font-medium text-gray-700">New Password <span class="text-red-500">*</span></span>
+            </label>
             <input
               :type="showPassword ? 'text' : 'password'"
               class="w-full border rounded-lg input"
@@ -29,7 +32,7 @@
             />
             <button
               type="button"
-              class="absolute right-3 top-3 text-gray-500"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
               aria-label="Toggle password visibility"
               @click="showPassword = !showPassword"
             >
@@ -117,6 +120,9 @@
 
           <!-- Confirm Password -->
           <div class="form-control relative mb-4">
+            <label class="label">
+              <span class="label-text text-sm font-medium text-gray-700">Confirm New Password <span class="text-red-500">*</span></span>
+            </label>
             <input
               :type="showConfirmPassword ? 'text' : 'password'"
               class="w-full border rounded-lg input"
@@ -126,7 +132,7 @@
             />
             <button
               type="button"
-              class="absolute right-3 top-3 text-gray-500"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
               aria-label="Toggle confirm password visibility"
               @click="showConfirmPassword = !showConfirmPassword"
             >

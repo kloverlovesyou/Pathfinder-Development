@@ -2881,7 +2881,7 @@ async function viewRequirement(id) {
 
           <div class="schedule-form">
             <div class="input-group full-width">
-              <label>Custom Message (Optional):</label>
+              <label>Custom Message:</label>
               <textarea
                 v-model="statusEmailData.body"
                 rows="6"
@@ -2957,16 +2957,16 @@ async function viewRequirement(id) {
             </div>
             <div class="input-with-counter">
               <label class="input-label">Details</label>
-              <textarea v-model="newCareer.details" :placeholder="newCareer.pdfPath ? 'Details (optional if PDF uploaded)' : 'Details (required if no PDF)'" class="career-input" maxlength="1000"></textarea>
+              <textarea v-model="newCareer.details" :placeholder="newCareer.pdfPath ? 'Details' : 'Details (required if no PDF)'" class="career-input" maxlength="1000"></textarea>
               <span class="char-counter">{{ (newCareer.details || '').length }}/1000</span>
             </div>
             <div class="input-with-counter">
               <label class="input-label">Qualification Standard</label>
-              <textarea v-model="newCareer.qualificationStandard" :placeholder="newCareer.pdfPath ? 'Qualification Standard (optional if PDF uploaded)' : 'Qualification Standard (required if no PDF)'" class="career-input" maxlength="1000"></textarea>
+              <textarea v-model="newCareer.qualificationStandard" :placeholder="newCareer.pdfPath ? 'Qualification Standard' : 'Qualification Standard (required if no PDF)'" class="career-input" maxlength="1000"></textarea>
               <span class="char-counter">{{ (newCareer.qualificationStandard || '').length }}/1000</span>
             </div>
             <div class="career-upload-wrapper">
-              <label class="input-label">Attach PDF (optional)</label>
+              <label class="input-label">Attach PDF</label>
               <input ref="careerPdfInput" type="file" accept="application/pdf" class="career-input"
                 @change="handleCareerPdfUpload" />
               <p class="upload-help-text">Accepted format: PDF up to 10MB.</p>

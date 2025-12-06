@@ -856,7 +856,7 @@ const logout = () => {
                 />
                 <button
                   type="button"
-                  class="absolute right-3 top-3 text-gray-500"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
                   aria-label="Toggle current password visibility"
                   @click="showPasswordFields.current = !showPasswordFields.current"
                 >
@@ -947,13 +947,13 @@ const logout = () => {
                 <input
                   :type="showPasswordFields.new ? 'text' : 'password'"
                   class="border border-gray-300 input w-full pr-10"
-                  placeholder="New Password (optional)"
+                  placeholder="New Password"
                   v-model="form.newPassword"
                   :disabled="otpRequested && (form.newPassword || form.confirmPassword)"
                 />
                 <button
                   type="button"
-                  class="absolute right-3 top-3 text-gray-500"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
                   aria-label="Toggle new password visibility"
                   @click="showPasswordFields.new = !showPasswordFields.new"
                 >
@@ -1049,7 +1049,7 @@ const logout = () => {
                   />
                   <button
                     type="button"
-                    class="absolute right-3 top-3 text-gray-500"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
                     aria-label="Toggle confirm password visibility"
                     @click="
                       showPasswordFields.confirm = !showPasswordFields.confirm
