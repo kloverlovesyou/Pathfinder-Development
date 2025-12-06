@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useRegistrationStore } from "@/stores/registrationStore";
 import axios from "axios";
 
@@ -13,6 +13,7 @@ const regStore = useRegistrationStore();
 const actionError = ref("");
 const showConflictDialog = ref(false);
 const conflictingTrainings = ref([]);
+const myRegistrationsData = ref([]); // Store full registration data with attendance
 
 const trainingId = computed(() => resolveTrainingId(props.training));
 const isRegistered = computed(() => {
@@ -23,7 +24,158 @@ const isLoading = computed(() => {
   const id = trainingId.value;
   return id ? !!regStore.loading[id] : false;
 });
-const canToggleRegistration = computed(() => !!trainingId.value && !isLoading.value);
+
+// Fetch registration data with attendance info
+async function fetchMyRegistrations() {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/registrations",
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    myRegistrationsData.value = res.data || [];
+  } catch (err) {
+    console.error("Failed to fetch registrations:", err);
+  }
+}
+
+// Watch for training changes and fetch registrations
+watch(() => props.training, async (newTraining) => {
+  if (newTraining) {
+    await fetchMyRegistrations();
+  }
+}, { immediate: true });
+
+// Parse date string to local Date object (prevents timezone issues)
+function parseLocalDateTime(dateString) {
+  if (!dateString) return null;
+  
+  try {
+    const [datePart, timePart] = dateString.split(/[ T]/);
+    if (!datePart) return null;
+    
+    const [year, month, day] = datePart.split("-");
+    const timeStr = timePart || "00:00:00";
+    const [hour, minute, second] = timeStr.split(":");
+    
+    return new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour || 0),
+      Number(minute || 0),
+      Number(second || 0)
+    );
+  } catch (error) {
+    console.error("Error parsing date:", dateString, error);
+    return null;
+  }
+}
+
+// Check if training has ended
+function isTrainingEnded(training) {
+  if (!training) return false;
+  
+  const now = new Date();
+  
+  if (training.schedules && Array.isArray(training.schedules) && training.schedules.length > 0) {
+    let latestEndTime = null;
+    let hasFutureSchedule = false;
+    
+    for (const schedule of training.schedules) {
+      const scheduleTime = schedule.schedule || schedule.Schedule;
+      if (scheduleTime) {
+        const startTime = parseLocalDateTime(scheduleTime);
+        if (startTime && startTime.getTime() > now.getTime()) {
+          hasFutureSchedule = true;
+          break;
+        }
+      }
+      
+      const endTime = schedule.end_time || schedule.endTime || schedule.endTimeDate;
+      if (endTime) {
+        const endTimeDate = parseLocalDateTime(endTime);
+        if (endTimeDate && (!latestEndTime || endTimeDate.getTime() > latestEndTime.getTime())) {
+          latestEndTime = endTimeDate;
+        }
+      }
+    }
+    
+    if (hasFutureSchedule) return false;
+    if (latestEndTime) return latestEndTime.getTime() <= now.getTime();
+    return false;
+  }
+  
+  const scheduleTime = training.schedule || training.Schedule;
+  const endTime = training.end_time || training.endTime || training.endTimeDate;
+  
+  if (!scheduleTime) return false;
+  
+  const startTime = parseLocalDateTime(scheduleTime);
+  if (startTime && startTime.getTime() > now.getTime()) {
+    return false;
+  }
+  
+  if (endTime) {
+    const endTimeDate = parseLocalDateTime(endTime);
+    if (endTimeDate) {
+      return endTimeDate.getTime() <= now.getTime();
+    }
+  }
+  
+  return false;
+}
+
+// Check if user has attended the training
+function hasUserAttended(training) {
+  if (!training) return false;
+  
+  const id = trainingId.value;
+  if (id === null || id === undefined) return false;
+  
+  const registration = myRegistrationsData.value.find((reg) => {
+    const regTrainingID = Number(reg.trainingID);
+    const normalizedTrainingID = Number(id);
+    return regTrainingID === normalizedTrainingID;
+  });
+  
+  if (registration) {
+    if (registration.hasAttended !== undefined) {
+      return registration.hasAttended === true;
+    }
+    const status = (registration.registrationStatus || '').toLowerCase().trim();
+    return status === 'attended';
+  }
+  
+  return false;
+}
+
+// Computed properties for button state
+const hasAttended = computed(() => hasUserAttended(props.training));
+const trainingEnded = computed(() => isTrainingEnded(props.training));
+const buttonText = computed(() => {
+  if (!props.training) return "Register";
+  
+  if (hasAttended.value) {
+    return "Already Attended";
+  }
+  
+  if (trainingEnded.value && !isRegistered.value) {
+    return "Training has already ended";
+  }
+  
+  return isRegistered.value ? "Unregister" : "Register";
+});
+
+const canToggleRegistration = computed(() => {
+  if (!trainingId.value || isLoading.value) return false;
+  // Disable if user attended or training ended without registration
+  if (hasAttended.value) return false;
+  if (trainingEnded.value && !isRegistered.value) return false;
+  return true;
+});
 
 // Check for same-day onsite conflicts
 async function checkSameDayOnsiteConflict(newTraining) {
@@ -516,7 +668,7 @@ function formatScheduleTime(schedule) {
       <div class="mt-4 pt-4 border-t border-gray-200 flex flex-col gap-2">
         <button
           class="btn w-full text-white flex items-center justify-center gap-2"
-          :class="isRegistered ? 'bg-gray-500' : 'bg-customButton'"
+          :class="!canToggleRegistration || isRegistered ? 'bg-gray-500 hover:bg-gray-600' : 'bg-customButton'"
           @click="handleRegisterClick"
           :disabled="!canToggleRegistration"
         >
@@ -541,7 +693,7 @@ function formatScheduleTime(schedule) {
               d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
             ></path>
           </svg>
-          <span v-else>{{ isRegistered ? "Unregister" : "Register" }}</span>
+          <span v-else>{{ buttonText }}</span>
         </button>
         <p v-if="actionError" class="text-xs text-red-500 text-center">
           {{ actionError }}
@@ -550,8 +702,8 @@ function formatScheduleTime(schedule) {
     </div>
 
     <!-- Conflict Confirmation Dialog -->
-    <div v-if="showConflictDialog" class="modal-overlay" @click.self="cancelConflictRegistration">
-      <div class="training-details-modal">
+    <div v-if="showConflictDialog" class="modal-overlay conflict-modal-overlay" @click.self="cancelConflictRegistration">
+      <div class="training-details-modal conflict-modal-box">
         <button class="modal-close-btn" @click="cancelConflictRegistration">✕</button>
 
         <h3 class="modal-title text-orange-600">
@@ -809,6 +961,15 @@ function formatScheduleTime(schedule) {
 
 .schedule-link .training-link:hover {
   color: #2563eb;
+}
+
+/* Conflict Modal - Higher z-index to appear above training details modal */
+.conflict-modal-overlay {
+  z-index: 3000 !important;
+}
+
+.conflict-modal-box {
+  z-index: 3100 !important;
 }
 
 </style>

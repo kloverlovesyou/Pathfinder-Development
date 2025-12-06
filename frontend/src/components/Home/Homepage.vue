@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted, computed } from "vue";
+import { ref, reactive, onMounted, computed, watch } from "vue";
 import "cally"; // Calendar library
 import axios from "axios";
 import CalendarSidebar from "@/components/Layout/CalendarSidebar.vue";
@@ -49,6 +49,7 @@ const conflictTraining = ref(null);
 const conflictingTrainings = ref([]);
 const pendingRegistration = ref(null);
 const loadingPosts = ref(false);
+const organizationsChoiceTrainings = ref([]); // Store org's choice trainings for selected career
 
 
 
@@ -66,6 +67,165 @@ const filteredCareers = computed(() => {
 const selectedTrainingRegistered = computed(() =>
   isTrainingRegistered(selectedTraining.value)
 );
+
+// Check if user has attended the selected training
+const selectedTrainingAttended = computed(() =>
+  hasUserAttended(selectedTraining.value)
+);
+
+// Check if selected training has ended
+const selectedTrainingEnded = computed(() =>
+  isTrainingEnded(selectedTraining.value)
+);
+
+// Get button text based on training state
+const registrationButtonText = computed(() => {
+  if (!selectedTraining.value) return "Register";
+  
+  // If user attended, show "Already Attended"
+  if (selectedTrainingAttended.value) {
+    return "Already Attended";
+  }
+  
+  // If training ended and user didn't register/attend, show "Training has already ended"
+  if (selectedTrainingEnded.value && !selectedTrainingRegistered.value) {
+    return "Training has already ended";
+  }
+  
+  // Otherwise, show Register/Unregister based on registration status
+  return selectedTrainingRegistered.value ? "Unregister" : "Register";
+});
+
+// Check if button should be disabled
+const isRegistrationButtonDisabled = computed(() => {
+  if (trainingActionLoading.value) return true;
+  
+  if (!selectedTraining.value) return false;
+  
+  // Disable if user attended
+  if (selectedTrainingAttended.value) {
+    return true;
+  }
+  
+  // Disable if training ended and user didn't register
+  if (selectedTrainingEnded.value && !selectedTrainingRegistered.value) {
+    return true;
+  }
+  
+  return false;
+});
+
+// Calculate percentage of organizationschoice trainings attended
+const organizationsChoiceAttendancePercentage = computed(() => {
+  if (!selectedCareerId.value) {
+    return null;
+  }
+
+  const totalOrgChoiceTrainings = organizationsChoiceTrainings.value.length;
+  
+  // If no org's choice trainings exist for this career, return 0%
+  if (totalOrgChoiceTrainings === 0) {
+    return 0;
+  }
+
+  // Count how many org's choice trainings the user has actually attended
+  // Check hasAttended flag which is based on actual schedule_attendance records
+  const attendedCount = organizationsChoiceTrainings.value.filter((training) => {
+    const trainingID = training.trainingID || training.TrainingID;
+    if (!trainingID) {
+      console.warn('Training missing ID:', training);
+      return false;
+    }
+    
+    // Normalize training ID to number for comparison
+    const normalizedTrainingID = Number(trainingID);
+    
+    // Find the registration for this training
+    const registration = myRegistrationsData.value.find((reg) => {
+      const regTrainingID = Number(reg.trainingID);
+      return regTrainingID === normalizedTrainingID;
+    });
+    
+    if (registration) {
+      // Debug logging
+      console.log('Found registration for training:', {
+        trainingID: normalizedTrainingID,
+        registrationID: registration.registrationID,
+        hasAttended: registration.hasAttended,
+        registrationStatus: registration.registrationStatus,
+        attendanceCount: registration.attendanceCount
+      });
+      
+      // Use hasAttended flag if available (from backend), otherwise fallback to registrationStatus
+      if (registration.hasAttended !== undefined) {
+        return registration.hasAttended === true;
+      }
+      // Fallback: check registrationStatus for backward compatibility
+      const status = (registration.registrationStatus || '').toLowerCase().trim();
+      return status === 'attended';
+    } else {
+      console.log('No registration found for training:', normalizedTrainingID);
+    }
+    
+    return false;
+  }).length;
+
+  // Debug logging
+  console.log('Attendance calculation:', {
+    totalOrgChoiceTrainings,
+    attendedCount,
+    percentage: Math.round((attendedCount / totalOrgChoiceTrainings) * 100),
+    orgChoiceTrainings: organizationsChoiceTrainings.value.map(t => ({
+      trainingID: t.trainingID || t.TrainingID,
+      title: t.title
+    })),
+    myRegistrations: myRegistrationsData.value.map(r => ({
+      trainingID: r.trainingID,
+      hasAttended: r.hasAttended,
+      status: r.registrationStatus
+    }))
+  });
+
+  // Calculate percentage (can be 0% to 100%)
+  const percentage = Math.round((attendedCount / totalOrgChoiceTrainings) * 100);
+  return percentage;
+});
+
+// Computed property for attendance count display
+const organizationsChoiceAttendanceCount = computed(() => {
+  if (!selectedCareerId.value) {
+    return { attended: 0, total: 0 };
+  }
+
+  const total = organizationsChoiceTrainings.value.length;
+  // Count how many org's choice trainings the user has actually attended
+  // Check hasAttended flag which is based on actual schedule_attendance records
+  const attended = organizationsChoiceTrainings.value.filter((training) => {
+    const trainingID = training.trainingID || training.TrainingID;
+    if (!trainingID) return false;
+    
+    // Find the registration for this training
+    const registration = myRegistrationsData.value.find(
+      (reg) => reg.trainingID === Number(trainingID) || reg.trainingID === trainingID
+    );
+    
+    // Check if user has actually attended (has at least one schedule_attendance record)
+    // This is more reliable than checking registrationStatus
+    if (registration) {
+      // Use hasAttended flag if available (from backend), otherwise fallback to registrationStatus
+      if (registration.hasAttended !== undefined) {
+        return registration.hasAttended === true;
+      }
+      // Fallback: check registrationStatus for backward compatibility
+      const status = (registration.registrationStatus || '').toLowerCase().trim();
+      return status === 'attended';
+    }
+    
+    return false;
+  }).length;
+
+  return { attended, total };
+});
 
 // Build events only when posts are loaded
 function buildEvents() {
@@ -162,6 +322,12 @@ async function openCareerModal(career) {
 
     console.log('Career Object:', career);
     console.log('Parsed Career ID:', parsedCareerID);
+
+    // Update selected career ID if different
+    if (selectedCareerId.value !== parsedCareerID) {
+      selectedCareerId.value = parsedCareerID;
+      await fetchOrganizationsChoiceTrainings();
+    }
 
     // Make API request
     const res = await axios.get(import.meta.env.VITE_API_BASE_URL + `/careers/${parsedCareerID}/details`);
@@ -707,6 +873,29 @@ function selectCareer(career) {
   careerSearch.value = career.position;
   careerDropdownOpen.value = false;
   fetchRecommendedCareers();
+  fetchOrganizationsChoiceTrainings();
+}
+
+async function fetchOrganizationsChoiceTrainings() {
+  if (!selectedCareerId.value) {
+    organizationsChoiceTrainings.value = [];
+    return;
+  }
+
+  try {
+    console.log("Fetching organizationschoice trainings for career:", selectedCareerId.value);
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + `/careers/${selectedCareerId.value}/organizations-choice-trainings`
+    );
+    organizationsChoiceTrainings.value = Array.isArray(res.data) ? res.data : [];
+    console.log("Organizationschoice trainings loaded:", organizationsChoiceTrainings.value.length, organizationsChoiceTrainings.value);
+    
+    // Refresh registration data to ensure we have latest attendance info
+    await fetchMyRegistrations();
+  } catch (err) {
+    console.error("Error fetching organizationschoice trainings:", err);
+    organizationsChoiceTrainings.value = [];
+  }
 }
 
 function normalizeCareerDetails(career) {
@@ -784,6 +973,133 @@ function isTrainingRegistered(training) {
     myRegistrations.value.has(Number(id)) ||
     myRegistrations.value.has(id)
   );
+}
+
+// Parse date string to local Date object (prevents timezone issues)
+function parseLocalDateTime(dateString) {
+  if (!dateString) return null;
+  
+  try {
+    // Split by space or T to get date and time parts
+    const [datePart, timePart] = dateString.split(/[ T]/);
+    if (!datePart) return null;
+    
+    const [year, month, day] = datePart.split("-");
+    const timeStr = timePart || "00:00:00";
+    const [hour, minute, second] = timeStr.split(":");
+    
+    // Create date in local timezone (not UTC)
+    return new Date(
+      Number(year),
+      Number(month) - 1, // Month is 0-indexed
+      Number(day),
+      Number(hour || 0),
+      Number(minute || 0),
+      Number(second || 0)
+    );
+  } catch (error) {
+    console.error("Error parsing date:", dateString, error);
+    return null;
+  }
+}
+
+// Check if training has ended
+function isTrainingEnded(training) {
+  if (!training) return false;
+  
+  const now = new Date();
+  
+  // Check if training has multiple schedules
+  if (training.schedules && Array.isArray(training.schedules) && training.schedules.length > 0) {
+    // Check if all schedules have ended (no future schedules, and latest end time has passed)
+    let latestEndTime = null;
+    let hasFutureSchedule = false;
+    
+    for (const schedule of training.schedules) {
+      // Check if this schedule hasn't started yet (future schedule)
+      const scheduleTime = schedule.schedule || schedule.Schedule;
+      if (scheduleTime) {
+        const startTime = parseLocalDateTime(scheduleTime);
+        if (startTime && startTime.getTime() > now.getTime()) {
+          hasFutureSchedule = true;
+          break; // Found a future schedule, so training is not ended
+        }
+      }
+      
+      // Track latest end time
+      const endTime = schedule.end_time || schedule.endTime || schedule.endTimeDate;
+      if (endTime) {
+        const endTimeDate = parseLocalDateTime(endTime);
+        if (endTimeDate && (!latestEndTime || endTimeDate.getTime() > latestEndTime.getTime())) {
+          latestEndTime = endTimeDate;
+        }
+      }
+    }
+    
+    // If there's a future schedule, it's not ended
+    if (hasFutureSchedule) {
+      return false;
+    }
+    
+    // No future schedules, check if latest end time has passed
+    if (latestEndTime) {
+      return latestEndTime.getTime() <= now.getTime();
+    }
+    
+    return false;
+  }
+  
+  // Single schedule format (backward compatibility)
+  const scheduleTime = training.schedule || training.Schedule;
+  const endTime = training.end_time || training.endTime || training.endTimeDate;
+  
+  if (!scheduleTime) {
+    return false;
+  }
+  
+  const startTime = parseLocalDateTime(scheduleTime);
+  
+  // If schedule hasn't started yet, it's not ended
+  if (startTime && startTime.getTime() > now.getTime()) {
+    return false;
+  }
+  
+  // Schedule has started, check if it has ended
+  if (endTime) {
+    const endTimeDate = parseLocalDateTime(endTime);
+    if (endTimeDate) {
+      return endTimeDate.getTime() <= now.getTime();
+    }
+  }
+  
+  return false;
+}
+
+// Check if user has attended the training
+function hasUserAttended(training) {
+  if (!training) return false;
+  
+  const trainingID = resolveTrainingId(training);
+  if (trainingID === null || trainingID === undefined) return false;
+  
+  // Find the registration for this training
+  const registration = myRegistrationsData.value.find((reg) => {
+    const regTrainingID = Number(reg.trainingID);
+    const normalizedTrainingID = Number(trainingID);
+    return regTrainingID === normalizedTrainingID;
+  });
+  
+  if (registration) {
+    // Use hasAttended flag if available (from backend), otherwise fallback to registrationStatus
+    if (registration.hasAttended !== undefined) {
+      return registration.hasAttended === true;
+    }
+    // Fallback: check registrationStatus for backward compatibility
+    const status = (registration.registrationStatus || '').toLowerCase().trim();
+    return status === 'attended';
+  }
+  
+  return false;
 }
 
 
@@ -880,6 +1196,7 @@ function aggregateRecommendedTrainings(trainings) {
           "",
         provider: item.provider || item.organizationName || item.organization || "",
         schedules: Array.isArray(item.schedules) ? [...item.schedules] : [],
+        isOrganizationsChoice: item.isOrganizationsChoice || false,
       };
       map.set(id, entry);
     } else {
@@ -891,6 +1208,8 @@ function aggregateRecommendedTrainings(trainings) {
         item.provider ||
         "";
       entry.provider = entry.provider || item.provider;
+      // Preserve isOrganizationsChoice flag if any item has it set to true
+      entry.isOrganizationsChoice = entry.isOrganizationsChoice || item.isOrganizationsChoice || false;
       if (Array.isArray(item.schedules)) {
         item.schedules.forEach((sched) => {
           if (!entry.schedules.some((existing) => existing.trainingScheduleID === sched.trainingScheduleID)) {
@@ -986,6 +1305,15 @@ onMounted(async () => {
   await fetchMyApplications();
   await fetchMyRegistrations();
 });
+
+// Watch for changes in selected career to fetch organizationschoice trainings
+watch(selectedCareerId, (newCareerId) => {
+  if (newCareerId) {
+    fetchOrganizationsChoiceTrainings();
+  } else {
+    organizationsChoiceTrainings.value = [];
+  }
+});
 </script>
 
 <template>
@@ -995,9 +1323,31 @@ onMounted(async () => {
       <!-- MAIN CONTENT -->
       <main class="flex-1 bg-white m-3 px-4 rounded-lg flex flex-col min-h-0 overflow-hidden">
         <!-- Sticky Header -->
-        <div class="sticky top-0 z-10 bg-white pt-4 px-4 pb-2 border-b shadow-sm">
-          <h2 class="text-lg font-bold">Career-Training</h2>
-          <h2 class="text-2xl font-bold mb-2">Matching Engine</h2>
+        <div class="sticky top-0 z-10 bg-white pt-4 px-4 pb-2 border-b shadow-sm relative">
+          <div class="flex items-start justify-between gap-4 mb-2">
+            <div>
+              <h2 class="text-lg font-bold">Career-Training</h2>
+              <h2 class="text-2xl font-bold">Matching Engine</h2>
+            </div>
+            <!-- OrganizationsChoice Attendance Percentage -->
+            <div
+              v-if="selectedCareerId && organizationsChoiceAttendancePercentage !== null"
+              class="flex-shrink-0 px-3 sm:px-4 py-3 sm:py-4 bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-900 rounded-lg shadow-lg border-2 border-yellow-600 z-50 flex flex-col items-center justify-center w-[100px] h-[100px] sm:w-[180px] sm:h-[100px]"
+            >
+              <div class="text-[9px] sm:text-[10px] font-semibold mb-1 uppercase tracking-wide text-center">Career Progress</div>
+              <div class="text-2xl sm:text-3xl font-bold">{{ organizationsChoiceAttendancePercentage }}%</div>
+            </div>
+            <!-- Message when no target career is selected -->
+            <div
+              v-else-if="!selectedCareerId"
+              class="flex-shrink-0 px-3 sm:px-4 py-3 sm:py-4 bg-gray-100 text-gray-600 rounded-lg shadow-md border border-gray-300 z-50 flex flex-col items-center justify-center w-[100px] h-[100px] sm:w-[200px] sm:h-[100px]"
+            >
+              <div class="text-[9px] sm:text-[10px] font-semibold mb-1 text-gray-700 text-center">Target Career</div>
+              <div class="text-xs sm:text-sm leading-tight text-center">
+                Select a target career to see progress
+              </div>
+            </div>
+          </div>
 
           <div class="mt-4 mb-4">
           <label for="career-select" class="block text-sm font-medium text-gray-700 mb-2">
@@ -1394,16 +1744,16 @@ onMounted(async () => {
           <button
             class="btn w-full text-white flex items-center justify-center gap-2"
             :class="
-              selectedTrainingRegistered
+              isRegistrationButtonDisabled || selectedTrainingRegistered
                 ? 'bg-gray-500 hover:bg-gray-600'
                 : 'bg-customButton hover:bg-dark-slate'
             "
             @click="
-              selectedTrainingRegistered
+              selectedTrainingRegistered && !isRegistrationButtonDisabled
                 ? unregisterFromTraining(selectedTraining)
                 : registerForTraining(selectedTraining)
             "
-            :disabled="trainingActionLoading"
+            :disabled="isRegistrationButtonDisabled"
           >
             <svg
               v-if="trainingActionLoading"
@@ -1427,7 +1777,7 @@ onMounted(async () => {
               ></path>
             </svg>
             <span>
-              {{ selectedTrainingRegistered ? "Unregister" : "Register" }}
+              {{ registrationButtonText }}
             </span>
           </button>
           <p v-if="trainingActionError" class="training-modal-error text-center">
@@ -1439,25 +1789,25 @@ onMounted(async () => {
 
     <!-- Career Details Modal -->
     <dialog v-if="showCareerPopup && selectedCareerDetails" open class="modal sm:modal-middle">
-      <div class="modal-box max-w-3xl relative font-poppins bg-white text-gray-900">
+      <div class="modal-box max-w-6xl w-full relative font-poppins bg-white text-gray-900 max-h-[90vh] overflow-y-auto">
         <!-- Close button -->
         <button
-          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2 text-gray-600 hover:text-gray-800"
+          class="btn btn-sm btn-circle border-transparent bg-transparent absolute right-2 top-2 text-gray-600 hover:text-gray-800 z-10"
           @click="closeCareerModal">
           ✕
         </button>
 
         <!-- Career Details -->
-        <div>
+        <div class="pr-8">
           <h2 class="text-xl font-bold mb-2">
             {{ selectedCareerDetails.position }}
           </h2>
-          <p class="text-sm text-gray-400 mb-2">
+          <p class="text-sm text-gray-400 mb-4">
             Organization: {{ selectedCareerDetails.organization }}
           </p>
 
           <!-- Career Details -->
-          <div class="space-y-2 text-sm">
+          <div class="space-y-3 text-sm mb-6">
             <p>
               <strong>Place of Assignment:</strong>
               {{ selectedCareerDetails.placeOfAssignment || "Not specified" }}
@@ -1495,7 +1845,7 @@ onMounted(async () => {
           </div>
 
           <!-- Button on top of Recommended Trainings - full width -->
-          <div class="mt-6 mb-4">
+          <div class="mt-6 mb-6">
             <button v-if="!myApplications.has(selectedCareerDetails.careerID)"
               class="btn w-full bg-blue-600 text-white hover:bg-blue-700"
               @click="openApplyModal(selectedCareerDetails)">
@@ -1507,24 +1857,32 @@ onMounted(async () => {
           </div>
 
           <!-- Recommended Trainings -->
-          <div>
-            <h3 class="text-base font-semibold mb-3">Recommended Trainings</h3>
+          <div class="mt-6">
+            <h3 class="text-base font-semibold mb-4">Recommended Trainings</h3>
             <div v-if="recommendedTrainings.length === 0" class="text-gray-400 text-sm">
               No recommended trainings available.
             </div>
-            <div v-else class="flex overflow-x-auto space-x-3 pb-2 snap-x snap-mandatory" style="scrollbar-width: thin">
+            <div v-else class="flex overflow-x-auto space-x-4 pb-4 snap-x snap-mandatory" style="scrollbar-width: thin">
               <div
                 v-for="training in recommendedTrainings"
                 :key="training.trainingID"
-                class="snap-start w-[200px] flex-shrink-0 p-3 bg-white text-gray-800 rounded-lg cursor-pointer hover:bg-gray-200 transition shadow-sm border border-gray-200"
+                class="snap-start w-[300px] flex-shrink-0 p-4 bg-white text-gray-800 rounded-lg cursor-pointer hover:bg-gray-200 transition shadow-md border border-gray-200 relative"
                 @click.stop="openTrainingModal(training)"
               >
-                <div class="flex items-start justify-between gap-2 mb-1">
-                  <h4 class="font-semibold text-sm leading-snug">
+                <!-- Org's Choice Badge -->
+                <div
+                  v-if="training.isOrganizationsChoice"
+                  class="absolute top-3 right-3 px-2.5 py-1 text-[10px] font-bold text-yellow-800 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full shadow-md border border-yellow-600 z-10 whitespace-nowrap"
+                  title="Organization's Choice"
+                >
+                  ⭐ Org's Choice
+                </div>
+                <div class="flex items-start justify-between gap-2 mb-2">
+                  <h4 class="font-semibold text-base leading-snug pr-20">
                     {{ training.title }}
                   </h4>
                 </div>
-                <p class="text-[11px] text-gray-600 truncate">
+                <p class="text-xs text-gray-600 truncate mt-2">
                   {{
                     training.organizationName ||
                     training.provider ||

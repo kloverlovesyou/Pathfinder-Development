@@ -36,6 +36,9 @@ export default {
       showViewScheduleModal: false,
       showScheduleModal: false,
       showStatusEmailModal: false,
+      showStatusChangeModal: false,
+      pendingStatusChange: null, // { person, newStatus, originalStatus }
+      originalStatuses: new Map(), // Store original statuses by applicant ID
       selectedPerson: null,
       isLoading : false,
 
@@ -72,6 +75,13 @@ export default {
       applicantsError: "",
       applicantSearchQuery: "", // Search query for filtering applicants
       upcomingCareers: [],
+
+      // Trainings for career
+      alignedTrainings: [],
+      alignedTrainingsLoading: false,
+      alignedTrainingsError: "",
+      selectedTrainingsForCareer: [], // Array of trainingIDs selected as organization's choice
+      savingTrainings: false,
 
       // Popup state + form
       showCareerPopup: false,
@@ -402,6 +412,14 @@ export default {
       }
     },
 
+    storeOriginalStatus(person, event) {
+      // Store the original status when user focuses on the dropdown
+      // This happens before v-model updates the value
+      if (!this.originalStatuses.has(person.id)) {
+        this.originalStatuses.set(person.id, person.status);
+      }
+    },
+
     async updateApplicationStatus(person, event) {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -409,15 +427,30 @@ export default {
         return;
       }
 
-      // Get the index first to access the original status
+      // Get the index first
       const index = this.applicantsList.findIndex((a) => a.id === person.id);
       
-      // Store original status BEFORE the change (from the list, not from person object which may already be updated)
-      const originalStatus = index !== -1 ? this.applicantsList[index].status : null;
-      const newStatus = person.status; // This is the new status from the dropdown
+      // Get the new status from the event target
+      const newStatus = event.target.value;
+      
+      // Get original status from our stored map (captured on focus)
+      const originalStatus = this.originalStatuses.get(person.id) || person.status;
+      
+      // Clear the stored original status
+      this.originalStatuses.delete(person.id);
+      
+      // Revert the status change immediately until user confirms
+      if (index !== -1) {
+        this.applicantsList[index].status = originalStatus;
+      }
+
+      // If status hasn't actually changed, do nothing
+      if (originalStatus === newStatus) {
+        return;
+      }
 
       console.log(
-        "Updating status for application ID:",
+        "Status change requested for application ID:",
         person.id,
         "Original status:",
         originalStatus,
@@ -425,11 +458,75 @@ export default {
         newStatus
       );
 
+      // Normalize the new status for comparison
+      const normalizedNewStatus = String(newStatus).toLowerCase().trim();
+
+      // If status is "for interview", skip confirmation modal and proceed directly
+      // The scheduling modal will appear automatically after status update
+      if (normalizedNewStatus === "for interview") {
+        // Store the pending change and proceed directly without confirmation modal
+        this.pendingStatusChange = {
+          person: { ...person, status: originalStatus }, // Use original status
+          newStatus: newStatus,
+          originalStatus: originalStatus,
+          index: index
+        };
+        // Directly confirm the status change without showing modal
+        await this.confirmStatusChange();
+        return;
+      }
+
+      // For other statuses, show confirmation modal
+      this.pendingStatusChange = {
+        person: { ...person, status: originalStatus }, // Use original status
+        newStatus: newStatus,
+        originalStatus: originalStatus,
+        index: index
+      };
+      this.showStatusChangeModal = true;
+    },
+
+    async confirmStatusChange() {
+      if (!this.pendingStatusChange) {
+        return;
+      }
+
+      const { person, newStatus, originalStatus, index } = this.pendingStatusChange;
+      const token = localStorage.getItem("token");
+      
+      if (!token) {
+        showToast("Please log in to continue.");
+        this.closeStatusChangeModal();
+        return;
+      }
+
       try {
+        // Prepare payload - clear interview-related fields when status changes (unless status is "for interview")
+        const normalizedNewStatus = String(newStatus).toLowerCase().trim();
+        const payload = { status: newStatus };
+        
+        // Clear interview-related fields if status is not "for interview"
+        if (normalizedNewStatus !== "for interview") {
+          payload.interviewSchedule = null;
+          payload.interviewMode = null;
+          payload.interviewLocation = null;
+          payload.interviewLink = null;
+          payload.screenDate = null; // Clear screenDate as it's connected to "for interview" status
+        }
+        
+        // Also clear hiring/rejection dates when status changes
+        // (Backend should handle this, but we'll include it in the payload)
+        if (normalizedNewStatus !== "hired") {
+          payload.hiredDate = null;
+        }
+        if (normalizedNewStatus !== "declined") {
+          payload.declinedDate = null;
+        }
+
         const response = await axios.put(
           import.meta.env.VITE_API_BASE_URL +
             `/applications/${person.id}/status`,
-          { status: newStatus },
+          payload,
           {
             headers: {
               Authorization: `Bearer ${token.trim()}`,
@@ -446,21 +543,31 @@ export default {
             ? String(updatedData.applicationStatus).toLowerCase()
             : String(newStatus).toLowerCase();
 
+          // Update status
           Object.assign(this.applicantsList[index], {
             status: normalizedStatus,
           });
 
-          if (Object.prototype.hasOwnProperty.call(updatedData, "interviewSchedule")) {
-            this.applicantsList[index].interviewSchedule = updatedData.interviewSchedule;
-          }
-          if (Object.prototype.hasOwnProperty.call(updatedData, "interviewMode")) {
-            this.applicantsList[index].interviewMode = updatedData.interviewMode;
-          }
-          if (Object.prototype.hasOwnProperty.call(updatedData, "interviewLocation")) {
-            this.applicantsList[index].interviewLocation = updatedData.interviewLocation;
-          }
-          if (Object.prototype.hasOwnProperty.call(updatedData, "interviewLink")) {
-            this.applicantsList[index].interviewLink = updatedData.interviewLink;
+          // Clear interview-related fields if status is not "for interview"
+          if (normalizedStatus !== "for interview") {
+            this.applicantsList[index].interviewSchedule = null;
+            this.applicantsList[index].interviewMode = null;
+            this.applicantsList[index].interviewLocation = null;
+            this.applicantsList[index].interviewLink = null;
+          } else {
+            // Only update interview fields if status is "for interview"
+            if (Object.prototype.hasOwnProperty.call(updatedData, "interviewSchedule")) {
+              this.applicantsList[index].interviewSchedule = updatedData.interviewSchedule;
+            }
+            if (Object.prototype.hasOwnProperty.call(updatedData, "interviewMode")) {
+              this.applicantsList[index].interviewMode = updatedData.interviewMode;
+            }
+            if (Object.prototype.hasOwnProperty.call(updatedData, "interviewLocation")) {
+              this.applicantsList[index].interviewLocation = updatedData.interviewLocation;
+            }
+            if (Object.prototype.hasOwnProperty.call(updatedData, "interviewLink")) {
+              this.applicantsList[index].interviewLink = updatedData.interviewLink;
+            }
           }
 
           // Open scheduling modal only after successful status update to "for interview"
@@ -470,38 +577,37 @@ export default {
             });
           }
 
-          // Open status email modal automatically after successful status update to "hired", "declined", or "rejected"
+          // Send email notification for all status changes
           const normalizedStatusTrimmed = normalizedStatus.trim();
           
-          console.log("Status change check:", {
+          console.log("Status changed, sending email notification:", {
             normalizedStatus: normalizedStatusTrimmed,
             newStatus: newStatus,
-            originalStatus: originalStatus,
-            shouldOpen: normalizedStatusTrimmed === "hired" || normalizedStatusTrimmed === "declined" || normalizedStatusTrimmed === "rejected"
+            originalStatus: originalStatus
           });
           
-          // Check both normalizedStatus and newStatus to catch any case variations
-          const statusToCheck = normalizedStatusTrimmed || String(newStatus).toLowerCase().trim();
-          if (statusToCheck === "hired" || statusToCheck === "declined" || statusToCheck === "rejected") {
-            console.log("Opening status email modal for:", statusToCheck);
-            // Use setTimeout to ensure the DOM has updated and any other modals are closed
-            setTimeout(() => {
-              console.log("Calling openStatusEmailModal with:", this.applicantsList[index]);
-              if (this.applicantsList[index]) {
-                this.openStatusEmailModal(this.applicantsList[index]);
-              } else {
-                console.error("Applicant not found in list at index:", index);
-              }
-            }, 300);
+          // Automatically send email notification for all status changes
+          const emailResult = await this.sendStatusChangeEmail(this.applicantsList[index], normalizedStatusTrimmed);
+          if (emailResult === true) {
+            showToast(`Status updated to ${normalizedStatusTrimmed} and email notification sent.`, "success");
+          } else if (emailResult === null) {
+            // Email not supported for this status (400 error) - just show success
+            showToast(`Status updated to ${normalizedStatusTrimmed}.`, "success");
           } else {
-            console.log("Modal not opening - status is:", statusToCheck);
+            // Email failed for other reasons - show warning
+            showToast(`Status updated to ${normalizedStatusTrimmed}, but email notification failed.`, "error");
           }
         }
+
+        // Close the modal after successful update
+        this.closeStatusChangeModal();
       } catch (error) {
         console.error("Error updating status:", error);
         console.error("Error response:", error.response);
         // Revert to original status on error
-        person.status = originalStatus;
+        if (index !== -1) {
+          this.applicantsList[index].status = originalStatus;
+        }
         if (error.response?.status === 401) {
           showToast(
             "Unauthorized. Please log in again. Error: " +
@@ -517,6 +623,81 @@ export default {
               "Failed to update application status. Please try again."
           );
         }
+      }
+    },
+
+    closeStatusChangeModal() {
+      this.showStatusChangeModal = false;
+      if (this.pendingStatusChange) {
+        // Clear stored original status
+        this.originalStatuses.delete(this.pendingStatusChange.person.id);
+      }
+      this.pendingStatusChange = null;
+    },
+
+    cancelStatusChange() {
+      if (this.pendingStatusChange) {
+        const { person, originalStatus, index } = this.pendingStatusChange;
+        // Revert the status in the UI
+        if (index !== -1 && this.applicantsList[index]) {
+          this.applicantsList[index].status = originalStatus;
+        }
+        // Clear stored original status
+        this.originalStatuses.delete(person.id);
+      }
+      this.showStatusChangeModal = false;
+      this.pendingStatusChange = null;
+    },
+
+    async sendStatusChangeEmail(person, newStatus) {
+      if (!person || !person.id) {
+        console.error("No applicant provided for status change email");
+        return;
+      }
+
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No token available for sending status change email");
+        return;
+      }
+
+      try {
+        // Send empty payload - backend will read the status from the application record
+        // The status was already updated before this email is sent
+        const payload = {};
+
+        const response = await axios.post(
+          import.meta.env.VITE_API_BASE_URL +
+            `/applications/${person.id}/send-status-email`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token.trim()}`,
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+          }
+        );
+
+        console.log("Status change email sent successfully:", response.data?.message);
+        return true;
+      } catch (error) {
+        console.error("Error sending status change email:", error);
+        console.error("Error details:", {
+          status: error.response?.status,
+          message: error.response?.data?.message,
+          data: error.response?.data
+        });
+        
+        // If it's a 400 error, the backend might not support email for this status
+        // Return a special value to indicate this is expected
+        if (error.response?.status === 400) {
+          console.warn("Email notification not supported for this status or invalid request");
+          return null; // Return null to indicate "not supported" vs false for "failed"
+        }
+        
+        // Don't throw - we don't want to fail the status update if email fails
+        return false;
       }
     },
 
@@ -1058,6 +1239,13 @@ export default {
           return;
         }
 
+        // Check if the selected date is in the past
+        const now = new Date();
+        if (dateObj < now) {
+          showToast("Cannot schedule an interview in the past. Please select a future date and time.");
+          return;
+        }
+
         const year = dateObj.getFullYear();
         const month = String(dateObj.getMonth() + 1).padStart(2, "0");
         const day = String(dateObj.getDate()).padStart(2, "0");
@@ -1397,11 +1585,6 @@ export default {
         this.openUpcomingMenu = null;
         this.openCompletedMenu = null;
       }
-      // Close schedule dropdown if clicking outside
-      const clickedInsideScheduleDropdown = event.target.closest(".schedule-dropdown-wrapper");
-      if (!clickedInsideScheduleDropdown) {
-        this.showScheduleDropdown = false;
-      }
     },
 
     showMoreUpcoming() {
@@ -1418,7 +1601,6 @@ export default {
         this.showScheduleModal = true;
         this.showViewScheduleModal = false;
         this.scheduleAction = "scheduleOnly";
-        this.showScheduleDropdown = false;
 
         // If person already has a schedule, populate the form with existing data
         if (person.interviewSchedule) {
@@ -1463,14 +1645,12 @@ export default {
       this.showScheduleModal = false;
       this.scheduleData = { date: "", mode: "", detail: "", cc: "" };
       this.scheduleAction = "scheduleOnly";
-      this.showScheduleDropdown = false;
       this.selectedPerson = null;
       this.cancelConflictSchedule();
     },
 
     selectScheduleAction(action) {
       this.scheduleAction = action;
-      this.showScheduleDropdown = false;
     },
 
     getScheduleButtonText() {
@@ -1482,17 +1662,6 @@ export default {
       return this.scheduleAction === "scheduleAndEmail" 
         ? "Schedule and Email" 
         : "Schedule only";
-    },
-
-    handleScheduleDropdownBlur(event) {
-      // Delay closing to allow click events to fire first
-      setTimeout(() => {
-        // Check if focus moved to dropdown menu or if clicking outside
-        const relatedTarget = event.relatedTarget;
-        if (!relatedTarget || !relatedTarget.closest('.schedule-dropdown-wrapper')) {
-          this.showScheduleDropdown = false;
-        }
-      }, 150);
     },
 
     // Delete a career
@@ -1779,9 +1948,10 @@ export default {
         this.applicantsLoading = false;
         this.applicantSearchQuery = ""; // Clear search when opening modal
         this.showCareerDetailsModal = true;
-        // Load applicants after modal is shown to prevent blocking
+        // Load applicants and aligned trainings after modal is shown to prevent blocking
         this.$nextTick(() => {
           this.loadApplicantsForCareer(normalizedCareer);
+          this.loadAlignedTrainings(normalizedCareer);
         });
       } catch (error) {
         console.error("Error opening career details:", error);
@@ -1791,6 +1961,9 @@ export default {
     closeCareerDetails() {
       this.showCareerDetailsModal = false;
       this.applicantSearchQuery = ""; // Clear search when closing modal
+      this.alignedTrainings = [];
+      this.selectedTrainingsForCareer = [];
+      this.alignedTrainingsError = "";
     },
     closeRequirementsModal() {
       this.showRequirementsModal = false;
@@ -1991,6 +2164,177 @@ export default {
         return date || "Not set";
       }
     },
+
+    async loadAlignedTrainings(career) {
+      if (!career || !career.careerID) {
+        console.warn("No career provided for aligned trainings.");
+        return;
+      }
+
+      const careerID = career.careerID || career.id || null;
+      if (!careerID) {
+        console.error("Career object missing careerID:", career);
+        return;
+      }
+
+      let token = localStorage.getItem("token");
+      if (!token) {
+        showToast("Please log in to continue.");
+        return;
+      }
+      token = token.trim().replace(/^"(.*)"$/, "$1");
+
+      this.alignedTrainingsLoading = true;
+      this.alignedTrainingsError = "";
+      this.alignedTrainings = [];
+
+      try {
+        // Fetch trainings that share tags with this career
+        const response = await axios.get(
+          import.meta.env.VITE_API_BASE_URL + `/careers/${careerID}/aligned-trainings`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (Array.isArray(response.data)) {
+          this.alignedTrainings = response.data;
+        } else if (response.data?.trainings) {
+          this.alignedTrainings = response.data.trainings;
+        } else {
+          this.alignedTrainings = [];
+        }
+
+        // Load selected trainings for this career
+        await this.loadSelectedTrainingsForCareer(careerID);
+      } catch (error) {
+        console.error("Error fetching aligned trainings:", error);
+        if (error.response?.status === 401) {
+          this.alignedTrainingsError = "Token invalid or expired. Please log in again.";
+        } else if (error.response?.status === 404) {
+          // Endpoint might not exist yet, that's okay
+          this.alignedTrainings = [];
+        } else {
+          this.alignedTrainingsError = error.response?.data?.message || "Failed to load aligned trainings.";
+        }
+        this.alignedTrainings = [];
+      } finally {
+        this.alignedTrainingsLoading = false;
+      }
+    },
+
+    async loadSelectedTrainingsForCareer(careerID) {
+      let token = localStorage.getItem("token");
+      if (!token) return;
+      token = token.trim().replace(/^"(.*)"$/, "$1");
+
+      try {
+        const response = await axios.get(
+          import.meta.env.VITE_API_BASE_URL + `/careers/${careerID}/selected-trainings`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+            },
+          }
+        );
+
+        if (Array.isArray(response.data)) {
+          this.selectedTrainingsForCareer = response.data.map(t => t.trainingID || t.training_id || t.id);
+        } else if (response.data?.selectedTrainings) {
+          this.selectedTrainingsForCareer = response.data.selectedTrainings.map(t => t.trainingID || t.training_id || t.id);
+        } else {
+          this.selectedTrainingsForCareer = [];
+        }
+      } catch (error) {
+        // If endpoint doesn't exist, start with empty array
+        if (error.response?.status !== 404) {
+          console.warn("Error loading selected trainings:", error);
+        }
+        this.selectedTrainingsForCareer = [];
+      }
+    },
+
+    toggleTrainingSelection(trainingID) {
+      const normalizedID = Number(trainingID);
+      const index = this.selectedTrainingsForCareer.indexOf(normalizedID);
+      
+      if (index === -1) {
+        // Add to selection
+        this.selectedTrainingsForCareer.push(normalizedID);
+      } else {
+        // Remove from selection
+        this.selectedTrainingsForCareer.splice(index, 1);
+      }
+    },
+
+    isTrainingSelected(trainingID) {
+      const normalizedID = Number(trainingID);
+      return this.selectedTrainingsForCareer.includes(normalizedID);
+    },
+
+    async saveSelectedTrainings() {
+      if (!this.selectedCareer || !this.selectedCareer.careerID) {
+        showToast("No career selected.", "error");
+        return;
+      }
+
+      let token = localStorage.getItem("token");
+      if (!token) {
+        showToast("Please log in to continue.", "error");
+        return;
+      }
+      token = token.trim().replace(/^"(.*)"$/, "$1");
+
+      this.savingTrainings = true;
+
+      try {
+        const response = await axios.post(
+          import.meta.env.VITE_API_BASE_URL + `/careers/${this.selectedCareer.careerID}/selected-trainings`,
+          {
+            trainingIDs: this.selectedTrainingsForCareer,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+          }
+        );
+
+        showToast(response.data?.message || "Organization's choice trainings saved successfully!", "success");
+        // Reload selected trainings to reflect the changes
+        await this.loadSelectedTrainingsForCareer(this.selectedCareer.careerID);
+      } catch (error) {
+        console.error("Error saving selected trainings:", error);
+        console.error("Error response:", error.response);
+        if (error.response?.status === 401) {
+          showToast("Unauthorized. Please log in again.", "error");
+        } else if (error.response?.status === 403) {
+          showToast("Access denied. You don't have permission to update this.", "error");
+        } else if (error.response?.status === 422) {
+          showToast(
+            error.response?.data?.message || "Validation error. Please check your selections.",
+            "error"
+          );
+        } else {
+          const errorMessage = error.response?.data?.message || error.message || "Failed to save selected trainings. Please try again.";
+          console.error("Full error details:", {
+            message: errorMessage,
+            status: error.response?.status,
+            data: error.response?.data
+          });
+          showToast(errorMessage, "error");
+        }
+      } finally {
+        this.savingTrainings = false;
+      }
+    },
   },
 
   computed: {
@@ -2012,6 +2356,15 @@ export default {
       const month = String(today.getMonth() + 1).padStart(2, "0");
       const day = String(today.getDate()).padStart(2, "0");
       return `${year}-${month}-${day}`; // YYYY-MM-DD
+    },
+    minDateTime() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      const hours = String(now.getHours()).padStart(2, "0");
+      const minutes = String(now.getMinutes()).padStart(2, "0");
+      return `${year}-${month}-${day}T${hours}:${minutes}`; // YYYY-MM-DDTHH:mm
     },
     visibleUpcomingCareers() {
       const list = this.sortedUpcomingCareers;
@@ -2645,40 +2998,22 @@ async function viewRequirement(id) {
                 ref="dateInput"
                 type="datetime-local"
                 v-model="scheduleData.date"
+                :min="minDateTime"
                 @keydown.prevent
                 @keypress.prevent
                 @paste.prevent
                 @input="$event.target.value = $event.target.value"
               />
               <span class="calendar-icon" @click.prevent="openCalendar">
-                <!-- SVG icon (click target is the span) -->
-                <svg
-                  width="26"
-                  height="26"
-                  viewBox="0 0 26 26"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+                <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M2.16669 9.41675C2.16669 7.53113 2.16669 6.58832 2.75247 6.00253C3.33826 5.41675 4.28107 5.41675 6.16669 5.41675H19.8334C21.719 5.41675 22.6618 5.41675 23.2476 6.00253C23.8334 6.58832 23.8334 7.53113 23.8334 9.41675V9.83342C23.8334 10.3048 23.8334 10.5405 23.6869 10.687C23.5405 10.8334 23.3048 10.8334 22.8334 10.8334H3.16669C2.69528 10.8334 2.45958 10.8334 2.31313 10.687C2.16669 10.5405 2.16669 10.3048 2.16669 9.83341V9.41675Z"
-                    fill="black"
-                  />
+                    fill="black" />
                   <path
                     d="M22.833 13C23.3042 13 23.5401 13.0002 23.6865 13.1465C23.833 13.2929 23.833 13.5286 23.833 14V19.833C23.833 21.7186 23.8329 22.6613 23.2471 23.2471C22.6613 23.8329 21.7186 23.833 19.833 23.833H6.16699C4.28137 23.833 3.33872 23.8329 2.75293 23.2471C2.16714 22.6613 2.16699 21.7186 2.16699 19.833V14C2.16699 13.5286 2.16703 13.2929 2.31348 13.1465C2.45994 13.0002 2.69576 13 3.16699 13H22.833Z"
-                    fill="black"
-                  />
-                  <path
-                    d="M7.58331 3.25L7.58331 6.5"
-                    stroke="black"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  />
-                  <path
-                    d="M18.4167 3.25L18.4167 6.5"
-                    stroke="black"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  />
+                    fill="black" />
+                  <path d="M7.58331 3.25L7.58331 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
+                  <path d="M18.4167 3.25L18.4167 6.5" stroke="black" stroke-width="2" stroke-linecap="round" />
                 </svg>
               </span>
             </div>
@@ -2734,45 +3069,35 @@ async function viewRequirement(id) {
               />
             </div>
 
-            <div class="modal-actions">
-              <div class="schedule-dropdown-wrapper">
-                <div class="schedule-dropdown-container">
-                  <button 
-                    class="confirm-btn schedule-dropdown-main-btn" 
-                    @click="confirmSchedule"
-                  >
-                    {{ getScheduleButtonText() }}
-                  </button>
-                  <button 
-                    class="schedule-dropdown-toggle" 
-                    :class="{ 'dropdown-open': showScheduleDropdown }"
-                    @click.stop="showScheduleDropdown = !showScheduleDropdown"
-                    @blur="handleScheduleDropdownBlur"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" class="dropdown-arrow">
-                      <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </button>
-                </div>
-                <div v-if="showScheduleDropdown" class="schedule-dropdown-menu" @click.stop>
-                  <button 
-                    class="schedule-dropdown-item" 
-                    :class="{ active: scheduleAction === 'scheduleOnly' }"
-                    @click="selectScheduleAction('scheduleOnly')"
-                  >
-                    Schedule only
-                  </button>
-                  <button 
-                    class="schedule-dropdown-item" 
-                    :class="{ active: scheduleAction === 'scheduleAndEmail' }"
-                    @click="selectScheduleAction('scheduleAndEmail')"
-                  >
-                    Schedule and Email
-                  </button>
-                </div>
+            <!-- Schedule Action Selection (Radio Buttons) -->
+            <div class="schedule-action-selection">
+              <label class="schedule-action-label">Action:</label>
+              <div class="schedule-action-radio-group">
+                <label>
+                  <input
+                    type="radio"
+                    value="scheduleOnly"
+                    v-model="scheduleAction"
+                  />
+                  Schedule only
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    value="scheduleAndEmail"
+                    v-model="scheduleAction"
+                  />
+                  Schedule and Email
+                </label>
               </div>
-              <button class="cancel-btn" @click="closeScheduleModal">
-                Cancel
+            </div>
+
+            <div class="modal-actions">
+              <button 
+                class="submit-btn" 
+                @click="confirmSchedule"
+              >
+                Submit
               </button>
             </div>
           </div>
@@ -2866,6 +3191,51 @@ async function viewRequirement(id) {
             <button class="cancel-btn" @click="closeViewScheduleModal">
               Close
             </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status Change Confirmation Modal -->
+      <div v-if="showStatusChangeModal" class="modal-overlay schedule-modal-overlay" @click.self="cancelStatusChange">
+        <div class="modal-box">
+          <button class="modal-close-btn" @click="cancelStatusChange">✕</button>
+          <h3>Confirm Status Change</h3>
+
+          <div class="schedule-form">
+            <div v-if="pendingStatusChange" class="status-change-info">
+              <p>
+                <strong>Applicant:</strong> {{ pendingStatusChange.person.name }}
+              </p>
+              <p>
+                <strong>Current Status:</strong> 
+                <span class="status-badge">{{ pendingStatusChange.originalStatus || 'N/A' }}</span>
+              </p>
+              <p>
+                <strong>New Status:</strong> 
+                <span class="status-badge new-status">{{ pendingStatusChange.newStatus }}</span>
+              </p>
+            </div>
+
+            <div class="status-change-warning">
+              <p><strong>⚠️ Please note:</strong></p>
+              <ul>
+                <li>Changing the status will clear any existing interview schedule, location, and link data (unless changing to "For Interview")</li>
+                <li>An email notification will be automatically sent to the applicant</li>
+                <li>This action cannot be undone</li>
+              </ul>
+            </div>
+
+            <div class="modal-actions">
+              <button 
+                class="confirm-btn" 
+                @click="confirmStatusChange"
+              >
+                Continue & Save
+              </button>
+              <button class="cancel-btn" @click="cancelStatusChange">
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -3070,7 +3440,10 @@ async function viewRequirement(id) {
       >
         <div class="career-details-modal">
           <button class="modal-close-btn" @click="closeCareerDetails">✕</button>
-          <h3 class="modal-title">{{ selectedCareer.position }}</h3>
+          <div class="career-details-container">
+            <!-- Main Content Section -->
+            <div class="career-details-main">
+              <h3 class="modal-title">{{ selectedCareer.position }}</h3>
           
           <!-- Tags -->
           <div
@@ -3190,6 +3563,7 @@ async function viewRequirement(id) {
                       <div class="status-cell-wrapper">
                         <select 
                           v-model="person.status" 
+                          @focus="storeOriginalStatus(person, $event)"
                           @change="updateApplicationStatus(person, $event)" 
                           class="status-dropdown"
                         >
@@ -3210,7 +3584,7 @@ async function viewRequirement(id) {
                           </option>
                         </select>
                         <button
-                          v-if="person.status === 'hired' || person.status === 'declined' || person.status === 'rejected'"
+                          v-if="person.status === 'hired' || person.status === 'declined'"
                           @click="openStatusEmailModal(person)"
                           class="resend-email-btn"
                           title="Send status change email"
@@ -3310,6 +3684,75 @@ async function viewRequirement(id) {
                   </tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+            </div>
+
+            <!-- Side Panel: Aligned Trainings (like OrganizationCalendar) -->
+            <div class="career-details-side">
+              <h3>Organization's Choice Trainings</h3>
+              
+              <div v-if="alignedTrainingsLoading" class="trainings-loading">
+                <div class="loading-spinner"></div>
+                <p>Loading aligned trainings...</p>
+              </div>
+
+              <div v-else-if="alignedTrainingsError" class="trainings-error">
+                <p>{{ alignedTrainingsError }}</p>
+                <button class="retry-btn" @click="loadAlignedTrainings(selectedCareer)">Retry</button>
+              </div>
+
+              <div v-else-if="alignedTrainings.length === 0" class="trainings-empty">
+                <p>No trainings found that align with this career's tags.</p>
+                <p class="empty-hint">Trainings must share at least one tag with this career.</p>
+              </div>
+
+              <div v-else class="trainings-side-content">
+                <div class="trainings-list">
+                  <div
+                    v-for="training in alignedTrainings"
+                    :key="training.trainingID || training.id"
+                    class="training-item-card"
+                  >
+                    <label class="training-checkbox-label">
+                      <input
+                        type="checkbox"
+                        :checked="isTrainingSelected(training.trainingID || training.id)"
+                        @change="toggleTrainingSelection(training.trainingID || training.id)"
+                        class="training-checkbox"
+                      />
+                      <div class="training-item-content">
+                        <h5 class="training-item-title">{{ training.title || training.Title }}</h5>
+                        <p class="training-item-description" v-if="training.description || training.Description">
+                          {{ (training.description || training.Description).substring(0, 120) }}{{ (training.description || training.Description).length > 120 ? '...' : '' }}
+                        </p>
+                        <div class="training-item-tags" v-if="training.Tags && training.Tags.length > 0">
+                          <span
+                            v-for="tag in training.Tags"
+                            :key="tag.TagID || tag.tagID || tag.id"
+                            class="training-tag-chip"
+                          >
+                            {{ tag.TagName || tag.tagName || getTagName(tag.TagID || tag.tagID || tag.id) }}
+                          </span>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="trainings-actions">
+                  <p class="trainings-selected-count">
+                    <strong>{{ selectedTrainingsForCareer.length }}</strong> training{{ selectedTrainingsForCareer.length !== 1 ? 's' : '' }} selected
+                  </p>
+                  <button
+                    class="save-trainings-btn"
+                    @click="saveSelectedTrainings"
+                    :disabled="savingTrainings"
+                  >
+                    {{ savingTrainings ? "Saving..." : "Save Selected" }}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -4320,14 +4763,33 @@ async function viewRequirement(id) {
   background: #fff;
   padding: 2rem;
   border-radius: 1rem;
-  width: min(95vw, 1200px);
+  width: min(95vw, 1600px);
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden;
   position: relative;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
   animation: fadeIn 0.25s ease;
   z-index: 2100;
   /* ensure above other overlays */
+  display: flex;
+  flex-direction: column;
+}
+
+.career-details-container {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: row;
+  gap: 1.5rem;
+  width: 100%;
+  flex: 1;
+  overflow: hidden;
+}
+
+.career-details-main {
+  flex: 3;
+  overflow-y: auto;
+  min-width: 0;
+  padding-right: 1rem;
 }
 
 .career-info {
@@ -4335,15 +4797,16 @@ async function viewRequirement(id) {
   color: #333;
   line-height: 1.6;
   display: flex;
+  flex-direction: column;
   justify-content: flex-start;
   align-items: flex-start;
-  gap: 1.5rem;
+  gap: 0.75rem;
 }
 
 .career-group {
-  display: inline-flex;
+  display: flex;
   align-items: baseline;
-  flex: 1;
+  width: 100%;
   min-width: 0;
 }
 
@@ -4961,6 +5424,73 @@ tbody td {
   gap: 12px;
 }
 
+/* Status Change Modal Styles */
+.status-change-info {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.status-change-info p {
+  margin: 8px 0;
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+.status-change-info p:first-child {
+  margin-top: 0;
+}
+
+.status-change-info p:last-child {
+  margin-bottom: 0;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: #e5e7eb;
+  color: #374151;
+  text-transform: capitalize;
+}
+
+.status-badge.new-status {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-change-warning {
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  border-left: 4px solid #f59e0b;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.status-change-warning p {
+  margin: 0 0 8px 0;
+  font-size: 0.95rem;
+  color: #92400e;
+  font-weight: 600;
+}
+
+.status-change-warning ul {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+  color: #78350f;
+}
+
+.status-change-warning li {
+  margin: 6px 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 .form-group label {
   font-weight: 500;
   margin-bottom: 4px;
@@ -5147,17 +5677,24 @@ input[type="text"] {
 
 .calendar-icon {
   position: absolute;
-  right: 10px;
-  top: 6px;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 24px;
+  height: 24px;
+  pointer-events: auto;
 }
 
 .calendar-icon svg {
+  width: 100%;
+  height: 100%;
   fill: black;
   pointer-events: none;
+  display: block;
 }
 
 .schedule-form label {
@@ -5181,10 +5718,16 @@ input[type="text"] {
   border: 1px solid #ccc;
   border-radius: 8px;
   font-size: 0.95rem;
+  line-height: 1.5;
   margin-bottom: 8px;
   background: #fff;
   color: #000;
   transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.schedule-form input[type="datetime-local"] {
+  padding-right: 45px;
 }
 
 .schedule-form input[type="datetime-local"]:focus,
@@ -5370,14 +5913,15 @@ input[type="text"] {
 
 .schedule-dropdown-container {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 0;
+  height: 100%;
 }
 
 .schedule-dropdown-main-btn {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
-  border-right: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
   flex: 1;
 }
 
@@ -5385,15 +5929,18 @@ input[type="text"] {
   background: #334155;
   color: white;
   border: none;
-  padding: 7px 8px;
+  padding: 10px 14px;
   border-top-right-radius: 6px;
   border-bottom-right-radius: 6px;
-  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background 0.2s;
+  min-width: 48px;
+  height: 100%;
+  flex-shrink: 0;
 }
 
 .schedule-dropdown-toggle:hover {
@@ -5402,6 +5949,9 @@ input[type="text"] {
 
 .schedule-dropdown-toggle .dropdown-arrow {
   transition: transform 0.2s;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
 .schedule-dropdown-toggle.dropdown-open .dropdown-arrow {
@@ -5454,6 +6004,70 @@ input[type="text"] {
 
 .schedule-dropdown-item.active:hover {
   background: #c7d2fe;
+}
+
+/* Schedule Action Selection (Radio Buttons) */
+.schedule-action-selection {
+  margin: 16px 0;
+}
+
+.schedule-action-label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #000;
+  font-size: 0.95rem;
+}
+
+.schedule-action-radio-group {
+  display: flex;
+  gap: 16px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.schedule-action-radio-group label {
+  cursor: pointer;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Schedule modal action radio group */
+.schedule-modal-overlay .schedule-action-radio-group {
+  gap: 20px;
+  padding: 16px;
+  margin: 12px 0;
+}
+
+.schedule-modal-overlay .schedule-action-radio-group label {
+  font-size: 1rem;
+}
+
+/* Submit Button */
+.submit-btn {
+  background: #334155;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background 0.2s, transform 0.1s;
+  width: 100%;
+}
+
+.submit-btn:hover {
+  background: #1e293b;
+  transform: translateY(-1px);
+}
+
+.submit-btn:active {
+  transform: translateY(0);
 }
 
 .view-schedule-info p {
@@ -5644,6 +6258,259 @@ input[type="text"] {
   
   .requirements-iframe {
     min-height: 400px;
+  }
+}
+
+/* Side Panel: Aligned Trainings (like OrganizationCalendar) */
+.career-details-side {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  flex: 1;
+  min-width: 300px;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-left: 2px solid #e5e7eb;
+  margin-left: 1rem;
+}
+
+.career-details-side h3 {
+  margin-bottom: 15px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+}
+
+.trainings-side-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.trainings-loading {
+  padding: 3rem;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #334155;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.trainings-error,
+.trainings-empty {
+  padding: 3rem;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.empty-icon {
+  opacity: 0.5;
+}
+
+.empty-hint {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.trainings-error {
+  color: #dc2626;
+}
+
+.retry-btn {
+  margin-top: 0.75rem;
+  background-color: #334155;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.retry-btn:hover {
+  background-color: #1e293b;
+}
+
+.trainings-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.training-item-card {
+  color: black;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+}
+
+.training-item-card:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+.training-checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  cursor: pointer;
+  width: 100%;
+}
+
+.training-checkbox {
+  margin-top: 0.25rem;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.training-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.training-item-title {
+  color: black;
+  font-weight: bold;
+  font-size: 0.95rem;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.training-item-description {
+  font-size: 0.85rem;
+  color: #6b7280;
+  line-height: 1.5;
+  margin-bottom: 0.5rem;
+}
+
+.training-item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.training-tag-chip {
+  background-color: #e0e7ff;
+  color: #1e40af;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.trainings-actions {
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+.save-trainings-btn {
+  background-color: #334155;
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.save-trainings-btn:hover:not(:disabled) {
+  background-color: #1e293b;
+}
+
+.save-trainings-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.trainings-selected-count {
+  font-size: 0.9rem;
+  color: #333;
+  margin: 0;
+  text-align: center;
+  font-weight: 500;
+}
+
+.trainings-selected-count strong {
+  color: #1e293b;
+  font-size: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .career-details-container {
+    flex-direction: column;
+  }
+
+  .career-details-side {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    border-left: none;
+    border-top: 2px solid #e5e7eb;
+    margin-left: 0;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    max-height: 400px;
+  }
+
+  .career-details-main {
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .career-details-modal {
+    width: 95vw;
+    padding: 1.5rem;
+  }
+
+  .career-details-side {
+    max-height: 300px;
   }
 }
 </style>

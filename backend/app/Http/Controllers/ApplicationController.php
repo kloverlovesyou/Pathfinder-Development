@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\InterviewSchedule;
 use App\Mail\ApplicationHired;
 use App\Mail\ApplicationDeclined;
+use App\Mail\ApplicationStatusChange;
 use App\Services\BrevoEmailService;
 
 class ApplicationController extends Controller
@@ -597,21 +598,76 @@ public function viewRequirement(Request $request, $id)
             return response()->json(['message' => 'Access denied'], 403);
         }
         
+        // Normalize the status to lowercase and trim whitespace
+        $statusInput = strtolower(trim($request->input('status', '')));
+        
+        // Map common status variations to standard values
+        $statusMap = [
+            'forreview' => 'for review',
+            'for-review' => 'for review',
+            'for_interview' => 'for interview',
+            'for-interview' => 'for interview',
+            'forinterview' => 'for interview',
+        ];
+        
+        // Apply mapping if needed
+        $normalizedStatus = $statusMap[$statusInput] ?? $statusInput;
+        
+        // Validate the normalized status - only allow the 5 specified statuses
+        $validStatuses = ['submitted', 'for review', 'for interview', 'hired', 'declined'];
+        if (!in_array($normalizedStatus, $validStatuses)) {
+            return response()->json([
+                'message' => 'The selected status is invalid',
+                'received_status' => $request->input('status'),
+                'normalized_status' => $normalizedStatus,
+                'valid_statuses' => $validStatuses
+            ], 422);
+        }
+        
+        // Validate other fields
         $validated = $request->validate([
-            'status' => 'required|in:submitted,in review,for interview,pending,accepted,rejected,hired,declined',
             'date' => 'nullable|date',
             'overwrite' => 'nullable|boolean',
             'body' => 'nullable|string', // Optional custom message for email
+            'interviewSchedule' => 'nullable',
+            'interviewMode' => 'nullable',
+            'interviewLocation' => 'nullable',
+            'interviewLink' => 'nullable',
+            'screenDate' => 'nullable',
+            'hiredDate' => 'nullable',
+            'declinedDate' => 'nullable',
+            'rejectionDate' => 'nullable',
+            'pendingDate' => 'nullable',
         ]);
 
         $timestamp = isset($validated['date'])
             ? Carbon::parse($validated['date'])
             : null;
 
-        $application->applicationStatus = $validated['status'];
+        $application->applicationStatus = $normalizedStatus;
+        
+        // Clear fields that are explicitly set to null in the request
+        $fieldsToClear = [
+            'interviewSchedule',
+            'interviewMode',
+            'interviewLocation',
+            'interviewLink',
+            'screenDate',
+            'hiredDate',
+            'declinedDate',
+            'rejectionDate',
+            'pendingDate'
+        ];
+        
+        foreach ($fieldsToClear as $field) {
+            if ($request->has($field) && $request->input($field) === null) {
+                $application->$field = null;
+            }
+        }
+        
         $this->recordApplicationStage(
             $application,
-            $validated['status'],
+            $normalizedStatus,
             $timestamp,
             $request->boolean('overwrite', false)
         );
@@ -962,13 +1018,10 @@ public function viewRequirement(Request $request, $id)
     {
         $map = [
             'submitted' => 'appliedDate',
-            'in review' => 'appliedDate',
+            'for review' => 'appliedDate',
             'for interview' => 'screenDate',
-            'pending' => 'pendingDate',
-            'accepted' => 'hiredDate',
             'hired' => 'hiredDate',
             'declined' => 'declinedDate',
-            'rejected' => 'declinedDate',
         ];
 
         $key = strtolower(trim($status));
@@ -991,7 +1044,7 @@ public function viewRequirement(Request $request, $id)
     }
 
     /**
-     * Send email notification when application status changes to 'hired', 'declined', or 'rejected'
+     * Send email notification when application status changes
      */
     private function sendStatusChangeEmail(Application $application, string $status, ?string $customBody = null): void
     {
@@ -1074,6 +1127,8 @@ public function viewRequirement(Request $request, $id)
             $emailSent = false;
             $statusLower = strtolower(trim($status));
 
+            // Use specialized templates for hired and declined
+            // Use generic template for all other statuses
             if ($statusLower === 'hired') {
                 $mailable = new ApplicationHired(
                     $applicantName,
@@ -1081,8 +1136,7 @@ public function viewRequirement(Request $request, $id)
                     $organizationName,
                     $customBody
                 );
-            } elseif ($statusLower === 'declined' || $statusLower === 'rejected') {
-                // Treat 'rejected' the same as 'declined' for email purposes
+            } elseif ($statusLower === 'declined') {
                 $mailable = new ApplicationDeclined(
                     $applicantName,
                     $positionTitle,
@@ -1090,11 +1144,14 @@ public function viewRequirement(Request $request, $id)
                     $customBody
                 );
             } else {
-                Log::warning('sendStatusChangeEmail called with invalid status', [
-                    'status' => $status,
-                    'application_id' => $application->applicationID,
-                ]);
-                return;
+                // Use generic status change email for all other statuses
+                $mailable = new ApplicationStatusChange(
+                    $applicantName,
+                    $positionTitle,
+                    $organizationName,
+                    $status,
+                    $customBody
+                );
             }
 
             // Try to send via Brevo API first, then fallback to SMTP
@@ -1105,14 +1162,35 @@ public function viewRequirement(Request $request, $id)
             if (!empty($brevoApiKey)) {
                 try {
                     $brevoService = app(BrevoEmailService::class);
-                    // Use declined template for both 'declined' and 'rejected' statuses
-                    $viewName = $statusLower === 'hired' ? 'emails.application-hired' : 'emails.application-declined';
-                    $htmlContent = view($viewName, [
-                        'applicantName' => $applicantName,
-                        'positionTitle' => $positionTitle,
-                        'organizationName' => $organizationName,
-                        'customBody' => $customBody,
-                    ])->render();
+                    // Determine which template to use based on status
+                    if ($statusLower === 'hired') {
+                        $viewName = 'emails.application-hired';
+                        $viewData = [
+                            'applicantName' => $applicantName,
+                            'positionTitle' => $positionTitle,
+                            'organizationName' => $organizationName,
+                            'customBody' => $customBody,
+                        ];
+                    } elseif ($statusLower === 'declined') {
+                        $viewName = 'emails.application-declined';
+                        $viewData = [
+                            'applicantName' => $applicantName,
+                            'positionTitle' => $positionTitle,
+                            'organizationName' => $organizationName,
+                            'customBody' => $customBody,
+                        ];
+                    } else {
+                        // Use generic status change template for all other statuses
+                        $viewName = 'emails.application-status-change';
+                        $viewData = [
+                            'applicantName' => $applicantName,
+                            'positionTitle' => $positionTitle,
+                            'organizationName' => $organizationName,
+                            'status' => $status,
+                            'customBody' => $customBody,
+                        ];
+                    }
+                    $htmlContent = view($viewName, $viewData)->render();
 
                     $brevoService->send(
                         $applicantEmail,
@@ -1210,13 +1288,8 @@ public function viewRequirement(Request $request, $id)
 
         $status = strtolower(trim($application->applicationStatus ?? ''));
         
-        // Only allow sending emails for hired, declined, or rejected statuses
-        if ($status !== 'hired' && $status !== 'declined' && $status !== 'rejected') {
-            return response()->json([
-                'message' => 'Email can only be sent for hired, declined, or rejected statuses',
-                'current_status' => $application->applicationStatus,
-            ], 400);
-        }
+        // Allow sending emails for all statuses
+        // The sendStatusChangeEmail method will handle the appropriate template
 
         try {
             $this->sendStatusChangeEmail($application, $status, $validated['body'] ?? null);

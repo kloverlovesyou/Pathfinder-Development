@@ -509,6 +509,7 @@
                     <th>Full Name</th>
                     <th>Registration Date</th>
                     <th>Status</th>
+                    <th>Schedule Attendance</th>
                     <th class="cert-col-header">Certificate</th>
                   </tr>
                 </thead>
@@ -527,23 +528,50 @@
                       <p class="registration-date">{{ person.dateRegistered }}</p>
                     </td>
                     <td :class="{
-                      'status-attended': person.status === 'Attended',
+                      'status-attended': person.status === 'Attended' || person.status === 'Attended (Partial)',
                       'status-registered': person.status === 'Registered',
                       'status-did-not-attend': person.status === 'Did not Attend'
                     }">
                       {{ person.status }}
+                      <span v-if="person.attendedSchedulesCount !== undefined && person.totalSchedulesCount > 0" class="attendance-count">
+                        ({{ person.attendedSchedulesCount }}/{{ person.totalSchedulesCount }})
+                      </span>
+                    </td>
+                    <td>
+                      <div v-if="person.scheduleAttendance && person.scheduleAttendance.length > 0" class="schedule-attendance-list">
+                        <div 
+                          v-for="(schedule, idx) in person.scheduleAttendance" 
+                          :key="schedule.trainingScheduleID || idx"
+                          class="schedule-attendance-item"
+                          :class="{ 'attended': schedule.attended }"
+                          :title="schedule.attended ? `Attended on ${formatScheduleDate(schedule.attendedAt)}` : `Not attended - ${formatScheduleDate(schedule.schedule)}`"
+                        >
+                          <span class="schedule-date-badge">
+                            {{ formatScheduleShort(schedule.schedule) }}
+                          </span>
+                          <span class="schedule-status-icon">
+                            <svg v-if="schedule.attended" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M5 13l4 4L19 7" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <circle cx="12" cy="12" r="10" stroke="#9ca3af" stroke-width="2" />
+                            </svg>
+                          </span>
+                        </div>
+                      </div>
+                      <span v-else class="no-schedules">No schedules</span>
                     </td>
                     <td>
                       <div class="button-tooltip-wrapper"
-                        v-if="person.hasCertificate || person.status !== 'Attended'"
-                        :title="person.hasCertificate ? 'Certificate already issued' : 'Registrant status must be Attended'">
+                        v-if="person.hasCertificate || !hasAttendedAllSchedules(person)"
+                        :data-tooltip="person.hasCertificate ? 'Certificate already issued' : 'Registrant must have attended all scheduled dates'">
                         <button class="action-btn"
                           :class="{
                             'certificate-issued-btn': person.hasCertificate,
-                            'issue-cert-btn': !person.hasCertificate && person.status === 'Attended',
-                            'disabled-action': person.status !== 'Attended' && !person.hasCertificate
+                            'issue-cert-btn': !person.hasCertificate && hasAttendedAllSchedules(person),
+                            'disabled-action': !hasAttendedAllSchedules(person) && !person.hasCertificate
                           }"
-                          :disabled="person.hasCertificate || person.status !== 'Attended'"
+                          :disabled="person.hasCertificate || !hasAttendedAllSchedules(person)"
                           @click.stop="handleIssueCertificate(person)">
                           {{ person.hasCertificate ? 'Certificate Issued' : 'Issue Certificate' }}
                         </button>
@@ -565,7 +593,7 @@
 
             <div class="registrants-footer" v-if="filteredRegistrants.length">
               <button class="bulk-issue-btn" @click="issueCertificatesToSelected"
-                :disabled="!filteredRegistrants.some((p) => p.selected && !p.hasCertificate && p.status === 'Attended')">
+                :disabled="!filteredRegistrants.some((p) => p.selected && !p.hasCertificate && hasAttendedAllSchedules(p))">
                 Issue Certificates to Selected
               </button>
             </div>
@@ -1192,6 +1220,14 @@ export default {
   },
 
   methods: {
+    // Helper method to check if registrant attended all scheduled dates
+    hasAttendedAllSchedules(person) {
+      if (!person.scheduleAttendance || person.scheduleAttendance.length === 0) {
+        return false;
+      }
+      // Check if all schedules are attended
+      return person.scheduleAttendance.every(s => s.attended);
+    },
 
     viewCertificate(certificatePathOrUrl) {
       if (!certificatePathOrUrl) {
@@ -1229,8 +1265,10 @@ export default {
     handleIssueCertificate(person) {
       // Early return if disabled conditions are met
       if (person.hasCertificate) return;
-      if (person.status !== 'Attended') {
-        showToast('Certificates can only be issued to registrants with "Attended" status.', "error");
+      
+      // Check if person attended all schedules
+      if (!this.hasAttendedAllSchedules(person)) {
+        showToast('Certificates can only be issued to registrants who have attended all scheduled dates.', "error");
         return;
       }
       // Proceed with issuing certificate
@@ -1240,8 +1278,10 @@ export default {
     async issueCertificate(person) {
       try {
         if (person.hasCertificate) return;
-        if (person.status !== 'Attended') {
-          showToast('Certificates can only be issued to registrants with "Attended" status.', "error");
+        
+        // Check if person attended all schedules
+        if (!this.hasAttendedAllSchedules(person)) {
+          showToast('Certificates can only be issued to registrants who have attended all scheduled dates.', "error");
           return;
         }
 
@@ -1353,9 +1393,15 @@ export default {
     },
 
     async issueCertificatesToSelected() {
-      const selectedPeople = this.registrantsList.filter(p => p.selected && !p.hasCertificate && p.status === 'Attended');
+      // Filter for people who have attended all schedules
+      const selectedPeople = this.registrantsList.filter(p => {
+        if (!p.selected || p.hasCertificate) return false;
+        // Check if they attended all schedules
+        return this.hasAttendedAllSchedules(p);
+      });
+      
       if (!selectedPeople.length) {
-        showToast("No selected registrants with 'Attended' status or all already issued.", "error");
+        showToast("No selected registrants have attended all scheduled dates or all already issued.", "error");
         return;
       }
 
@@ -2345,6 +2391,49 @@ export default {
         console.error("Error formatting expiry time:", error, expiresAt);
         // Fallback: try to display as-is
         return expiresAt.toString();
+      }
+    },
+
+    formatScheduleDate(dateString) {
+      if (!dateString) return "";
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+      } catch (error) {
+        return dateString;
+      }
+    },
+
+    formatScheduleShort(dateString) {
+      if (!dateString) return "";
+      try {
+        const [datePart, timePart] = dateString.split(/[ T]/);
+        const [year, month, day] = datePart.split("-");
+        const [hour, minute] = (timePart || "00:00:00").split(":");
+        
+        const date = new Date(
+          Number(year),
+          Number(month) - 1,
+          Number(day),
+          Number(hour),
+          Number(minute)
+        );
+        
+        return date.toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+      } catch (error) {
+        return dateString;
       }
     },
 
@@ -3840,11 +3929,16 @@ const logout = () => {
 .registrants-table-container {
   /* Ensures table fits on smaller screens if needed */
   overflow-x: auto;
+  overflow-y: visible;
+  overflow: visible;
+  position: relative;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
+  position: relative;
+  overflow: visible;
 }
 
 thead th {
@@ -3860,6 +3954,8 @@ thead th {
 tbody tr {
   border-bottom: 1px solid #f5f5f5;
   /* Light separator line */
+  position: relative;
+  overflow: visible;
 }
 
 tbody td {
@@ -3868,6 +3964,8 @@ tbody td {
   font-size: 0.95rem;
   /* Vertically aligns content in the middle */
   vertical-align: middle;
+  position: relative;
+  overflow: visible;
 }
 
 /* Status Colors (like in your image) */
@@ -3877,10 +3975,106 @@ tbody td {
   font-weight: 500;
 }
 
+.attendance-count {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-left: 4px;
+}
+
+.schedule-attendance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 300px;
+}
+
+.schedule-attendance-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.schedule-attendance-item.attended {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.schedule-attendance-item:not(.attended) {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.schedule-date-badge {
+  flex: 1;
+  font-weight: 500;
+}
+
+.schedule-status-icon {
+  display: flex;
+  align-items: center;
+}
+
+.no-schedules {
+  color: #9ca3af;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
 .status-did-not-attend {
   color: #d30707;
   /* Blue */
   font-weight: 500;
+}
+
+.attendance-count {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-left: 4px;
+}
+
+.schedule-attendance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 300px;
+}
+
+.schedule-attendance-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.schedule-attendance-item.attended {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.schedule-attendance-item:not(.attended) {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.schedule-date-badge {
+  flex: 1;
+  font-weight: 500;
+}
+
+.schedule-status-icon {
+  display: flex;
+  align-items: center;
+}
+
+.no-schedules {
+  color: #9ca3af;
+  font-size: 0.85rem;
+  font-style: italic;
 }
 
 /* Specific Styles for Issue Certificate Button */
@@ -3951,6 +4145,7 @@ tbody td {
   display: inline-block;
   position: relative;
   pointer-events: auto;
+  overflow: visible;
 }
 
 .button-tooltip-wrapper:has(button:disabled) {
@@ -3962,35 +4157,36 @@ tbody td {
 }
 
 /* Custom tooltip that works on disabled buttons */
-.button-tooltip-wrapper[title]:hover::after {
-  content: attr(title);
+.button-tooltip-wrapper[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
   position: absolute;
-  bottom: 100%;
+  bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
-  margin-bottom: 8px;
   padding: 8px 12px;
   background-color: #1f2937;
   color: white;
   border-radius: 6px;
   font-size: 13px;
   white-space: nowrap;
-  z-index: 10000;
+  z-index: 100000;
   pointer-events: none;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   animation: tooltipFadeIn 0.2s ease;
+  min-width: max-content;
+  max-width: none;
+  width: max-content;
 }
 
-.button-tooltip-wrapper[title]:hover::before {
+.button-tooltip-wrapper[data-tooltip]:hover::before {
   content: '';
   position: absolute;
-  bottom: 100%;
+  bottom: calc(100% + 2px);
   left: 50%;
   transform: translateX(-50%);
-  margin-bottom: 2px;
   border: 6px solid transparent;
   border-top-color: #1f2937;
-  z-index: 10001;
+  z-index: 100001;
   pointer-events: none;
   animation: tooltipFadeIn 0.2s ease;
 }
@@ -4692,7 +4888,7 @@ tbody td {
   background: #fff;
   padding: 2rem;
   border-radius: 1rem;
-  width: min(95vw, 900px);
+  width: min(95vw, 1600px);
   max-height: 90vh;
   display: flex;
   flex-direction: column;
@@ -4700,7 +4896,8 @@ tbody td {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
   animation: fadeIn 0.25s ease;
   z-index: 2100;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: visible;
   /* ensure above other overlays */
 }
 
@@ -4897,10 +5094,14 @@ tbody td {
   margin-top: 1.5rem;
   border-top: 1px solid #e5e7eb;
   padding-top: 1rem;
+  padding-bottom: 3rem;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: visible;
+  overflow: visible;
   padding-right: 0.5rem;
+  position: relative;
 }
 
 .registrants-header {
@@ -4977,12 +5178,18 @@ tbody td {
 .registrants-table-container.inline {
   max-height: none;
   overflow-y: visible;
+  overflow-x: visible;
+  overflow: visible;
+  position: relative;
 }
 
 .registrants-footer {
   margin-top: 0.75rem;
   display: flex;
   justify-content: flex-end;
+  position: relative;
+  overflow: visible;
+  z-index: 1;
 }
 
 /* Smooth appear animation */

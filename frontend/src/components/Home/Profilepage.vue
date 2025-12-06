@@ -794,6 +794,12 @@ function normalizeCareer(application) {
 
 function getStepDate(activity, step) {
   if (!activity || !step?.dateField) return null;
+  
+  // For "For Interview" step, prioritize interviewSchedule over screenDate
+  if (step.key === "screen" && activity.interviewSchedule) {
+    return activity.interviewSchedule;
+  }
+  
   return (
     activity[step.dateField] ||
     (step.fallbackDateField ? activity[step.fallbackDateField] : null) ||
@@ -1271,7 +1277,10 @@ onBeforeUnmount(() => {
                     <span class="text-[10px] text-gray-600">
                       {{ step.label }}
                     </span>
-                    <span class="text-[10px] text-gray-400">
+                    <span 
+                      v-if="isStepActive(activity, step, index)"
+                      class="text-[10px] text-gray-400"
+                    >
                       {{
                         getStepDate(activity, step)
                           ? formatDateOnly(getStepDate(activity, step))
@@ -1573,7 +1582,10 @@ onBeforeUnmount(() => {
                           ),
                         }"
                       ></span>
-                      <span class="text-[11px] text-gray-500">
+                      <span 
+                        v-if="isStepActive(activity, step, index)"
+                        class="text-[11px] text-gray-500"
+                      >
                         {{
                           getStepDate(activity, step)
                             ? formatDateOnly(getStepDate(activity, step))

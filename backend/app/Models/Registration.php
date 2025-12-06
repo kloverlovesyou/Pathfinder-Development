@@ -74,6 +74,11 @@ class Registration extends Model
 		return $this->belongsTo(Applicant::class, 'applicantID');
 	}
 
+	public function scheduleAttendances()
+	{
+		return $this->hasMany(ScheduleAttendance::class, 'registrationID', 'registrationID');
+	}
+
 	public function recordStage(string $status, ?Carbon $timestamp = null, bool $force = false): void
 	{
 		$map = [

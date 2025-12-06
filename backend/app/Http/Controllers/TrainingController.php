@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Training;
 use App\Models\TrainingSchedule;
 use App\Models\Registration;
+use App\Models\ScheduleAttendance;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -101,8 +102,8 @@ class TrainingController extends Controller
             'emailAddress' => 'required|email',
         ]);
 
-        // Find the training by trainingID
-        $training = Training::find($request->trainingID);
+        // Find the training by trainingID and load schedules relationship
+        $training = Training::with('schedules')->find($request->trainingID);
 
         if (!$training) {
             return response()->json(['message' => 'Invalid or fake QR code'], 400);
@@ -111,6 +112,10 @@ class TrainingController extends Controller
         // Check if QR is valid by finding the schedule with this key
         // attendance_key is stored on the trainingschedule table, not the training table
         $schedule = $training->schedules()->where('attendance_key', $request->key)->first();
+        
+        if (!$schedule || !$schedule->trainingScheduleID) {
+            return response()->json(['message' => 'Invalid or fake QR code'], 400);
+        }
         if (!$schedule) {
             return response()->json(['message' => 'Invalid or fake QR code'], 400);
         }
@@ -154,19 +159,53 @@ class TrainingController extends Controller
             ], 400);
         }
 
-        // ✅ Step 4: Update attendance (only for registered applicants)
+        // ✅ Step 4: Record schedule-specific attendance
         $registration = Registration::find($registrationData->registrationID);
-        if ($registration) {
-            $registration->checked_in_at = now();
-            $registration->registrationStatus = 'Attended';
-            $registration->certTrackingID = $request->key;
-            $registration->recordStage('attended', now());
-            $registration->save();
-        } else {
+        if (!$registration) {
             return response()->json([
                 'message' => '⚠️ Error: Could not update attendance record. Please contact support.'
             ], 500);
         }
+
+        // Check if attendance already recorded for this schedule
+        $existingAttendance = ScheduleAttendance::where('registrationID', $registration->registrationID)
+            ->where('trainingScheduleID', $schedule->trainingScheduleID)
+            ->first();
+
+        if ($existingAttendance) {
+            return response()->json(['message' => '✅ Attendance already recorded for this schedule']);
+        }
+
+        // Record attendance for this specific schedule
+        ScheduleAttendance::create([
+            'registrationID' => $registration->registrationID,
+            'trainingScheduleID' => $schedule->trainingScheduleID,
+            'attendedAt' => now(),
+            'attendanceKey' => $request->key,
+        ]);
+
+        // Update overall registration status based on schedule attendance
+        // If they attended at least one schedule, mark as "Attended"
+        // We can enhance this later to require all schedules
+        // Reload schedules to ensure we have fresh data
+        $training->load('schedules');
+        $totalSchedules = $training->schedules->count();
+        $scheduleIDs = $training->schedules->pluck('trainingScheduleID')->toArray();
+        $attendedSchedules = ScheduleAttendance::where('registrationID', $registration->registrationID)
+            ->whereIn('trainingScheduleID', $scheduleIDs)
+            ->count();
+
+        // Update registration status
+        if ($attendedSchedules > 0) {
+            $registration->registrationStatus = 'Attended';
+            $registration->recordStage('attended', now());
+        } else {
+            // If they haven't attended any schedules yet, keep as Registered
+            // This should not happen here, but just in case
+            $registration->registrationStatus = 'Registered';
+        }
+        
+        $registration->save();
 
         return response()->json(['message' => '✅ Attendance Recorded Successfully']);
     }

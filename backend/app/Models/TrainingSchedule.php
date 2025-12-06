@@ -59,4 +59,10 @@ class TrainingSchedule extends Model
     {
         return $this->belongsTo(Training::class, 'trainingID', 'trainingID');
     }
+
+    // Relationship: a schedule has many attendances
+    public function attendances()
+    {
+        return $this->hasMany(ScheduleAttendance::class, 'trainingScheduleID', 'trainingScheduleID');
+    }
 }

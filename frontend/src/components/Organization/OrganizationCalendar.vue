@@ -150,7 +150,7 @@
                 <div class="day-name" v-for="day in dayNames" :key="day">{{ day }}</div>
 
                 <div v-for="(date, index) in calendarDays" :key="index" class="day-cell"
-                  :class="{ today: isToday(date), event: hasEvent(date) }"
+                  :class="{ today: isToday(date), selected: isSelected(date), event: hasEvent(date) }"
                   :style="{ backgroundColor: getEventColor(date) }" @click="openDayModal(date)">
                   <span v-if="date" class="date-number">{{ date.getDate() }}</span>
 
@@ -176,9 +176,6 @@
                   <span class="training">🟦</span> Trainings
                 </div>
                 <div class="legend-item">
-                  <span class="career">🟨</span> Careers
-                </div>
-                <div class="legend-item">
                   <span class="interview">🟥</span> Scheduled Interviews
                 </div>
               </div>
@@ -188,7 +185,7 @@
             <div class="calendar-side">
               <!-- When there are events -->
               <template
-                v-if="selectedEvents && (selectedEvents.trainings?.length || selectedEvents.careers?.length || selectedEvents.interviews?.length)">
+                v-if="selectedEvents && (selectedEvents.trainings?.length || selectedEvents.interviews?.length)">
                 <h3>Events on {{ selectedDate }}</h3>
 
                 <!-- Trainings -->
@@ -199,7 +196,7 @@
                     <p class="event-info" v-if="event.description"><strong>Description:</strong></p>
                     <p class="event-info" v-if="event.description">{{ event.description }}</p>
                     <p class="event-info" v-if="event.startTime || event.endTime">
-                      <strong>Date and Time:</strong> 
+                      <strong>Date and Time: </strong> 
                       <span v-if="event.startTime">{{ formatTime12Hour(event.startTime) }}</span>
                       <span v-if="event.startTime && event.endTime"> - </span>
                       <span v-if="event.endTime">{{ formatTime12Hour(event.endTime) }}</span>
@@ -210,22 +207,6 @@
                       <strong>Link:</strong> 
                       <a :href="event.link" target="_blank" rel="noopener noreferrer" class="event-link">{{ event.link }}</a>
                     </p>
-                  </div>
-                </div>
-
-                <!-- Careers -->
-                <div v-if="selectedEvents.careers.length" class="event-group">
-                  <h4 class="group-title">🟨 Careers</h4>
-                  <div v-for="(event, i) in selectedEvents.careers" :key="'c-' + i" class="event-details-card">
-                    <h5>{{ event.title }}</h5>
-                    <p class="event-info" v-if="event.qualificationStandard"><strong>Qualification Standard:</strong></p>
-                    <p class="event-info" v-if="event.qualificationStandard">{{ event.qualificationStandard }}</p>
-                    <p class="event-info" v-if="event.requirements"><strong>Requirements:</strong></p>
-                    <p class="event-info" v-if="event.requirements">{{ event.requirements }}</p>
-                    <p class="event-info" v-if="event.details"><strong>Details:</strong></p>
-                    <p class="event-info" v-if="event.details">{{ event.details }}</p>
-                    <p class="event-info" v-if="event.postingDate"><strong>Posting Date:</strong> {{ event.postingDate }}</p>
-                    <p class="event-info" v-if="event.closingDate"><strong>Closing Date:</strong> {{ event.closingDate }}</p>
                   </div>
                 </div>
 
@@ -258,7 +239,7 @@
               <!-- When no date is selected -->
               <template v-else>
                 <h3>Select a date</h3>
-                <p>Click a date in the calendar to view its trainings and careers.</p>
+                <p>Click a date in the calendar to view its trainings and scheduled interviews.</p>
               </template>
             </div>
           </div>
@@ -318,7 +299,7 @@ export default {
       toasts: toasts,
       organizationLogo: null,
       currentDate: new Date(),
-      selectedEvents: { trainings: [], careers: [], scheduledInterviews: [] },
+      selectedEvents: { trainings: [], interviews: [] },
       isSidebarOpen: true,
       dayNames: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
 
@@ -328,14 +309,8 @@ export default {
       showMenu: false,
 
       trainings: [],
-      careers: [],
       scheduledInterviews: [],
     }
-  },
-  setup() {
-    const events = ref({}); // calendar events by date
-
-    return { events };
   },
   computed: {
     logoUrl() {
@@ -421,45 +396,6 @@ export default {
       return `${displayHour}:${minutes.toString().padStart(2, "0")} ${ampm}`;
     },
 
-    async fetchApplications() {
-      try {
-        const user = JSON.parse(localStorage.getItem("user"));
-        const token = localStorage.getItem("token");
-        if (!user || !token) return;
-
-        // Call the API that returns applications with interview schedule
-        const { data: apps } = await axios.get(
-          import.meta.env.VITE_API_BASE_URL + "/applications",
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        // Filter only applications that have an interview schedule
-        const careerEvents = apps
-          .filter((app) => app.interviewSchedule) // skip applications without interviews
-          .map((app) => ({
-            id: app.applicationID,
-            careerID: app.careerID,
-            title: app.career?.position || "Career Interview",
-            date: new Date(app.interviewSchedule).toISOString().split("T")[0],
-            type: "career",
-            interviewSchedule: app.interviewSchedule,
-            interviewMode: app.interviewMode,
-            interviewLink: app.interviewLink,
-            interviewLocation: app.interviewLocation,
-            organization: app.career?.organization,
-          }));
-
-        // Merge career events into your existing events map
-        careerEvents.forEach((event) => {
-          if (!events.value[event.date]) events.value[event.date] = [];
-          events.value[event.date].push(event);
-        });
-
-        console.log("📅 Career events merged:", careerEvents);
-      } catch (err) {
-        console.error("Failed to fetch applications:", err);
-      }
-    },
 
     async fetchInterviews() {
       const token = localStorage.getItem("token");
@@ -626,24 +562,6 @@ export default {
       this.trainings = trainingEvents;
     },
 
-    async fetchCareers() {
-      const res = await api.get("/organization/careers");
-
-      this.careers = res.data.map(c => ({
-        id: c.careerID,
-        title: c.position,
-        details: c.detailsAndInstructions || c.details,
-        qualificationStandard: c.qualificationStandard,
-        requirements: c.requirements,
-        letterAddress: c.applicationLetterAddress,
-        postingDate: c.postingDate ? c.postingDate.split("T")[0] : null,
-        closingDate: c.closingDate ? c.closingDate.split("T")[0] : null,
-        // 👇 Fix the date formatting here
-        date: c.deadlineOfSubmission ? c.deadlineOfSubmission.split("T")[0] : null,
-        // 👇 Also fix organization mapping if your backend nests it
-        organizationID: c.organization?.organizationID || c.organizationID,
-      }));
-    },
     openEventDetailsByDate(date) {
       this.selectedDate = date;
       this.openDayModal(date);
@@ -671,12 +589,16 @@ export default {
         date.getFullYear() === today.getFullYear()
       );
     },
+    isSelected(date) {
+      if (!date || !this.selectedDate) return false;
+      const formatted = this.formatDate(date);
+      return formatted === this.selectedDate;
+    },
     hasEvent(date) {
       if (!date) return false;
       const formatted = this.formatDate(date); // ✅ define formatted here
       return (
         this.trainings.some(t => t.date === formatted) ||
-        this.careers.some(c => c.date === formatted) ||
         this.scheduledInterviews.some(i => i.date === formatted)
       );
     },
@@ -690,21 +612,16 @@ export default {
         .filter(t => t.date === formatted)
         .map(t => ({ type: "training", title: "🟦 " + t.title }));
 
-      const careers = this.careers
-        .filter(c => c.date === formatted)
-        .map(c => ({ type: "career", title: "🟨 " + c.title }));
-
       const interviews = this.scheduledInterviews
         .filter(i => i.date === formatted)
         .map(i => ({ type: "interview", title: "🟥 " + i.title }));
 
-      return [...trainings, ...careers, ...interviews];
+      return [...trainings, ...interviews];
     },
     getEventColor(date) {
       if (!date) return "";
       const formatted = this.formatDate(date);
       if (this.trainings.some(t => t.date === formatted)) return "#F5F5F5";
-      if (this.careers.some(c => c.date === formatted)) return "#F5F5F5";
       if (this.scheduledInterviews.some(i => i.date === formatted)) return "#FFE5E5";
       return "";
     },
@@ -719,10 +636,9 @@ export default {
       const formatted = this.formatDate(date);
 
       const trainings = this.trainings?.filter(t => t.date === formatted) || [];
-      const careers = this.careers?.filter(c => c.date === formatted) || [];
       const interviews = this.scheduledInterviews?.filter(i => i.date === formatted) || [];
 
-      return [...trainings, ...careers, ...interviews];
+      return [...trainings, ...interviews];
     },
     openEventDetails(event) {
       this.selectedEvent = event;
@@ -738,20 +654,16 @@ export default {
         .filter(t => t.date === formatted)
         .map(t => ({ ...t, type: "Training" }));
 
-      const careers = this.careers
-        .filter(c => c.date === formatted)
-        .map(c => ({ ...c, type: "Career" }));
-
       const interviews = this.scheduledInterviews
         .filter(i => i.date === formatted)
         .map(i => ({ ...i, type: "Interview" }));
 
       this.selectedDate = formatted;
-      this.selectedEvents = { trainings, careers, interviews };
+      this.selectedEvents = { trainings, interviews };
     },
 
     closeSidebar() {
-      this.selectedEvents = { trainings: [], careers: [] };
+      this.selectedEvents = { trainings: [], interviews: [] };
       this.selectedDate = null;
     },
 
@@ -770,7 +682,7 @@ export default {
       const confirmed = await showConfirmToast("Are you sure you want to delete this event?");
       if (confirmed) {
         showToast("Delete function triggered!", "success");
-        // Here you can add your logic to remove the event from `trainings` or `careers`
+        // Here you can add your logic to remove the event from `trainings` or `scheduledInterviews`
       }
       this.closeMenu();
     },
@@ -799,8 +711,6 @@ export default {
     }
     
     this.fetchTrainings();
-    this.fetchCareers();
-    this.fetchApplications();
     this.fetchInterviews();
   },
 };
@@ -1270,6 +1180,16 @@ const isToday = (date) => {
   border: 2px solid #007bff;
 }
 
+.day-cell.selected {
+  border: 2px solid #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.day-cell.today.selected {
+  border: 2px solid #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
 .date-number {
   font-weight: bold;
   margin-bottom: 3px;
@@ -1417,10 +1337,6 @@ const isToday = (date) => {
   border-left: 4px solid #007bff;
 }
 
-.event-item.career {
-  border-left: 4px solid #f1c40f;
-}
-
 .event-item strong {
   display: block;
   font-size: 15px;
@@ -1508,11 +1424,6 @@ const isToday = (date) => {
   font-size: 12px;
 }
 
-.event-title.career {
-  color: #fbbf24;
-  /* yellow */
-  font-size: 12px;
-}
 
 .calendar-side {
   background: #fff;
@@ -1565,11 +1476,6 @@ const isToday = (date) => {
 .legend-color.training {
   background-color: #007bff;
   /* Blue */
-}
-
-.legend-color.career {
-  background-color: #FFD43B;
-  /* Yellow */
 }
 
 /* Make it responsive */

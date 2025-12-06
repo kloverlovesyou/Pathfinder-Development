@@ -5,6 +5,7 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * Class Career
@@ -61,5 +62,14 @@ class Career extends Model
     public function tags()
     {
         return $this->belongsToMany(Tag::class, 'career_tag', 'careerID', 'TagID');
+    }
+
+    /**
+     * Selected trainings for this career (Organization's Choice)
+     */
+    public function selectedTrainings(): BelongsToMany
+    {
+        return $this->belongsToMany(Training::class, 'organizationschoice', 'careerID', 'trainingID', 'careerID', 'trainingID')
+            ->withPivot('organizationID'); // Include organizationID in pivot for filtering
     }
 }

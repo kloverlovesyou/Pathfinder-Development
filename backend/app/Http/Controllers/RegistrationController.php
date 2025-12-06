@@ -26,11 +26,23 @@ class RegistrationController extends Controller
                 'training.schedules' => function ($query) {
                     $query->orderBy('schedule');
                 },
+                'scheduleAttendances', // Load schedule attendance records
             ])
             ->where('applicantID', $user->applicantID)
             ->get()
             ->map(function ($registration) {
                 $training = $registration->training;
+                
+                // Check if user has attended at least one schedule
+                // First check schedule_attendance table (most reliable)
+                $attendanceCount = $registration->scheduleAttendances->count();
+                $hasAttended = $attendanceCount > 0;
+                
+                // Fallback: If no schedule_attendance records but registrationStatus is "Attended",
+                // consider them as attended (handles old data or manual status updates)
+                if (!$hasAttended && strtolower(trim($registration->registrationStatus ?? '')) === 'attended') {
+                    $hasAttended = true;
+                }
 
                 return [
                     'registrationID' => $registration->registrationID,
@@ -46,6 +58,8 @@ class RegistrationController extends Controller
                     'certificatePath' => $registration->certificatePath,
                     'trainingID' => $registration->trainingID,
                     'applicantID' => $registration->applicantID,
+                    'hasAttended' => $hasAttended, // ✅ Add flag indicating actual attendance
+                    'attendanceCount' => $registration->scheduleAttendances->count(),
                     'training' => $training ? [
                         'trainingID' => $training->trainingID,
                         'title' => $training->title,
@@ -164,20 +178,57 @@ class RegistrationController extends Controller
         }
 
 
-        $registrants = Registration::with('applicant')
+        // Load training with schedules to get schedule information
+        $training->load('schedules');
+        
+        $registrants = Registration::with(['applicant', 'scheduleAttendances.schedule'])
         ->where('trainingID', $trainingID)
         ->get()
-        ->map(function($r) {
+        ->map(function($r) use ($training) {
+            // Get schedule attendance for this registrant
+            $attendedScheduleIDs = $r->scheduleAttendances->pluck('trainingScheduleID')->toArray();
+            
+            // Map schedules with attendance status
+            $scheduleAttendance = $training->schedules->map(function($schedule) use ($attendedScheduleIDs, $r) {
+                $attendance = $r->scheduleAttendances->firstWhere('trainingScheduleID', $schedule->trainingScheduleID);
+                return [
+                    'trainingScheduleID' => $schedule->trainingScheduleID,
+                    'schedule' => $schedule->schedule?->format('Y-m-d H:i:s'),
+                    'end_time' => $schedule->end_time?->format('Y-m-d H:i:s'),
+                    'mode' => $schedule->mode,
+                    'attended' => in_array($schedule->trainingScheduleID, $attendedScheduleIDs),
+                    'attendedAt' => $attendance?->attendedAt?->format('Y-m-d H:i:s'),
+                ];
+            });
+
+            // Calculate overall status based on schedules
+            $totalSchedules = $training->schedules->count();
+            $attendedCount = count($attendedScheduleIDs);
+            
+            // Determine status: if attended at least one schedule, show "Attended"
+            // But also include partial attendance info
+            $effectiveStatus = $r->registrationStatus;
+            if ($attendedCount > 0 && $attendedCount < $totalSchedules) {
+                // Partial attendance - still show as "Attended" but with details
+                $effectiveStatus = 'Attended (Partial)';
+            } elseif ($attendedCount === $totalSchedules && $totalSchedules > 0) {
+                $effectiveStatus = 'Attended';
+            }
+
             return [
                 'id' => $r->registrationID,
                 'applicantID' => $r->applicantID,
                 'name' => $r->applicant->firstName . ' ' . $r->applicant->lastName,
-                'status' => $r->registrationStatus,
+                'status' => $effectiveStatus,
+                'originalStatus' => $r->registrationStatus,
                 'dateRegistered' => $r->registrationDate ? $r->registrationDate->format('M d, Y') : null,
                 'certificateTrackingID' => $r->certTrackingID,
                 'certificateGivenDate' => $r->certGivenDate ? $r->certGivenDate->format('M d, Y') : null,
                 'certificatePath' => $r->certificatePath,
                 'hasCertificate' => !is_null($r->certTrackingID) && !is_null($r->certGivenDate),
+                'scheduleAttendance' => $scheduleAttendance,
+                'attendedSchedulesCount' => $attendedCount,
+                'totalSchedulesCount' => $totalSchedules,
             ];
         });
 

@@ -145,6 +145,7 @@ Route::get('/careers/recommend/{careerID}', [CareerRecommendationController::cla
      ->name('careers.recommendation');
 Route::get('/careers/{careerID}/trainings', [CareerRecommendationController::class, 'recommendedTrainings']);
 Route::get('/careers/{careerID}/details', [CareerRecommendationController::class, 'careerDetails']);
+Route::get('/careers/{careerID}/organizations-choice-trainings', [CareerRecommendationController::class, 'getOrganizationsChoiceTrainings']);
 
 //Certificate Issuance
 
@@ -350,6 +351,11 @@ Route::middleware('auth.custom')->group(function () {
 
     // Applicant monitoring
     Route::get('/careers/{careerID}/applicants', [ApplicationController::class, 'getApplicantsByCareer']);
+
+    // Career aligned trainings
+    Route::get('/careers/{careerID}/aligned-trainings', [CareerController::class, 'getAlignedTrainings']);
+    Route::get('/careers/{careerID}/selected-trainings', [CareerController::class, 'getSelectedTrainings']);
+    Route::post('/careers/{careerID}/selected-trainings', [CareerController::class, 'saveSelectedTrainings']);
     Route::put('/applications/{applicationID}/status', [ApplicationController::class, 'updateStatus'])->middleware('require.verified.org');
     Route::post('/applications/{applicationID}/send-status-email', [ApplicationController::class, 'sendStatusEmail'])->middleware('require.verified.org');
     Route::get('/applications/interviews', [InterviewController::class, 'index']);

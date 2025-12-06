@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\Career;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -185,8 +186,14 @@ class CareerRecommendationController extends Controller
          // Fetch recommended trainings (includes trainings for target career)
          $recommended_trainings = DB::select('SELECT * FROM sp_getrecommendedtrainings_bycareer(?)', [$careerID]);
          
+         // Get list of training IDs that are marked as organization's choice for this career
+         $organizationsChoiceTrainingIDs = DB::table('organizationschoice')
+             ->where('careerID', $careerID)
+             ->pluck('trainingID')
+             ->toArray();
+         
          // ✅ Map organization name from stored procedure result
-         $trainingsWithOrg = collect($recommended_trainings)->map(function ($training) {
+         $trainingsWithOrg = collect($recommended_trainings)->map(function ($training) use ($organizationsChoiceTrainingIDs) {
              // The stored procedure returns 'organizationName', map it to multiple fields for compatibility
              if (isset($training->organizationName)) {
                  // Stored procedure already returns organizationName
@@ -207,6 +214,10 @@ class CareerRecommendationController extends Controller
                  $training->provider = 'Unknown';
              }
              
+             // Check if this training is marked as organization's choice
+             $trainingID = $training->trainingID ?? $training->TrainingID ?? null;
+             $training->isOrganizationsChoice = $trainingID && in_array($trainingID, $organizationsChoiceTrainingIDs);
+             
              return $training;
          })->all(); // Use all() instead of toArray() to preserve objects
          
@@ -214,7 +225,7 @@ class CareerRecommendationController extends Controller
          $trainingsWithOrg = array_map(function($training) {
              return (array) $training; // Convert stdClass to array for JSON encoding
          }, $trainingsWithOrg);
-
+ 
          // Return the results as JSON
          return response()->json([
              'career' => $career,
@@ -254,6 +265,52 @@ class CareerRecommendationController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Failed to load career recommendations',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get organizationschoice trainings for a career (public endpoint for applicants)
+     */
+    public function getOrganizationsChoiceTrainings($careerID)
+    {
+        try {
+            $careerID = (int)$careerID;
+
+            // Use Eloquent model to handle column mapping automatically
+            $career = Career::find($careerID);
+
+            if (!$career) {
+                return response()->json([
+                    'message' => 'Career not found'
+                ], 404);
+            }
+
+            // Get organizationschoice trainings using the relationship
+            // Filter by organizationID on the pivot table
+            $organizationsChoiceTrainings = $career->selectedTrainings()
+                ->wherePivot('organizationID', $career->organizationID)
+                ->select('training.trainingID', 'training.title', 'training.description')
+                ->get()
+                ->map(function($training) {
+                    return [
+                        'trainingID' => $training->trainingID,
+                        'title' => $training->title ?? $training->Title ?? null,
+                        'description' => $training->description ?? $training->Description ?? null,
+                    ];
+                });
+
+            return response()->json($organizationsChoiceTrainings);
+        } catch (\Exception $e) {
+            Log::error('Failed to get organizationschoice trainings', [
+                'careerID' => $careerID,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'error' => 'Failed to load organizationschoice trainings',
                 'message' => $e->getMessage()
             ], 500);
         }
