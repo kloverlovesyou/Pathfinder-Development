@@ -124,12 +124,41 @@
           </div>
 
           <div class="card-actions justify-center">
-            <button
-              type="submit"
-              class="btn btn-primary w-3/4 bg-dark-slate text-white"
-            >
+          <button
+            type="submit"
+            class="btn btn-primary w-3/4 bg-dark-slate text-white flex items-center justify-center gap-2 disabled:opacity-60"
+            :disabled="isLoading"
+          >
+            <!-- 🔥 IF LOADING -->
+            <span v-if="isLoading" class="flex items-center gap-2">
+              <svg
+                class="animate-spin h-4 w-4 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                ></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
+                ></path>
+              </svg>
+              Logging in...
+            </span>
+
+            <!-- 🔥 IF NOT LOADING -->
+            <span v-else>
               Log in
-            </button>
+            </span>
+          </button>
           </div>
         </form>
 
@@ -180,6 +209,8 @@ const handleAdminLogin = async () => {
   emailError.value = !validateEmail(email.value);
   if (emailError.value) return;
 
+  isLoading.value = true; // 🔥 Start loader
+
   try {
     const res = await axios.post(
       import.meta.env.VITE_API_BASE_URL + "/admin/login",
@@ -194,25 +225,30 @@ const handleAdminLogin = async () => {
 
     // Save admin login in localStorage
     localStorage.setItem("admin_token", token);
-    localStorage.setItem("user", JSON.stringify({ ...adminData, role: "admin" }));
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ ...adminData, role: "admin" })
+    );
 
     // Update reactive store
     login({ ...adminData, role: "admin" }, token);
 
-    // Clear textboxes
+    // Clear fields
     email.value = "";
     password.value = "";
 
-    // Redirect to admin dashboard
+    // Redirect
     router.push("/admin/dashboard");
   } catch (err) {
     console.error("Admin login error:", err);
 
     if (err.response?.status === 401) {
-      return showToast("Incorrect email or password.");
+      showToast("Incorrect email or password.");
+    } else {
+      showToast("Login failed. Try again.");
     }
-
-    showToast("Login failed. Try again.");
+  } finally {
+    isLoading.value = false; // 🔥 Stop loader ALWAYS
   }
 };
 

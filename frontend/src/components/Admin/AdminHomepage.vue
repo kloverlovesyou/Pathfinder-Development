@@ -313,26 +313,26 @@ onMounted(() => {
         <div v-if="activeTab === 'approved'">
           <!-- Loading State -->
           <div v-if="loadingApproved" class="flex flex-col items-center justify-center space-y-2 py-10">
-            <svg
-              class="animate-spin h-10 w-10 text-green-600"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              ></circle>
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v8H4z"
-              ></path>
-            </svg>
+          <svg
+            class="animate-spin h-10 w-10 text-blue-600"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8H4z"
+            ></path>
+          </svg>
             <p class="text-gray-500">Loading approved organizations...</p>
           </div>
 
@@ -363,26 +363,26 @@ onMounted(() => {
         <div v-else-if="activeTab === 'rejected'">
   <!-- Loading State -->
   <div v-if="loadingRejected" class="flex flex-col items-center justify-center space-y-2 py-10">
-    <svg
-      class="animate-spin h-10 w-10 text-red-600"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <circle
-        class="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        stroke-width="4"
-      ></circle>
-      <path
-        class="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8v8H4z"
-      ></path>
-    </svg>
+          <svg
+            class="animate-spin h-10 w-10 text-blue-600"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8H4z"
+            ></path>
+          </svg>
     <p class="text-gray-500">Loading rejected organizations...</p>
   </div>
 
