@@ -185,19 +185,104 @@
       </section>
 
       <!-- Chart Section -->
+      <!-- Chart Section -->
       <section class="charts-container">
-        <div class="main-chart">
-          <canvas :id="activeChart.id"></canvas>
+
+        <!-- MAIN CHART -->
+        <div class="main-chart relative">
+
+          <!-- Loader -->
+          <div
+            v-if="isChartLoading[activeChart.id]"
+            class="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-sm rounded-lg z-10"
+          >
+            <!-- Spinner -->
+            <svg
+              class="animate-spin h-12 w-12 text-blue-600"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v8H4z"
+              ></path>
+            </svg>
+          </div>
+
+          <!-- Chart Canvas -->
+          <canvas
+            :id="activeChart.id"
+            :class="{
+              'opacity-0': isChartLoading[activeChart.id],
+              'opacity-100 transition-opacity duration-300': !isChartLoading[activeChart.id]
+            }"
+          ></canvas>
+
           <h3>{{ activeChart.title }}</h3>
         </div>
 
+        <!-- SIDE CHARTS -->
         <div class="side-charts">
-          <div v-for="chart in sideCharts" :key="chart.id" class="side-chart" @click="swapChart(chart)">
-            <canvas :id="chart.id"></canvas>
+          <div
+            v-for="chart in sideCharts"
+            :key="chart.id"
+            class="side-chart relative cursor-pointer"
+            @click="swapChart(chart)"
+          >
+
+            <!-- Loader -->
+            <div
+              v-if="isChartLoading[chart.id]"
+              class="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-sm rounded-lg z-10"
+            >
+              <!-- Spinner -->
+              <svg
+                class="animate-spin h-10 w-10 text-blue-600"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                ></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8H4z"
+                ></path>
+              </svg>
+            </div>
+
+            <!-- Chart Canvas -->
+            <canvas
+              :id="chart.id"
+              :class="{
+                'opacity-0': isChartLoading[chart.id],
+                'opacity-100 transition-opacity duration-300': !isChartLoading[chart.id]
+              }"
+            ></canvas>
+
             <h4>{{ chart.title }}</h4>
           </div>
         </div>
+
       </section>
+
     </main>
   </div>
 </template>
@@ -275,6 +360,19 @@ import { getImageUrl } from "@/lib/supabase.js";
 const router = useRouter();
 const isSidebarOpen = ref(true);
 const toggleSidebar = () => isSidebarOpen.value = !isSidebarOpen.value;
+
+// ----------------------
+// Loading States for Charts
+// ----------------------
+const isChartsLoading = ref(true);
+
+// Each chart has its own loading state
+const isChartLoading = ref({
+  chart1: true,
+  chart2: true,
+  chart3: true,
+  chart4: true
+});
 
 // ----------------------
 // Organization & User Info
@@ -747,30 +845,56 @@ function renderChart(id) {
     return;
   }
 
+  // Ensure loading state ON while rendering
+  isChartLoading.value[id] = true;
+
+  // Destroy previous chart instance
   if (charts.value[id]) {
     charts.value[id].destroy();
   }
-  
+
   const config = chartConfigs.value[id];
   if (!config) {
     console.warn(`Chart config for "${id}" not found`);
     return;
   }
 
+  // Render new chart
   charts.value[id] = new Chart(ctx, config);
+
+  // Stop loading after small delay (smooth UX)
+  setTimeout(() => {
+    isChartLoading.value[id] = false;
+
+    // If all charts finished loading, disable global loading
+    const allDone = Object.values(isChartLoading.value).every(v => v === false);
+    if (allDone) isChartsLoading.value = false;
+
+  }, 300); // delay for smooth fade-in
 }
 
 // Swap active and side charts
 function swapChart(clickedChart) {
+
+  // Reset loading state
+  isChartLoading.value[clickedChart.id] = true;
+
   const oldMain = { ...activeChart.value };
   activeChart.value = clickedChart;
-  sideCharts.value = sideCharts.value.map(c => c.id === clickedChart.id ? oldMain : c);
+
+  sideCharts.value = sideCharts.value.map(c =>
+    c.id === clickedChart.id ? oldMain : c
+  );
 
   nextTick(() => {
     Object.values(charts.value).forEach(chart => chart.destroy());
     charts.value = {};
+
     renderChart(activeChart.value.id);
-    sideCharts.value.forEach(chart => renderChart(chart.id));
+    sideCharts.value.forEach(c => {
+      isChartLoading.value[c.id] = true;
+      renderChart(c.id);
+    });
   });
 }
 
@@ -778,20 +902,21 @@ function swapChart(clickedChart) {
 // Lifecycle
 // ----------------------
 onMounted(async () => {
-  // Fetch training and career stats first (needed for registrations/applications)
+  isChartsLoading.value = true;
+
   await Promise.all([
     fetchTrainingStats(),
     fetchCareerStats()
   ]);
-  
-  // Then fetch registrations and applications
+
   await Promise.all([
     fetchRegistrations(),
     fetchApplications()
   ]);
-  
-  // Finally calculate and render charts
-  await fetchChartData();
+
+  await fetchChartData(); // render charts inside this
+
+  // All data loaded; charts will switch loading off after render
 });
 
 // ----------------------
