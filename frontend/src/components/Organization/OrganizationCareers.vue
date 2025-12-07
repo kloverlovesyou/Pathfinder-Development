@@ -2536,7 +2536,9 @@ import { useRouter } from "vue-router";
 import { useOrganizationLogo } from "@/composables/useOrganizationLogo.js";
 
 const router = useRouter();
-const isSidebarOpen = ref(true);
+// Load sidebar state from localStorage, default to true for first visit
+const savedSidebarState = localStorage.getItem('orgSidebarOpen');
+const isSidebarOpen = ref(savedSidebarState !== null ? savedSidebarState === 'true' : true);
 const organizationName = ref("");
 const organizationStatus = ref(null);
 
@@ -2546,6 +2548,8 @@ const { logoUrl } = useOrganizationLogo();
 // Toggle sidebar
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
+  // Save state to localStorage
+  localStorage.setItem('orgSidebarOpen', isSidebarOpen.value.toString());
 };
 
 // Get org name from localStorage on mount
@@ -2610,24 +2614,23 @@ async function viewRequirement(id) {
 </script>
 
 <template>
-  <div class="organization-careers">
-    <!-- Hamburger Toggle -->
-    <button
-      class="hamburger"
-      @click="toggleSidebar"
-      :class="{ open: isSidebarOpen, shifted: isSidebarOpen }"
-    >
-      <span></span>
-      <span></span>
-      <span></span>
-    </button>
+  <div class="organization-careers" :class="{ 'sidebar-expanded': isSidebarOpen }">
+    <!-- Mobile Backdrop -->
+    <div v-if="isSidebarOpen" class="mobile-backdrop" @click="toggleSidebar"></div>
 
     <!-- Sidebar -->
     <transition name="slide">
-      <aside class="sidebar" :class="{ collapsed: !isSidebarOpen }">
+      <aside class="sidebar" :class="{ collapsed: !isSidebarOpen }" @click.stop>
+        <!-- Hamburger Toggle inside sidebar -->
+        <button class="hamburger" @click="toggleSidebar" :class="{ open: isSidebarOpen }">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+
         <div class="space"></div>
         <!-- Avatar always visible -->
-        <div class="avatar">
+        <div class="avatar" @click.stop>
           <img v-if="logoUrl" :src="logoUrl" alt="Organization Logo" class="avatar-img" />
           <div v-else class="avatar-placeholder">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2653,7 +2656,7 @@ async function viewRequirement(id) {
               </span>
             </h3>
             <div class="profile-actions">
-              <div class="action" @click="navigateTo({ name: 'OrgUpdateProfile' })">
+              <div class="action" @click.stop="navigateTo({ name: 'OrgUpdateProfile' })">
                 <!-- Update Profile Icon -->
                 <svg
                   width="24"
@@ -2669,7 +2672,7 @@ async function viewRequirement(id) {
                 </svg>
                 <span>Update Profile</span>
               </div>
-              <div class="action" @click="navigateTo({ name: 'OrgChangePassword' })">
+              <div class="action" @click.stop="navigateTo({ name: 'OrgChangePassword' })">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
@@ -2684,7 +2687,7 @@ async function viewRequirement(id) {
           </div>
         </transition>
 
-        <div class="icon" @click="navigateTo('/organization')">
+        <div class="icon" @click.stop="navigateTo('/organization')">
           <svg
             width="30"
             height="30"
@@ -2715,7 +2718,7 @@ async function viewRequirement(id) {
           </svg>
           <span>Home</span>
         </div>
-        <div class="icon" @click="navigateTo({ name: 'OrgTrainings' })">
+        <div class="icon" @click.stop="navigateTo({ name: 'OrgTrainings' })">
           <svg
             width="29"
             height="29"
@@ -2730,7 +2733,7 @@ async function viewRequirement(id) {
           </svg>
           <span>Trainings</span>
         </div>
-        <div class="icon" @click="navigateTo({ name: 'OrgCareers' })">
+        <div class="icon" @click.stop="navigateTo({ name: 'OrgCareers' })">
           <svg
             width="25"
             height="25"
@@ -2749,7 +2752,7 @@ async function viewRequirement(id) {
           </svg>
           <span>Career</span>
         </div>
-        <div class="icon" @click="navigateTo({ name: 'OrgCalendar' })">
+        <div class="icon" @click.stop="navigateTo({ name: 'OrgCalendar' })">
           <svg
             width="26"
             height="26"
@@ -2783,7 +2786,7 @@ async function viewRequirement(id) {
 
         <div class="spacer"></div>
         <!-- pushes signout down -->
-        <div class="icon signout" @click="logout">
+        <div class="icon signout" @click.stop="logout">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="28"
@@ -3923,6 +3926,12 @@ async function viewRequirement(id) {
   height: 100vh;
   font-family: "Poppins", sans-serif;
   background-color: #f4f4f4;
+  position: relative;
+}
+
+/* Mobile backdrop overlay */
+.mobile-backdrop {
+  display: none;
 }
 
 /* Sidebar */
@@ -4009,6 +4018,8 @@ async function viewRequirement(id) {
   flex: 1;
   padding: 30px 40px;
   overflow-y: auto;
+  transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
+  box-sizing: border-box;
 }
 
 .topbar {
@@ -4425,12 +4436,12 @@ async function viewRequirement(id) {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  z-index: 10000;
 }
 
 /* Schedule Modal Overlay - appears above career details modal */
 .schedule-modal-overlay {
-  z-index: 2200;
+  z-index: 10001;
 }
 
 .modal {
@@ -4558,18 +4569,38 @@ async function viewRequirement(id) {
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 50;
+  z-index: 10000;
+  padding: 20px;
 }
 
 .career-popup {
   background: #f9fafb;
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-  width: 600px;
+  width: min(95vw, 600px);
+  max-width: 600px;
   max-height: 90vh;
   padding: 24px;
   position: relative;
   overflow-y: auto;
+  z-index: 10001;
+}
+
+/* Mobile responsive for career popup */
+@media (max-width: 768px) {
+  .career-popup-overlay {
+    padding: 10px;
+    left: 0;
+    right: 0;
+  }
+
+  .career-popup {
+    width: calc(100vw - 20px);
+    max-width: calc(100vw - 20px);
+    max-height: 95vh;
+    padding: 20px;
+    margin: 0;
+  }
 }
 
 .career-popup-close {
@@ -4782,12 +4813,15 @@ async function viewRequirement(id) {
   gap: 1.5rem;
   width: 100%;
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: auto; /* Allow modal to scroll horizontally */
+  min-height: 0;
 }
 
 .career-details-main {
   flex: 3;
-  overflow-y: auto;
+  overflow-y: visible;
+  overflow-x: visible; /* Allow modal to scroll horizontally */
   min-width: 0;
   padding-right: 1rem;
 }
@@ -4853,6 +4887,19 @@ async function viewRequirement(id) {
   margin-top: 1.5rem;
   border-top: 1px solid #e5e7eb;
   padding-top: 1rem;
+  overflow-x: visible; /* Allow section to scroll horizontally */
+  overflow-y: visible;
+  width: 100%;
+}
+
+/* Mobile: Allow applicants section to scroll horizontally */
+@media (max-width: 768px) {
+  .applicants-section {
+    overflow-x: visible; /* Allow section to scroll horizontally */
+    overflow-y: visible;
+    width: 100%;
+    position: relative;
+  }
 }
 
 .applicants-header {
@@ -4984,9 +5031,11 @@ async function viewRequirement(id) {
 }
 
 .applicants-table-container.inline {
-  max-height: 320px;
-  overflow-y: auto;
-  overflow-x: auto;
+  max-height: none;
+  overflow-y: visible;
+  overflow-x: visible;
+  position: relative;
+  width: 100%;
 }
 
 .applicants-table-container.inline table {
@@ -4994,6 +5043,50 @@ async function viewRequirement(id) {
   table-layout: fixed;
   border-collapse: collapse;
   min-width: 100%;
+}
+
+/* Mobile: Make applicants table horizontally scrollable (but not the modal) */
+@media (max-width: 768px) {
+  .applicants-table-container.inline {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    width: 100%;
+    max-width: 100%;
+    position: relative;
+    display: block !important; /* Ensure it's a block element for scrolling */
+    margin-left: 0;
+    margin-right: 0;
+    /* Create a new stacking context to isolate scrolling */
+    transform: translateZ(0);
+    will-change: scroll-position;
+  }
+
+  .applicants-table-container.inline table {
+    min-width: 900px !important; /* Ensure table doesn't shrink below this width - triggers horizontal scroll */
+    width: auto !important; /* Let table size to its content */
+    table-layout: auto !important; /* Allow columns to size naturally */
+    display: table !important; /* Maintain table display */
+  }
+
+  /* Custom scrollbar styling for better UX */
+  .applicants-table-container.inline::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .applicants-table-container.inline::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+
+  .applicants-table-container.inline::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+  }
+
+  .applicants-table-container.inline::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
 }
 
 .applicants-table-container.inline th,
@@ -5057,38 +5150,42 @@ async function viewRequirement(id) {
 }
 
 /* Animate position when sidebar opens */
+/* Hamburger inside sidebar */
 .hamburger {
-  position: fixed;
-  top: 15px;
-  left: 18px;
-  width: 25px;
-  height: 18px;
+  width: 30px;
+  height: 24px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   background: none;
   border: none;
   cursor: pointer;
-  z-index: 2000;
-  /* ← raised from 100 to 2000 */
-  padding: 0;
-  transition: transform 0.6s ease;
-  /* smoother animation */
+  padding: 6px 4px;
+  margin: 15px auto 10px auto;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  align-self: center;
+  position: relative;
 }
 
-/* Hamburger lines */
+/* When sidebar is open, move hamburger to the right */
+.sidebar:not(.collapsed) .hamburger {
+  align-self: flex-end;
+  margin: 15px 10px 10px auto;
+}
+
+.hamburger:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Hamburger lines - always stay as 3 lines */
 .hamburger span {
   display: block;
   height: 3px;
   width: 100%;
   background-color: white;
   border-radius: 2px;
-}
-
-/* When sidebar is open, move hamburger to the right */
-.hamburger.shifted {
-  transform: translateX(170px);
-  /* Adjust this to your sidebar width (230px - 60px = 170px) */
+  flex-shrink: 0;
 }
 
 /* Calendar for Deadline of Submission */
@@ -5542,12 +5639,12 @@ input[type="text"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  z-index: 10000;
 }
 
 /* Schedule Modal Overlay - appears above career details modal */
 .schedule-modal-overlay {
-  z-index: 2200;
+  z-index: 10001;
 }
 
 .modal-box {
@@ -5908,7 +6005,7 @@ input[type="text"] {
 
 /* Ensure dropdown is above modal overlay */
 .schedule-modal-overlay .schedule-dropdown-wrapper {
-  z-index: 2300;
+  z-index: 10002;
 }
 
 .schedule-dropdown-container {
@@ -5975,7 +6072,7 @@ input[type="text"] {
 
 /* Ensure dropdown menu appears above modal overlay */
 .schedule-modal-overlay .schedule-dropdown-menu {
-  z-index: 2300;
+  z-index: 10002;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
@@ -6271,7 +6368,7 @@ input[type="text"] {
   max-width: 400px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
   border-left: 2px solid #e5e7eb;
   margin-left: 1rem;
 }
@@ -6289,7 +6386,7 @@ input[type="text"] {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .trainings-loading {
@@ -6495,7 +6592,7 @@ input[type="text"] {
     margin-left: 0;
     margin-top: 1.5rem;
     padding-top: 1.5rem;
-    max-height: 400px;
+    max-height: none; /* Remove max-height so it scrolls with container */
   }
 
   .career-details-main {
@@ -6510,7 +6607,120 @@ input[type="text"] {
   }
 
   .career-details-side {
-    max-height: 300px;
+    max-height: none; /* Remove max-height so it scrolls with container */
+  }
+
+  /* Mobile backdrop */
+  .mobile-backdrop {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    transition: opacity 0.3s ease-in-out;
+  }
+
+  /* Sidebar on mobile - show collapsed state (icons only) when not open */
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    z-index: 1000;
+    transition: width 0.3s ease-in-out;
+  }
+
+  /* When collapsed on mobile, show 60px width (icons only) like desktop */
+  .sidebar.collapsed {
+    width: 60px;
+    transform: translateX(0);
+  }
+
+  /* When open on mobile, show full width with backdrop */
+  .sidebar:not(.collapsed) {
+    width: 230px;
+    transform: translateX(0);
+  }
+
+  /* Content padding on mobile */
+  /* Content padding on mobile - account for sidebar */
+  .content {
+    padding: 20px 15px;
+    width: calc(100% - 60px);
+    margin-left: 60px; /* Space for collapsed sidebar (60px) */
+    transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
+    box-sizing: border-box;
+  }
+
+  /* When sidebar is open (expanded), adjust content */
+  .organization-careers.sidebar-expanded .content {
+    width: calc(100% - 230px);
+    margin-left: 230px;
+  }
+
+  /* Hamburger positioning */
+  /* Hamburger positioning on mobile */
+  .hamburger {
+    margin: 15px auto 10px auto;
+    align-self: center;
+  }
+
+  /* When sidebar is open on mobile, move hamburger to the right */
+  .sidebar:not(.collapsed) .hamburger {
+    align-self: flex-end;
+    margin: 15px 10px 10px auto;
+  }
+
+  /* Topbar adjustments */
+  .topbar {
+    margin-bottom: 20px;
+  }
+
+  .logo-text {
+    font-size: 22px;
+  }
+
+  /* Global search */
+  .global-search-section {
+    margin: 15px 0;
+  }
+
+  /* Section titles */
+  .section-title {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .content {
+    padding: 15px 10px;
+  }
+
+  .logo-text {
+    font-size: 20px;
+  }
+
+  .section-title {
+    font-size: 16px;
+  }
+
+  .career-details-modal {
+    width: 98vw;
+    padding: 1rem;
+  }
+}
+
+/* Large screens - ensure sidebar doesn't overlay */
+@media (min-width: 769px) {
+  .sidebar {
+    position: relative;
+  }
+
+  .content {
+    margin-left: 0;
   }
 }
 </style>

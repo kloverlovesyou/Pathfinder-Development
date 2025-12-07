@@ -1,22 +1,24 @@
 <template>
-  <div class="organization-homepage">
+  <div class="organization-homepage" :class="{ 'sidebar-expanded': isSidebarOpen }">
 
-    <!-- Hamburger Toggle -->
-    <button class="hamburger" @click="toggleSidebar" :class="{ open: isSidebarOpen, shifted: isSidebarOpen }">
-      <span></span>
-      <span></span>
-      <span></span>
-    </button>
+    <!-- Mobile Backdrop - only show when sidebar is open (expanded) -->
+    <div v-if="isSidebarOpen" class="mobile-backdrop" @click="toggleSidebar"></div>
 
     <!-- Sidebar -->
     <transition name="slide">
-      <aside class="sidebar" :class="{ collapsed: !isSidebarOpen }">
+      <aside class="sidebar" :class="{ collapsed: !isSidebarOpen }" @click.stop>
+        <!-- Hamburger Toggle inside sidebar -->
+        <button class="hamburger" @click="toggleSidebar" :class="{ open: isSidebarOpen }">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
 
         <div class="space">
 
         </div>
         <!-- Avatar always visible -->
-        <div class="avatar">
+        <div class="avatar" @click.stop>
           <img v-if="logoUrl" :src="logoUrl" alt="Organization Logo" class="avatar-img" />
           <div v-else class="avatar-placeholder">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -42,7 +44,7 @@
               </span>
             </h3>
             <div class="profile-actions">
-              <div class="action" @click="navigateTo({ name: 'OrgUpdateProfile' })">
+              <div class="action" @click.stop="navigateTo({ name: 'OrgUpdateProfile' })">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M11.7278 8.27191C12.7534 9.87525 14.1247 11.2375 15.7464 12.2534L8.85673 19.144C8.43166 19.569 8.21841 19.7816 7.95731 19.9213C7.69637 20.0609 7.40171 20.1199 6.81278 20.2377L3.73563 20.853C3.40302 20.9195 3.23649 20.9525 3.14188 20.8578C3.04759 20.7632 3.08035 20.5971 3.14677 20.2651L3.76298 17.1879C3.88087 16.5985 3.93965 16.3035 4.07938 16.0424C4.21912 15.7814 4.43173 15.569 4.85673 15.144L11.7278 8.27191ZM16.1116 4.03656C16.6711 3.75929 17.3284 3.75931 17.888 4.03656C18.1821 4.18229 18.455 4.45518 19.0003 5.00043C19.5453 5.54545 19.8184 5.81774 19.9641 6.11175C20.2414 6.67123 20.2413 7.32861 19.9641 7.88812C19.8184 8.18221 19.5455 8.45517 19.0003 9.00043L17.2034 10.7963C15.5308 9.84498 14.1456 8.46859 13.1819 6.81781L15.0003 5.00043C15.5453 4.45539 15.8176 4.18234 16.1116 4.03656Z"
@@ -50,7 +52,7 @@
                 </svg>
                 <span>Update Profile</span>
               </div>
-              <div class="action" @click="navigateTo({ name: 'OrgChangePassword' })">
+              <div class="action" @click.stop="navigateTo({ name: 'OrgChangePassword' })">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
@@ -65,7 +67,7 @@
           </div>
         </transition>
 
-        <div class="icon" @click="navigateTo('/organization')">
+        <div class="icon" @click.stop="navigateTo('/organization')">
           <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M6.25 17.0585C6.25 16.0494 6.25 15.5448 6.47166 15.1141C6.69333 14.6833 7.1039 14.3901 7.92505 13.8035L13.8375 9.58034C14.3989 9.17938 14.6795 8.9789 15 8.9789C15.3205 8.9789 15.6011 9.17938 16.1625 9.58034L22.075 13.8035C22.8961 14.3901 23.3067 14.6833 23.5283 15.1141C23.75 15.5448 23.75 16.0494 23.75 17.0585V24.25C23.75 25.1928 23.75 25.6642 23.4571 25.9571C23.1642 26.25 22.6928 26.25 21.75 26.25H8.25C7.30719 26.25 6.83579 26.25 6.54289 25.9571C6.25 25.6642 6.25 25.1928 6.25 24.25V17.0585Z"
@@ -80,7 +82,7 @@
           </svg>
           <span>Home</span>
         </div>
-        <div class="icon" @click="navigateTo({ name: 'OrgTrainings' })">
+        <div class="icon" @click.stop="navigateTo({ name: 'OrgTrainings' })">
           <svg width="29" height="29" viewBox="0 0 29 29" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M20.5837 3.625C23.4119 3.625 24.8261 3.62526 25.7048 4.50391C26.5833 5.3826 26.5837 6.79675 26.5837 9.625V19.375C26.5837 22.2033 26.5833 23.6174 25.7048 24.4961C24.8261 25.3747 23.4119 25.375 20.5837 25.375H8.41666C5.58824 25.375 4.17425 25.3748 3.29557 24.4961C2.41689 23.6174 2.41666 22.2034 2.41666 19.375V9.625C2.41666 6.79657 2.41689 5.38259 3.29557 4.50391C4.17425 3.62523 5.58824 3.625 8.41666 3.625H20.5837ZM9.66666 12.292C9.11438 12.292 8.66666 12.7397 8.66666 13.292V20.542L8.67155 20.6445C8.72303 21.1485 9.1491 21.542 9.66666 21.542C10.1842 21.542 10.6103 21.1485 10.6618 20.6445L10.6667 20.542V13.292C10.6667 12.7397 10.2189 12.292 9.66666 12.292ZM19.3337 9.875C18.7814 9.875 18.3337 10.3227 18.3337 10.875V20.542L18.3385 20.6436C18.3896 21.148 18.8158 21.542 19.3337 21.542C19.8514 21.5418 20.2778 21.1479 20.3288 20.6436L20.3337 20.542V10.875C20.3337 10.3228 19.8858 9.87518 19.3337 9.875ZM14.4997 14.708C13.9476 14.7082 13.4998 15.156 13.4997 15.708V20.541L13.5046 20.6436C13.5557 21.1477 13.982 21.5408 14.4997 21.541C15.0175 21.541 15.4436 21.1478 15.4948 20.6436L15.4997 20.541V15.708C15.4995 15.1559 15.0518 14.708 14.4997 14.708Z"
@@ -88,7 +90,7 @@
           </svg>
           <span>Trainings</span>
         </div>
-        <div class="icon" @click="navigateTo({ name: 'OrgCareers' })">
+        <div class="icon" @click.stop="navigateTo({ name: 'OrgCareers' })">
           <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M22.8798 11.0484C23.4046 10.8642 23.9845 11.1431 24.1081 11.6855C24.4792 13.3134 24.4217 15.0018 23.9268 16.6191C23.4739 18.0989 22.6698 19.4685 21.5787 20.6449C21.2148 21.0372 20.6017 21.0197 20.2239 20.6408L14.9487 15.3495C14.4292 14.8284 14.6314 13.9436 15.3257 13.6999L22.8798 11.0484ZM13 4.0826C13 3.50231 13.4932 3.04057 14.0672 3.12592C15.8633 3.39302 17.5788 4.00579 19.085 4.93161C20.3794 5.72731 21.4793 6.72976 22.3343 7.87824C22.709 8.38157 22.4513 9.07932 21.8592 9.28718L14.3313 11.9301C13.6809 12.1584 13 11.6758 13 10.9865V4.0826Z"
@@ -99,7 +101,7 @@
           </svg>
           <span>Career</span>
         </div>
-        <div class="icon" @click="navigateTo({ name: 'OrgCalendar' })">
+        <div class="icon" @click.stop="navigateTo({ name: 'OrgCalendar' })">
           <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M2.16675 9.4165C2.16675 7.53089 2.16675 6.58808 2.75253 6.00229C3.33832 5.4165 4.28113 5.4165 6.16675 5.4165H19.8334C21.719 5.4165 22.6618 5.4165 23.2476 6.00229C23.8334 6.58808 23.8334 7.53089 23.8334 9.4165V9.83317C23.8334 10.3046 23.8334 10.5403 23.687 10.6867C23.5405 10.8332 23.3048 10.8332 22.8334 10.8332H3.16675C2.69534 10.8332 2.45964 10.8332 2.31319 10.6867C2.16675 10.5403 2.16675 10.3046 2.16675 9.83317V9.4165Z"
@@ -114,7 +116,7 @@
         </div>
 
         <div class="spacer"></div> <!-- pushes signout down -->
-        <div class="icon signout" @click="logout">
+        <div class="icon signout" @click.stop="logout">
           <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -258,7 +260,9 @@ export default {
   },
 
   setup() {
-    const isSidebarOpen = ref(true);
+    // Load sidebar state from localStorage, default to true for first visit
+    const savedSidebarState = localStorage.getItem('orgSidebarOpen');
+    const isSidebarOpen = ref(savedSidebarState !== null ? savedSidebarState === 'true' : true);
 
     const organizationName = ref("Loading...");
     const organizationLogo = ref(null);
@@ -294,6 +298,8 @@ export default {
     // Functions
     const toggleSidebar = () => {
       isSidebarOpen.value = !isSidebarOpen.value;
+      // Save state to localStorage
+      localStorage.setItem('orgSidebarOpen', isSidebarOpen.value.toString());
     };
 
     return {
@@ -316,8 +322,14 @@ import { getImageUrl } from "@/lib/supabase.js";
 // Router & Sidebar
 // ----------------------
 const router = useRouter();
-const isSidebarOpen = ref(true);
-const toggleSidebar = () => isSidebarOpen.value = !isSidebarOpen.value;
+// Load sidebar state from localStorage, default to true for first visit
+const savedSidebarState = localStorage.getItem('orgSidebarOpen');
+const isSidebarOpen = ref(savedSidebarState !== null ? savedSidebarState === 'true' : true);
+const toggleSidebar = () => {
+  isSidebarOpen.value = !isSidebarOpen.value;
+  // Save state to localStorage
+  localStorage.setItem('orgSidebarOpen', isSidebarOpen.value.toString());
+};
 
 // ----------------------
 // Loading States for Charts
@@ -916,6 +928,32 @@ const logout = () => {
   height: 100vh;
   font-family: 'Poppins', sans-serif;
   background-color: #f4f4f4;
+  position: relative;
+}
+
+/* Mobile backdrop overlay */
+.mobile-backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Only show backdrop when sidebar is open (expanded), not when collapsed */
+  .mobile-backdrop {
+    display: none;
+  }
+
+  /* Show backdrop only when sidebar is expanded */
+  .organization-homepage.sidebar-expanded .mobile-backdrop {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    transition: opacity 0.3s ease-in-out;
+  }
 }
 
 /* Sidebar */
@@ -1002,6 +1040,8 @@ const logout = () => {
   flex: 1;
   padding: 30px 40px;
   overflow-y: auto;
+  transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
+  box-sizing: border-box;
 }
 
 .topbar {
@@ -1479,39 +1519,42 @@ const logout = () => {
   pointer-events: none;
 }
 
-/* Animate position when sidebar opens */
+/* Hamburger inside sidebar */
 .hamburger {
-  position: fixed;
-  top: 15px;
-  left: 18px;
-  width: 25px;
-  height: 18px;
+  width: 30px;
+  height: 24px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   background: none;
   border: none;
   cursor: pointer;
-  z-index: 2000;
-  /* ← raised from 100 to 2000 */
-  padding: 0;
-  transition: transform 0.6s ease;
-  /* smoother animation */
+  padding: 6px 4px;
+  margin: 15px auto 10px auto;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  align-self: center;
+  position: relative;
 }
 
-/* Hamburger lines */
+/* When sidebar is open, move hamburger to the right */
+.sidebar:not(.collapsed) .hamburger {
+  align-self: flex-end;
+  margin: 15px 10px 10px auto;
+}
+
+.hamburger:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Hamburger lines - always stay as 3 lines */
 .hamburger span {
   display: block;
   height: 3px;
   width: 100%;
   background-color: white;
   border-radius: 2px;
-}
-
-/* When sidebar is open, move hamburger to the right */
-.hamburger.shifted {
-  transform: translateX(170px);
-  /* Adjust this to your sidebar width (230px - 60px = 170px) */
+  flex-shrink: 0;
 }
 
 /* 🧩 Base Layout */
@@ -1685,8 +1728,8 @@ canvas {
   align-items: stretch;
   gap: 20px;
   margin: 20px;
-  flex-wrap: nowrap;
-  /* keep left/right alignment */
+  flex-wrap: wrap;
+  /* allow wrapping on smaller screens */
 }
 
 /* 🏷️ Titles & Text */
@@ -1732,10 +1775,142 @@ canvas {
   .cards-container {
     flex-direction: column;
     gap: 15px;
+    margin: 15px;
   }
 
   .summary-card {
     width: 100%;
+  }
+
+  /* Sidebar on mobile - show collapsed state (icons only) when not open */
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    z-index: 1000;
+    transition: width 0.3s ease-in-out;
+  }
+
+  /* When collapsed on mobile, show 60px width (icons only) like desktop */
+  .sidebar.collapsed {
+    width: 60px;
+    transform: translateX(0);
+  }
+
+  /* When open on mobile, show full width with backdrop */
+  .sidebar:not(.collapsed) {
+    width: 230px;
+    transform: translateX(0);
+  }
+
+  /* Content padding on mobile - account for sidebar */
+  .content {
+    padding: 20px 15px;
+    width: calc(100% - 60px);
+    margin-left: 60px; /* Space for collapsed sidebar (60px) */
+    transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
+  }
+
+  /* When sidebar is open (expanded), adjust content */
+  .organization-homepage.sidebar-expanded .content {
+    width: calc(100% - 230px);
+    margin-left: 230px;
+  }
+
+  /* Hamburger positioning on mobile */
+  .hamburger {
+    margin: 15px auto 10px auto;
+    align-self: center;
+  }
+
+  /* When sidebar is open on mobile, move hamburger to the right */
+  .sidebar:not(.collapsed) .hamburger {
+    align-self: flex-end;
+    margin: 15px 10px 10px auto;
+  }
+
+  /* Topbar adjustments */
+  .topbar {
+    margin-bottom: 20px;
+  }
+
+  .logo-text {
+    font-size: 22px;
+  }
+
+  /* Cards responsive */
+  .card {
+    min-height: 100px;
+    padding: 15px;
+  }
+
+  .cards-title {
+    font-size: 12px;
+    min-height: 35px;
+  }
+
+  .cards-counter {
+    font-size: 24px;
+  }
+
+  /* Verification warning card */
+  .verification-warning-card {
+    padding: 15px 18px;
+    margin-bottom: 20px;
+  }
+
+  .verification-warning-title {
+    font-size: 14px;
+  }
+
+  .verification-warning-email {
+    font-size: 12px;
+  }
+}
+
+/* Extra Small Screens (Phones < 480px) */
+@media (max-width: 480px) {
+  .content {
+    padding: 15px 10px;
+  }
+
+  .cards-container {
+    margin: 10px;
+    gap: 10px;
+  }
+
+  .card {
+    padding: 12px;
+    min-height: 90px;
+  }
+
+  .cards-title {
+    font-size: 11px;
+    min-height: 30px;
+  }
+
+  .cards-counter {
+    font-size: 20px;
+  }
+
+  .logo-text {
+    font-size: 20px;
+  }
+
+  .verification-warning-card {
+    padding: 12px 15px;
+  }
+}
+
+/* Large screens - ensure sidebar doesn't overlay */
+@media (min-width: 769px) {
+  .sidebar {
+    position: relative;
+  }
+
+  .content {
+    margin-left: 0;
   }
 }
 </style>
