@@ -39,11 +39,11 @@
 
             <!-- Toggle Password -->
             <button
-              type="button"
-              class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center text-gray-500"
-              aria-label="Toggle password visibility"
-              @click="showPassword = !showPassword"
-            >
+                type="button"
+                class="absolute right-3 top-[71%] -translate-y-1/2 flex items-center text-gray-500"
+                aria-label="Toggle password visibility"
+                @click="showPassword = !showPassword"
+              >
               <span v-if="showPassword">
                 <svg
                   width="24"
