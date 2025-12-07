@@ -40,7 +40,7 @@
             <!-- Toggle Password -->
             <button
               type="button"
-              class="absolute right-2 inset-y-0 my-auto flex items-center text-gray-500"
+              class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center text-gray-500"
               aria-label="Toggle password visibility"
               @click="showPassword = !showPassword"
             >
