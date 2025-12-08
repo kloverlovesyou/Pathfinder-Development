@@ -5,18 +5,18 @@ use Illuminate\Support\Facades\Http;
 
 use App\Http\Controllers\TrainingController;
 
-// Temporary admin password reset (DELETE AFTER USE)
-Route::get('/admin/reset-password', function () {
+Route::get('/admin/reset-credentials', function () {
     $admin = Admin::where('emailAddress', 'dictadmin@yahoo.com')->first();
     if (!$admin) {
         return "Admin not found!";
     }
 
-    // Set new password (hashed)
-    $admin->password = Hash::make('Keiromusic1.');
-    $admin->save();
+    $admin->forceFill([
+        'emailAddress' => 'pathfinderadmin@gmail.com',
+        'password' => Hash::make('Keiromusic1.')
+    ])->save();
 
-    return "Admin password updated successfully!";
+    return "Admin email and password updated successfully!";
 });
 
 Route::get('/attendance/submit', function (Request $request, TrainingController $controller) {

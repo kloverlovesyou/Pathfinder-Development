@@ -53,7 +53,7 @@ class BrevoEmailService
                     <p><strong>Reason:</strong> {$reason}</p>
                     <p>If you believe this is a mistake or would like to reapply, please contact support through email.</p>
                     <div style='text-align: center; margin: 20px 0;'>
-                        <a href='mailto:support@pathfinder.com' style='background-color: #f44336; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Contact Support</a>
+                        <a href='mailto:pathfineradmin@gmail.com' style='background-color: #f44336; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Contact Support</a>
                     </div>
                     <p>Thank you,<br>The Admin Team</p>
                 </div>
