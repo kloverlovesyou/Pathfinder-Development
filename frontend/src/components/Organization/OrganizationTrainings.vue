@@ -133,6 +133,7 @@
     <main class="content">
       <header class="topbar">
         <div class="Pathfinder-wrapper">
+          <img :src="pathfinderLogo" alt="Pathfinder Logo" class="pathfinder-logo" />
           <span class="logo-text">Pathfinder</span>
         </div>
       </header>
@@ -166,7 +167,7 @@
 
       <!-- ✅ GLOBAL SEARCH -->
       <section class="global-search-section">
-        <div class="flex justify-center my-6 px-4">
+        <div class="flex justify-center my-6 px-2 sm:px-4">
           <div class="relative w-full sm:w-3/4 md:w-1/2 lg:w-1/3">
             <input type="text" v-model="globalSearchQuery" placeholder="Search trainings..."
               class="global-search-bar text-black px-4 py-2 border rounded-lg w-full" />
@@ -962,6 +963,7 @@ import { uploadCertificate, getPDFUrl, getImageUrl } from "@/lib/supabase.js";
 import { useToast } from "@/composables/useToast.js";
 import jsPDF from "jspdf";
 import * as pdfjsLib from "pdfjs-dist";
+import pathfinderLogo from "@/assets/images/Pathfinder_Logo.png";
 
 const { toasts, showToast, showConfirmToast } = useToast();
 
@@ -1133,6 +1135,7 @@ export default {
   data() {
     return {
       toasts: toasts,
+      pathfinderLogo: pathfinderLogo,
       organizationLogo: null,
       organizationStatus: null,
       isOrganizationVerified: false,
@@ -3498,9 +3501,11 @@ const logout = () => {
 .topbar {
   display: flex;
   justify-content: center;
-  /* Keep it centered */
   align-items: center;
-  margin-bottom: 40px;
+  margin-bottom: 10px;
+  margin-top: -30px;
+  width: 100%;
+  position: relative;
 }
 
 .logo-title {
@@ -3509,11 +3514,26 @@ const logout = () => {
   color: #2d3748;
 }
 
+.Pathfinder-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: fit-content;
+  position: relative;
+}
+
+.pathfinder-logo {
+  height: 135px;
+  width: 135px;
+  object-fit: contain;
+}
+
 .logo-text {
   font-size: 26px;
   font-weight: 700;
   color: #44576D;
   font-family: 'Poppins', sans-serif;
+  margin-left: -25px;
 }
 
 .search-container {
@@ -3835,16 +3855,32 @@ const logout = () => {
 
   /* Topbar adjustments */
   .topbar {
-    margin-bottom: 20px;
+    margin-bottom: 10px;
+    margin-top: -30px;
+  }
+
+  .pathfinder-logo {
+    height: 100px;
+    width: 100px;
   }
 
   .logo-text {
     font-size: 22px;
+    margin-left: -20px;
   }
 
   /* Global search */
   .global-search-section {
     margin: 15px 0;
+  }
+
+  .global-search-section .flex {
+    padding: 0 10px;
+  }
+
+  .global-search-bar {
+    padding: 8px 12px;
+    font-size: 14px;
   }
 
   /* Section titles */
@@ -3871,8 +3907,14 @@ const logout = () => {
     padding: 15px 10px;
   }
 
+  .pathfinder-logo {
+    height: 80px;
+    width: 80px;
+  }
+
   .logo-text {
     font-size: 20px;
+    margin-left: -15px;
   }
 
   .section-title {
@@ -3885,6 +3927,20 @@ const logout = () => {
 
   .training-title {
     font-size: 13px;
+  }
+
+  /* Global search mobile */
+  .global-search-section {
+    margin: 10px 0;
+  }
+
+  .global-search-section .flex {
+    padding: 0 5px;
+  }
+
+  .global-search-bar {
+    padding: 8px 10px;
+    font-size: 14px;
   }
 }
 
@@ -5571,7 +5627,8 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 
 /* Search Bar CSS*/
 .global-search-bar {
-  width: 600px;
+  width: 100%;
+  max-width: 600px;
   padding: 10px 14px;
   border: 1px solid #aaaaaa;
   border-radius: 8px;
@@ -5579,6 +5636,7 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   outline: none;
   transition: all 0.2s ease;
   color: #000;
+  box-sizing: border-box;
 }
 
 .global-search-bar::placeholder {

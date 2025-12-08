@@ -60,12 +60,24 @@
             :class="isLogin ? 'translate-x-0' : 'translate-x-full'"
           >
             <div class="text-center text-white">
-              <h2 class="text-3xl md:text-4xl font-bold mb-4">
-                {{ isLogin ? 'Welcome Back!' : 'Hello, Welcome' }}
-              </h2>
-              <p class="text-base md:text-lg mb-8 opacity-90">
-                {{ isLogin ? 'Already have an Account' : "Don't have an Account" }}
-              </p>
+              <div class="min-h-[4rem] md:min-h-[5rem]">
+                <template v-if="isLogin">
+                  <h2 class="text-3xl md:text-4xl font-bold mb-4" v-if="welcomeBackHeading || showWelcomeBackHeadingCursor">
+                    {{ welcomeBackHeading }}<span class="animate-pulse" v-if="showWelcomeBackHeadingCursor">|</span>
+                  </h2>
+                  <p class="text-base md:text-lg mb-8 opacity-90" v-if="welcomeBackParagraph || showWelcomeBackParagraphCursor">
+                    {{ welcomeBackParagraph }}<span class="animate-pulse" v-if="showWelcomeBackParagraphCursor">|</span>
+                  </p>
+                </template>
+                <template v-else>
+                  <h2 class="text-3xl md:text-4xl font-bold mb-4" v-if="helloWelcomeHeading || showHelloWelcomeHeadingCursor">
+                    {{ helloWelcomeHeading }}<span class="animate-pulse" v-if="showHelloWelcomeHeadingCursor">|</span>
+                  </h2>
+                  <p class="text-base md:text-lg mb-8 opacity-90" v-if="helloWelcomeParagraph || showHelloWelcomeParagraphCursor">
+                    {{ helloWelcomeParagraph }}<span class="animate-pulse" v-if="showHelloWelcomeParagraphCursor">|</span>
+                  </p>
+                </template>
+              </div>
               <button
                 @click="toggleForm"
                 class="px-6 md:px-8 py-2 md:py-3 border-2 border-white rounded-lg text-white font-semibold hover:bg-white hover:text-customButton transition-colors duration-300"
@@ -311,12 +323,24 @@
             :class="isLogin ? 'translate-y-0' : 'translate-y-full'"
           >
             <div class="text-center text-white">
-              <h2 class="text-xl sm:text-2xl font-bold mb-2 sm:mb-3">
-                {{ isLogin ? 'Welcome Back!' : 'Hello, Welcome' }}
-              </h2>
-              <p class="text-xs sm:text-sm mb-4 sm:mb-6 opacity-90">
-                {{ isLogin ? 'Already have an Account' : "Don't have an Account" }}
-              </p>
+              <div class="min-h-[3rem] sm:min-h-[3.5rem]">
+                <template v-if="isLogin">
+                  <h2 class="text-xl sm:text-2xl font-bold mb-2 sm:mb-3" v-if="welcomeBackHeading || showWelcomeBackHeadingCursor">
+                    {{ welcomeBackHeading }}<span class="animate-pulse" v-if="showWelcomeBackHeadingCursor">|</span>
+                  </h2>
+                  <p class="text-xs sm:text-sm mb-4 sm:mb-6 opacity-90" v-if="welcomeBackParagraph || showWelcomeBackParagraphCursor">
+                    {{ welcomeBackParagraph }}<span class="animate-pulse" v-if="showWelcomeBackParagraphCursor">|</span>
+                  </p>
+                </template>
+                <template v-else>
+                  <h2 class="text-xl sm:text-2xl font-bold mb-2 sm:mb-3" v-if="helloWelcomeHeading || showHelloWelcomeHeadingCursor">
+                    {{ helloWelcomeHeading }}<span class="animate-pulse" v-if="showHelloWelcomeHeadingCursor">|</span>
+                  </h2>
+                  <p class="text-xs sm:text-sm mb-4 sm:mb-6 opacity-90" v-if="helloWelcomeParagraph || showHelloWelcomeParagraphCursor">
+                    {{ helloWelcomeParagraph }}<span class="animate-pulse" v-if="showHelloWelcomeParagraphCursor">|</span>
+                  </p>
+                </template>
+              </div>
               <button
                 @click="toggleForm"
                 class="px-4 sm:px-6 py-2 border-2 border-white rounded-lg text-white font-semibold hover:bg-white hover:text-customButton transition-colors duration-300 text-xs sm:text-sm"
@@ -732,12 +756,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import axios from "axios";
 import { useRegistrationStore } from "@/stores/registrationStore";
 import ApplicantRegistration from "./A_RegistrationForm.vue";
 import OrganizationRegistration from "./O_RegistrationForm.vue";
+import { useTypingAnimation } from "@/composables/useTypingAnimation";
+import { useSequentialTypingAnimation } from "@/composables/useSequentialTypingAnimation";
 
 const regStore = useRegistrationStore();
 const router = useRouter();
@@ -752,6 +778,14 @@ onMounted(() => {
   // If route has mode=register query param, show registration
   if (route.query.mode === 'register') {
     isLogin.value = false;
+  }
+  
+  // Initialize typing animations based on initial state
+  // Only start heading animations - paragraph animations will start automatically after heading completes
+  if (isLogin.value) {
+    welcomeBackAnimation.start();
+  } else {
+    helloWelcomeAnimation.start();
   }
 });
 const showPassword = ref(false);
@@ -780,6 +814,152 @@ const showVerificationModal = ref(false);
 const resendingEmail = ref(false);
 const resendMessage = ref("");
 const resendMessageType = ref("");
+
+// Sequential typing animations - heading types first, then paragraph, then deletes in reverse
+const welcomeBackAnimation = useSequentialTypingAnimation(
+  "Welcome Back!", 
+  "Don't have an Account?", 
+  { 
+    typingSpeed: 120, 
+    deletingSpeed: 60, 
+    pauseAfterHeading: 800, 
+    pauseAfterParagraph: 2500, 
+    pauseAfterDelete: 600, 
+    autoStart: false
+  }
+);
+
+const helloWelcomeAnimation = useSequentialTypingAnimation(
+  "Hello, Welcome", 
+  "Already have an Account?", 
+  { 
+    typingSpeed: 120, 
+    deletingSpeed: 60, 
+    pauseAfterHeading: 800, 
+    pauseAfterParagraph: 2500, 
+    pauseAfterDelete: 600, 
+    autoStart: false
+  }
+);
+
+// Computed properties to unwrap refs and get string values
+const welcomeBackHeading = computed(() => {
+  try {
+    const ref = welcomeBackAnimation.headingText;
+    if (!ref) return '';
+    const text = ref.value !== undefined ? ref.value : (typeof ref === 'string' ? ref : '');
+    return typeof text === 'string' ? text : '';
+  } catch (e) {
+    return '';
+  }
+});
+
+const welcomeBackParagraph = computed(() => {
+  try {
+    const ref = welcomeBackAnimation.paragraphText;
+    if (!ref) return '';
+    const text = ref.value !== undefined ? ref.value : (typeof ref === 'string' ? ref : '');
+    return typeof text === 'string' ? text : '';
+  } catch (e) {
+    return '';
+  }
+});
+
+const helloWelcomeHeading = computed(() => {
+  try {
+    const ref = helloWelcomeAnimation.headingText;
+    if (!ref) return '';
+    const text = ref.value !== undefined ? ref.value : (typeof ref === 'string' ? ref : '');
+    return typeof text === 'string' ? text : '';
+  } catch (e) {
+    return '';
+  }
+});
+
+const helloWelcomeParagraph = computed(() => {
+  try {
+    const ref = helloWelcomeAnimation.paragraphText;
+    if (!ref) return '';
+    const text = ref.value !== undefined ? ref.value : (typeof ref === 'string' ? ref : '');
+    return typeof text === 'string' ? text : '';
+  } catch (e) {
+    return '';
+  }
+});
+
+// Get phase information
+const welcomeBackPhase = computed(() => {
+  try {
+    const ref = welcomeBackAnimation.phase;
+    if (!ref) return '';
+    return ref.value !== undefined ? ref.value : (typeof ref === 'string' ? ref : '');
+  } catch (e) {
+    return '';
+  }
+});
+
+const helloWelcomePhase = computed(() => {
+  try {
+    const ref = helloWelcomeAnimation.phase;
+    if (!ref) return '';
+    return ref.value !== undefined ? ref.value : (typeof ref === 'string' ? ref : '');
+  } catch (e) {
+    return '';
+  }
+});
+
+// Check if typing is in progress
+const isWelcomeBackTyping = computed(() => {
+  try {
+    const ref = welcomeBackAnimation.isTyping;
+    if (!ref) return false;
+    return ref.value !== undefined ? ref.value : (ref === true);
+  } catch (e) {
+    return false;
+  }
+});
+
+const isHelloWelcomeTyping = computed(() => {
+  try {
+    const ref = helloWelcomeAnimation.isTyping;
+    if (!ref) return false;
+    return ref.value !== undefined ? ref.value : (ref === true);
+  } catch (e) {
+    return false;
+  }
+});
+
+// Check if heading should show cursor (only when typing heading phase)
+const showWelcomeBackHeadingCursor = computed(() => {
+  return welcomeBackPhase.value === 'heading' && welcomeBackHeading.value.length > 0;
+});
+
+const showHelloWelcomeHeadingCursor = computed(() => {
+  return helloWelcomePhase.value === 'heading' && helloWelcomeHeading.value.length > 0;
+});
+
+// Check if paragraph should show cursor (only when typing paragraph phase)
+const showWelcomeBackParagraphCursor = computed(() => {
+  return welcomeBackPhase.value === 'paragraph' && welcomeBackParagraph.value.length > 0;
+});
+
+const showHelloWelcomeParagraphCursor = computed(() => {
+  return helloWelcomePhase.value === 'paragraph' && helloWelcomeParagraph.value.length > 0;
+});
+
+// Watch isLogin to restart animations when switching
+watch(isLogin, () => {
+  // Small delay to ensure smooth transition
+  setTimeout(() => {
+    if (isLogin.value) {
+      welcomeBackAnimation.start();
+      helloWelcomeAnimation.stop();
+    } else {
+      helloWelcomeAnimation.start();
+      welcomeBackAnimation.stop();
+    }
+  }, 500);
+});
 
 const validateEmail = (emailVal) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
 const validatePassword = (pw) => /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/.test(pw);

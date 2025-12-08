@@ -92,6 +92,34 @@ class BrevoEmailService
         return $this->send($toEmail, $subject, $htmlContent);
     }
 
+    public function sendLoginOTP($toEmail, $adminName, $otp)
+    {
+        $subject = "🔐 Admin Login Verification Code";
+
+        $htmlContent = "
+        <div style='font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;'>
+            <div style='max-width: 600px; margin: auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.1);'>
+                <div style='background-color: #44576D; color: #fff; padding: 20px; text-align: center;'>
+                    <h1>Admin Login Verification</h1>
+                </div>
+                <div style='padding: 20px; color: #333; line-height: 1.6;'>
+                    <p>Hi <strong>{$adminName}</strong>,</p>
+                    <p>You have attempted to log in to your admin account. Please use the following verification code to complete the login:</p>
+                    <div style='text-align: center; margin: 30px 0;'>
+                        <div style='background-color: #f0f0f0; border: 2px dashed #44576D; border-radius: 8px; padding: 20px; display: inline-block;'>
+                            <div style='font-size: 32px; font-weight: bold; color: #44576D; letter-spacing: 8px;'>{$otp}</div>
+                        </div>
+                    </div>
+                    <p style='color: #666; font-size: 14px;'>This code will expire in 10 minutes. If you did not attempt to log in, please ignore this email or contact support immediately.</p>
+                    <p>Thank you,<br>The Pathfinder Team</p>
+                </div>
+            </div>
+        </div>
+        ";
+
+        return $this->send($toEmail, $subject, $htmlContent);
+    }
+
     public function __construct()
     {
         // Try multiple ways to get the API key, with trimming to handle spaces

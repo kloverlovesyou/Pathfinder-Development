@@ -24,6 +24,8 @@ class Admin extends Model
         'websiteURL',
         'emailAddress',
         'password',
+        'login_otp',
+        'login_otp_expires_at',
     ];
 
     public function organizations()

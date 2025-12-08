@@ -2534,6 +2534,7 @@ export default {
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useOrganizationLogo } from "@/composables/useOrganizationLogo.js";
+import pathfinderLogo from "@/assets/images/Pathfinder_Logo.png";
 
 const router = useRouter();
 // Load sidebar state from localStorage, default to true for first visit
@@ -2811,6 +2812,7 @@ async function viewRequirement(id) {
     <main class="content">
       <header class="topbar">
         <div class="Pathfinder-wrapper">
+          <img :src="pathfinderLogo" alt="Pathfinder Logo" class="pathfinder-logo" />
           <span class="logo-text">Pathfinder</span>
         </div>
       </header>
@@ -2844,7 +2846,7 @@ async function viewRequirement(id) {
         <div v-else>
           <!-- ✅ GLOBAL SEARCH -->
           <section class="global-search-section">
-            <div class="flex justify-center my-6 px-4">
+            <div class="flex justify-center my-6 px-2 sm:px-4">
               <input
                 type="text"
                 v-model="globalSearchQuery"
@@ -4025,9 +4027,11 @@ async function viewRequirement(id) {
 .topbar {
   display: flex;
   justify-content: center;
-  /* Keep it centered */
   align-items: center;
-  margin-bottom: 40px;
+  margin-bottom: 10px;
+  margin-top: -30px;
+  width: 100%;
+  position: relative;
 }
 
 .logo-title {
@@ -4036,11 +4040,26 @@ async function viewRequirement(id) {
   color: #2d3748;
 }
 
+.Pathfinder-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: fit-content;
+  position: relative;
+}
+
+.pathfinder-logo {
+  height: 135px;
+  width: 135px;
+  object-fit: contain;
+}
+
 .logo-text {
   font-size: 26px;
   font-weight: 700;
   color: #44576d;
   font-family: "Poppins", sans-serif;
+  margin-left: -25px;
 }
 
 .search-container {
@@ -6274,6 +6293,7 @@ input[type="text"] {
   outline: none;
   transition: all 0.2s ease;
   color: #000;
+  box-sizing: border-box;
 }
 
 .global-search-bar::placeholder {
@@ -6676,7 +6696,13 @@ input[type="text"] {
 
   /* Topbar adjustments */
   .topbar {
-    margin-bottom: 20px;
+    margin-bottom: 10px;
+    margin-top: -30px;
+  }
+
+  .pathfinder-logo {
+    height: 100px;
+    width: 100px;
   }
 
   .logo-text {
@@ -6686,6 +6712,15 @@ input[type="text"] {
   /* Global search */
   .global-search-section {
     margin: 15px 0;
+  }
+
+  .global-search-section .flex {
+    padding: 0 10px;
+  }
+
+  .global-search-bar {
+    padding: 8px 12px;
+    font-size: 14px;
   }
 
   /* Section titles */
@@ -6710,6 +6745,20 @@ input[type="text"] {
   .career-details-modal {
     width: 98vw;
     padding: 1rem;
+  }
+
+  /* Global search mobile */
+  .global-search-section {
+    margin: 10px 0;
+  }
+
+  .global-search-section .flex {
+    padding: 0 5px;
+  }
+
+  .global-search-bar {
+    padding: 8px 10px;
+    font-size: 14px;
   }
 }
 

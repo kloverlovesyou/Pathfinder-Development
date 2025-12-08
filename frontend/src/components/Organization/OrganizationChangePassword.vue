@@ -135,6 +135,7 @@
         <main class="content">
             <header class="topbar">
                 <div class="Pathfinder-wrapper">
+                    <img :src="pathfinderLogo" alt="Pathfinder Logo" class="pathfinder-logo" />
                     <span class="logo-text">Pathfinder</span>
                 </div>
             </header>
@@ -233,6 +234,7 @@ import { useRouter } from "vue-router";
 import axios from "axios";
 import { useOrganizationLogo } from "@/composables/useOrganizationLogo.js";
 import { useToast } from "@/composables/useToast.js";
+import pathfinderLogo from "@/assets/images/Pathfinder_Logo.png";
 
 const { toasts, showToast } = useToast();
 
@@ -559,9 +561,11 @@ const logout = () => {
 .topbar {
     display: flex;
     justify-content: center;
-    /* Keep it centered */
     align-items: center;
-    margin-bottom: 40px;
+    margin-bottom: 10px;
+    margin-top: -30px;
+    width: 100%;
+    position: relative;
 }
 
 .logo-title {
@@ -570,11 +574,26 @@ const logout = () => {
     color: #2d3748;
 }
 
+.Pathfinder-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    width: fit-content;
+    position: relative;
+}
+
+.pathfinder-logo {
+    height: 135px;
+    width: 135px;
+    object-fit: contain;
+}
+
 .logo-text {
     font-size: 26px;
     font-weight: 700;
     color: #44576D;
     font-family: 'Poppins', sans-serif;
+    margin-left: -25px;
 }
 
 .spacer {
@@ -932,11 +951,18 @@ const logout = () => {
 
     /* Topbar adjustments */
     .topbar {
-        margin-bottom: 20px;
+        margin-bottom: 10px;
+        margin-top: -30px;
+    }
+
+    .pathfinder-logo {
+        height: 100px;
+        width: 100px;
     }
 
     .logo-text {
         font-size: 22px;
+        margin-left: -20px;
     }
 
     /* Form container */

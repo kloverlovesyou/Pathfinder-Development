@@ -323,12 +323,6 @@ async function openCareerModal(career) {
     console.log('Career Object:', career);
     console.log('Parsed Career ID:', parsedCareerID);
 
-    // Update selected career ID if different
-    if (selectedCareerId.value !== parsedCareerID) {
-      selectedCareerId.value = parsedCareerID;
-      await fetchOrganizationsChoiceTrainings();
-    }
-
     // Make API request
     const res = await axios.get(import.meta.env.VITE_API_BASE_URL + `/careers/${parsedCareerID}/details`);
 

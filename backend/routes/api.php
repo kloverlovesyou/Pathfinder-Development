@@ -32,6 +32,7 @@ use App\Http\Controllers\LocationController;
 // ----------------------
 
 Route::post('/admin/login', [AdminController::class, 'login']);
+Route::post('/admin/verify-otp', [AdminController::class, 'verifyOTP']);
 
 Route::get('/dashboard', [DashboardController::class, 'getChartData']);
 
