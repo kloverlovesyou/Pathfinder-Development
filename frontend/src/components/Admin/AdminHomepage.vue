@@ -33,7 +33,7 @@ function openRejectModal(id) {
 // Submit rejection
 async function submitRejection() {
   if (!rejectReason.value.trim()) {
-    showToast("Please enter a reason for rejection.", "error"); // use toast instead of alert
+    showToast("Please enter a reason for rejection.", "error");
     return;
   }
 
@@ -43,17 +43,23 @@ async function submitRejection() {
       { reason: rejectReason.value }
     );
 
-    // Remove the rejected org from the pending list
-    const rejectedOrg = organizations.value.find(o => o.organizationID === rejectOrgID.value);
-    organizations.value = organizations.value.filter(
-      (o) => o.organizationID !== rejectOrgID.value
+    // Remove from pending
+    const rejectedOrg = organizations.value.find(
+      o => o.organizationID === rejectOrgID.value
     );
 
-    // Add rejected org to rejectedOrganizations list
+    organizations.value = organizations.value.filter(
+      o => o.organizationID !== rejectOrgID.value
+    );
+
+    // Add to rejected list (local instant update)
     if (rejectedOrg) {
-      rejectedOrg.rejectionReason = res.data.rejectionReason; // include reason from API
+      rejectedOrg.rejectionReason = res.data.rejectionReason;
       rejectedOrganizations.value.push(rejectedOrg);
     }
+
+    // 🔥 Auto-refresh rejected organization list
+    await loadRejectedOrganizations();
 
     // Close modal
     rejectModal.value = false;
@@ -109,26 +115,20 @@ async function acceptOrg(id) {
       import.meta.env.VITE_API_BASE_URL + `/organization/${id}/approve`
     );
 
-    // Remove approved org from the pending list
-    organizations.value = organizations.value.filter((o) => o.organizationID !== id);
+    // Remove approved org from pending
+    organizations.value = organizations.value.filter(o => o.organizationID !== id);
 
-    // Optionally, add to approvedOrganizations list immediately
-    const approvedOrg = res.data.organization; // adjust if your API returns the org details
-    if (approvedOrg) {
-      approvedOrganizations.value.push(approvedOrg);
-    }
+    // Reload updated approved list
+    await loadApprovedOrganizations();
 
-    // Close modal if open
+    // Close details modal if open
     if (selectedOrg.value?.organizationID === id) {
       selectedOrg.value = null;
     }
 
-    // Show success toast
     showToast("Organization approved and email sent successfully!", "success");
   } catch (err) {
     console.error("Approval failed:", err.response?.data || err.message);
-
-    // Show error toast
     showToast("Failed to approve organization or send email.", "error");
   }
 }
