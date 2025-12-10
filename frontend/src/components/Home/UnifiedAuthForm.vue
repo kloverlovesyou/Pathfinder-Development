@@ -128,8 +128,9 @@
                         required
                         placeholder="Password"
                         v-model="loginForm.password"
-                        pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
-                        title="Must contain at least 8 characters, including a number, a lowercase and an uppercase letter"
+                        pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9]).{8,}"
+                        title="Must contain at least 8 characters, including a number, lowercase, uppercase, and a special character"
+                        maxlength="50"
                       />
                       <button
                         type="button"
@@ -390,8 +391,9 @@
                         required
                         placeholder="Password"
                         v-model="loginForm.password"
-                        pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
-                        title="Must contain at least 8 characters, including a number, a lowercase and an uppercase letter"
+                        pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9]).{8,}"
+                        title="Must contain at least 8 characters, including a number, lowercase, uppercase, and a special character"
+                        maxlength="50"
                       />
                       <button
                         type="button"
