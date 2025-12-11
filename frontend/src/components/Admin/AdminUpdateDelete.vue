@@ -232,7 +232,7 @@
               <input
                 :type="showCurrentPassword ? 'text' : 'password'"
                 class="border border-gray-300 input w-full pr-10"
-                placeholder="Confirm Password"
+                placeholder="Current Password"
                 v-model="form.currentPassword"
                 required
               />
