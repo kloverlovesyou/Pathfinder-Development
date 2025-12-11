@@ -525,7 +525,7 @@
           <p class="validator-hint text-gray-500 text-sm mt-1">
             <i>
               *Must be at least 8 characters, and include a number, a lowercase
-              letter, and an uppercase letter.
+              letter, and an uppercase letter, and special character.
             </i>
           </p>
         </div>

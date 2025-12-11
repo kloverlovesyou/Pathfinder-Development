@@ -433,7 +433,7 @@
           <p class="validator-hint text-gray-500 text-sm mt-1">
             <i>
               *Must be at least 8 characters, and include a number, a lowercase
-              letter, and an uppercase letter.
+              letter, and an uppercase letter, and special character.
             </i>
           </p>
         </div>
@@ -554,65 +554,6 @@
         </div>
 
         <div class="divider"></div>
-
-        <!--
-        <div class="relative mb-4">
-          <label class="block font-semibold text-gray-500"
-            >To help us personalize recommendations for you,
-          </label>
-          <p class="text-gray-500 mb-2">fill up the fields below.</p>
-
-        
-          <div @click="focusInput">
-            <input
-              ref="inputEl"
-              v-model="search"
-              type="text"
-              @focus="showDropdown = true"
-              @blur="hideDropdown"
-              @keydown.enter.prevent="addCustomJob"
-              placeholder="Type or select desired positions"
-              class="input w-full focus:outline-none focus:border-transparent bg-gray-100 text-gray-800 rounded-lg px-3 py-2"
-            />
-          </div>
-
-          
-          <ul
-            v-if="showDropdown"
-            class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-auto"
-          >
-            <li
-              v-for="(job, index) in filteredJobs.length
-                ? filteredJobs
-                : jobOptions"
-              :key="index"
-              @mousedown.prevent="selectJob(job)"
-              class="px-4 py-2 hover:bg-blue-100 cursor-pointer"
-            >
-              {{ job }}
-            </li>
-          </ul>
-
-          
-          <div
-            v-if="selectedJobs.length"
-            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-3 rounded-lg"
-          >
-            <div
-              v-for="(job, index) in selectedJobs"
-              :key="index"
-              class="flex items-center justify-between bg-customButton text-white text-sm px-3 py-1 rounded-full"
-            >
-              <span class="truncate">{{ job }}</span>
-              <button
-                @click.stop="removeJob(job)"
-                class="text-white hover:text-gray-200 font-bold ml-2"
-              >
-                ×
-              </button>
-            </div>
-          </div>
-        </div> -->
 
         <div>
           <label class="flex items-center space-x-2 cursor-pointer mb-2">
