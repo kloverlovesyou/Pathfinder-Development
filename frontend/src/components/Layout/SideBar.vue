@@ -77,9 +77,34 @@
               >
                 <!-- Floating count badge -->
                 <span
-                  class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold text-white bg-customButton rounded-full shadow-lg"
+                  class="absolute -top-2 -right-2 inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 text-xs font-bold rounded-full shadow-lg"
+                  :class="activityStore.loading ? 'bg-gray-200' : 'bg-customButton text-white'"
                 >
-                  {{ activityStore.upcomingCount }}
+                  <template v-if="activityStore.loading">
+                    <svg
+                      class="animate-spin h-4 w-4 text-gray-500"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                      />
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
+                      />
+                    </svg>
+                  </template>
+                  <template v-else>
+                    {{ activityStore.upcomingCount }}
+                  </template>
                 </span>
 
                 <span class="text-dark-slate mb-1">Upcoming</span>
@@ -91,9 +116,34 @@
               >
                 <!-- Floating count badge -->
                 <span
-                  class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold text-white bg-customButton rounded-full shadow-lg"
+                  class="absolute -top-2 -right-2 inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 text-xs font-bold rounded-full shadow-lg"
+                  :class="activityStore.loading ? 'bg-gray-200' : 'bg-customButton text-white'"
                 >
-                  {{ activityStore.completedCount }}
+                  <template v-if="activityStore.loading">
+                    <svg
+                      class="animate-spin h-4 w-4 text-gray-500"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                      />
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
+                      />
+                    </svg>
+                  </template>
+                  <template v-else>
+                    {{ activityStore.completedCount }}
+                  </template>
                 </span>
 
                 <span class="text-dark-slate mb-1">Completed</span>
