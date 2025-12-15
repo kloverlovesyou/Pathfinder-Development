@@ -264,9 +264,9 @@ onMounted(() => {
                 Accept
               </button>
 
-              <button
+             <button
                 @click.stop="openRejectModal(org.organizationID)"
-                class="px-4 py-2 text-black bg-gray-400 hover:bg-gray-500 rounded-lg transition"
+                class="px-4 py-2 text-white bg-red-500 hover:bg-red-600 rounded-lg transition"
               >
                 Reject
               </button>
