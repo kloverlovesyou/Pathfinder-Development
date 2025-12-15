@@ -212,14 +212,14 @@ onMounted(() => {
   <div class="min-h-screen p-3 rounded-lg font-poppins bg-gray-50">
     <!-- Main Area -->
     <div class="bg-white rounded-lg shadow p-6 flex-1">
-      <header class="sticky top-0 z-10 h-16 text-black flex items-center px-4">
+      <header class="h-16 bg-white text-black flex items-center px-4">
         <h1>
           <span class="block text-sm">Organization Account</span>
           <span class="block font-bold text-3xl">For Verification</span>
         </h1>
       </header>
 
-      <section class="mt-4">
+      <section class="mt-16">
         <div v-if="loadingPending" class="flex flex-col items-center justify-center space-y-2 py-10">
           <svg
             class="animate-spin h-10 w-10 text-blue-600"

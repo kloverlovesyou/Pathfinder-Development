@@ -1345,7 +1345,7 @@ watch(selectedCareerId, (newCareerId) => {
 
           <div class="mt-4 mb-4">
           <label for="career-select" class="block text-sm font-medium text-gray-700 mb-2">
-            Select Your Target Career
+            Select Your Matched Career
           </label>
           <div class="relative">
             <input

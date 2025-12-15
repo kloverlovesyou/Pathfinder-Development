@@ -1628,32 +1628,36 @@ export default {
     },
 
     // Schedule management methods
-    addDate() {
-      if (!this.tempDateInput) {
-        showToast("Please select a date first.", "error");
-        return;
-      }
+addDate() {
+  if (!this.tempDateInput) {
+    showToast("Please select a date first.", "error");
+    return;
+  }
 
-      // Check if date already exists
-      const dateExists = this.newTraining.schedules.some(s => s.date === this.tempDateInput);
-      if (dateExists) {
-        showToast("This date has already been added.", "error");
-        return;
-      }
+  // Check if date already exists
+  const dateExists = this.newTraining.schedules.some(s => s.date === this.tempDateInput);
+  if (dateExists) {
+    showToast("This date has already been added.", "error");
+    return;
+  }
 
-      // Add new schedule with default values
-      this.newTraining.schedules.push({
-        date: this.tempDateInput,
-        startTime: "",
-        endTime: "",
-        mode: "",
-        location: "",
-        trainingLink: ""
-      });
+  // Get current time in HH:MM format
+  const now = new Date();
+  const currentTime = now.toTimeString().slice(0, 5);
 
-      // Clear the temporary input
-      this.tempDateInput = "";
-    },
+  // Add new schedule with default current time
+  this.newTraining.schedules.push({
+    date: this.tempDateInput,
+    startTime: currentTime, // default to current time
+    endTime: "",
+    mode: "",
+    location: "",
+    trainingLink: ""
+  });
+
+  // Clear the temporary input
+  this.tempDateInput = "";
+  },
 
     removeSchedule(index) {
       this.newTraining.schedules.splice(index, 1);
@@ -2154,7 +2158,10 @@ export default {
     async saveTraining() {
       // Check if organization is verified
       if (!this.isOrganizationVerified) {
-        showToast("Your organization account is not yet verified by the admin. Please wait for admin approval before performing this action.", "error");
+        showToast(
+          "Your organization account is not yet verified by the admin. Please wait for admin approval before performing this action.",
+          "error"
+        );
         return;
       }
 
@@ -2165,13 +2172,26 @@ export default {
           return;
         }
 
+        const now = new Date();
+        const currentTime = now.toTimeString().slice(0, 5); // "HH:MM" format
+
         // Validate each schedule
         for (let i = 0; i < this.newTraining.schedules.length; i++) {
           const schedule = this.newTraining.schedules[i];
+
+          // If startTime is missing, set it to current time
+          if (!schedule.startTime) {
+            schedule.startTime = currentTime;
+          }
+
           if (!schedule.date || !schedule.startTime || !schedule.endTime || !schedule.mode) {
-            showToast(`PLEASE COMPLETE ALL FIELDS FOR DATE: ${this.formatDateDisplay(schedule.date) || 'Date ' + (i + 1)}`, "error");
+            showToast(
+              `PLEASE COMPLETE ALL FIELDS FOR DATE: ${this.formatDateDisplay(schedule.date) || 'Date ' + (i + 1)}`,
+              "error"
+            );
             return;
           }
+
           if (schedule.mode === "On-Site" && !schedule.location) {
             showToast(`PLEASE ENTER A LOCATION FOR DATE: ${this.formatDateDisplay(schedule.date)}`, "error");
             return;
@@ -2184,28 +2204,27 @@ export default {
 
         const token = localStorage.getItem("token");
 
-        if (this.isEditMode && this.trainingToEditId) {
-          // For edit mode, update the training with all schedules
-          const schedules = this.newTraining.schedules.map(schedule => {
-            const combinedSchedule = `${schedule.date} ${schedule.startTime}`;
-            const endTimeSchedule = `${schedule.date} ${schedule.endTime}`;
-
-            return {
-              schedule: combinedSchedule,
-              end_time: endTimeSchedule,
-              mode: schedule.mode,
-              location: schedule.mode === "On-Site" ? schedule.location || null : null,
-              training_link: schedule.mode === "Online" ? schedule.trainingLink || null : null,
-            };
-          });
-
-          const payload = {
-            title: this.newTraining.title,
-            description: this.newTraining.description,
-            schedules: schedules, // Array of schedule objects
-            Tags: this.newTraining.Tags || []
+        // Prepare schedules for API
+        const schedules = this.newTraining.schedules.map(schedule => {
+          const combinedSchedule = `${schedule.date} ${schedule.startTime}`;
+          const endTimeSchedule = `${schedule.date} ${schedule.endTime}`;
+          return {
+            schedule: combinedSchedule,
+            end_time: endTimeSchedule,
+            mode: schedule.mode,
+            location: schedule.mode === "On-Site" ? schedule.location || null : null,
+            training_link: schedule.mode === "Online" ? schedule.trainingLink || null : null,
           };
+        });
 
+        const payload = {
+          title: this.newTraining.title,
+          description: this.newTraining.description,
+          schedules: schedules,
+          Tags: this.newTraining.Tags || []
+        };
+
+        if (this.isEditMode && this.trainingToEditId) {
           await axios.put(
             `${import.meta.env.VITE_API_BASE_URL}/trainings/${this.trainingToEditId}`,
             payload,
@@ -2213,35 +2232,15 @@ export default {
           );
           showToast("✅ TRAINING UPDATED SUCCESSFULLY!", "success");
         } else {
-          // For create mode, create ONE training with MULTIPLE schedules
-          // Format schedules array according to database schema
-          const schedules = this.newTraining.schedules.map(schedule => {
-            const combinedSchedule = `${schedule.date} ${schedule.startTime}`;
-            const endTimeSchedule = `${schedule.date} ${schedule.endTime}`;
-
-            return {
-              schedule: combinedSchedule,
-              end_time: endTimeSchedule,
-              mode: schedule.mode,
-              location: schedule.mode === "On-Site" ? schedule.location || null : null,
-              training_link: schedule.mode === "Online" ? schedule.trainingLink || null : null,
-            };
-          });
-
-          const payload = {
-            title: this.newTraining.title,
-            description: this.newTraining.description,
-            schedules: schedules, // Array of schedule objects
-            Tags: this.newTraining.Tags || []
-          };
-
-          const response = await axios.post(
+          await axios.post(
             `${import.meta.env.VITE_API_BASE_URL}/trainings`,
             payload,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-
-          showToast(`✅ TRAINING WITH ${this.newTraining.schedules.length} SCHEDULE(S) POSTED SUCCESSFULLY!`, "success");
+          showToast(
+            `✅ TRAINING WITH ${this.newTraining.schedules.length} SCHEDULE(S) POSTED SUCCESSFULLY!`,
+            "success"
+          );
         }
 
         await this.fetchTrainings();
@@ -2253,6 +2252,11 @@ export default {
         console.error("ERROR SAVING TRAINING:", error.response?.data || error);
         showToast("❌ SOMETHING WENT WRONG WHILE SAVING THE TRAINING", "error");
       }
+    },
+
+    getCurrentTime() {
+      const now = new Date();
+      return now.toTimeString().slice(0, 5); // HH:mm
     },
 
     // For deleting training
