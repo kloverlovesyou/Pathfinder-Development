@@ -819,7 +819,7 @@ const resendMessageType = ref("");
 
 // Sequential typing animations - heading types first, then paragraph, then deletes in reverse
 const welcomeBackAnimation = useSequentialTypingAnimation(
-  "Welcome Back!", 
+  "Welcome!", 
   "Don't have an Account?", 
   { 
     typingSpeed: 120, 

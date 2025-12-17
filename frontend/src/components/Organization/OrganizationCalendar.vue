@@ -166,9 +166,13 @@
                       </div>
 
                       <!-- Show "+ Show more" if there are more than 2 events -->
-                      <div v-if="getEventTitles(date).length > 1" class="show-more"
-                        @click.stop="openEventDetailsByDate(date)">
-                        + Show more
+                      <div
+                        v-if="getEventTitles(date).length > 1"
+                        class="training-count"
+                        @click.stop="openEventDetailsByDate(date)"
+                      >
+                        {{ getEventTitles(date).length }}+
+                        {{ getEventTitles(date).length === 1 ? 'training' : 'trainings' }}
                       </div>
                     </div>
                   </div>
