@@ -14,7 +14,7 @@ class ApplicantController extends Controller
 
 public function a_register(Request $request)
 {
-    $validator = \Validator::make($request->all(), [
+        $validator = \Validator::make($request->all(), [
         'firstName'    => 'required|string|max:255',
         'lastName'     => 'required|string|max:255',
         'middleName'   => 'nullable|string|max:255',
@@ -22,7 +22,7 @@ public function a_register(Request $request)
         'emailAddress' => [
             'required',
             'email',
-            'unique:applicant,emailAddress', // exact column in applicant table
+            'unique:applicant,emailAddress',
             function ($attribute, $value, $fail) {
                 if (\App\Models\Organization::where('emailAddress', $value)->exists()) {
                     $fail('The email has already been taken by an organization.');
@@ -30,9 +30,21 @@ public function a_register(Request $request)
             },
         ],
         'phoneNumber'  => 'required|string|max:11',
-        'password'     => 'required|string|min:8',
+
+        // 🔥 STRONG PASSWORD VALIDATION
+        'password' => [
+            'required',
+            'string',
+            'min:8',
+            'regex:/[a-z]/',      // lowercase
+            'regex:/[A-Z]/',      // uppercase
+            'regex:/[0-9]/',      // digit
+            'regex:/[@$!%*#?&^()_\-+=\[\]{};:\'",.<>\/\\|`~]/', // special
+        ],
+
         'displayPicture_directory' => 'nullable|string|max:255',
     ]);
+    
     if ($validator->fails()) {
         return response()->json([
             'status' => 'error',

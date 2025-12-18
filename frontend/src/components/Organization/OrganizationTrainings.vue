@@ -747,32 +747,43 @@
                     <div class="time-inputs-row">
                       <!-- Start Time -->
                       <div class="time-input-wrapper">
-                        <label :for="'startTime-' + index">Start Time</label>
-                        <div class="date-input-wrapper">
-                          <input type="time" :id="'startTime-' + index" v-model="schedule.startTime"
-                            placeholder="Start Time" />
-                          <span class="calendar-icon">
-                            <svg width="26" height="26" viewBox="0 0 26 26" fill="none"
-                              xmlns="http://www.w3.org/2000/svg">
-                              <path
-                                d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
-                                fill="black" />
-                              <path
-                                d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
-                                fill="black" />
-                            </svg>
-                          </span>
+                          <label :for="'startTime-' + index">Start Time</label>
+                          <div class="date-input-wrapper">
+                           <input
+                              type="time"
+                              :id="'startTime-' + index"
+                              v-model="schedule.startTime"
+                              placeholder="Start Time"
+                              step="600"
+                              @change="snapTo10Min(schedule, 'startTime')"
+                            />
+                            <span class="calendar-icon">
+                              <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                  d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
+                                  fill="black" />
+                                <path
+                                  d="M13.8125 7.58337H12.1875V13.4067L16.9583 16.25L17.875 14.8334L13.8125 12.25V7.58337Z"
+                                  fill="black" />
+                              </svg>
+                            </span>
+                          </div>
                         </div>
-                      </div>
 
                       <!-- End Time -->
                       <div class="time-input-wrapper">
                         <label :for="'endTime-' + index">End Time</label>
                         <div class="date-input-wrapper">
-                          <input type="time" :id="'endTime-' + index" v-model="schedule.endTime" placeholder="End Time" />
+                          <input
+                            type="time"
+                            :id="'endTime-' + index"
+                            v-model="schedule.endTime"
+                            placeholder="End Time"
+                            step="600"
+                            @change="snapTo10Min(schedule, 'endTime')"
+                          />
                           <span class="calendar-icon">
-                            <svg width="26" height="26" viewBox="0 0 26 26" fill="none"
-                              xmlns="http://www.w3.org/2000/svg">
+                            <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
                               <path
                                 d="M13 2.16663C7.02012 2.16663 2.16669 7.02006 2.16669 13C2.16669 18.9799 7.02012 23.8333 13 23.8333C18.9799 23.8333 23.8334 18.9799 23.8334 13C23.8334 7.02006 18.9799 2.16663 13 2.16663ZM13 21.6666C8.10012 21.6666 4.33335 17.8999 4.33335 13C4.33335 8.10006 8.10012 4.33329 13 4.33329C17.9 4.33329 21.6667 8.10006 21.6667 13C21.6667 17.8999 17.9 21.6666 13 21.6666Z"
                                 fill="black" />
@@ -1234,6 +1245,8 @@ export default {
       return person.scheduleAttendance.every(s => s.attended);
     },
 
+    
+
     viewCertificate(certificatePathOrUrl) {
       if (!certificatePathOrUrl) {
         showToast("Certificate not found.", "error");
@@ -1255,6 +1268,22 @@ export default {
       this.certificateImageUrl = publicUrl;
       this.showCertificateModal = true;
     },
+
+    snapTo10Min(schedule, field) {
+    if (!schedule[field]) return;
+
+    let [hours, minutes] = schedule[field].split(":").map(Number);
+    minutes = Math.round(minutes / 10) * 10;
+
+    if (minutes === 60) {
+      minutes = 0;
+      hours = (hours + 1) % 24;
+    }
+
+    schedule[field] = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  },
+
+    
 
     closeCertificateModal() {
       this.showCertificateModal = false;
@@ -1628,32 +1657,44 @@ export default {
     },
 
     // Schedule management methods
-    addDate() {
-      if (!this.tempDateInput) {
-        showToast("Please select a date first.", "error");
-        return;
-      }
+addDate() {
+  if (!this.tempDateInput) {
+    showToast("Please select a date first.", "error");
+    return;
+  }
 
-      // Check if date already exists
-      const dateExists = this.newTraining.schedules.some(s => s.date === this.tempDateInput);
-      if (dateExists) {
-        showToast("This date has already been added.", "error");
-        return;
-      }
+  // Check if date already exists
+  const dateExists = this.newTraining.schedules.some(s => s.date === this.tempDateInput);
+  if (dateExists) {
+    showToast("This date has already been added.", "error");
+    return;
+  }
 
-      // Add new schedule with default values
-      this.newTraining.schedules.push({
-        date: this.tempDateInput,
-        startTime: "",
-        endTime: "",
-        mode: "",
-        location: "",
-        trainingLink: ""
-      });
+  // Get current time and round to nearest 10 minutes
+  const now = new Date();
+  let minutes = now.getMinutes();
+  minutes = Math.ceil(minutes / 10) * 10; // round up to next 10
+  if (minutes === 60) {
+    now.setHours(now.getHours() + 1);
+    minutes = 0;
+  }
+  const hours = now.getHours().toString().padStart(2, "0");
+  const mins = minutes.toString().padStart(2, "0");
+  const roundedTime = `${hours}:${mins}`;
 
-      // Clear the temporary input
-      this.tempDateInput = "";
-    },
+  // Add new schedule with rounded current time
+  this.newTraining.schedules.push({
+    date: this.tempDateInput,
+    startTime: roundedTime, // default rounded time
+    endTime: "",
+    mode: "",
+    location: "",
+    trainingLink: ""
+  });
+
+  // Clear the temporary input
+  this.tempDateInput = "";
+},
 
     removeSchedule(index) {
       this.newTraining.schedules.splice(index, 1);
@@ -2154,7 +2195,10 @@ export default {
     async saveTraining() {
       // Check if organization is verified
       if (!this.isOrganizationVerified) {
-        showToast("Your organization account is not yet verified by the admin. Please wait for admin approval before performing this action.", "error");
+        showToast(
+          "Your organization account is not yet verified by the admin. Please wait for admin approval before performing this action.",
+          "error"
+        );
         return;
       }
 
@@ -2165,13 +2209,26 @@ export default {
           return;
         }
 
+        const now = new Date();
+        const currentTime = now.toTimeString().slice(0, 5); // "HH:MM" format
+
         // Validate each schedule
         for (let i = 0; i < this.newTraining.schedules.length; i++) {
           const schedule = this.newTraining.schedules[i];
+
+          // If startTime is missing, set it to current time
+          if (!schedule.startTime) {
+            schedule.startTime = currentTime;
+          }
+
           if (!schedule.date || !schedule.startTime || !schedule.endTime || !schedule.mode) {
-            showToast(`PLEASE COMPLETE ALL FIELDS FOR DATE: ${this.formatDateDisplay(schedule.date) || 'Date ' + (i + 1)}`, "error");
+            showToast(
+              `PLEASE COMPLETE ALL FIELDS FOR DATE: ${this.formatDateDisplay(schedule.date) || 'Date ' + (i + 1)}`,
+              "error"
+            );
             return;
           }
+
           if (schedule.mode === "On-Site" && !schedule.location) {
             showToast(`PLEASE ENTER A LOCATION FOR DATE: ${this.formatDateDisplay(schedule.date)}`, "error");
             return;
@@ -2184,28 +2241,27 @@ export default {
 
         const token = localStorage.getItem("token");
 
-        if (this.isEditMode && this.trainingToEditId) {
-          // For edit mode, update the training with all schedules
-          const schedules = this.newTraining.schedules.map(schedule => {
-            const combinedSchedule = `${schedule.date} ${schedule.startTime}`;
-            const endTimeSchedule = `${schedule.date} ${schedule.endTime}`;
-
-            return {
-              schedule: combinedSchedule,
-              end_time: endTimeSchedule,
-              mode: schedule.mode,
-              location: schedule.mode === "On-Site" ? schedule.location || null : null,
-              training_link: schedule.mode === "Online" ? schedule.trainingLink || null : null,
-            };
-          });
-
-          const payload = {
-            title: this.newTraining.title,
-            description: this.newTraining.description,
-            schedules: schedules, // Array of schedule objects
-            Tags: this.newTraining.Tags || []
+        // Prepare schedules for API
+        const schedules = this.newTraining.schedules.map(schedule => {
+          const combinedSchedule = `${schedule.date} ${schedule.startTime}`;
+          const endTimeSchedule = `${schedule.date} ${schedule.endTime}`;
+          return {
+            schedule: combinedSchedule,
+            end_time: endTimeSchedule,
+            mode: schedule.mode,
+            location: schedule.mode === "On-Site" ? schedule.location || null : null,
+            training_link: schedule.mode === "Online" ? schedule.trainingLink || null : null,
           };
+        });
 
+        const payload = {
+          title: this.newTraining.title,
+          description: this.newTraining.description,
+          schedules: schedules,
+          Tags: this.newTraining.Tags || []
+        };
+
+        if (this.isEditMode && this.trainingToEditId) {
           await axios.put(
             `${import.meta.env.VITE_API_BASE_URL}/trainings/${this.trainingToEditId}`,
             payload,
@@ -2213,35 +2269,15 @@ export default {
           );
           showToast("✅ TRAINING UPDATED SUCCESSFULLY!", "success");
         } else {
-          // For create mode, create ONE training with MULTIPLE schedules
-          // Format schedules array according to database schema
-          const schedules = this.newTraining.schedules.map(schedule => {
-            const combinedSchedule = `${schedule.date} ${schedule.startTime}`;
-            const endTimeSchedule = `${schedule.date} ${schedule.endTime}`;
-
-            return {
-              schedule: combinedSchedule,
-              end_time: endTimeSchedule,
-              mode: schedule.mode,
-              location: schedule.mode === "On-Site" ? schedule.location || null : null,
-              training_link: schedule.mode === "Online" ? schedule.trainingLink || null : null,
-            };
-          });
-
-          const payload = {
-            title: this.newTraining.title,
-            description: this.newTraining.description,
-            schedules: schedules, // Array of schedule objects
-            Tags: this.newTraining.Tags || []
-          };
-
-          const response = await axios.post(
+          await axios.post(
             `${import.meta.env.VITE_API_BASE_URL}/trainings`,
             payload,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-
-          showToast(`✅ TRAINING WITH ${this.newTraining.schedules.length} SCHEDULE(S) POSTED SUCCESSFULLY!`, "success");
+          showToast(
+            `✅ TRAINING WITH ${this.newTraining.schedules.length} SCHEDULE(S) POSTED SUCCESSFULLY!`,
+            "success"
+          );
         }
 
         await this.fetchTrainings();
@@ -2253,6 +2289,11 @@ export default {
         console.error("ERROR SAVING TRAINING:", error.response?.data || error);
         showToast("❌ SOMETHING WENT WRONG WHILE SAVING THE TRAINING", "error");
       }
+    },
+
+    getCurrentTime() {
+      const now = new Date();
+      return now.toTimeString().slice(0, 5); // HH:mm
     },
 
     // For deleting training

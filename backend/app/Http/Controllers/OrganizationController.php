@@ -60,7 +60,15 @@ class OrganizationController extends Controller
             },
         ],
         'phoneNumber' => 'nullable|string|max:20',
-        'password'    => 'required|string|min:8',
+         'password' => [
+        'required',
+        'string',
+        'min:8',
+        'regex:/[a-z]/',      // lowercase
+        'regex:/[A-Z]/',      // uppercase
+        'regex:/[0-9]/',      // digit
+        'regex:/[@$!%*#?&^()_\-+=\[\]{};:\'",.<>\/\\|`~]/', // special
+    ],
         'logoPath'    => 'nullable|string|max:500',
         'logo_directory' => 'nullable|string|max:500',
         'registrationRequirements' => 'required|string|max:500',

@@ -33,7 +33,7 @@ function openRejectModal(id) {
 // Submit rejection
 async function submitRejection() {
   if (!rejectReason.value.trim()) {
-    showToast("Please enter a reason for rejection.", "error"); // use toast instead of alert
+    showToast("Please enter a reason for rejection.", "error");
     return;
   }
 
@@ -43,17 +43,23 @@ async function submitRejection() {
       { reason: rejectReason.value }
     );
 
-    // Remove the rejected org from the pending list
-    const rejectedOrg = organizations.value.find(o => o.organizationID === rejectOrgID.value);
-    organizations.value = organizations.value.filter(
-      (o) => o.organizationID !== rejectOrgID.value
+    // Remove from pending
+    const rejectedOrg = organizations.value.find(
+      o => o.organizationID === rejectOrgID.value
     );
 
-    // Add rejected org to rejectedOrganizations list
+    organizations.value = organizations.value.filter(
+      o => o.organizationID !== rejectOrgID.value
+    );
+
+    // Add to rejected list (local instant update)
     if (rejectedOrg) {
-      rejectedOrg.rejectionReason = res.data.rejectionReason; // include reason from API
+      rejectedOrg.rejectionReason = res.data.rejectionReason;
       rejectedOrganizations.value.push(rejectedOrg);
     }
+
+    // 🔥 Auto-refresh rejected organization list
+    await loadRejectedOrganizations();
 
     // Close modal
     rejectModal.value = false;
@@ -109,26 +115,20 @@ async function acceptOrg(id) {
       import.meta.env.VITE_API_BASE_URL + `/organization/${id}/approve`
     );
 
-    // Remove approved org from the pending list
-    organizations.value = organizations.value.filter((o) => o.organizationID !== id);
+    // Remove approved org from pending
+    organizations.value = organizations.value.filter(o => o.organizationID !== id);
 
-    // Optionally, add to approvedOrganizations list immediately
-    const approvedOrg = res.data.organization; // adjust if your API returns the org details
-    if (approvedOrg) {
-      approvedOrganizations.value.push(approvedOrg);
-    }
+    // Reload updated approved list
+    await loadApprovedOrganizations();
 
-    // Close modal if open
+    // Close details modal if open
     if (selectedOrg.value?.organizationID === id) {
       selectedOrg.value = null;
     }
 
-    // Show success toast
     showToast("Organization approved and email sent successfully!", "success");
   } catch (err) {
     console.error("Approval failed:", err.response?.data || err.message);
-
-    // Show error toast
     showToast("Failed to approve organization or send email.", "error");
   }
 }
@@ -212,14 +212,14 @@ onMounted(() => {
   <div class="min-h-screen p-3 rounded-lg font-poppins bg-gray-50">
     <!-- Main Area -->
     <div class="bg-white rounded-lg shadow p-6 flex-1">
-      <header class="sticky top-0 z-10 h-16 text-black flex items-center px-4">
+      <header class="h-16 bg-white text-black flex items-center px-4">
         <h1>
           <span class="block text-sm">Organization Account</span>
           <span class="block font-bold text-3xl">For Verification</span>
         </h1>
       </header>
 
-      <section class="mt-4">
+      <section class="mt-16">
         <div v-if="loadingPending" class="flex flex-col items-center justify-center space-y-2 py-10">
           <svg
             class="animate-spin h-10 w-10 text-blue-600"
@@ -264,9 +264,9 @@ onMounted(() => {
                 Accept
               </button>
 
-              <button
+             <button
                 @click.stop="openRejectModal(org.organizationID)"
-                class="px-4 py-2 text-black bg-gray-400 hover:bg-gray-500 rounded-lg transition"
+                class="px-4 py-2 text-white bg-red-500 hover:bg-red-600 rounded-lg transition"
               >
                 Reject
               </button>

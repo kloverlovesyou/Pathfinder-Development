@@ -320,46 +320,91 @@ async function openCareerModal(career) {
       return;
     }
 
-    console.log('Career Object:', career);
-    console.log('Parsed Career ID:', parsedCareerID);
+    console.log("Career Object:", career);
+    console.log("Parsed Career ID:", parsedCareerID);
 
     // Make API request
-    const res = await axios.get(import.meta.env.VITE_API_BASE_URL + `/careers/${parsedCareerID}/details`);
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + `/careers/${parsedCareerID}/details`
+    );
 
-    // Check if career exists in response
     if (!res.data || !res.data.career) {
       addToast("Career details not found.", "error");
       return;
     }
 
-    // Store main career + recommended trainings
+    // Store main career
     selectedCareerDetails.value = normalizeCareerDetails(res.data.career);
-    const rawTrainings = res.data.recommended_trainings || [];
-    
-    // Debug: Check what the API is returning
-    console.log("API Response - recommended_trainings:", rawTrainings);
-    rawTrainings.forEach((t, idx) => {
-      console.log(`Training ${idx}:`, {
-        title: t.title || t.trainingTitle,
-        trainingID: t.trainingID || t.TrainingID,
-        allKeys: Object.keys(t)
-      });
-    });
-    recommendedTrainings.value = aggregateRecommendedTrainings(rawTrainings);
-    console.log("After aggregation:", recommendedTrainings.value);
-    
+
     if (!selectedCareerDetails.value) {
       addToast("Career details not found.", "error");
       return;
     }
-    
+
+    // Normalize career closing date
+    const careerClosingDate = selectedCareerDetails.value.closingDate
+      ? new Date(selectedCareerDetails.value.closingDate)
+      : null;
+
+    if (careerClosingDate) {
+      careerClosingDate.setHours(0, 0, 0, 0);
+    }
+
+    const rawTrainings = res.data.recommended_trainings || [];
+    console.log("API Response - recommended_trainings:", rawTrainings);
+
+    // 🔥 FINAL FILTER (schedule-based, correct)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const filteredTrainings = careerClosingDate
+      ? rawTrainings.filter(training => {
+          const schedules = Array.isArray(training.schedules) && training.schedules.length
+            ? training.schedules
+            : training.schedule
+              ? [{ schedule: training.schedule }]
+              : [];
+
+          if (!schedules.length) return false;
+
+          return schedules.some(schedule => {
+            const raw =
+              schedule.schedule ||
+              schedule.Schedule ||
+              schedule.date;
+
+            if (!raw) return false;
+
+            const datePart = raw.includes("T")
+              ? raw.split("T")[0]
+              : raw.split(" ")[0];
+
+            const scheduleDate = new Date(datePart);
+            scheduleDate.setHours(0, 0, 0, 0);
+
+            // ✅ ONLY allow: today → career closing date
+            return (
+              scheduleDate >= today &&
+              scheduleDate <= careerClosingDate
+            );
+          });
+        })
+      : rawTrainings;
+
+    console.log("Career closing date:", careerClosingDate);
+    console.log("Filtered trainings:", filteredTrainings);
+
+    // Aggregate AFTER filtering
+    recommendedTrainings.value =
+      aggregateRecommendedTrainings(filteredTrainings);
+
+    console.log("After aggregation:", recommendedTrainings.value);
+
     showCareerPopup.value = true;
   } catch (error) {
     console.error("Error loading career details:", error);
-    
-    // Provide more specific error messages
+
     if (error.response) {
-      // Server responded with error status
       const status = error.response.status;
       if (status === 404) {
         addToast("Career not found.", "error");
@@ -369,10 +414,8 @@ async function openCareerModal(career) {
         addToast(`Failed to load career details (${status}).`, "error");
       }
     } else if (error.request) {
-      // Request was made but no response received
       addToast("Network error. Please check your connection.", "error");
     } else {
-      // Something else happened
       addToast("Failed to load career details.", "error");
     }
   }
@@ -1344,8 +1387,8 @@ watch(selectedCareerId, (newCareerId) => {
           </div>
 
           <div class="mt-4 mb-4">
-          <label for="career-select" class="block text-sm font-medium text-gray-700 mb-2">
-            Select Your Target Career
+          <label for="career-select" class="block text-sm font-medium text-gray-700 mb-2 texr-xs">
+            Select Your Matched Career
           </label>
           <div class="relative">
             <input
@@ -1447,8 +1490,8 @@ watch(selectedCareerId, (newCareerId) => {
           >
             <div class="flex items-center justify-between z-10 relative">
               <div class="flex-1">
-                <h3 class="font-semibold text-lg">{{ post.position }}</h3>
-                <p class="text-gray-600 text-sm">{{ post.organization || 'Unknown Organization' }}</p>
+                <h3 class="font-semibold text-sm">{{ post.position }}</h3>
+                <p class="text-gray-600 text-xs">{{ post.organization || 'Unknown Organization' }}</p>
               </div>
               <span v-if="post.careerID === selectedCareerId" class="ml-2 px-2 py-1 text-xs bg-blue-500 text-white rounded-full">
                 Target

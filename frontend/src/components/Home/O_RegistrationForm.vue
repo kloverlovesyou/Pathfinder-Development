@@ -432,8 +432,8 @@
             required
             placeholder="Enter your password"
             v-model="form.password"
-            pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
-            title="Must contain at least 8 characters, including a number, a lowercase and an uppercase letter"
+            pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9]).{8,}"
+            title="Must contain at least 8 characters, including a number, lowercase, uppercase, and a special character"
             maxlength="50"
           />
 
@@ -525,7 +525,7 @@
           <p class="validator-hint text-gray-500 text-sm mt-1">
             <i>
               *Must be at least 8 characters, and include a number, a lowercase
-              letter, and an uppercase letter.
+              letter, and an uppercase letter, and special character.
             </i>
           </p>
         </div>

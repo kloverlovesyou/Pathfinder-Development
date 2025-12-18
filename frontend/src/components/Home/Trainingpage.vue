@@ -199,8 +199,8 @@ const showModal = ref(false);
             @click="openTrainingModal(training)"
           >
             <div>
-              <h3 class="font-semibold">{{ training.title }}</h3>
-              <p class="text-gray-700">
+              <h3 class="font-semibold text-sm">{{ training.title }}</h3>
+              <p class="text-gray-700 text-xs">
                 {{ training.organization?.name || training.organizationName || 'Unknown' }}
               </p>
             </div>

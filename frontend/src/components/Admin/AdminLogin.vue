@@ -2,7 +2,7 @@
   <div class="font-poppins w-full flex items-center justify-center min-h-screen md:min-h-[600px] py-4 md:py-8">
     <!-- Main Card Container -->
     <div class="relative w-full max-w-4xl">
-      <div class="bg-white rounded-2xl shadow-2xl relative animated-border">
+      <div class="bg-white rounded-2xl shadow-sm relative">
         <div class="overflow-hidden rounded-2xl">
         <!-- Desktop: Horizontal Layout (side-by-side) -->
         <div class="hidden md:flex relative w-full h-[600px] md:h-[650px] overflow-hidden">
