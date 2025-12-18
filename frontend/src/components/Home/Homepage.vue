@@ -1387,7 +1387,7 @@ watch(selectedCareerId, (newCareerId) => {
           </div>
 
           <div class="mt-4 mb-4">
-          <label for="career-select" class="block text-sm font-medium text-gray-700 mb-2">
+          <label for="career-select" class="block text-sm font-medium text-gray-700 mb-2 texr-xs">
             Select Your Matched Career
           </label>
           <div class="relative">
@@ -1490,8 +1490,8 @@ watch(selectedCareerId, (newCareerId) => {
           >
             <div class="flex items-center justify-between z-10 relative">
               <div class="flex-1">
-                <h3 class="font-semibold text-lg">{{ post.position }}</h3>
-                <p class="text-gray-600 text-sm">{{ post.organization || 'Unknown Organization' }}</p>
+                <h3 class="font-semibold text-sm">{{ post.position }}</h3>
+                <p class="text-gray-600 text-xs">{{ post.organization || 'Unknown Organization' }}</p>
               </div>
               <span v-if="post.careerID === selectedCareerId" class="ml-2 px-2 py-1 text-xs bg-blue-500 text-white rounded-full">
                 Target

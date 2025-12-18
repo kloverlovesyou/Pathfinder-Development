@@ -213,8 +213,8 @@ async function fetchMyApplications() {
             class="p-4 mb-2 bg-blue-gray rounded-lg hover:bg-gray-300 transition cursor-pointer"
             @click="openModal(career)"
           >
-            <h3 class="font-semibold">{{ career.position }}</h3>
-            <p class="text-gray-700">
+            <h3 class="font-semibold text-sm">{{ career.position }}</h3>
+            <p class="text-gray-700 text-xs">
               {{ career.organizationName || career.organization || 'Unknown' }}
             </p>
           </div>
