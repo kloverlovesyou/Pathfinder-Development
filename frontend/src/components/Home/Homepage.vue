@@ -50,17 +50,34 @@ const conflictingTrainings = ref([]);
 const pendingRegistration = ref(null);
 const loadingPosts = ref(false);
 const organizationsChoiceTrainings = ref([]); // Store org's choice trainings for selected career
+const allOrganizationsChoiceCounts = ref({}); // Store org choice counts for all careers: {careerId: {attended: X, total: Y}}
 
 
 
 const filteredCareers = computed(() => {
   const query = careerSearch.value.trim().toLowerCase();
-  if (!query) {
-    return allCareers.value;
-  }
-  return allCareers.value.filter((career) =>
-    career.position?.toLowerCase().includes(query)
-  );
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let filtered = allCareers.value.filter((career) => {
+    // Exclude closed careers (where closing date has passed)
+    if (career.closingDate) {
+      const closingDate = new Date(career.closingDate);
+      closingDate.setHours(0, 0, 0, 0);
+      if (closingDate < today) {
+        return false; // Career is closed
+      }
+    }
+
+    // If there's a search query, also filter by position
+    if (query) {
+      return career.position?.toLowerCase().includes(query);
+    }
+
+    return true;
+  });
+
+  return filtered;
 });
 
 
@@ -198,19 +215,18 @@ const organizationsChoiceAttendanceCount = computed(() => {
   }
 
   const total = organizationsChoiceTrainings.value.length;
+
   // Count how many org's choice trainings the user has actually attended
-  // Check hasAttended flag which is based on actual schedule_attendance records
   const attended = organizationsChoiceTrainings.value.filter((training) => {
     const trainingID = training.trainingID || training.TrainingID;
     if (!trainingID) return false;
-    
+
     // Find the registration for this training
     const registration = myRegistrationsData.value.find(
       (reg) => reg.trainingID === Number(trainingID) || reg.trainingID === trainingID
     );
-    
+
     // Check if user has actually attended (has at least one schedule_attendance record)
-    // This is more reliable than checking registrationStatus
     if (registration) {
       // Use hasAttended flag if available (from backend), otherwise fallback to registrationStatus
       if (registration.hasAttended !== undefined) {
@@ -220,7 +236,7 @@ const organizationsChoiceAttendanceCount = computed(() => {
       const status = (registration.registrationStatus || '').toLowerCase().trim();
       return status === 'attended';
     }
-    
+
     return false;
   }).length;
 
@@ -253,6 +269,9 @@ async function fetchAllCareers() {
   try {
     const res = await axios.get(import.meta.env.VITE_API_BASE_URL + "/careers");
     allCareers.value = Array.isArray(res.data) ? res.data : [];
+
+    // Also fetch org choice counts for all careers
+    await fetchAllOrganizationsChoiceCounts();
   } catch (err) {
     console.error(err);
     addToast("Failed to fetch careers", "error");
@@ -871,7 +890,22 @@ async function fetchRecommendedCareers() {
     );
 
     // API SHOULD RETURN LIST OF CAREERS
-    posts.value = Array.isArray(res.data) ? res.data : [];
+    let recommendedCareers = Array.isArray(res.data) ? res.data : [];
+
+    // Filter out closed careers (where closing date has passed)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    recommendedCareers = recommendedCareers.filter((career) => {
+      if (!career.closingDate) return true; // Include careers without closing date
+
+      const closingDate = new Date(career.closingDate);
+      closingDate.setHours(0, 0, 0, 0);
+
+      return closingDate >= today; // Only include if closing date hasn't passed
+    });
+
+    posts.value = recommendedCareers;
 
   } catch (err) {
     console.error("Error fetching recommended careers:", err);
@@ -905,12 +939,105 @@ function handleCareerInput() {
   }, 500); // 500ms delay to simulate loading
 }
 
-function selectCareer(career) {
+// Helper function to get org choice count for a specific career
+async function getOrganizationsChoiceCount(careerId) {
+  try {
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + `/careers/${careerId}/details`
+    );
+
+    if (res.data && res.data.recommended_trainings) {
+      const rawTrainings = res.data.recommended_trainings || [];
+      const processedTrainings = aggregateRecommendedTrainings(rawTrainings);
+      const orgChoiceTrainings = processedTrainings.filter(t => t.isOrganizationsChoice === true);
+
+      // Count attended trainings
+      const attended = orgChoiceTrainings.filter((training) => {
+        const trainingID = training.trainingID || training.TrainingID;
+        if (!trainingID) return false;
+
+        const registration = myRegistrationsData.value.find(
+          (reg) => reg.trainingID === Number(trainingID) || reg.trainingID === trainingID
+        );
+
+        if (registration) {
+          if (registration.hasAttended !== undefined) {
+            return registration.hasAttended === true;
+          }
+          const status = (registration.registrationStatus || '').toLowerCase().trim();
+          return status === 'attended';
+        }
+
+        return false;
+      }).length;
+
+      return { attended, total: orgChoiceTrainings.length };
+    }
+  } catch (err) {
+    console.error("Error fetching org choice count for career:", careerId, err);
+  }
+
+  return { attended: 0, total: 0 };
+}
+
+async function fetchAllOrganizationsChoiceCounts() {
+  const counts = {};
+
+  // Fetch org choice counts for all careers
+  for (const career of allCareers.value) {
+    counts[career.careerID] = await getOrganizationsChoiceCount(career.careerID);
+  }
+
+  allOrganizationsChoiceCounts.value = counts;
+}
+
+async function selectCareer(career) {
   selectedCareerId.value = career.careerID;
   careerSearch.value = career.position;
   careerDropdownOpen.value = false;
   fetchRecommendedCareers();
-  fetchOrganizationsChoiceTrainings();
+
+  // Also fetch career details to get recommended trainings (including org choice)
+  try {
+    const res = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + `/careers/${career.careerID}/details`
+    );
+
+    if (res.data && res.data.recommended_trainings) {
+      // Process the recommended trainings to extract org choice ones
+      const rawTrainings = res.data.recommended_trainings || [];
+      const processedTrainings = aggregateRecommendedTrainings(rawTrainings);
+      // Store org choice trainings for the computed property
+      const orgChoiceTrainings = processedTrainings.filter(t => t.isOrganizationsChoice === true);
+      organizationsChoiceTrainings.value = orgChoiceTrainings;
+
+      // Also store in the all counts map
+      const attended = orgChoiceTrainings.filter((training) => {
+        const trainingID = training.trainingID || training.TrainingID;
+        if (!trainingID) return false;
+
+        const registration = myRegistrationsData.value.find(
+          (reg) => reg.trainingID === Number(trainingID) || reg.trainingID === trainingID
+        );
+
+        if (registration) {
+          if (registration.hasAttended !== undefined) {
+            return registration.hasAttended === true;
+          }
+          const status = (registration.registrationStatus || '').toLowerCase().trim();
+          return status === 'attended';
+        }
+
+        return false;
+      }).length;
+
+      allOrganizationsChoiceCounts.value[career.careerID] = { attended, total: orgChoiceTrainings.length };
+    }
+  } catch (err) {
+    console.error("Error fetching career details for org choice trainings:", err);
+    // Fallback to separate API call
+    fetchOrganizationsChoiceTrainings();
+  }
 }
 
 async function fetchOrganizationsChoiceTrainings() {
@@ -924,9 +1051,10 @@ async function fetchOrganizationsChoiceTrainings() {
     const res = await axios.get(
       import.meta.env.VITE_API_BASE_URL + `/careers/${selectedCareerId.value}/organizations-choice-trainings`
     );
+    console.log("API Response:", res.data);
     organizationsChoiceTrainings.value = Array.isArray(res.data) ? res.data : [];
     console.log("Organizationschoice trainings loaded:", organizationsChoiceTrainings.value.length, organizationsChoiceTrainings.value);
-    
+
     // Refresh registration data to ensure we have latest attendance info
     await fetchMyRegistrations();
   } catch (err) {
@@ -1366,24 +1494,6 @@ watch(selectedCareerId, (newCareerId) => {
               <h2 class="text-lg font-bold">Career-Training</h2>
               <h2 class="text-2xl font-bold">Matching Engine</h2>
             </div>
-            <!-- OrganizationsChoice Attendance Percentage -->
-            <div
-              v-if="selectedCareerId && organizationsChoiceAttendancePercentage !== null"
-              class="flex-shrink-0 px-3 sm:px-4 py-3 sm:py-4 bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-900 rounded-lg shadow-lg border-2 border-yellow-600 z-50 flex flex-col items-center justify-center w-[100px] h-[100px] sm:w-[180px] sm:h-[100px]"
-            >
-              <div class="text-[9px] sm:text-[10px] font-semibold mb-1 uppercase tracking-wide text-center">Career Progress</div>
-              <div class="text-2xl sm:text-3xl font-bold">{{ organizationsChoiceAttendancePercentage }}%</div>
-            </div>
-            <!-- Message when no target career is selected -->
-            <div
-              v-else-if="!selectedCareerId"
-              class="flex-shrink-0 px-3 sm:px-4 py-3 sm:py-4 bg-gray-100 text-gray-600 rounded-lg shadow-md border border-gray-300 z-50 flex flex-col items-center justify-center w-[100px] h-[100px] sm:w-[200px] sm:h-[100px]"
-            >
-              <div class="text-[9px] sm:text-[10px] font-semibold mb-1 text-gray-700 text-center">Target Career</div>
-              <div class="text-xs sm:text-sm leading-tight text-center">
-                Select a target career to see progress
-              </div>
-            </div>
           </div>
 
           <div class="mt-4 mb-4">
@@ -1488,14 +1598,26 @@ watch(selectedCareerId, (newCareerId) => {
             ]"
             @click="handleCardClick(post, index)"
           >
-            <div class="flex items-center justify-between z-10 relative">
+            <div class="flex items-center z-10 relative">
+              <!-- Left section: career info -->
               <div class="flex-1">
                 <h3 class="font-semibold text-sm">{{ post.position }}</h3>
                 <p class="text-gray-600 text-xs">{{ post.organization || 'Unknown Organization' }}</p>
               </div>
-              <span v-if="post.careerID === selectedCareerId" class="ml-2 px-2 py-1 text-xs bg-blue-500 text-white rounded-full">
-                Target
-              </span>
+
+              <!-- Center section: training info (always present for consistent layout) -->
+              <div class="flex-1 text-center">
+                <span v-if="allOrganizationsChoiceCounts[post.careerID] && allOrganizationsChoiceCounts[post.careerID].total > 0" class="text-gray-600 text-xs">
+                  <strong>Org's Choice Training:</strong> {{ allOrganizationsChoiceCounts[post.careerID].attended }}/{{ allOrganizationsChoiceCounts[post.careerID].total }} attended
+                </span>
+              </div>
+
+              <!-- Right section: matched badge (always present for consistent layout) -->
+              <div class="flex-1 text-right">
+                <span v-if="post.careerID === selectedCareerId" class="px-2 py-1 text-xs bg-blue-500 text-white rounded-full">
+                  Matched
+                </span>
+              </div>
             </div>
 
             <!-- Spinner overlay -->
