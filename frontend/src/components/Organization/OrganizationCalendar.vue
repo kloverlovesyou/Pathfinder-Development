@@ -159,20 +159,10 @@
 
                   <div v-if="date && getEventsByDate(date).length" class="events-list">
                     <div v-if="date && getEventTitles(date).length" class="events-list">
-                      <!-- Show only first 2 events -->
-                      <div v-for="(event, i) in getEventTitles(date).slice(0, 1)" :key="i" class="event-title"
-                        :class="event.type">
-                        {{ event.title }}
-                      </div>
-
-                      <!-- Show "+ Show more" if there are more than 2 events -->
-                      <div
-                        v-if="getEventTitles(date).length > 1"
-                        class="training-count"
-                        @click.stop="openEventDetailsByDate(date)"
-                      >
-                        {{ getEventTitles(date).length }}+
-                        {{ getEventTitles(date).length === 1 ? 'training' : 'trainings' }}
+                      <!-- Show event counts by type -->
+                      <div v-for="(eventGroup, i) in getEventCounts(date)" :key="i" class="event-count"
+                        :class="eventGroup.type" @click.stop="openEventDetailsByDate(date)">
+                        {{ eventGroup.icon }} {{ eventGroup.count }} {{ eventGroup.label }}
                       </div>
                     </div>
                   </div>
@@ -627,6 +617,36 @@ export default {
 
       return [...trainings, ...interviews];
     },
+    getEventCounts(date) {
+      if (!date) return [];
+
+      const formatted = this.formatDate(date);
+
+      const trainingsCount = this.trainings.filter(t => t.date === formatted).length;
+      const interviewsCount = this.scheduledInterviews.filter(i => i.date === formatted).length;
+
+      const counts = [];
+
+      if (trainingsCount > 0) {
+        counts.push({
+          type: "training",
+          icon: "🟦",
+          count: trainingsCount,
+          label: trainingsCount === 1 ? "Training" : "Trainings"
+        });
+      }
+
+      if (interviewsCount > 0) {
+        counts.push({
+          type: "interview",
+          icon: "🟥",
+          count: interviewsCount,
+          label: interviewsCount === 1 ? "Interview" : "Interviews"
+        });
+      }
+
+      return counts;
+    },
     getEventColor(date) {
       if (!date) return "";
       const formatted = this.formatDate(date);
@@ -884,6 +904,7 @@ const isToday = (date) => {
   height: 100vh;
   font-family: 'Poppins', sans-serif;
   background-color: #f4f4f4;
+  overflow: hidden;
 }
 
 .calendar-container {
@@ -974,9 +995,9 @@ const isToday = (date) => {
 .content {
   flex: 1;
   padding: 30px 40px;
-  overflow-y: auto;
   transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .topbar {
@@ -1237,25 +1258,33 @@ const isToday = (date) => {
   gap: 2px;
 }
 
-.event-title {
-  font-size: 0.7rem;
-  /* smaller text fits better */
-  line-height: 1rem;
+.event-count {
+  font-size: 11px;
+  /* smaller size for counts */
+  line-height: 1.2;
   word-wrap: break-word;
   white-space: normal;
   /* allows text to wrap */
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer;
+  padding: 2px 0;
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
 }
 
-.interview {
-  color: #ef4444;
-  /* emoji color fallback */
+.event-count:hover {
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
-.event-title.interview {
+.event-count.training {
+  color: #2563eb;
+  /* blue for trainings */
+}
+
+.event-count.interview {
   color: #ef4444;
-  font-weight: 600;
+  /* red for interviews */
 }
 
 /* Hamburger inside sidebar */
@@ -1316,6 +1345,7 @@ const isToday = (date) => {
   border-radius: 12px;
   padding: 1.2rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
 
 /* Right-side panel */
@@ -1325,6 +1355,9 @@ const isToday = (date) => {
   padding: 20px;
   flex: 1;
   min-width: 250px;
+  max-height: calc(92.4vh - 140px); /* Constrain height to viewport minus header/padding */
+  overflow-y: auto; /* Allow the panel itself to scroll */
+  overflow-x: hidden;
 }
 
 .calendar-side h3 {
@@ -1334,6 +1367,24 @@ const isToday = (date) => {
   color: #333;
   border-bottom: 1px solid #eee;
   padding-bottom: 8px;
+}
+
+.calendar-side::-webkit-scrollbar {
+  width: 6px;
+}
+
+.calendar-side::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.calendar-side::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.calendar-side::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 .event-details-card {
@@ -1456,7 +1507,6 @@ const isToday = (date) => {
 .event-title.training {
   color: #2563eb;
   /* blue */
-  font-size: 12px;
 }
 
 
@@ -1619,6 +1669,7 @@ const isToday = (date) => {
   .calendar-wrapper,
   .calendar-side {
     width: 100%;
+    max-height: calc(100vh - 120px); /* Smaller height for mobile */
   }
 
   .calendar-side {
@@ -1640,8 +1691,8 @@ const isToday = (date) => {
     font-size: 12px;
   }
 
-  .event-title {
-    font-size: 0.6rem;
+  .event-count {
+    font-size: 10px;
   }
 
   .calendar-header h2 {

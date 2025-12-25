@@ -414,6 +414,7 @@ Route::middleware('auth.custom')->group(function () {
 Route::get('/skills/{resumeID}', [SkillController::class, 'index']);
 Route::post('/skills', [SkillController::class, 'store']);
 Route::delete('/skills/{id}', [SkillController::class, 'destroy']);
+Route::get('/popular-skills', [SkillController::class, 'getPopularSkills']);
 
 Route::delete('/user', [ApplicantController::class, 'destroy']);
 Route::post('/update-password', [ApplicantController::class, 'updatePassword']);
