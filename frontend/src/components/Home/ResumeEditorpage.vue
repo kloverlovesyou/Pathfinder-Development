@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref, onMounted, onActivated } from "vue";
+import { reactive, ref, computed, onMounted, onActivated, nextTick } from "vue";
 import jsPDF from "jspdf";
 import axios from "axios";
 import { useRouter } from "vue-router";
@@ -390,26 +390,73 @@ async function loadSkills(resumeID) {
   }
 }
 
-async function addSkill() {
-  if (!newSkill.value.trim()) return;
-
+async function addSkill(skillName) {
   try {
-    const token = localStorage.getItem("token");
-    if (!resume.resumeID) {
-      showToast("Please save your resume first before adding skills.");
+    // If no skillName provided, use the input field value
+    const skillToAdd = skillName || newSkill.value.trim();
+
+    if (!skillToAdd || !skillToAdd.trim()) return;
+
+    // Check if skill already exists
+    const skillExists = resume.skills.some(s => {
+      const existingName = s.skillName || s;
+      return existingName && existingName.toLowerCase() === skillToAdd.toLowerCase();
+    });
+
+    if (skillExists) {
+      showToast("Skill already added!");
       return;
     }
 
+    const token = localStorage.getItem("token");
+    if (!token) {
+      showToast("Authentication required. Please log in again.");
+      return;
+    }
+
+    // If no resume exists yet, create one automatically
+    if (!resume.resumeID) {
+      console.log('No resume found, creating one automatically...');
+      try {
+        const response = await axios.post(
+          import.meta.env.VITE_API_BASE_URL + "/resume",
+          {
+            summary: resume.summary || "",
+            professionalLink: resume.url || "",
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        resume.resumeID = response.data.resumeID;
+        console.log('Resume created automatically with ID:', resume.resumeID);
+      } catch (resumeError) {
+        console.error("Error creating resume:", resumeError);
+        showToast("Failed to create resume. Please try saving your resume first.");
+        return;
+      }
+    }
+
+    console.log('Adding skill:', skillToAdd, 'to resume:', resume.resumeID);
+
     const { data } = await axios.post(
       import.meta.env.VITE_API_BASE_URL + "/skills",
-      { skillName: newSkill.value.trim(), resumeID: resume.resumeID },
+      { skillName: skillToAdd.trim(), resumeID: resume.resumeID },
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    resume.skills.push(data);
+    console.log('API response:', data);
+
+    if (data) {
+      // Use Vue.nextTick to ensure reactivity
+      await nextTick();
+      resume.skills = [...resume.skills, data];
+      console.log('Skills updated:', resume.skills.length, 'skills');
+      showToast("Skill added successfully!");
+    }
+
     newSkill.value = "";
   } catch (error) {
-    console.error("Error adding skill:", error.response?.data || error);
+    console.error("Error adding skill:", error);
+    showToast("Failed to add skill. Please try again.");
   }
 }
 
@@ -430,6 +477,70 @@ async function removeSkill(index) {
     console.error("Error removing skill:", error.response?.data || error);
   }
 }
+
+// Skills search and selection functions
+
+
+function handleSkillInput() {
+  const query = skillSearchQuery.value.trim();
+
+  if (query) {
+    // Filter suggestions based on input
+    filteredSuggestions.value = [
+      "JavaScript", "Python", "Java", "C++", "C#", "PHP", "Ruby", "Swift", "Kotlin", "Go",
+      "React", "Vue.js", "Angular", "Node.js", "Express", "Django", "Spring", "Laravel", "Rails",
+      "HTML", "CSS", "SASS", "Bootstrap", "Tailwind CSS", "Material UI",
+      "SQL", "MySQL", "PostgreSQL", "MongoDB", "Redis", "Firebase",
+      "AWS", "Azure", "Google Cloud", "Docker", "Kubernetes", "Git", "Jenkins", "CI/CD",
+      "Machine Learning", "Data Analysis", "TensorFlow", "PyTorch", "Pandas", "NumPy",
+      "Agile", "Scrum", "Project Management", "Leadership", "Communication", "Teamwork"
+    ].filter(skill => skill.toLowerCase().includes(query.toLowerCase())).slice(0, 8);
+    showSuggestions.value = true;
+  } else {
+    filteredSuggestions.value = [];
+    showSuggestions.value = true; // Show popular skills when input is empty
+  }
+}
+
+function handleSkillFocus() {
+  showSuggestions.value = true;
+  if (!skillSearchQuery.value.trim()) {
+    filteredSuggestions.value = [];
+  } else {
+    handleSkillInput();
+  }
+}
+
+function handleSkillBlur() {
+  // Delay hiding to allow click events on suggestions
+  setTimeout(() => {
+    showSuggestions.value = false;
+  }, 150);
+}
+
+function addCurrentSkill() {
+  const query = skillSearchQuery.value.trim();
+  if (!query) return;
+
+  addSkill(query);
+  skillSearchQuery.value = '';
+  showSuggestions.value = false;
+}
+
+function selectSkill(skillName) {
+  addSkill(skillName);
+  skillSearchQuery.value = '';
+  showSuggestions.value = false;
+}
+
+function hideSuggestions() {
+  showSuggestions.value = false;
+}
+
+
+
+
+
 
 // --- PDF Generation (unchanged from your version) ---
 function sectionHeader(doc, title, x, y, pageWidth, margin) {
@@ -692,12 +803,26 @@ function closeModal() {
   isModalOpen.value = false;
 }
 
+// Fetch popular skills from organizations
+async function fetchPopularSkills() {
+  try {
+    const { data } = await axios.get(
+      import.meta.env.VITE_API_BASE_URL + "/popular-skills"
+    );
+    popularSkills.value = Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Error fetching popular skills:', error);
+    popularSkills.value = [];
+  }
+}
+
 // --- Autofill + Load Data ---
 onMounted(async () => {
   await loadUserData(); // Fetch user data from backend
   await loadResume();
   await activityStore.fetchCounts();
   await fetchSelectedCertificates(); // Ensure certificates are loaded
+  await fetchPopularSkills(); // Load popular skills for dropdown
 });
 
 const logout = () => {
@@ -707,6 +832,14 @@ const logout = () => {
 };
 
 const selectedCertificates = ref([]);
+
+
+
+// Skills search and selection with categories for better matchmaking
+const skillSearchQuery = ref("");
+const showSuggestions = ref(false);
+const filteredSuggestions = ref([]);
+const popularSkills = ref([]);
 
 async function fetchSelectedCertificates() {
   const token = localStorage.getItem("token");
@@ -1087,9 +1220,7 @@ onActivated(async () => {
 
               <!-- Institution Address -->
               <div>
-                <label class="block font-medium mb-1"
-                  >Institution Address <span class="text-red-500">*</span></label
-                >
+                <label class="block font-medium mb-1">Institution Address <span class="text-red-500">*</span></label>
                 <input
                   v-model="newEducation.institutionAddress"
                   type="text"
@@ -1159,44 +1290,84 @@ onActivated(async () => {
           <div class="border rounded p-4 space-y-3">
             <label class="text-lg font-semibold">Skills</label>
 
-            <div class="flex gap-2">
-              <!-- 👇 use newSkill, not resume.skills -->
-              <div class="flex-1">
-                <input
-                  v-model="newSkill"
-                  type="text"
-                  placeholder="Type a skill"
-                  class="input-field w-full border rounded p-2"
-                  @keyup.enter="addSkill"
-                  maxlength="100"
-                />
-                <p v-if="newSkill.length >= 100" class="text-xs text-red-500 mt-1">
-                  Maximum character limit (100) reached
-                </p>
-                <p v-else-if="newSkill.length > 0" class="text-xs text-gray-500 mt-1">
-                  {{ 100 - newSkill.length }} characters remaining
-                </p>
+            <!-- Skill Search and Add -->
+            <div class="relative">
+              <div class="flex gap-2">
+                <div class="flex-1 relative">
+                  <input
+                    v-model="skillSearchQuery"
+                    type="text"
+                    placeholder="Type to search skills or add custom..."
+                    class="input-field w-full border rounded p-2"
+                    @input="handleSkillInput"
+                    @focus="handleSkillFocus"
+                    @blur="handleSkillBlur"
+                    @keyup.enter="addCurrentSkill"
+                    @keyup.escape="hideSuggestions"
+                    maxlength="100"
+                  />
+
+                  <!-- Skills Suggestions Dropdown -->
+                  <div
+                    v-if="showSuggestions"
+                    class="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-b-md shadow-lg z-10 max-h-48 overflow-y-auto"
+                  >
+                    <!-- Filtered search results -->
+                    <div v-if="filteredSuggestions.length > 0">
+                      <div
+                        v-for="skill in filteredSuggestions"
+                        :key="'filtered-' + skill"
+                        @mousedown="selectSkill(skill)"
+                        class="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                      >
+                        {{ skill }}
+                      </div>
+                    </div>
+
+                    <!-- Popular skills when no search -->
+                    <div v-else-if="!skillSearchQuery.trim() && popularSkills.length > 0">
+                      <div class="px-3 py-2 text-xs text-gray-500 border-b border-gray-100">
+                        Popular skills from organizations:
+                      </div>
+                      <div
+                        v-for="(skill, index) in popularSkills.slice(0, 8)"
+                        :key="'popular-' + index"
+                        @mousedown="selectSkill(skill.tagName)"
+                        class="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                      >
+                        {{ skill.tagName }}
+                      </div>
+                    </div>
+
+                    <!-- Add custom skill option -->
+                    <div v-if="skillSearchQuery.trim() && filteredSuggestions.length === 0" class="px-3 py-2 text-sm text-blue-600 border-t border-gray-100">
+                      ➕ Press Enter or click Add to add "{{ skillSearchQuery }}" as custom skill
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  @click="addCurrentSkill"
+                  :disabled="!skillSearchQuery.trim()"
+                  class="px-4 py-2 bg-customButton text-white rounded hover:bg-dark-slate disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
+                >
+                  Add Skill
+                </button>
               </div>
-              <button
-                type="button"
-                @click="addSkill"
-                class="w-8 h-8 flex items-center justify-center rounded-full bg-customButton text-white hover:bg-dark-slate"
-              >
-                +
-              </button>
             </div>
 
-            <div class="flex flex-wrap gap-2 mt-2">
+            <!-- Selected Skills Tags -->
+            <div class="flex flex-wrap gap-2 mt-3" v-if="resume.skills.length">
               <span
                 v-for="(skill, index) in resume.skills"
                 :key="index"
-                class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full flex items-center gap-2"
+                class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full flex items-center gap-2 text-sm"
               >
                 {{ skill.skillName || skill }}
                 <button
                   type="button"
                   @click="removeSkill(index)"
-                  class="text-blue-500 hover:text-red-500"
+                  class="text-blue-500 hover:text-red-500 text-sm"
                 >
                   ✕
                 </button>
