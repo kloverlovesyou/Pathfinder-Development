@@ -4,6 +4,7 @@ import jsPDF from "jspdf";
 import axios from "axios";
 import { useRouter } from "vue-router";
 import { useActivityStore } from "@/stores/activityStore";
+import { watch } from "vue";
 
 const isModalOpen = ref(false);
 const pdfUrl = ref(null);
@@ -389,6 +390,19 @@ async function loadSkills(resumeID) {
     console.error("Error loading skills:", error.response?.data || error);
   }
 }
+
+watch(
+  () => resume.skills,
+  (newSkills) => {
+    localStorage.setItem(
+      "selectedSkills",
+      JSON.stringify(
+        newSkills.map(s => s.skillName || s)
+      )
+    );
+  },
+  { deep: true }
+);
 
 async function addSkill(skillName) {
   try {
@@ -823,6 +837,8 @@ onMounted(async () => {
   await activityStore.fetchCounts();
   await fetchSelectedCertificates(); // Ensure certificates are loaded
   await fetchPopularSkills(); // Load popular skills for dropdown
+
+
 });
 
 const logout = () => {
