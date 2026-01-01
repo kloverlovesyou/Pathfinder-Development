@@ -1666,9 +1666,32 @@ watch(selectedCareerId, (newCareerId) => {
           <div v-else-if="posts.length === 0 && selectedSkills.length > 0" class="text-center text-gray-500 py-8">
             No recommended careers found based on your skills.
           </div>
-          <div v-else-if="posts.length === 0" class="text-center text-gray-500 py-8">
-            Please add skills to your resume to see recommended careers.
-          </div>
+
+          <div v-else-if="posts.length === 0" class="flex flex-col justify-center items-center py-8">
+            <svg
+              class="animate-spin h-10 w-10 text-blue-600 mb-2"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v8H4z"
+              ></path>
+            </svg>
+              <span class="text-gray-500 text-sm">
+                Loading career recommendation based on your skills.
+              </span>
+            </div>
 
           <!-- Career posts -->
           <div
