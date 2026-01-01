@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted, computed, watch } from "vue";
+import { ref, reactive, onMounted, onUnmounted, computed, watch } from "vue";
 import "cally"; // Calendar library
 import axios from "axios";
 import CalendarSidebar from "@/components/Layout/CalendarSidebar.vue";
@@ -879,41 +879,32 @@ function handleFileUpload(e) {
 }
 
 async function fetchRecommendedCareers() {
-  if (!selectedSkills.value.length) {
+  if (!selectedCareerId.value) {
     posts.value = [];
     return;
   }
 
-  loadingPosts.value = true;
-
+  loadingPosts.value = true; // start loading
   try {
-    // 🔥 fetch ALL careers (or reuse already fetched ones)
     const res = await axios.get(
-      import.meta.env.VITE_API_BASE_URL + "/careers"
+      import.meta.env.VITE_API_BASE_URL +
+      `/careers/recommend/${selectedCareerId.value}`
     );
 
+    // API SHOULD RETURN LIST OF CAREERS
     let recommendedCareers = Array.isArray(res.data) ? res.data : [];
 
-    // ✅ Match careers by SKILLS / TAGS
-    recommendedCareers = recommendedCareers.filter(career =>
-      career.tags?.some(tag =>
-        selectedSkills.value.some(skill =>
-          tag.toLowerCase() === skill.toLowerCase()
-        )
-      )
-    );
-
-    // ✅ Filter out closed careers
+    // Filter out closed careers (where closing date has passed)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    recommendedCareers = recommendedCareers.filter(career => {
-      if (!career.closingDate) return true;
+    recommendedCareers = recommendedCareers.filter((career) => {
+      if (!career.closingDate) return true; // Include careers without closing date
 
       const closingDate = new Date(career.closingDate);
       closingDate.setHours(0, 0, 0, 0);
 
-      return closingDate >= today;
+      return closingDate >= today; // Only include if closing date hasn't passed
     });
 
     posts.value = recommendedCareers;
@@ -923,7 +914,46 @@ async function fetchRecommendedCareers() {
     posts.value = [];
     addToast("Failed to load recommended careers", "error");
   } finally {
-    loadingPosts.value = false;
+    loadingPosts.value = false; // stop loading
+  }
+}
+
+// Fetch recommended careers based on user's skills
+async function fetchRecommendedCareersBySkills() {
+  // Get skills from localStorage or selectedSkills ref
+  const storedSkills = localStorage.getItem("selectedSkills");
+  const skills = storedSkills ? JSON.parse(storedSkills) : selectedSkills.value || [];
+  
+  // If no skills, show empty list
+  if (!skills || skills.length === 0) {
+    posts.value = [];
+    return;
+  }
+
+  loadingPosts.value = true; // start loading
+  try {
+    // Call the skills-based recommendation endpoint
+    const res = await axios.post(
+      import.meta.env.VITE_API_BASE_URL + "/careers/recommend-by-skills",
+      { skills: skills }
+    );
+
+    // API SHOULD RETURN LIST OF CAREERS (already filtered by backend)
+    let recommendedCareers = Array.isArray(res.data) ? res.data : [];
+
+    // Store the recommended careers
+    posts.value = recommendedCareers;
+
+  } catch (err) {
+    console.error("Error fetching recommended careers by skills:", err);
+    posts.value = [];
+    
+    // Only show error toast if it's not a 404 or empty response
+    if (err.response?.status !== 404) {
+      addToast("Failed to load recommended careers", "error");
+    }
+  } finally {
+    loadingPosts.value = false; // stop loading
   }
 }
 
@@ -1475,6 +1505,30 @@ function formatDate(d) {
   return new Date(d).toLocaleDateString("en-US", { dateStyle: "long" });
 }
 
+// Handle storage event (fires when localStorage is changed in another tab/window)
+function handleStorageChange(e) {
+  if (e.key === 'selectedSkills') {
+    try {
+      const newSkills = e.newValue ? JSON.parse(e.newValue) : [];
+      selectedSkills.value = newSkills;
+      fetchRecommendedCareersBySkills();
+    } catch (error) {
+      console.error('Error parsing skills from storage:', error);
+    }
+  }
+}
+
+// Handle custom event (for same-window updates)
+function handleSkillsUpdate() {
+  const storedSkills = localStorage.getItem("selectedSkills");
+  try {
+    selectedSkills.value = storedSkills ? JSON.parse(storedSkills) : [];
+    fetchRecommendedCareersBySkills();
+  } catch (error) {
+    console.error('Error parsing skills from storage:', error);
+  }
+}
+
 // ------------------ LIFECYCLE ------------------
 onMounted(async () => {
   await fetchAllCareers();
@@ -1485,7 +1539,20 @@ onMounted(async () => {
   const storedSkills = localStorage.getItem("selectedSkills");
   selectedSkills.value = storedSkills ? JSON.parse(storedSkills) : [];
 
-    fetchRecommendedCareers(); // 🔥 auto-run
+  // 🔥 Fetch recommended careers based on skills
+  fetchRecommendedCareersBySkills();
+
+  // Listen for storage changes (when skills are updated in ResumeEditorpage.vue)
+  window.addEventListener('storage', handleStorageChange);
+  
+  // Also listen for custom event for same-window updates
+  window.addEventListener('skillsUpdated', handleSkillsUpdate);
+});
+
+// Cleanup event listeners on unmount
+onUnmounted(() => {
+  window.removeEventListener('storage', handleStorageChange);
+  window.removeEventListener('skillsUpdated', handleSkillsUpdate);
 });
 
 // Watch for changes in selected career to fetch organizationschoice trainings
@@ -1566,126 +1633,86 @@ watch(selectedCareerId, (newCareerId) => {
         </div>
         </div>
 
-<!-- Scrollable Posts -->
-<div class="flex-1 overflow-y-auto space-y-4 pb-4 pt-4 relative z-0">
+        <!-- Scrollable Posts -->
+        <div
+            class="flex-1 overflow-y-auto space-y-4 pb-4 pt-4 relative z-0"
+          >
+          <!-- Loading State -->
+          <div v-if="loadingPosts" class="flex justify-center items-center py-8">
+            <svg
+            class="animate-spin h-10 w-10 text-blue-600"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8H4z"
+            ></path>
+          </svg>
+            <span class="ml-2 text-gray-500 text-sm">Loading recommended careers...</span>
+          </div>
 
-  <!-- Loading State -->
-  <div v-if="loadingPosts" class="flex justify-center items-center py-8">
-    <svg
-      class="animate-spin h-10 w-10 text-blue-600"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <circle
-        class="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        stroke-width="4"
-      ></circle>
-      <path
-        class="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8v8H4z"
-      ></path>
-    </svg>
-    <span class="ml-2 text-gray-500 text-sm">
-      Loading recommended careers...
-    </span>
-  </div>
+          <!-- No posts messages -->
+          <div v-else-if="posts.length === 0 && selectedSkills.length > 0" class="text-center text-gray-500 py-8">
+            No recommended careers found based on your skills.
+          </div>
+          <div v-else-if="posts.length === 0" class="text-center text-gray-500 py-8">
+            Please add skills to your resume to see recommended careers.
+          </div>
 
-  <!-- No recommended careers -->
-  <div
-    v-else-if="posts.length === 0"
-    class="text-center text-gray-500 py-8"
-  >
-    No recommended careers found based on your skills.
-  </div>
+          <!-- Career posts -->
+          <div
+            v-else
+            v-for="(post, index) in posts"
+            :key="post.careerID + '-' + index"
+            class="relative p-4 rounded-lg cursor-pointer transition"
+            :class="[
+              careerDropdownOpen ? 'bg-blue-gray' : 'bg-blue-gray hover:bg-gray-300',
+              loadingCardId === (post.careerID + '-' + index) ? 'opacity-50' : ''
+            ]"
+            @click="handleCardClick(post, index)"
+          >
+            <div class="flex items-center z-10 relative">
+              <!-- Left section: career info -->
+              <div class="flex-1">
+                <h3 class="font-semibold text-sm">{{ post.position }}</h3>
+                <p class="text-gray-600 text-xs">{{ post.organization || 'Unknown Organization' }}</p>
+              </div>
 
-  <!-- Career posts -->
-  <div
-    v-else
-    v-for="(post, index) in posts"
-    :key="post.careerID + '-' + index"
-    class="relative p-4 rounded-lg cursor-pointer transition"
-    :class="[
-      careerDropdownOpen
-        ? 'bg-blue-gray'
-        : 'bg-blue-gray hover:bg-gray-300',
-      loadingCardId === (post.careerID + '-' + index)
-        ? 'opacity-50'
-        : ''
-    ]"
-    @click="handleCardClick(post, index)"
-  >
-    <div class="flex items-center z-10 relative">
+              <!-- Center section: training info (always present for consistent layout) -->
+              <div class="flex-1 text-center">
+                <span v-if="allOrganizationsChoiceCounts[post.careerID] && allOrganizationsChoiceCounts[post.careerID].total > 0" class="text-gray-600 text-xs">
+                  <strong>Org's Choice Training:</strong> {{ allOrganizationsChoiceCounts[post.careerID].attended }}/{{ allOrganizationsChoiceCounts[post.careerID].total }} attended
+                </span>
+              </div>
 
-      <!-- Left: Career info -->
-      <div class="flex-1">
-        <h3 class="font-semibold text-sm">
-          {{ post.position }}
-        </h3>
-        <p class="text-gray-600 text-xs">
-          {{ post.organization || 'Unknown Organization' }}
-        </p>
-      </div>
+              <!-- Right section: matched badge (always present for consistent layout) -->
+              <div class="flex-1 text-right">
+                <span v-if="post.careerID === selectedCareerId" class="px-2 py-1 text-xs bg-blue-500 text-white rounded-full">
+                  Matched
+                </span>
+              </div>
+            </div>
 
-      <!-- Center: Training info -->
-      <div class="flex-1 text-center">
-        <span
-          v-if="
-            allOrganizationsChoiceCounts[post.careerID] &&
-            allOrganizationsChoiceCounts[post.careerID].total > 0
-          "
-          class="text-gray-600 text-xs"
-        >
-          <strong>Org's Choice Training:</strong>
-          {{ allOrganizationsChoiceCounts[post.careerID].attended }}
-          /
-          {{ allOrganizationsChoiceCounts[post.careerID].total }}
-          attended
-        </span>
-      </div>
-
-      <!-- Right: Recommended badge -->
-      <div class="flex-1 text-right">
-        <span class="px-2 py-1 text-xs bg-blue-500 text-white rounded-full">
-          Recommended
-        </span>
-      </div>
-    </div>
-
-    <!-- Spinner overlay -->
-    <div
-      v-if="loadingCardId === (post.careerID + '-' + index)"
-      class="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center rounded-lg z-0"
-    >
-      <svg
-        class="animate-spin h-6 w-6 text-gray-500"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle
-          class="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          stroke-width="4"
-        ></circle>
-        <path
-          class="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
-        ></path>
-      </svg>
-    </div>
-
-  </div>
-</div>
+            <!-- Spinner overlay -->
+            <div v-if="loadingCardId === (post.careerID + '-' + index)" class="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center rounded-lg z-0">
+              <svg class="animate-spin h-6 w-6 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
       </main>
     </div>
 

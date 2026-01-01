@@ -144,6 +144,7 @@ Route::get('/barangays/{cityCode}', function ($cityCode) {
 Route::get('/careers', [CareerRecommendationController::class, 'index']);
 Route::get('/careers/recommend/{careerID}', [CareerRecommendationController::class, 'recommendedCareers'])
      ->name('careers.recommendation');
+Route::post('/careers/recommend-by-skills', [CareerRecommendationController::class, 'recommendCareersBySkills']);
 Route::get('/careers/{careerID}/trainings', [CareerRecommendationController::class, 'recommendedTrainings']);
 Route::get('/careers/{careerID}/details', [CareerRecommendationController::class, 'careerDetails']);
 Route::get('/careers/{careerID}/organizations-choice-trainings', [CareerRecommendationController::class, 'getOrganizationsChoiceTrainings']);

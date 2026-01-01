@@ -394,12 +394,13 @@ async function loadSkills(resumeID) {
 watch(
   () => resume.skills,
   (newSkills) => {
+    const skillsArray = newSkills.map(s => s.skillName || s);
     localStorage.setItem(
       "selectedSkills",
-      JSON.stringify(
-        newSkills.map(s => s.skillName || s)
-      )
+      JSON.stringify(skillsArray)
     );
+    // Dispatch custom event to notify other components (same window)
+    window.dispatchEvent(new Event('skillsUpdated'));
   },
   { deep: true }
 );

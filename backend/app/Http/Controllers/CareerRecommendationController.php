@@ -315,4 +315,98 @@ class CareerRecommendationController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Get recommended careers based on user skills
+     * Skills are matched against career tags (tagName)
+     */
+    public function recommendCareersBySkills(Request $request)
+    {
+        try {
+            $skills = $request->input('skills', []);
+            
+            // If no skills provided, return empty array
+            if (empty($skills) || !is_array($skills)) {
+                return response()->json([]);
+            }
+
+            // Normalize skills to lowercase for matching
+            $normalizedSkills = array_map('strtolower', array_map('trim', $skills));
+            
+            // Get all tags that match the skills (case-insensitive match)
+            $tags = DB::table('tag')->get();
+            $matchingTagIDs = [];
+            foreach ($tags as $tag) {
+                $tagName = strtolower(trim($tag->tagName ?? $tag->TagName ?? ''));
+                if (in_array($tagName, $normalizedSkills)) {
+                    $matchingTagIDs[] = $tag->TagID;
+                }
+            }
+
+            if (empty($matchingTagIDs)) {
+                return response()->json([]);
+            }
+
+            // Get careers that have at least one matching tag
+            // Join with career_tag to find careers with matching tags
+            $careers = DB::table('career as c')
+                ->join('organization as o', 'c.organizationID', '=', 'o.organizationID')
+                ->join('career_tag as ct', 'c.careerID', '=', 'ct.careerID')
+                ->whereIn('ct.TagID', $matchingTagIDs)
+                ->select(
+                    'c.careerID',
+                    'c.position',
+                    'c.placeOfAssignment',
+                    'c.details',
+                    'c.qualificationStandard',
+                    'c.pdf_directory',
+                    'c.postingDate',
+                    'c.closingDate',
+                    'c.trainingsAttendedPercentage',
+                    'c.organizationID',
+                    'o.name as organization',
+                    'o.name as organizationName',
+                    DB::raw('COUNT(DISTINCT ct.TagID) as matchedTagsCount')
+                )
+                ->groupBy(
+                    'c.careerID',
+                    'c.position',
+                    'c.placeOfAssignment',
+                    'c.details',
+                    'c.qualificationStandard',
+                    'c.pdf_directory',
+                    'c.postingDate',
+                    'c.closingDate',
+                    'c.trainingsAttendedPercentage',
+                    'c.organizationID',
+                    'o.name'
+                )
+                ->orderByDesc('matchedTagsCount')
+                ->orderByDesc('c.postingDate')
+                ->get();
+
+            // Filter out closed careers (where closing date has passed)
+            $today = now()->startOfDay();
+            $careers = $careers->filter(function ($career) use ($today) {
+                if (!$career->closingDate) {
+                    return true; // Include careers without closing date
+                }
+                $closingDate = \Carbon\Carbon::parse($career->closingDate)->startOfDay();
+                return $closingDate >= $today;
+            });
+
+            return response()->json($careers->values());
+        } catch (\Exception $e) {
+            Log::error('Failed to get recommended careers by skills', [
+                'skills' => $skills ?? [],
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'error' => 'Failed to load recommended careers',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
