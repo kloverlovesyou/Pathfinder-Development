@@ -352,7 +352,7 @@ class CareerRecommendationController extends Controller
             $careers = DB::table('career as c')
                 ->join('organization as o', 'c.organizationID', '=', 'o.organizationID')
                 ->join('career_tag as ct', 'c.careerID', '=', 'ct.careerID')
-                ->whereIn('ct.TagID', $matchingTagIDs)
+                ->whereRaw('"ct"."TagID" IN (' . implode(',', array_fill(0, count($matchingTagIDs), '?')) . ')', $matchingTagIDs)
                 ->select(
                     'c.careerID',
                     'c.position',
@@ -366,7 +366,7 @@ class CareerRecommendationController extends Controller
                     'c.organizationID',
                     'o.name as organization',
                     'o.name as organizationName',
-                    DB::raw('COUNT(DISTINCT ct.TagID) as matchedTagsCount')
+                    DB::raw('COUNT(DISTINCT "ct"."TagID") as "matchedTagsCount"')
                 )
                 ->groupBy(
                     'c.careerID',
