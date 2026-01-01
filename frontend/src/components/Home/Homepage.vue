@@ -55,55 +55,32 @@ const organizationsChoiceTrainings = ref([]); // Store org's choice trainings fo
 const allOrganizationsChoiceCounts = ref({}); // Store org choice counts for all careers: {careerId: {attended: X, total: Y}}
 
 
-const filteredCareers = computed(() => {
-  if (!allCareers.value) return [];
 
-  const query = careerSearch.value?.trim().toLowerCase() || '';
+const filteredCareers = computed(() => {
+  const query = careerSearch.value.trim().toLowerCase();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  let filtered = allCareers.value
-    .filter((career) => {
-      // Skip if no careerID
-      if (!career.careerID) return false;
-
-      // Exclude closed careers
-      if (career.closingDate) {
-        const closingDate = new Date(career.closingDate);
-        closingDate.setHours(0, 0, 0, 0);
-        if (closingDate < today) return false;
+  let filtered = allCareers.value.filter((career) => {
+    // Exclude closed careers (where closing date has passed)
+    if (career.closingDate) {
+      const closingDate = new Date(career.closingDate);
+      closingDate.setHours(0, 0, 0, 0);
+      if (closingDate < today) {
+        return false; // Career is closed
       }
+    }
 
-      // Filter by search query
-      if (query) {
-        return career.position?.toLowerCase().includes(query);
-      }
+    // If there's a search query, also filter by position
+    if (query) {
+      return career.position?.toLowerCase().includes(query);
+    }
 
-      return true;
-    })
-    .map((career) => ({
-      ...career,
-      matchedSkills: career.matchedSkills || [],
-    }));
-
-  // Sort by matchedSkills descending
-  filtered.sort((a, b) => (b.matchedSkills.length || 0) - (a.matchedSkills.length || 0));
-
-  // Prepend selectedCareer safely
-  if (
-    selectedCareer.value &&
-    selectedCareer.value.careerID &&
-    !filtered.some(c => c.careerID === selectedCareer.value.careerID)
-  ) {
-    filtered = [
-      { ...selectedCareer.value, matchedSkills: selectedCareer.value.matchedSkills || [] },
-      ...filtered
-    ];
-  }
+    return true;
+  });
 
   return filtered;
 });
-
 
 
 const selectedTrainingRegistered = computed(() =>
@@ -1594,27 +1571,52 @@ watch(selectedCareerId, (newCareerId) => {
 
   <!-- Loading State -->
   <div v-if="loadingPosts" class="flex justify-center items-center py-8">
-    <svg class="animate-spin h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+    <svg
+      class="animate-spin h-10 w-10 text-blue-600"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <circle
+        class="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        stroke-width="4"
+      ></circle>
+      <path
+        class="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8v8H4z"
+      ></path>
     </svg>
-    <span class="ml-2 text-gray-500 text-sm">Loading recommended careers...</span>
+    <span class="ml-2 text-gray-500 text-sm">
+      Loading recommended careers...
+    </span>
   </div>
 
   <!-- No recommended careers -->
-  <div v-else-if="filteredCareers.length === 0" class="text-center text-gray-500 py-8">
+  <div
+    v-else-if="posts.length === 0"
+    class="text-center text-gray-500 py-8"
+  >
     No recommended careers found based on your skills.
   </div>
 
-  <!-- Career cards -->
+  <!-- Career posts -->
   <div
     v-else
-    v-for="(post, index) in filteredCareers"
+    v-for="(post, index) in posts"
     :key="post.careerID + '-' + index"
     class="relative p-4 rounded-lg cursor-pointer transition"
     :class="[
-      careerDropdownOpen ? 'bg-blue-gray' : 'bg-blue-gray hover:bg-gray-300',
-      loadingCardId === (post.careerID + '-' + index) ? 'opacity-50' : ''
+      careerDropdownOpen
+        ? 'bg-blue-gray'
+        : 'bg-blue-gray hover:bg-gray-300',
+      loadingCardId === (post.careerID + '-' + index)
+        ? 'opacity-50'
+        : ''
     ]"
     @click="handleCardClick(post, index)"
   >
@@ -1622,49 +1624,66 @@ watch(selectedCareerId, (newCareerId) => {
 
       <!-- Left: Career info -->
       <div class="flex-1">
-        <h3 class="font-semibold text-sm">{{ post.position }}</h3>
-        <p class="text-gray-600 text-xs">{{ post.organization || 'Unknown Organization' }}</p>
-
-        <!-- Matched skills count for recommended careers -->
-        <p v-if="post.matchedSkills?.length && (!selectedCareer || post.careerID !== selectedCareer.careerID)"
-           class="text-xs text-gray-500 mt-1">
-          {{ post.matchedSkills.length }} skill(s) matched
+        <h3 class="font-semibold text-sm">
+          {{ post.position }}
+        </h3>
+        <p class="text-gray-600 text-xs">
+          {{ post.organization || 'Unknown Organization' }}
         </p>
       </div>
 
       <!-- Center: Training info -->
       <div class="flex-1 text-center">
-        <span v-if="allOrganizationsChoiceCounts[post.careerID] && allOrganizationsChoiceCounts[post.careerID].total > 0"
-              class="text-gray-600 text-xs">
+        <span
+          v-if="
+            allOrganizationsChoiceCounts[post.careerID] &&
+            allOrganizationsChoiceCounts[post.careerID].total > 0
+          "
+          class="text-gray-600 text-xs"
+        >
           <strong>Org's Choice Training:</strong>
-          {{ allOrganizationsChoiceCounts[post.careerID].attended }}/{{ allOrganizationsChoiceCounts[post.careerID].total }} attended
+          {{ allOrganizationsChoiceCounts[post.careerID].attended }}
+          /
+          {{ allOrganizationsChoiceCounts[post.careerID].total }}
+          attended
         </span>
       </div>
 
-      <!-- Right: Badge -->
+      <!-- Right: Recommended badge -->
       <div class="flex-1 text-right">
-        <!-- Target Career badge -->
-        <span v-if="selectedCareer && post.careerID === selectedCareer.careerID"
-              class="px-2 py-1 text-xs bg-green-500 text-white rounded-full">
-          Target Career
-        </span>
-
-        <!-- Matched badge for recommended careers -->
-        <span v-else-if="post.matchedSkills?.length"
-              class="px-2 py-1 text-xs bg-blue-500 text-white rounded-full">
-          Matched
+        <span class="px-2 py-1 text-xs bg-blue-500 text-white rounded-full">
+          Recommended
         </span>
       </div>
     </div>
 
     <!-- Spinner overlay -->
-    <div v-if="loadingCardId === (post.careerID + '-' + index)"
-         class="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center rounded-lg z-0">
-      <svg class="animate-spin h-6 w-6 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"></path>
+    <div
+      v-if="loadingCardId === (post.careerID + '-' + index)"
+      class="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center rounded-lg z-0"
+    >
+      <svg
+        class="animate-spin h-6 w-6 text-gray-500"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          class="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          stroke-width="4"
+        ></circle>
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
+        ></path>
       </svg>
     </div>
+
   </div>
 </div>
       </main>
