@@ -76,7 +76,15 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'require'), // Supabase requires SSL
-            'options' => [],
+            'options' => extension_loaded('pdo_pgsql') ? array_filter([
+                // Avoid "prepared statement ... does not exist" with transaction/statement pooling
+                // (e.g., PgBouncer in transaction pooling mode, some serverless poolers).
+                PDO::ATTR_EMULATE_PREPARES => env('DB_EMULATE_PREPARES', true),
+
+                // Persistent connections can exacerbate stale server-side prepared statements
+                // across worker/container restarts.
+                PDO::ATTR_PERSISTENT => env('DB_PERSISTENT', false),
+            ]) : [],
         ],
 
         'sqlsrv' => [
