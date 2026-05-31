@@ -513,8 +513,9 @@ class AuthController extends Controller
         $user->password_reset_expires_at = $expiresAt;
         $user->save();
 
-        // Prepare reset URL
-        $resetUrl = url('/reset-password?token=' . $resetToken . '&type=' . $userType);
+        // Prepare reset URL using the frontend app URL so emails always open the SPA reset page
+        $frontendUrl = rtrim(config('app.frontend_url', env('FRONTEND_URL', config('app.url'))), '/');
+        $resetUrl = $frontendUrl . '/reset-password?token=' . $resetToken . '&type=' . $userType;
 
         // Send password reset email
         $emailResult = $this->verificationEmailSender->sendPasswordReset(
