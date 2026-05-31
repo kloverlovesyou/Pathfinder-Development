@@ -251,6 +251,7 @@ class BrevoEmailService
         // Get detailed error information
         $statusCode = $response->status();
         $errorBody = $response->json();
+        $responseBody = $response->body();
         $errorMessage = $errorBody['message'] ?? $errorBody['error'] ?? 'Unknown error';
         $fullError = $errorBody;
         
@@ -261,16 +262,16 @@ class BrevoEmailService
             'status_code' => $statusCode,
             'error' => $errorMessage,
             'full_response' => $fullError,
-            'response_body' => $response->body(),
+            'response_body' => $responseBody,
         ]);
 
         // Provide more helpful error messages
         if ($statusCode === 401) {
-            throw new \Exception('Brevo API authentication failed. Check your BREVO_API_KEY. Status: ' . $statusCode . ' - ' . $errorMessage);
+            throw new \Exception('Brevo API authentication failed. Check your BREVO_API_KEY. Status: ' . $statusCode . ' - ' . $errorMessage . ' | Body: ' . $responseBody);
         } elseif ($statusCode === 400) {
-            throw new \Exception('Brevo API request invalid: ' . $errorMessage . ' (Status: ' . $statusCode . ')');
+            throw new \Exception('Brevo API request invalid: ' . $errorMessage . ' (Status: ' . $statusCode . ') | Body: ' . $responseBody);
         } else {
-            throw new \Exception('Brevo API error (Status ' . $statusCode . '): ' . $errorMessage);
+            throw new \Exception('Brevo API error (Status ' . $statusCode . '): ' . $errorMessage . ' | Body: ' . $responseBody);
         }
     }
 }
