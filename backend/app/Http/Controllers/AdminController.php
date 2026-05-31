@@ -8,9 +8,11 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use App\Support\PasswordCompatibility;
 
 class AdminController extends Controller
 {
+    use PasswordCompatibility;
     public function AdminInfo(Request $request)
     {
         $admin = $request->user();
@@ -54,7 +56,7 @@ class AdminController extends Controller
         }
 
         // Verify password
-        if (!Hash::check($request->password, $admin->password)) {
+        if (!$this->passwordMatches($request->password, $admin->password, $admin)) {
             return response()->json([
                 'message' => 'Invalid email or password.'
             ], 401);
@@ -126,7 +128,7 @@ class AdminController extends Controller
         }
 
         // Verify password again
-        if (!Hash::check($request->password, $admin->password)) {
+        if (!$this->passwordMatches($request->password, $admin->password, $admin)) {
             return response()->json([
                 'message' => 'Invalid email or password.'
             ], 401);
@@ -207,7 +209,7 @@ class AdminController extends Controller
         }
 
         // Verify current password
-        if (!Hash::check($request->currentPassword, $admin->password)) {
+        if (!$this->passwordMatches($request->currentPassword, $admin->password, $admin)) {
             return response()->json([
                 'message' => 'Current password is incorrect.'
             ], 401);

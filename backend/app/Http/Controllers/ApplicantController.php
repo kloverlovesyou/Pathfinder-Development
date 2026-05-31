@@ -9,8 +9,10 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Jobs\SendVerificationEmailJob;
 use Carbon\Carbon;
+use App\Support\PasswordCompatibility;
 class ApplicantController extends Controller
 {
+    use PasswordCompatibility;
 
 public function a_register(Request $request)
 {
@@ -113,7 +115,7 @@ public function login(Request $request)
 
     $applicant = Applicant::where('emailAddress', $request->emailAddress)->first();
 
-    if (!$applicant || !Hash::check($request->password, $applicant->password)) {
+    if (!$applicant || !$this->passwordMatches($request->password, $applicant->password, $applicant)) {
         return response()->json(['message' => 'Invalid credentials'], 401);
     }
 
@@ -201,7 +203,7 @@ public function login(Request $request)
     }
 
     // Verify password
-    if (!Hash::check($request->currentPassword, $user->password)) {
+    if (!$this->passwordMatches($request->currentPassword, $user->password, $user)) {
         return response()->json(['message' => 'Incorrect password'], 403);
     }
 
@@ -227,7 +229,7 @@ public function login(Request $request)
            'currentPassword' => 'required|string',
        ]);
 
-       if (!Hash::check($validated['currentPassword'], $applicant->password)) {
+       if (!$this->passwordMatches($validated['currentPassword'], $applicant->password, $applicant)) {
            return response()->json(['message' => 'Invalid current password.'], 401);
        }
 
@@ -287,7 +289,7 @@ public function login(Request $request)
        ]);
 
        // Verify current password
-       if (!Hash::check($validated['currentPassword'], $applicant->password)) {
+       if (!$this->passwordMatches($validated['currentPassword'], $applicant->password, $applicant)) {
            return response()->json(['message' => 'Invalid current password.'], 401);
        }
 
@@ -302,7 +304,7 @@ public function login(Request $request)
        }
 
        // Check if new password is different from current password
-       if (Hash::check($validated['newPassword'], $applicant->password)) {
+       if ($this->passwordMatches($validated['newPassword'], $applicant->password)) {
            return response()->json(['message' => 'New password must be different from your current password.'], 400);
        }
 

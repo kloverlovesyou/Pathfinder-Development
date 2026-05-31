@@ -11,10 +11,12 @@ use Illuminate\Support\Str;
 use App\Jobs\SendVerificationEmailJob;
 use App\Services\VerificationEmailSender;
 use Carbon\Carbon;
+use App\Support\PasswordCompatibility;
 
 
 class AuthController extends Controller
 {
+    use PasswordCompatibility;
     public function __construct(
         private VerificationEmailSender $verificationEmailSender
     ) {
@@ -170,7 +172,7 @@ class AuthController extends Controller
 
         // Check applicant
         $applicant = Applicant::where('emailAddress', $request->emailAddress)->first();
-        if ($applicant && Hash::check($request->password, $applicant->password)) {
+        if ($applicant && $this->passwordMatches($request->password, $applicant->password, $applicant)) {
             // Check if email is verified
             if (!$applicant->email_verified_at) {
                 return response()->json([
@@ -194,7 +196,7 @@ class AuthController extends Controller
 
         // Check organization
         $organization = Organization::where('emailAddress', $request->emailAddress)->first();
-        if ($organization && Hash::check($request->password, $organization->password)) {
+        if ($organization && $this->passwordMatches($request->password, $organization->password, $organization)) {
             // Check if email is verified
             if (!$organization->email_verified_at) {
                 return response()->json([

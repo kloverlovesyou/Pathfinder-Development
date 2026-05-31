@@ -10,9 +10,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use App\Jobs\SendVerificationEmailJob;
 use Carbon\Carbon;
+use App\Support\PasswordCompatibility;
 
 class OrganizationController extends Controller
 {
+    use PasswordCompatibility;
 
     // ----------------------
     // List approved organizations with careers & trainings
@@ -345,7 +347,7 @@ class OrganizationController extends Controller
             'confirmPassword' => 'required|string',
         ]);
 
-        if (!Hash::check($validated['confirmPassword'], $organization->password)) {
+        if (!$this->passwordMatches($validated['confirmPassword'], $organization->password, $organization)) {
             return response()->json(['message' => 'Invalid password. Please check your password and try again.'], 401);
         }
 
@@ -408,7 +410,7 @@ class OrganizationController extends Controller
         ]);
 
         // Verify password
-        if (!Hash::check($validated['confirmPassword'], $organization->password)) {
+        if (!$this->passwordMatches($validated['confirmPassword'], $organization->password, $organization)) {
             return response()->json(['message' => 'Invalid password. Please check your password and try again.'], 401);
         }
 
@@ -478,7 +480,7 @@ class OrganizationController extends Controller
             'currentPassword' => 'required|string',
         ]);
 
-        if (!Hash::check($validated['currentPassword'], $organization->password)) {
+        if (!$this->passwordMatches($validated['currentPassword'], $organization->password, $organization)) {
             return response()->json(['message' => 'Invalid current password.'], 401);
         }
 
@@ -535,7 +537,7 @@ class OrganizationController extends Controller
         ]);
 
         // Verify current password
-        if (!Hash::check($validated['currentPassword'], $organization->password)) {
+        if (!$this->passwordMatches($validated['currentPassword'], $organization->password, $organization)) {
             return response()->json(['message' => 'Invalid current password.'], 401);
         }
 
@@ -550,7 +552,7 @@ class OrganizationController extends Controller
         }
 
         // Check if new password is different from current password
-        if (Hash::check($validated['newPassword'], $organization->password)) {
+        if ($this->passwordMatches($validated['newPassword'], $organization->password)) {
             return response()->json(['message' => 'New password must be different from your current password.'], 400);
         }
 
