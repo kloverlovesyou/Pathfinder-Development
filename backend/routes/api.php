@@ -210,18 +210,32 @@ Route::get('/check-email-config', function() {
     $brevoApiKeyFromConfig = config('services.brevo.api_key');
     $brevoApiKeyFromEnv = env('BREVO_API_KEY');
     $brevoApiKey = trim($brevoApiKeyFromConfig ?: $brevoApiKeyFromEnv ?: '');
+    $mailMailer = config('mail.default');
+    $mailHost = config('mail.mailers.smtp.host');
+    $mailPort = config('mail.mailers.smtp.port');
+    $mailUsername = config('mail.mailers.smtp.username');
+    $mailPassword = config('mail.mailers.smtp.password');
+    $mailEncryption = config('mail.mailers.smtp.encryption');
+    $mailFromAddress = config('mail.from.address');
+    $mailFromName = config('mail.from.name');
     
     $mailConfig = [
-        'mailer' => config('mail.default'),
-        'host' => config('mail.mailers.smtp.host'),
-        'port' => config('mail.mailers.smtp.port'),
-        'username' => config('mail.mailers.smtp.username'),
-        'encryption' => config('mail.mailers.smtp.encryption'),
-        'from_address' => config('mail.from.address'),
-        'from_name' => config('mail.from.name'),
+        'mailer' => $mailMailer,
+        'host' => $mailHost,
+        'port' => $mailPort,
+        'username_set' => !empty($mailUsername),
+        'password_set' => !empty($mailPassword),
+        'encryption' => $mailEncryption,
+        'from_address' => $mailFromAddress,
+        'from_name' => $mailFromName,
     ];
     
     return response()->json([
+        'runtime' => [
+            'app_env' => config('app.env'),
+            'app_url' => config('app.url'),
+            'queue_connection' => config('queue.default'),
+        ],
         'brevo_api_key' => [
             'set' => !empty($brevoApiKey),
             'length' => $brevoApiKey ? strlen($brevoApiKey) : 0,
@@ -232,6 +246,10 @@ Route::get('/check-email-config', function() {
             'raw_env' => $brevoApiKeyFromEnv ? substr($brevoApiKeyFromEnv, 0, 10) . '...' : 'not set',
         ],
         'mail_config' => $mailConfig,
+        'sender_check' => [
+            'looks_verified' => filter_var($mailFromAddress, FILTER_VALIDATE_EMAIL) ? true : false,
+            'recommended' => 'MAIL_FROM_ADDRESS should be a Brevo verified sender, not just any Gmail address.',
+        ],
         'recommendation' => !empty($brevoApiKey) 
             ? 'Brevo API is configured. Emails should use Brevo API.' 
             : 'Brevo API key not found. Will fallback to SMTP. Add BREVO_API_KEY to .env file.',
